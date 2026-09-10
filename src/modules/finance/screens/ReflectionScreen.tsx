@@ -441,6 +441,19 @@ export function ReflectionScreen(_props?: any) {
       notify(`${moved.name} and ${parentCat.name} are not the same kind of money.`)
       return
     }
+    // A part takes its parent's kind, and this table files a row by that kind.
+    // So a category set to *both* — which is drawn in each section, summing
+    // its own side there — loses the other side's entries the moment it is
+    // nested: they are still in the ledger and in no total on this screen.
+    // Counting them is the difference between a move and a quiet subtraction.
+    if (parentCat && moved.txType === 'both' && parentCat.txType !== 'both') {
+      const other = parentCat.txType === 'income' ? 'expense' : 'income'
+      const lost = transactions.filter(t => t.categoryId === moved.id && t.type === other).length
+      if (lost > 0) {
+        notify(`${moved.name} has ${lost} ${other} ${lost === 1 ? 'entry' : 'entries'} — inside ${parentCat.name} only its ${parentCat.txType} side would count.`)
+        return
+      }
+    }
 
     // The list it lands in, without it, in the order it is drawn.
     const sibs = (newParent
@@ -474,7 +487,7 @@ export function ReflectionScreen(_props?: any) {
     if (moving) notify(newParent
       ? `${moved.name} is now inside ${parentCat?.name ?? 'it'}`
       : `${moved.name} is a category of its own again`)
-  }, [categories, upsertCategory])
+  }, [categories, transactions, upsertCategory])
 
   useEffect(() => {
     if (!drag) return

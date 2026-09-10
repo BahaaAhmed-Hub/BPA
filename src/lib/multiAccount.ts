@@ -36,6 +36,21 @@ export function saveAccounts(accounts: ConnectedAccount[]): void {
   try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts)) } catch { /* quota */ }
 }
 
+/**
+ *  Write back what a token turned out to carry.
+ *
+ *  The account row is stored the moment OAuth returns, but the scopes on the
+ *  token are read a round trip later — so the row is written first and told
+ *  the truth second, rather than being given a list somebody typed out.
+ */
+export function setAccountScopes(email: string, scopes: string[]): void {
+  const accounts = loadAccounts()
+  const hit = accounts.find(a => a.email.toLowerCase() === email.toLowerCase())
+  if (!hit) return
+  hit.scopes = scopes
+  saveAccounts(accounts)
+}
+
 export function addAccount(account: Omit<ConnectedAccount, 'id' | 'connectedAt'>): ConnectedAccount {
   const accounts = loadAccounts()
   const existing = accounts.find(a => a.email === account.email)

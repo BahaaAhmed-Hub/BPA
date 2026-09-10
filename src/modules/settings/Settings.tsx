@@ -35,7 +35,8 @@ import {
 import { LockGate } from '@/modules/finance/FinanceLockScreen'
 import { NotYet } from '@/components/ComingSoon'
 import { loadAutomationRules, saveAutomationRules, loadRunLog, runAutomation, AUTOMATION_EVENT, type AutomationRule, type RunEntry } from '@/lib/automation'
-import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
+import { connectAdditionalGoogleAccount, signInWithGoogle, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
+import { readScopes, cachedScopes, scopesAreStale, forgetScopes } from '@/lib/googleScopes'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, resolveThemeId, applyAppearance } from '@/lib/themes'
@@ -43,7 +44,7 @@ import { syncTimezoneFromLocation } from '@/lib/weather'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
 import { HABIT_VIEWS, loadHabitView, saveHabitView, EmojiBtn, type HabitView } from '@/modules/habits/HabitsModule'
 import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore'
-import { loadAccounts, removeAccount, getProviderTokenForAccount, loadHiddenAccounts, saveHiddenAccounts, loadAccountsFromServer, type ConnectedAccount, type ServerAccount } from '@/lib/multiAccount'
+import { loadAccounts, removeAccount, getProviderTokenForAccount, setAccountScopes, loadHiddenAccounts, saveHiddenAccounts, loadAccountsFromServer, type ConnectedAccount, type ServerAccount } from '@/lib/multiAccount'
 import {
   saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB,
   saveHabitsToDB, saveHabitLogsToDB, loadSettingsFromDB,
@@ -1694,19 +1695,40 @@ function TaskStatusesSection() {
 
 // ─── CHUNK 5: Connected Accounts (multi-Google) ───────────────────────────────
 
+/**
+ *  What one account can reach, as read off its own token.
+ *
+ *  `active` has three values, and the third is the point. `null` is "we have
+ *  not been able to ask" — a different thing from "not granted", and drawn
+ *  differently, because only one of them has a button that would help. The
+ *  badge used to be fed a hard-coded list that never mentioned Drive, so it
+ *  showed **Grant** for ever: the tap did send you round the whole OAuth loop,
+ *  Drive was in the request, Google did grant it, and the badge then wrote the
+ *  same three strings back and looked exactly as it had before.
+ */
 function IntegrationBadge({ icon, label, active, onGrant }: {
-  icon: ReactNode; label: string; active: boolean; onGrant?: () => void
+  icon: ReactNode; label: string; active: boolean | null; onGrant?: () => void
 }) {
+  const tone = active === true ? 'var(--sb-positive)' : active === null ? 'var(--sb-ink-4)' : 'var(--sb-info)'
+  const wash = active === true ? 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)'
+             : active === null ? 'var(--sb-field)'
+             : 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)'
+  const edge = active === true ? 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)'
+             : active === null ? 'var(--sb-border)'
+             : 'color-mix(in srgb, var(--sb-info) 25.0%, transparent)'
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '2px 7px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 500,
-      background: active ? 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)',
-      border: `var(--sb-border-width) solid ${active ? 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 25.0%, transparent)'}`,
-      color: active ? 'var(--sb-positive)' : 'var(--sb-info)',
-    }}>
+    <span
+      title={active === true ? `${label} access is on this account's token`
+           : active === null ? `We could not read this account's token, so we cannot say whether ${label} is granted`
+           : `${label} is not on this account's token`}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '2px 7px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 500,
+        background: wash, border: `var(--sb-border-width) solid ${edge}`, color: tone,
+      }}>
       {icon}{label}
-      {!active && onGrant && (
+      {active === null && <span style={{ opacity: 0.8 }}>?</span>}
+      {active === false && onGrant && (
         <button onClick={onGrant} style={{
           marginLeft: 3, background: 'none', border: 'none', cursor: 'pointer',
           color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: 0,
@@ -1770,6 +1792,8 @@ function AccountsSection({
 
   async function reconnectAccount(acc: ConnectedAccount) {
     setRecon(acc.id)
+    // What we measured is about the grant we are replacing.
+    forgetScopes(acc.email)
     try {
       await connectAdditionalGoogleAccount(acc.email)
     } catch { setRecon(null) }
@@ -1806,6 +1830,44 @@ function AccountsSection({
   // Primary account row (from Supabase session)
   const primaryToken = localStorage.getItem('google_provider_token') ?? ''
 
+  /**
+   *  What each account's token actually carries, asked of Google rather than
+   *  assumed. `undefined` while the question is out, `null` where it could not
+   *  be answered — the badges draw those two differently, and only one of them
+   *  offers a button.
+   */
+  const [grantsBy, setGrantsBy] = useState<Record<string, string[] | null>>({})
+  useEffect(() => {
+    let live = true
+    const ask = async () => {
+      const targets: { email: string; token: string }[] = []
+      if (primaryEmail && primaryToken) targets.push({ email: primaryEmail, token: primaryToken })
+      for (const a of accounts) {
+        const t = a.providerToken || (await getProviderTokenForAccount(a)) || ''
+        if (t) targets.push({ email: a.email, token: t })
+        else if (live) setGrantsBy(g => ({ ...g, [a.email.toLowerCase()]: null }))
+      }
+      for (const { email, token } of targets) {
+        const known = cachedScopes(email)
+        if (known && !scopesAreStale(email)) { if (live) setGrantsBy(g => ({ ...g, [email.toLowerCase()]: known })); continue }
+        const sc = await readScopes(email, token)
+        if (!live) continue
+        // A failed read keeps whatever we last measured. Losing the network is
+        // not evidence that a grant went away.
+        setGrantsBy(g => ({ ...g, [email.toLowerCase()]: sc ?? known ?? null }))
+        if (sc) setAccountScopes(email, sc)
+      }
+    }
+    void ask()
+    return () => { live = false }
+  }, [accounts, primaryEmail, primaryToken])
+
+  /** True / false / null — see IntegrationBadge. */
+  const can = (email: string, part: string): boolean | null => {
+    const sc = grantsBy[email.toLowerCase()]
+    return sc === undefined || sc === null ? null : sc.some(x => x.includes(part))
+  }
+
   return (
     <div>
 
@@ -1826,9 +1888,15 @@ function AccountsSection({
         <div style={{ flex: 1 }}>
           <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{primaryEmail || 'Primary Google Account'}</p>
           <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active />
-            <IntegrationBadge icon={<Mail size={ICON.sm} />} label="Gmail" active />
-            <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active />
+            {/* These read `active` unconditionally — three badges that were
+                green whatever the token carried. The primary account is the
+                one you signed in with, but signing in is not consent to
+                everything, and a stale grant is exactly what the row should
+                say. */}
+            <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active={can(primaryEmail, 'calendar')} />
+            <IntegrationBadge icon={<Mail size={ICON.sm} />} label="Gmail" active={can(primaryEmail, 'gmail')} />
+            <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active={can(primaryEmail, 'drive')}
+              onGrant={() => { forgetScopes(primaryEmail); void signInWithGoogle() }} />
           </div>
         </div>
         <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)', color: 'var(--sb-positive)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 20.0%, transparent)' }}>
@@ -1901,10 +1969,10 @@ function AccountsSection({
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-warning)' }}>⚠ Access lost — reconnect to restore</p>
               ) : (
                 <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active={acc.scopes.some(s => s.includes('calendar'))} />
-                  <IntegrationBadge icon={<Mail size={ICON.sm} />} label="Gmail" active={acc.scopes.some(s => s.includes('gmail'))} />
-                  <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active={acc.scopes.some(s => s.includes('drive'))}
-                    onGrant={!acc.scopes.some(s => s.includes('drive')) ? () => void reconnectAccount(acc) : undefined} />
+                  <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active={can(acc.email, 'calendar')} />
+                  <IntegrationBadge icon={<Mail size={ICON.sm} />} label="Gmail" active={can(acc.email, 'gmail')} />
+                  <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active={can(acc.email, 'drive')}
+                    onGrant={() => void reconnectAccount(acc)} />
                 </div>
               )}
             </div>

@@ -337,7 +337,11 @@ does the moving. Resizing needs no live transform either: it is worked out from
   out of the other's rows. The three refusals are the Budget screen's, word for
   word, because both screens move the same categories: a category with parts of
   its own cannot become a part (one level is all the model has), income and
-  expense do not mix, and a part takes its new parent's `txType`.
+  expense do not mix, and a part takes its new parent's `txType` — and because
+  it does, a category set to **both**, which is drawn in each section summing
+  its own side there, would lose the other side's entries the moment it is
+  nested: still in the ledger, in no total on the screen. That one is counted
+  and named (`4 income entries`) rather than moved.
   A drop that would nest and cannot **says so while you are still holding it** —
   the row shows `HAS PARTS OF ITS OWN` instead of `INSIDE`, and the drop falls
   back to a reorder rather than quietly doing the other thing.
@@ -700,6 +704,30 @@ history.
   Accounts & companies, and a company could not be linked to your own Google
   account. It is offered as the id `primary`, which every consumer already
   reads as "use the primary token" by finding no account with that id.
+
+## Accounts — a badge is a claim about a token, so it asks the token
+`lib/googleScopes.ts`. The Calendar / Gmail / Drive badges under each connected
+account were drawn from a **hard-coded list**, the same three strings typed out
+at three call sites in `App.tsx`:
+`scopes: ['calendar', 'calendar.events', 'gmail.readonly']` — which never
+contained `drive`. So Drive read "not granted" on every account for ever, and
+its **Grant** button sent you round the whole OAuth loop (with `drive.file` and
+`drive.readonly` correctly in the request, which Google did grant) only to write
+those same three strings back on the way home. Nothing about the grant was
+broken; the badge could not be changed by one.
+- **`readScopes(email, token)`** asks Google's `tokeninfo` endpoint and caches
+  the answer for 6h against the address (`professor-google-scopes`).
+- **`null` is not `[]`.** An empty list is a token that can do nothing; null is
+  a question nobody could answer. The badge draws a third state for it — grey,
+  a `?`, and **no Grant button**, because a button that cannot help is what sent
+  us here. A failed read keeps the last measurement: losing the network is not
+  evidence that a grant went away.
+- **The primary row used to claim all three unconditionally** (`active` with no
+  value). Signing in is not consent to everything, and a stale grant is exactly
+  what the row should say.
+- `setAccountScopes(email, scopes)` writes the measurement back onto the stored
+  account, and `forgetScopes(email)` runs before a re-consent — what was
+  measured is about the grant being replaced.
 
 ## Mail — several mailboxes, and the three ways of answering
 `lib/gmail.ts` takes a `MailAccount` on every call (`accessToken(account)`: the

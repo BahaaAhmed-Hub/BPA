@@ -24,7 +24,8 @@ import { useTaskStore } from './store/taskStore'
 import { useHabitsStore } from './store/habitsStore'
 import { supabase } from './lib/supabase'
 import { signInWithGoogle, signOut as googleSignOut, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
-import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
+import { addAccount, loadAccounts, saveAccounts, setAccountScopes } from './lib/multiAccount'
+import { readScopes, cachedScopes } from './lib/googleScopes'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB, mergeCompanies } from './lib/dbSync'
 import type { CompanyRow } from './lib/dbSync'
 import { startPrefSync } from './lib/prefSync'
@@ -812,6 +813,13 @@ function App() {
       clearPendingAddAccount()
       const email = session.user.email ?? ''
       console.log('[AddAccount] ✓ Adding account:', email)
+      // The scopes stored here used to be three strings typed out by hand,
+      // which is why the Drive badge said "not granted" however many times you
+      // granted it. `readScopes` asks the token; it lands a moment later, and
+      // the row is redrawn by `professor:accountsUpdated` when it does.
+      void readScopes(email, session.provider_token).then((sc: string[] | null) => {
+        if (sc) { setAccountScopes(email, sc); window.dispatchEvent(new CustomEvent('professor:accountsUpdated')) }
+      })
       addAccount({
         email,
         name:                 (session.user.user_metadata?.full_name as string) ?? '',
@@ -819,7 +827,9 @@ function App() {
         providerToken:        session.provider_token,
         supabaseAccessToken:  session.access_token,
         supabaseRefreshToken: session.refresh_token ?? '',
-        scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
+        // Empty rather than invented: what the token carries is read from the
+        // token, and until that answers, nothing here claims otherwise.
+        scopes:               cachedScopes(email) ?? [],
         isPrimary:            false,
       })
       // Seed tokenManager cache so the first fetchAllEvents doesn't hit the Edge Function
@@ -846,7 +856,7 @@ function App() {
               name:         (session.user.user_metadata?.full_name as string) ?? null,
               avatar_url:   session.user.user_metadata?.avatar_url as string | undefined ?? null,
               access_token: session.provider_token,
-              scopes:       ['calendar', 'calendar.events', 'gmail.readonly'],
+              scopes:       (await readScopes(email, session.provider_token)) ?? cachedScopes(email) ?? [],
             }
             // Include refresh_token only when Google provided one — Edge Function skips
             // google_account_tokens upsert when absent.
@@ -976,11 +986,17 @@ function App() {
               avatar_url:   u.user_metadata?.avatar_url as string | undefined ?? null,
               access_token: session.provider_token,
               expires_at:   expiresAt,
-              scopes:       ['calendar', 'calendar.events', 'gmail.readonly'],
+              // Filled in by the block below, which can await the token.
+              scopes:       cachedScopes(u.email) ?? [],
             }
             // Include refresh_token only when Google provides it (first OAuth grant only)
             if (session.provider_refresh_token) body.refresh_token = session.provider_refresh_token
             ;(async () => {
+              // Ask the token what it carries before telling the server. The
+              // three strings that used to sit here were a guess that outlived
+              // every grant the user ever made.
+              const measured = await readScopes(u.email ?? '', session.provider_token as string)
+              if (measured) body.scopes = measured
               for (let attempt = 1; attempt <= 3; attempt++) {
                 const { error } = await supabase.functions.invoke('google-oauth', { body })
                 if (!error) { console.log('[App] ✓ Primary tokens saved to google_account_tokens'); break }
