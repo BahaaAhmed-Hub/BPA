@@ -190,6 +190,47 @@ export function linesOf(rule: Pick<BudgetRule, 'lines'>): BudgetLine[] {
     .sort((a, b) => a.date.localeCompare(b.date))
 }
 
+/**
+ *  A budget with dates on it is not a monthly allowance.
+ *
+ *  Four instalments of 45,000 are four instalments of 45,000. Divided into a
+ *  monthly figure they become 15,000 a month, which is a number that never
+ *  leaves the account on any day of the year — and measuring a month's spending
+ *  against it is measuring against something nobody agreed to. So a dated rule
+ *  reports its **total**, and is measured over the span it is spread across.
+ */
+export const isDated = (r?: Pick<BudgetRule, 'schedule'>): boolean =>
+  scheduleOf(r) === 'once' || scheduleOf(r) === 'custom'
+
+/**
+ *  What this budget is, as one figure, without dividing it.
+ *
+ *  A repeating rule's figure is its month — that is what it is. A dated rule's
+ *  is the sum of its dates, in the year given, or across all of them when no
+ *  year is named.
+ */
+export function budgetTotal(rule?: BudgetRule, year?: string): number {
+  if (!rule) return 0
+  const kind = scheduleOf(rule)
+  if (kind === 'once') {
+    if (!(rule.amount > 0)) return 0
+    return !year || rule.onDate?.slice(0, 4) === year ? rule.amount : 0
+  }
+  if (kind === 'custom') {
+    const lines = linesOf(rule)
+    // A set that comes round every year is that set, whichever year is asked
+    // for; one that does not is only in its own.
+    if (!year || rule.linesRepeat) return lines.reduce((n, l) => n + l.amount, 0)
+    return lines.filter(l => l.date.slice(0, 4) === year).reduce((n, l) => n + l.amount, 0)
+  }
+  return monthlyAmount(rule)
+}
+
+/** How long a dated budget is measured over — the words for it, and the span. */
+export function budgetSpan(rule?: BudgetRule): 'month' | 'year' {
+  return isDated(rule) ? 'year' : 'month'
+}
+
 /** What a custom or one-off rule asks for across a whole year. */
 export function yearlyTotal(rule: BudgetRule): number {
   const kind = scheduleOf(rule)
@@ -447,6 +488,9 @@ interface Props {
   subs: Category[]
   transactions: Transaction[]
   monthKey: string          // YYYY-MM
+  /** True when this category has no figure of its own and its parts carry
+   *  dates — the figure shown is then a year's, like theirs. */
+  partsDated?: boolean
   currency: string
   /** Only so a budget with a day can say where its money comes from. */
   accounts?: { id: string; name: string }[]
@@ -465,7 +509,7 @@ interface Props {
 }
 
 export function BudgetRuleModal({
-  category, parent, partsBudget = 0, rule, subs, transactions, monthKey, currency, accounts = [],
+  category, parent, partsBudget = 0, partsDated = false, rule, subs, transactions, monthKey, currency, accounts = [],
   onChange, onDelete, onPromote, onRename, onEditCategory, onAddSub, onEditSub, onDrill, onClose,
 }: Props) {
   const box = useRef<HTMLDivElement>(null)
@@ -489,8 +533,14 @@ export function BudgetRuleModal({
   const cur = rule.currency ?? currency
   const wanted = category.txType === 'income' ? 'income' : 'expense'
   const ids = new Set([category.id, ...subs.map(s => s.id)])
+  // A dated budget is measured over the year it is spread across, not against
+  // one month of it — dividing four instalments into twelve equal months
+  // invents a figure that never leaves the account.
+  const own0 = activeIn(rule, monthKey) ? budgetTotal(rule, monthKey.slice(0, 4)) : 0
+  const span = isDated(rule) || (own0 === 0 && partsDated) ? 'year' : 'month'
+  const scope = span === 'year' ? monthKey.slice(0, 4) : monthKey
   const mine = transactions.filter(tx =>
-    tx.type === wanted && tx.categoryId && ids.has(tx.categoryId) && tx.date.startsWith(monthKey))
+    tx.type === wanted && tx.categoryId && ids.has(tx.categoryId) && tx.date.startsWith(scope))
   // Converted into what the budget is written in, so 117 USD counts against an
   // EGP envelope at what it is actually worth. Anything with no rate behind it
   // is still left out and named — a guessed rate is worse than a stated gap.
@@ -504,7 +554,7 @@ export function BudgetRuleModal({
   const others = [...othersSet]
 
   const running = activeIn(rule, monthKey)
-  const own    = running ? monthlyAmount(rule) : 0
+  const own    = running ? budgetTotal(rule, monthKey.slice(0, 4)) : 0
   // Same rule the envelope uses: its own figure where there is one, otherwise
   // what its parts add up to. Never both — that would count a split twice.
   const budget = own > 0 ? own : partsBudget
@@ -597,7 +647,7 @@ export function BudgetRuleModal({
             </span>
             <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
               {budget > 0
-                ? `of ${cur} ${fmt(budget)} this month${fromParts ? ', across its sub-categories' : ''}`
+                ? `of ${cur} ${fmt(budget)} ${span === 'year' ? `across ${monthKey.slice(0, 4)}` : 'this month'}${fromParts ? ', from its sub-categories' : ''}`
                 : rule.amount > 0 && !running
                   ? `budget not running this month`
                   : 'no budget set'}
@@ -740,8 +790,9 @@ export function BudgetRuleModal({
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                 {scheduleOf(rule) === 'repeat'
                   ? `${cur} ${fmt(budget)} a month, which is what the envelope is measured against`
-                  : `${cur} ${fmt(budget)} a month on average — the envelope is measured against what each `
-                    + `month actually asks for, so the months with nothing in them ask for nothing`}
+                  : `${cur} ${fmt(budget)} in total across ${linesOf(rule).length || 1} `
+                    + `${(linesOf(rule).length || 1) === 1 ? 'date' : 'dates'} — measured over the whole year, `
+                    + `not divided into months it never leaves in`}
               </span>
             </div>
           )}

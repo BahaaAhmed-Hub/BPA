@@ -550,11 +550,27 @@ written before this reads unchanged):
 - **`custom`** — `lines[]`, each a date and its own amount, with `linesRepeat`
   for a set that comes round every year (school fees) against one that does not
   (a build's payment plan).
+- **A dated budget is never divided.** Four instalments of 45,000 are four
+  instalments of 45,000; as a monthly figure they become 15,000 a month, which
+  leaves the account on no day of the year — and measuring a month's spending
+  against it measures against something nobody agreed to. `isDated(rule)` is
+  `once` or `custom`; `budgetTotal(rule, year?)` is the **sum of its dates**,
+  and such an envelope is measured against the **whole year**, its spending
+  included. `SpanChip` writes `THE YEAR` beside the figure, because 132,000
+  next to 6,000 otherwise reads as a category out of control.
+- **A parent takes its parts' span with it.** With no figure of its own and
+  dated parts, its budget is a year, so its spending has to be one too — the
+  modal gets `partsDated` for the same reason.
+- **Every aggregate stays a month.** The section total and the four-way split
+  add `plannedMonth` / `actualBase`, which are always what *this* month asks
+  for, dated rules included (`monthlyAmount(rule, monthKey)` — the real
+  instalment, not a twelfth). Adding a year of school fees to eleven monthly
+  envelopes would make the page's headline number mean nothing.
 - **`monthlyAmount(rule, monthKey?)`** — without a month it is the year's
-  average, which is what an envelope is *worth*; with one it is what that month
-  actually asks for, which is what the envelope is *measured against*. Every
-  call site that has a month in scope passes it, so a custom schedule stops
-  reporting a quarter of the year in a month with nothing in it.
+  average; with one it is what that month actually asks for. Every call site
+  that has a month in scope passes it, so a custom schedule stops reporting a
+  quarter of the year in a month with nothing in it. It is no longer what an
+  envelope displays for a dated rule — `budgetTotal` is.
 - `occurrencesFor` returns `{date, amount}` rather than dates, since a custom
   schedule gives each date its own; the writer takes the amount from there.
 - The **Paid on** row is hidden for the two dated shapes — they carry their own
