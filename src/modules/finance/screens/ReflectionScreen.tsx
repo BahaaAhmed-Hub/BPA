@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef, Fragment } from 'react'
 import { Button, Card, Segmented } from '@/components/ui'
-import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, GripVertical, X, Trash2, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, GripVertical, X, Trash2, Plus, Eye, EyeOff, Pencil, ArrowLeft } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
@@ -40,6 +40,44 @@ function fmt(v: number): string { return acct(v, { zero: '–' }) }
 function fmtOut(v: number): string { return v === 0 ? '–' : outflow(v) }
 
 function netColor(v: number) { return v > 0 ? OLIVE : v < 0 ? RUST : 'var(--sb-ink-4)' }
+
+/**
+ *  The controls a row keeps out of sight until you are on it.
+ *
+ *  Clicking the row itself used to hide it from the totals, which is a real
+ *  thing this table does and the wrong thing for the gesture people reach for
+ *  first. A click now *selects*, and the two other jobs get a button each:
+ *  the eye hides, the pencil opens what is filed there. Hidden until hover, so
+ *  eighty rows are eighty names rather than a wall of icons — and always
+ *  present for the row that is hidden or selected, or the way back would be
+ *  invisible on a touch screen.
+ */
+function RowTools({ hidden, on, onHide, onOpen, name, small }: {
+  hidden: boolean; on: boolean; onHide: () => void; onOpen: () => void; name: string; small?: boolean
+}) {
+  const btn: React.CSSProperties = {
+    width: small ? 20 : 22, height: small ? 20 : 22, padding: 0, flexShrink: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
+    background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+    color: 'var(--sb-ink-4)',
+  }
+  return (
+    <span className="sb-row-tools" style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: 4,
+      opacity: hidden || on ? 1 : 0, transition: 'opacity .12s',
+    }}>
+      <button style={btn} title={hidden ? `Put ${name} back in the totals` : `Take ${name} out of the totals`}
+        onClick={e => { e.stopPropagation(); onHide() }}>
+        {hidden ? <EyeOff size={ICON.sm} strokeWidth={STROKE.rest} /> : <Eye size={ICON.sm} strokeWidth={STROKE.rest} />}
+      </button>
+      <button style={btn} title={`Every entry filed under ${name} this year`}
+        onClick={e => { e.stopPropagation(); onOpen() }}>
+        <Pencil size={ICON.sm} strokeWidth={STROKE.rest} />
+      </button>
+    </span>
+  )
+}
 
 // ─── The same year, as lines ─────────────────────────────────────────────────
 //
@@ -105,19 +143,25 @@ function spread(list: { color: string }[]): string[] {
   })
 }
 
-function LinesChart({ series, hidden, onToggle, fmt }: {
+function LinesChart({ series, hidden, onToggle, fmt, through }: {
   series: Series[]
   hidden: (id: string) => boolean
   onToggle: (id: string) => void
   fmt: (v: number) => string
+  /** The last month there is an answer for. A line drawn flat along zero
+   *  through October, November and December says the spending stopped; what
+   *  actually happened is that the year has not got there yet. */
+  through: number
 }) {
   const [box, W] = useWidth()
   const [over, setOver] = useState<{ id: string; m: number } | null>(null)
   const colours = useMemo(() => spread(series), [series])
   const paint = (i: number) => colours[i] ?? series[i].color
-  const shown = series.map((s, i) => ({ ...s, color: paint(i) })).filter(s => !hidden(s.id))
+  const last = Math.max(0, Math.min(through, 11))
+  const shown = series.map((s, i) => ({ ...s, color: paint(i), amounts: s.amounts.slice(0, last + 1) }))
+    .filter(s => !hidden(s.id))
 
-  const H = 300, PAD_L = 66, PAD_R = 14, PAD_T = 14, PAD_B = 26
+  const H = 216, PAD_L = 66, PAD_R = 14, PAD_T = 12, PAD_B = 24
   const iw = Math.max(120, W - PAD_L - PAD_R)
   const ih = H - PAD_T - PAD_B
   const max = Math.max(1, ...shown.flatMap(s => s.amounts))
@@ -142,7 +186,7 @@ function LinesChart({ series, hidden, onToggle, fmt }: {
         ))}
         {MONTHS_SHORT.map((m, i) => (
           <text key={m} x={x(i)} y={H - 8} textAnchor="middle"
-            style={{ fontSize: 10, fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)' }}>{m}</text>
+            style={{ fontSize: 10, fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)', opacity: i > last ? 0.35 : 1 }}>{m}</text>
         ))}
 
         {shown.map(s => {
@@ -203,6 +247,88 @@ function LinesChart({ series, hidden, onToggle, fmt }: {
         })}
       </div>
     </div>
+  )
+}
+
+/**
+ *  One entry, in the panel the list was just in.
+ *
+ *  Opening an entry used to throw a modal over everything — over the panel it
+ *  came from, over the table that gave it meaning, and with no way back except
+ *  closing it and finding the figure again. It is the same column now, and the
+ *  arrow at the top left is the way back to the list.
+ */
+function EntryFace({ tx, categories, accounts, onBack, onEdit, onDelete, onClose }: {
+  tx: Transaction
+  categories: Category[]
+  accounts: { id: string; name: string }[]
+  onBack: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onClose: () => void
+}) {
+  const cat = categories.find(c => c.id === tx.categoryId)
+  const from = accounts.find(a => a.id === tx.accountId)
+  const to = accounts.find(a => a.id === tx.toAccountId)
+  const row = (label: string, value: React.ReactNode) => (
+    <div style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '7px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+      <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', width: 92, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', minWidth: 0, wordBreak: 'break-word' }}>{value}</span>
+    </div>
+  )
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <button onClick={onBack} title="Back to the list"
+          style={{
+            width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
+          }}><ArrowLeft size={ICON.sm} /></button>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>One entry</span>
+        <span style={{ flex: 1 }} />
+        <button onClick={onClose} title="Close"
+          style={{
+            width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-4)',
+          }}><X size={ICON.sm} /></button>
+      </div>
+
+      <div style={{ fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>
+        {tx.payee?.trim() || cat?.name || 'Entry'}
+      </div>
+      <div style={{
+        fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-display)', fontWeight: 700, letterSpacing: '-0.03em',
+        color: tx.type === 'income' ? OLIVE : RUST, margin: '2px 0 12px', fontVariantNumeric: 'tabular-nums',
+      }}>
+        {tx.type === 'income' ? acct(Math.abs(tx.amount), { currency: tx.currency }) : outflow(Math.abs(tx.amount), { currency: tx.currency })}
+      </div>
+
+      <div>
+        {row('Filed on', txDate(tx.date))}
+        {row('Paid', tx.paidAt
+          ? txDate(tx.paidAt)
+          : <span style={{ color: 'var(--sb-negative)' }}>not yet — it is in no total</span>)}
+        {row('Category', cat?.name ?? 'none')}
+        {row('Account', from?.name ?? 'none')}
+        {to && row('Into', to.name)}
+        {tx.note?.trim() ? row('Note', tx.note.trim()) : null}
+        {isBudgetEntry(tx) ? row('Made by', 'a budget with dates on it') : null}
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+        <Button variant="accent" onClick={onEdit}>Edit</Button>
+        <span style={{ flex: 1 }} />
+        <button onClick={onDelete} title="Delete this entry"
+          style={{
+            height: 32, padding: '0 12px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+            color: 'var(--sb-negative)', fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
+          }}><Trash2 size={ICON.sm} /> Delete</button>
+      </div>
+    </>
   )
 }
 
@@ -267,13 +393,21 @@ function DropMark({ blocked }: { blocked?: boolean }) {
   )
 }
 
-function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onDrill, onGrab, regRow, dragId, overId, overMode, nestBlocked, months, ROW_H, numCell, fmt }: {
+function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onSelect, onOpen, selectedId, onDrill, onGrab, regRow, dragId, overId, overMode, nestBlocked, months, ROW_H, numCell, fmt }: {
   row: Row
   tone: string
   open: boolean
   hidden: (id: string) => boolean
   onToggleOpen: (id: string) => void
+  /** The eye. Hiding is a real thing this table does — "hide any row and every
+   *  total recalculates" is the promise in its own subtitle — but it was on the
+   *  row itself, where it fought with selecting one. */
   onToggleHide: (id: string) => void
+  /** Clicking the row. It narrows the chart to this category, and nothing else. */
+  onSelect: (id: string) => void
+  /** The pencil. Every entry filed here this year. */
+  onOpen: (id: string) => void
+  selectedId: string | null
   /** A figure is a set of entries. `month` is null for the year column. */
   onDrill: (ids: string[], label: string, month: number | null) => void
   /** Picks a row up. It can only be put down among its own siblings. */
@@ -300,7 +434,8 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
   const lineBot = overMe && overMode === 'after'
   // A dragged-over row is tinted, and the tint has to reach the sticky name
   // cell too — it paints its own background over whatever the row has.
-  const bg = isOver ? 'var(--sb-accent-tint)' : isHidden ? 'var(--sb-field)' : 'var(--sb-card)'
+  const picked = selectedId === row.cat.id
+  const bg = isOver || picked ? 'var(--sb-accent-tint)' : isHidden ? 'var(--sb-field)' : 'var(--sb-card)'
   const total = months.reduce((s, v) => s + v, 0)
   const kids = row.children
   // A hidden part is taken out of the parent's figure, so it has to be out of
@@ -326,12 +461,13 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
     <>
       <tr
         ref={regRow(row.cat.id)}
-        onClick={() => onToggleHide(row.cat.id)}
-        title={isHidden ? 'Click to include in totals' : 'Click to hide from totals'}
+        className="sb-fin-row"
+        onClick={() => onSelect(row.cat.id)}
+        title={picked ? `${row.cat.name} — click again to put every category back on the chart` : `Show only ${row.cat.name} on the chart`}
         style={{
           borderTop: lineTop ? EDGE : undefined,
           borderBottom: lineBot ? EDGE : HAIR, cursor: 'pointer',
-          background: isOver ? 'var(--sb-accent-tint)' : isHidden ? 'var(--sb-field)' : 'transparent',
+          background: isOver ? 'var(--sb-accent-tint)' : picked ? 'var(--sb-accent-tint)' : isHidden ? 'var(--sb-field)' : 'transparent',
           opacity: lifted ? 0.4 : isHidden ? 0.45 : 1,
         }}
       >
@@ -359,6 +495,9 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
               <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-border)' }}>+{kids.length}</span>
             )}
             {overMe && (isOver || nestBlocked) && <DropMark blocked={nestBlocked} />}
+            <span style={{ flex: 1 }} />
+            <RowTools name={row.cat.name} hidden={isHidden} on={picked}
+              onHide={() => onToggleHide(row.cat.id)} onOpen={() => onOpen(row.cat.id)} />
           </div>
         </td>
         {months.map((v, mi) => (
@@ -374,17 +513,19 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
         const kidOverMe = overId === kid.cat.id && !kidLifted
         const kidTop    = kidOverMe && overMode === 'before'
         const kidBot    = kidOverMe && overMode === 'after'
+        const kidPicked = selectedId === kid.cat.id
         const kidBg = kidHidden ? 'var(--sb-field)' : 'var(--sb-accent-tint)'
         const kidTotal = kid.amounts.reduce((s, v) => s + v, 0)
         return (
           <tr key={kid.cat.id}
             ref={regRow(kid.cat.id)}
-            onClick={() => onToggleHide(kid.cat.id)}
-            title={hidden(kid.cat.id) ? 'Click to include in totals' : 'Click to hide from totals'}
+            className="sb-fin-row"
+            onClick={() => onSelect(kid.cat.id)}
+            title={kidPicked ? `${kid.cat.name} — click again to put every category back on the chart` : `Show only ${kid.cat.name} on the chart`}
             style={{
               borderTop: kidTop ? EDGE : undefined,
               borderBottom: kidBot ? EDGE : 'var(--sb-border-width) solid var(--sb-accent-tint)',
-              cursor: 'pointer', background: kidBg,
+              cursor: 'pointer', background: kidPicked ? 'var(--sb-accent)' : kidBg,
               opacity: kidLifted ? 0.4 : kidHidden ? 0.45 : 1,
             }}
           >
@@ -397,6 +538,9 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
                 <span style={{ fontSize: 'var(--sb-t-body-s)', color: kidHidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)', textDecoration: hidden(kid.cat.id) ? 'line-through' : 'none' }}>
                   {kid.cat.name}
                 </span>
+                <span style={{ flex: 1 }} />
+                <RowTools small name={kid.cat.name} hidden={hidden(kid.cat.id)} on={kidPicked}
+                  onHide={() => onToggleHide(kid.cat.id)} onOpen={() => onOpen(kid.cat.id)} />
               </div>
             </td>
             {kid.amounts.map((v, mi) => (
@@ -726,6 +870,14 @@ export function ReflectionScreen(_props?: any) {
     }
   }, [drag, categories, sectionOf, applyDrop])
 
+  /** The one category the chart is narrowed to, if any. Clicking a row picks
+   *  it; clicking it again, or anywhere that is not a row, puts them all back. */
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  function pickRow(id: string) {
+    if (justDragged.current) return
+    setSelectedId(cur => (cur === id ? null : id))
+  }
+
   // Hidden rows (by category id) — toggling removes row from totals
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
   function toggleHide(id: string) {
@@ -749,9 +901,21 @@ export function ReflectionScreen(_props?: any) {
     { ids: string[] | null; label: string; month: number | null; kind: 'income' | 'expense' | 'both' } | null
   >(null)
   const [editing, setEditing] = useState<Transaction | null>(null)
+  /** The one entry the panel is showing instead of the list. */
+  const [openTx, setOpenTx] = useState<Transaction | null>(null)
   const [adding, setAdding] = useState(false)
 
+  /** The pencil on a row: everything filed under it this year, parts included. */
+  function openRow(id: string) {
+    const cat = categories.find(c => c.id === id)
+    if (!cat) return
+    const kids = categories.filter(c => c.parentId === id).map(c => c.id)
+    openDrill([id, ...kids], `${cat.name} · ${year}`, null,
+      cat.txType === 'income' ? 'income' : 'expense')
+  }
+
   function openDrill(ids: string[] | null, label: string, month: number | null, kind: 'income' | 'expense' | 'both') {
+    setOpenTx(null)
     setDrill({ ids, label, month, kind })
   }
 
@@ -826,10 +990,18 @@ export function ReflectionScreen(_props?: any) {
         }
       }
     }
+    // One row picked narrows the chart to it — and to its parts, because a
+    // category *is* its parts and dropping them would draw a different figure
+    // from the one on the row you clicked.
+    if (selectedId) {
+      const kin = new Set([selectedId, ...categories.filter(c => c.parentId === selectedId).map(c => c.id)])
+      const only = out.filter(x => kin.has(x.id))
+      if (only.length) return only
+    }
     return out
   // rowMonths reads hiddenIds, which is exactly what should redraw this.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incomeRows, expenseRows, depth, hiddenIds])
+  }, [incomeRows, expenseRows, depth, hiddenIds, selectedId, categories])
 
   // Visible income / expense sums per month (respecting hidden rows)
   const visIncome  = MONTHS_SHORT.map((_, mi) => incomeRows.filter(r => !hiddenIds.has(r.cat.id)).reduce((s, r) => s + rowMonths(r)[mi], 0))
@@ -1031,8 +1203,22 @@ export function ReflectionScreen(_props?: any) {
         </div>
       </div>
 
-      {view === 'lines' ? (
-        <div style={{ flex: 1, overflow: 'auto', padding: '18px 26px 26px' }}>
+      {/* The page is now two columns: what you are reading, and what you have
+          opened out of it. The entries used to arrive as a modal over the middle
+          of the table — which hides the row you clicked, and every figure around
+          it that gives it meaning. Docked, like the task panel beside its board. */}
+      <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
+      <div
+        style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        onClick={e => {
+          // Anywhere that is not a row puts every category back on the chart.
+          if (!(e.target as HTMLElement).closest('.sb-fin-row, .sb-keep-selection')) setSelectedId(null)
+        }}>
+      {/* The chart sits *above* the table rather than instead of it: a shape and
+          the figures that make it are one question, and picking a row here is
+          what narrows the chart to it. */}
+      {view === 'lines' && (
+        <div style={{ flexShrink: 0, padding: '14px 26px 4px' }}>
           <Card style={{ padding: '18px 20px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>
@@ -1052,11 +1238,12 @@ export function ReflectionScreen(_props?: any) {
               series={series}
               hidden={id => hiddenIds.has(id)}
               onToggle={toggleHide}
+              through={year === today.getFullYear() ? currentMonth : 11}
               fmt={v => acct(v, { currency: base, zero: '–' })} />
           </Card>
         </div>
-      ) : (
-      <>
+      )}
+
       {/* Table scroll area */}
       <div style={{ flex: 1, overflow: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', minWidth: NAME_W + COL_W * 12 + 120 }}>
@@ -1102,6 +1289,7 @@ export function ReflectionScreen(_props?: any) {
                 onGrab={grab('income')} regRow={regRow}
                 dragId={drag?.id ?? null} overId={drag?.over ?? null}
                 overMode={drag?.mode ?? 'before'} nestBlocked={!!drag?.blocked}
+                onSelect={pickRow} onOpen={openRow} selectedId={selectedId}
                 open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
                 onToggleOpen={toggleOpen} onToggleHide={toggleHide}
                 months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmt}
@@ -1125,6 +1313,7 @@ export function ReflectionScreen(_props?: any) {
                 onGrab={grab('expense')} regRow={regRow}
                 dragId={drag?.id ?? null} overId={drag?.over ?? null}
                 overMode={drag?.mode ?? 'before'} nestBlocked={!!drag?.blocked}
+                onSelect={pickRow} onOpen={openRow} selectedId={selectedId}
                 open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
                 onToggleOpen={toggleOpen} onToggleHide={toggleHide}
                 months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmtOut}
@@ -1148,27 +1337,27 @@ export function ReflectionScreen(_props?: any) {
           </tbody>
         </table>
       </div>
-      </>
-      )}
+      </div>
 
-      {/* What one figure was summed from. Same card the other detail panels
-          use — eyebrow pill, round close, a black pill for the one action. */}
+      {/* What one figure was summed from, beside it rather than over it. */}
       {drill && (
-        <div
-          onClick={() => setDrill(null)}
+        <aside
+          className="sb-keep-selection"
           style={{
-            position: 'fixed', inset: 0, zIndex: 900,
-            background: 'var(--sb-scrim)', backdropFilter: 'blur(3px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+            width: 'clamp(320px, 31vw, 420px)', flexShrink: 0, display: 'flex', flexDirection: 'column',
+            background: 'var(--sb-header)', borderLeft: 'var(--sb-border-width) solid var(--sb-border)',
+            padding: '18px 20px 20px', overflowY: 'auto',
           }}>
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              width: '100%', maxWidth: 560, maxHeight: '84vh', display: 'flex', flexDirection: 'column',
-              background: 'var(--sb-header)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-              boxShadow: 'var(--sb-shadow-frame)', padding: '18px 20px 20px',
-            }}>
 
+            {openTx ? <EntryFace tx={openTx} categories={categories} accounts={accounts}
+              onBack={() => setOpenTx(null)}
+              onEdit={() => setEditing(openTx)}
+              onDelete={() => {
+                if (!window.confirm(`Delete ${openTx.payee?.trim() || 'this entry'} of ${acct(Math.abs(openTx.amount), { currency: openTx.currency })}?`)) return
+                void removeTransaction(openTx.id)
+                setOpenTx(null)
+              }}
+              onClose={() => { setOpenTx(null); setDrill(null) }} /> : (<>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
@@ -1232,8 +1421,8 @@ export function ReflectionScreen(_props?: any) {
                     amount={tx.amount}
                     currency={tx.currency}
                     unpaid={isUnpaid(tx)}
-                    hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}
-                    onClick={() => setEditing(tx)}
+                    hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : 'Open this entry'}
+                    onClick={() => setOpenTx(tx)}
                     trailing={
                       <button
                         onClick={e => {
@@ -1255,8 +1444,10 @@ export function ReflectionScreen(_props?: any) {
 
             <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '14px 0' }} />
 
-            {/* One more of the same thing, already knowing where it goes */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* One more of the same thing, already knowing where it goes.
+                The assistant's floating button is fixed to the viewport and
+                lands on this corner, so the row keeps it clear. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingRight: 56 }}>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                 {addTarget
                   ? `New entries land in ${addTarget.name}${drill.month === null ? '' : `, ${MONTHS_SHORT[drill.month]}`}`
@@ -1267,9 +1458,10 @@ export function ReflectionScreen(_props?: any) {
                 <Plus size={ICON.sm} /> Add an entry
               </Button>
             </div>
-          </div>
-        </div>
+            </>)}
+        </aside>
       )}
+      </div>
 
       {adding && drill && (
         <TransactionModal

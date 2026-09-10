@@ -300,6 +300,26 @@ function isoToday(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/**
+ *  Open a native date or month picker from a control that is hiding one.
+ *
+ *  These two pills are a label with an invisible `<input type="month">` laid
+ *  over them, so the pill can be styled like everything else here. Clicking one
+ *  therefore lands inside the input's own segments — which are invisible — and
+ *  the calendar itself only ever opens from the indicator, which is invisible
+ *  too. So the pill looked like a button and did nothing at all. `showPicker`
+ *  is the only way to ask for it; it throws where the browser will not oblige,
+ *  and then focus is at least something.
+ */
+function openPicker(e: React.MouseEvent<HTMLElement>) {
+  const input = (e.currentTarget as HTMLElement).querySelector('input')
+  if (!input) return
+  e.preventDefault()
+  try { (input as HTMLInputElement & { showPicker?: () => void }).showPicker?.() }
+  catch { /* not allowed here — the focus below is the fallback */ }
+  input.focus()
+}
+
 const LABEL: React.CSSProperties = { width: 74, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }
 const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 }
 
@@ -955,14 +975,18 @@ export function BudgetRuleModal({
           <div style={ROW}>
             <span style={LABEL}>Runs</span>
             <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 7 }}>
-              <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'center' }} title="First month this budget applies to">
+              <label onClick={openPicker}
+                style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'center' }}
+                title="First month this budget applies to">
                 {rule.starts ? monthLabel(rule.starts) : 'every month'}
                 <input type="month" value={rule.starts ?? ''}
                   onChange={e => onChange({ ...rule, starts: e.target.value || undefined })}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
               </label>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>to</span>
-              <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'center' }} title="Last month it applies to">
+              <label onClick={openPicker}
+                style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'center' }}
+                title="Last month it applies to">
                 <span style={{ color: rule.ends ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>{rule.ends ? monthLabel(rule.ends) : 'no end'}</span>
                 <input type="month" value={rule.ends ?? ''} min={rule.starts}
                   onChange={e => onChange({ ...rule, ends: e.target.value || undefined })}

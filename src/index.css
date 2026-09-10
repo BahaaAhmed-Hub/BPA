@@ -570,3 +570,11 @@ body.sb-dragging { user-select: none; }
 table { width: 100%; }
 pre, code { overflow-x: auto; }
 img { max-width: 100%; }
+
+/* ── Financials: a row's controls appear when you are on it ──────────────────
+   Eighty rows with an eye and a pencil on each is a wall of icons; the same
+   eighty with none is a table you cannot act on. They fade in on hover, and
+   stay put for a row that is hidden or selected — otherwise the way back would
+   be invisible, and on a touch screen there is no hover to find it with. */
+.sb-fin-row:hover .sb-row-tools,
+.sb-fin-row:focus-within .sb-row-tools { opacity: 1 !important; }
