@@ -351,6 +351,28 @@ does the moving. Resizing needs no live transform either: it is worked out from
   read as the move being refused. `CategoryRow.parent_id` is `string | null`, and
   the load maps `null` back to `undefined`, which is what every consumer tests
   for. The Budget screen's Promote button had the same hole.
+- **The same year, as lines.** A table answers "what did this cost in March?"
+  exactly, and cannot answer "which of these is climbing?" — twelve columns of
+  figures hide a shape. `LinesChart` draws one line per row across the twelve
+  months, and the header carries `Table / Lines` beside the due/paid toggle.
+  - **Dotted, not solid.** A month is a reading, not a continuum: nothing
+    happened *between* March and April, and a solid line claims it did. Dashed
+    is spending, finely dotted is earning, so the two read apart on one axis.
+  - **`Categories / Sub-categories`** decides what a line is. At the deeper
+    level a category with no parts **keeps its own line**, or half the year's
+    money vanishes when you ask to see the parts.
+  - **The legend is the control.** A line is taken off by its own name, which is
+    where you are already looking for it; the line itself is clickable too, via
+    a transparent 14px stroke under the 2px one — a dotted hairline is nearly
+    impossible to hit. It shares `hiddenIds` with the table, so hiding a row in
+    one hides it in the other and every total still recalculates.
+  - **`ticksTo` runs until it covers the largest reading.** Stopping at the last
+    round number below it drew a 62,000 salary above the top gridline, outside
+    the plot.
+  - **`spread()` separates repeated colours.** A category's colour is its
+    identity everywhere else so it is kept, but two categories may share one —
+    free on a table, fatal on a chart. Each later one is lightened or darkened a
+    step, alternating, so a third and fourth do not both fade into the ground.
 - **Exchange rates are a setting.** Settings → Finance owns them; screens that find
   unconvertible money say so and link there.
 

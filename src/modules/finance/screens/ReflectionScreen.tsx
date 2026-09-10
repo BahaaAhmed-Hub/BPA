@@ -5,7 +5,7 @@ import { useFinanceStore } from '../financeStore'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
-import { acct, outflow } from '../format'
+import { acct, outflow, group } from '../format'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { BudgetMark } from '../components/BudgetMark'
@@ -40,6 +40,171 @@ function fmt(v: number): string { return acct(v, { zero: '–' }) }
 function fmtOut(v: number): string { return v === 0 ? '–' : outflow(v) }
 
 function netColor(v: number) { return v > 0 ? OLIVE : v < 0 ? RUST : 'var(--sb-ink-4)' }
+
+// ─── The same year, as lines ─────────────────────────────────────────────────
+//
+//  A table answers "what did this cost in March?" and answers it exactly. It
+//  cannot answer "which of these is climbing?" — twelve columns of figures hide
+//  a shape, and a shape is the whole reason to look at a year at once.
+//
+//  One dotted line per category, or per part of one. Dotted rather than solid
+//  because a month is a reading, not a continuum: nothing happened *between*
+//  March and April, and a solid line quietly claims it did. The dots are the
+//  readings; the line only joins them so the eye can follow one series through
+//  a dozen others.
+
+/** How wide the chart may draw, measured rather than assumed. */
+function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [w, setW] = useState(720)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setW(Math.max(320, e.contentRect.width)))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return [ref, w]
+}
+
+interface Series { id: string; name: string; color: string; amounts: number[]; kind: 'income' | 'expense'; under?: string }
+
+/** A tick scale that lands on round numbers, because 47,318 is not an axis.
+ *  It runs until it has *covered* the largest reading — stopping at the last
+ *  round number below it drew a 62,000 salary above the top gridline and off
+ *  the plot. */
+function ticksTo(max: number): number[] {
+  if (max <= 0) return [0]
+  const rough = max / 4
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)))
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(v => v >= rough) ?? mag * 10
+  const out = [0]
+  while (out[out.length - 1] < max) out.push(out[out.length - 1] + step)
+  return out
+}
+
+/**
+ *  Twelve lines in one colour are one line.
+ *
+ *  A category's colour is its identity on every other screen, so it is kept —
+ *  but two categories may share one, and on a table that costs nothing while on
+ *  a chart it costs everything. Where a colour repeats, each later one is
+ *  lightened a step: near enough to still read as that category, far enough to
+ *  follow through the others.
+ */
+function spread(list: { color: string }[]): string[] {
+  const seen = new Map<string, number>()
+  return list.map(s => {
+    const n = seen.get(s.color) ?? 0
+    seen.set(s.color, n + 1)
+    if (n === 0) return s.color
+    // Alternating up and down, so a third and fourth sharing a colour do not
+    // both fade towards the background.
+    const step = Math.ceil(n / 2) * 16 * (n % 2 === 1 ? 1 : -1)
+    return `color-mix(in srgb, ${s.color} ${Math.max(35, 100 - Math.abs(step))}%, ${step > 0 ? 'white' : 'black'})`
+  })
+}
+
+function LinesChart({ series, hidden, onToggle, fmt }: {
+  series: Series[]
+  hidden: (id: string) => boolean
+  onToggle: (id: string) => void
+  fmt: (v: number) => string
+}) {
+  const [box, W] = useWidth()
+  const [over, setOver] = useState<{ id: string; m: number } | null>(null)
+  const colours = useMemo(() => spread(series), [series])
+  const paint = (i: number) => colours[i] ?? series[i].color
+  const shown = series.map((s, i) => ({ ...s, color: paint(i) })).filter(s => !hidden(s.id))
+
+  const H = 300, PAD_L = 66, PAD_R = 14, PAD_T = 14, PAD_B = 26
+  const iw = Math.max(120, W - PAD_L - PAD_R)
+  const ih = H - PAD_T - PAD_B
+  const max = Math.max(1, ...shown.flatMap(s => s.amounts))
+  const ticks = ticksTo(max)
+  const top = ticks[ticks.length - 1] || 1
+  const x = (m: number) => PAD_L + (iw * m) / 11
+  const y = (v: number) => PAD_T + ih - (ih * v) / top
+
+  return (
+    <div ref={box} style={{ width: '100%' }}>
+      <svg width={W} height={H} role="img" aria-label="Every category by month" style={{ display: 'block', overflow: 'visible' }}>
+        {/* the grid, and what each line of it is worth */}
+        {ticks.map(t => (
+          <g key={t}>
+            <line x1={PAD_L} x2={PAD_L + iw} y1={y(t)} y2={y(t)}
+              stroke="var(--sb-hairline)" strokeWidth={1} />
+            <text x={PAD_L - 8} y={y(t) + 3.5} textAnchor="end"
+              style={{ fontSize: 10, fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)', fontVariantNumeric: 'tabular-nums' }}>
+              {t === 0 ? '0' : group(Math.round(t))}
+            </text>
+          </g>
+        ))}
+        {MONTHS_SHORT.map((m, i) => (
+          <text key={m} x={x(i)} y={H - 8} textAnchor="middle"
+            style={{ fontSize: 10, fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)' }}>{m}</text>
+        ))}
+
+        {shown.map(s => {
+          const pts = s.amounts.map((v, i) => `${x(i)},${y(v)}`).join(' ')
+          const lit = over?.id === s.id
+          return (
+            <g key={s.id} onClick={() => onToggle(s.id)} style={{ cursor: 'pointer' }}>
+              {/* A 2px dotted line is nearly impossible to hit. This one is
+                  invisible, 14px wide, and is what the pointer actually lands on. */}
+              <polyline points={pts} fill="none" stroke="transparent" strokeWidth={14} />
+              <polyline points={pts} fill="none" stroke={s.color}
+                strokeWidth={lit ? 2.6 : 1.8} strokeLinecap="round"
+                strokeDasharray={s.kind === 'income' ? '1 5' : '5 4'}
+                opacity={over && !lit ? 0.28 : 1} />
+              {s.amounts.map((v, i) => (
+                <circle key={i} cx={x(i)} cy={y(v)} r={lit ? 3.6 : 2.6} fill={s.color}
+                  opacity={over && !lit ? 0.28 : 1}
+                  onMouseEnter={() => setOver({ id: s.id, m: i })}
+                  onMouseLeave={() => setOver(null)}>
+                  <title>{`${s.name} · ${MONTHS_SHORT[i]} · ${fmt(v)}`}</title>
+                </circle>
+              ))}
+            </g>
+          )
+        })}
+      </svg>
+
+      {/* The legend is the control: a category is taken off the chart by its own
+          name, which is where you are already looking for it. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+        {series.map((raw, i) => {
+          const s = { ...raw, color: paint(i) }
+          const off = hidden(s.id)
+          const total = s.amounts.reduce((n, v) => n + v, 0)
+          return (
+            <button key={s.id} onClick={() => onToggle(s.id)}
+              title={off ? `Put ${s.name} back on the chart` : `Take ${s.name} off the chart · ${fmt(total)} this year`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 9px',
+                borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', maxWidth: 220,
+                background: off ? 'transparent' : 'var(--sb-card)',
+                border: `var(--sb-border-width) solid ${off ? 'var(--sb-border)' : s.color}`,
+                color: off ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)',
+                fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 500,
+                opacity: off ? 0.55 : 1,
+              }}>
+              <span aria-hidden style={{
+                width: 9, height: 9, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+                background: off ? 'transparent' : s.color,
+                border: `1.5px solid ${s.color}`,
+              }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                textDecoration: off ? 'line-through' : 'none' }}>
+                {s.under ? `${s.under} · ${s.name}` : s.name}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -276,6 +441,24 @@ export function ReflectionScreen(_props?: any) {
         ?? localStorage.getItem('finance-count-on')) === 'paid' ? 'paid' : 'due'
     } catch { return 'due' }
   })
+  /** A table and a chart answer different questions about the same year, so
+   *  the year is not reloaded to switch between them — only redrawn. */
+  const [view, setView] = useState<'table' | 'lines'>(() => {
+    try { return localStorage.getItem('finance-financials-view') === 'lines' ? 'lines' : 'table' } catch { return 'table' }
+  })
+  function pickView(v: 'table' | 'lines') {
+    setView(v)
+    try { localStorage.setItem('finance-financials-view', v) } catch { /* private mode */ }
+  }
+  /** Whether a line is a category or one of its parts. */
+  const [depth, setDepth] = useState<'category' | 'part'>(() => {
+    try { return localStorage.getItem('finance-financials-depth') === 'part' ? 'part' : 'category' } catch { return 'category' }
+  })
+  function pickDepth(d: 'category' | 'part') {
+    setDepth(d)
+    try { localStorage.setItem('finance-financials-depth', d) } catch { /* private mode */ }
+  }
+
   function pickBasis(b: 'due' | 'paid') {
     setBasis(b)
     try { localStorage.setItem('finance-financials-basis', b) } catch { /* private mode */ }
@@ -627,6 +810,27 @@ export function ReflectionScreen(_props?: any) {
       v - row.children.reduce((s, c) => s + (hiddenIds.has(c.cat.id) ? c.amounts[mi] : 0), 0))
   }
 
+  /** What the chart draws. A category with no parts of its own is still a line
+   *  at the deeper level — otherwise switching to sub-categories makes half the
+   *  year's spending disappear, which is not what "show me the parts" means. */
+  const series = useMemo<Series[]>(() => {
+    const out: Series[] = []
+    for (const [rows, kind] of [[incomeRows, 'income'], [expenseRows, 'expense']] as const) {
+      for (const row of rows) {
+        if (depth === 'category' || row.children.length === 0) {
+          out.push({ id: row.cat.id, name: row.cat.name, color: row.cat.color, kind, amounts: rowMonths(row) })
+        } else {
+          for (const kid of row.children) {
+            out.push({ id: kid.cat.id, name: kid.cat.name, color: kid.cat.color, kind, amounts: kid.amounts, under: row.cat.name })
+          }
+        }
+      }
+    }
+    return out
+  // rowMonths reads hiddenIds, which is exactly what should redraw this.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomeRows, expenseRows, depth, hiddenIds])
+
   // Visible income / expense sums per month (respecting hidden rows)
   const visIncome  = MONTHS_SHORT.map((_, mi) => incomeRows.filter(r => !hiddenIds.has(r.cat.id)).reduce((s, r) => s + rowMonths(r)[mi], 0))
   const visExpense = MONTHS_SHORT.map((_, mi) => expenseRows.filter(r => !hiddenIds.has(r.cat.id)).reduce((s, r) => s + rowMonths(r)[mi], 0))
@@ -697,7 +901,29 @@ export function ReflectionScreen(_props?: any) {
         </div>
 
         {/* Stats bar */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 20, paddingBottom: 4, alignItems: 'flex-end' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 20, paddingBottom: 4, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <Segmented
+            size="sm"
+            aria-label="How to read the year"
+            value={view}
+            onChange={pickView}
+            options={[
+              { value: 'table' as const, label: 'Table', title: 'Every figure, by month — what a thing cost, exactly' },
+              { value: 'lines' as const, label: 'Lines', title: 'One dotted line each, across the year — which of them is climbing' },
+            ]}
+          />
+          {view === 'lines' && (
+            <Segmented
+              size="sm"
+              aria-label="What a line is"
+              value={depth}
+              onChange={pickDepth}
+              options={[
+                { value: 'category' as const, label: 'Categories',     title: 'One line per category, its parts included in it' },
+                { value: 'part'     as const, label: 'Sub-categories', title: 'One line per part; a category with no parts keeps its own' },
+              ]}
+            />
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
             <Segmented
               size="sm"
@@ -798,6 +1024,32 @@ export function ReflectionScreen(_props?: any) {
         </div>
       </div>
 
+      {view === 'lines' ? (
+        <div style={{ flex: 1, overflow: 'auto', padding: '18px 26px 26px' }}>
+          <Card style={{ padding: '18px 20px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>
+                {depth === 'part' ? 'EVERY SUB-CATEGORY' : 'EVERY CATEGORY'}, {year}
+              </span>
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+                {series.length - hiddenIds.size > 0
+                  ? `${series.filter(x => !hiddenIds.has(x.id)).length} of ${series.length} on the chart · tap a line or its name to take it off`
+                  : 'nothing on the chart — tap a name below to put one back'}
+              </span>
+              <span style={{ flex: 1 }} />
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+                dashed is spending, dotted is earning · {basis === 'paid' ? 'filed by the day the money moved' : 'filed by the day it is due'}
+              </span>
+            </div>
+            <LinesChart
+              series={series}
+              hidden={id => hiddenIds.has(id)}
+              onToggle={toggleHide}
+              fmt={v => acct(v, { currency: base, zero: '–' })} />
+          </Card>
+        </div>
+      ) : (
+      <>
       {/* Table scroll area */}
       <div style={{ flex: 1, overflow: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', minWidth: NAME_W + COL_W * 12 + 120 }}>
@@ -889,6 +1141,8 @@ export function ReflectionScreen(_props?: any) {
           </tbody>
         </table>
       </div>
+      </>
+      )}
 
       {/* What one figure was summed from. Same card the other detail panels
           use — eyebrow pill, round close, a black pill for the one action. */}
