@@ -628,6 +628,16 @@ written before this reads unchanged):
   and such an envelope is measured against the **whole year**, its spending
   included. `SpanChip` writes `THE YEAR` beside the figure, because 132,000
   next to 6,000 otherwise reads as a category out of control.
+- **The panel reads exactly what the envelope reads.** `BudgetRuleModal` filed
+  by the entry's own date and counted the unpaid, while the envelope behind it
+  filed by the day the money moved and counted only what had — `settled()` +
+  `whenPaid()`. So a fee due in August and paid on 10 September was August's in
+  one and September's in the other, and opening an envelope whose ring said
+  179,000 showed a panel that disagreed. Both now use `settled` and `whenPaid`,
+  and the panel takes `subRules` so each part is read over the span *it* is
+  measured on rather than its parent's. Verified side by side: `20,000 of EGP
+  25,000 this month` against a ring drawing 0.80, `179,000 of EGP 314,000
+  across 2026` against one drawing 0.57.
 - **A parent takes its parts' span with it.** With no figure of its own and
   dated parts, its budget is a year, so its spending has to be one too — the
   modal gets `partsDated` for the same reason.

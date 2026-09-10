@@ -1760,6 +1760,7 @@ export function BudgetScreen(_props?: any) {
             && categories.filter(c => c.parentId === selectedCat.id).some(c => isDated(rules[c.id]))}
           rule={rule ?? defaultRule()}
           subs={subs(selectedCat.id)}
+          subRules={rules}
           transactions={transactions}
           monthKey={monthKey}
           currency={currency}

@@ -6,6 +6,7 @@ import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { MoneyInput } from '../components/MoneyInput'
 import { toBase } from '../fx'
+import { settled, whenPaid } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
 
 // ─── What an envelope is set to ──────────────────────────────────────────────
@@ -504,6 +505,9 @@ interface Props {
   /** True when this category has no figure of its own and its parts carry
    *  dates — the figure shown is then a year's, like theirs. */
   partsDated?: boolean
+  /** Each part's own rule, so its figure is read over the span *it* is
+   *  measured on rather than the one its parent happens to be. */
+  subRules?: Record<string, BudgetRule | undefined>
   currency: string
   /** Only so a budget with a day can say where its money comes from. */
   accounts?: { id: string; name: string }[]
@@ -522,7 +526,7 @@ interface Props {
 }
 
 export function BudgetRuleModal({
-  category, parent, partsBudget = 0, partsDated = false, rule, subs, transactions, monthKey, currency, accounts = [],
+  category, parent, partsBudget = 0, partsDated = false, rule, subs, subRules = {}, transactions, monthKey, currency, accounts = [],
   onChange, onDelete, onPromote, onRename, onEditCategory, onAddSub, onEditSub, onDrill, onClose,
 }: Props) {
   const box = useRef<HTMLDivElement>(null)
@@ -552,8 +556,16 @@ export function BudgetRuleModal({
   const own0 = activeIn(rule, monthKey) ? budgetTotal(rule, monthKey.slice(0, 4)) : 0
   const span = isDated(rule) || (own0 === 0 && partsDated) ? 'year' : 'month'
   const scope = span === 'year' ? monthKey.slice(0, 4) : monthKey
-  const mine = transactions.filter(tx =>
-    tx.type === wanted && tx.categoryId && ids.has(tx.categoryId) && tx.date.startsWith(scope))
+  // The same reading the Budget screen makes, to the letter.
+  //
+  // This filed by the entry's own date and counted the unpaid, while the
+  // envelope behind it filed by the day the money moved and counted only what
+  // had. So a fee due in August and paid on 10 September was August's here and
+  // September's there: open the envelope whose ring says 135,000 and the panel
+  // said nothing had been spent. Two answers to one question, and the panel had
+  // the wrong one — an envelope holds what has come out of it.
+  const mine = settled(transactions).filter(tx =>
+    tx.type === wanted && tx.categoryId && ids.has(tx.categoryId) && whenPaid(tx).startsWith(scope))
   // Converted into what the budget is written in, so 117 USD counts against an
   // EGP envelope at what it is actually worth. Anything with no rate behind it
   // is still left out and named — a guessed rate is worse than a stated gap.
@@ -983,8 +995,9 @@ export function BudgetRuleModal({
           <button onClick={onAddSub} style={{ ...PILL, height: 28, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>+ Add</button>
         </div>
         {subs.map(sub => {
-          const subSpend = transactions
-            .filter(tx => tx.categoryId === sub.id && tx.date.startsWith(monthKey))
+          const subSpend = settled(transactions)
+            .filter(tx => tx.categoryId === sub.id
+              && whenPaid(tx).startsWith(isDated(subRules[sub.id]) ? monthKey.slice(0, 4) : monthKey))
             .reduce((s, tx) => s + (toBase(Math.abs(tx.amount), tx.currency, cur) ?? 0), 0)
           return (
             <button key={sub.id} onClick={() => onEditSub(sub)}
