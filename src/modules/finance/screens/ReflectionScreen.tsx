@@ -1373,7 +1373,10 @@ export function ReflectionScreen(_props?: any) {
             background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)',
             borderRadius: 'var(--sb-r-frame, var(--sb-r-card))',
             boxShadow: 'var(--sb-shadow-control, 0 1px 3px rgba(25,23,18,.10))',
-            margin: '10px 12px 12px 0', padding: '18px 20px 20px', overflowY: 'auto',
+            // The gap on the left is the one that matters: without it the
+            // panel's edge sits against the table's own scrollbar and the two
+            // read as one surface with a seam down it.
+            margin: '10px 12px 12px 18px', padding: '18px 20px 20px', overflowY: 'auto',
           }}>
 
             {openTx ? <EntryFace tx={openTx} categories={categories} accounts={accounts}
