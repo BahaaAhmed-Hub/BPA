@@ -431,6 +431,28 @@ company its Google account. The next load read those back empty and
 - `20260011_company_hidden.sql` adds `hidden` (and re-asserts the three from
   `20240002`).
 
+## Financials — a click selects, the pencil opens
+A row click used to throw a modal over the middle of the table, hiding the row
+you clicked and every figure around it that gives it meaning.
+- **Click selects.** The row lights and the chart above narrows to that category
+  and its parts. Clicking it again, or any empty space that is not a row, puts
+  them all back (`.sb-fin-row` / `.sb-keep-selection` decide what counts).
+- **The pencil opens it.** Eye and pencil (`RowTools`) are revealed on hover and
+  stay put for a row that is hidden or selected, or the way back is invisible on
+  a touch screen. The eye takes the row out of the totals.
+- **The entries are docked right**, like the task panel beside its board, and an
+  entry opens *in the same column* with a back arrow (`EntryFace`). The footer
+  carries `paddingRight: 56` — the assistant's floating button is fixed to the
+  viewport and sat on Add an entry.
+- **The lines chart sits above the table, not instead of it.** A shape and the
+  figures that make it are one question, and with the table gone there was
+  nothing to pick. It is clipped to the last month there is an answer for: a line
+  flat along zero through Oct–Dec says the spending stopped, when the year has
+  simply not got there yet.
+- **A `<select>` or month input under a styled label needs `showPicker()`.** The
+  native calendar only opens from the (invisible) indicator otherwise, so both
+  Runs pills in `BudgetRuleModal` read as dead controls.
+
 ## Finance — the envelope style is four real views
 `finance-envelope-style` was written by Settings and read by nothing: every
 choice drew the dial. `BudgetScreen` owns all four now (`loadEnvelopeStyle()`,
@@ -549,6 +571,39 @@ picture, as a set of rules you can see and switch off.
   ten-year plan got three and read as a school that stops charging in 2029.
 - `finance-forecast` is a prefSync key: which rules are off, which figures are
   yours, and your own rules (a raise, a car sold, a loan starting).
+
+## Finance — Goals plans on a forecast, not a flat month
+`forecast.ts` turns the ledger into a **month-by-month** picture; `GoalsScreen`
+plans on it. `capacityFrom` answers what a *normal* month leaves over, which is
+right for its own question and wrong for a year with school fees in it — four
+instalments spread flat makes eight months look richer than they are and four
+impossible, and every goal date comes out wrong in both directions.
+- **`planGoals` takes the same options `scheduleGoals` does.** It used to take a
+  bare `Policy`, so a forecast reached the run drawn under the goal and not the
+  date on its row.
+- **`GoalTimeline.tsx` — every goal on one timeline**, full width above the two
+  columns. The ranked list says when each lands; it cannot say *why* the laptop
+  waits, because the reason is always another month. **Stream** stacks what went
+  into each goal above the line and hangs what left on a date of its own below
+  it. **Bars** is one row per goal, one cell per month, and *the cell carries its
+  own figure* — 48px, the width a five-figure number needs at 9.5px, scrolling
+  rather than squeezing, because a bar you must hover to read cannot be compared
+  to the one beside it. Every column of every lane opens the same month in full.
+- **The axis is the line alone.** A label band between the line and the bars
+  below it makes them look like they belong to something else.
+- **`ForecastRules.tsx` — two disclosures, folded.** *What the forecast assumes*
+  is the eight rules: each says when it fires, what it read and what it did with
+  it, carries a switch, and takes a figure you type over — marked as yours, and
+  nothing overwrites it. A rule with nothing to read goes quiet, names what it is
+  missing, **and still takes a figure**, because typing one in is how you make it
+  speak. *Your own rules* is a raise, a car sold, a loan starting: asked for
+  rather than modelled, and kept apart from what was measured.
+- Every rule moves the dates, measured on four dated instalments: dated budgets
+  off moves the laptop Mar 2029 → Jul 2028; counting the gold makes the emergency
+  fund fundable today; a 20,000 expense of your own pushes it to Jan 2031. Each
+  puts itself back when switched off, and a corrected figure survives a reload.
+- **The tab is one scrolling column.** With a timeline above them, squeezing the
+  two columns into the viewport cut the open goal's detail off at the fold.
 
 ## Finance — what the assistant may do with the money
 `lib/financeTools.ts`, merged into `ASSISTANT_TOOLS` and dispatched ahead of the
