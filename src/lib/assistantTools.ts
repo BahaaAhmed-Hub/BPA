@@ -5,6 +5,7 @@ import { type ConnectedAccount } from './multiAccount'
 import { getGoogleToken } from './tokenManager'
 import { refreshPrimaryToken } from './googleCalendar'
 import { loadLogs, commitHabitLogs } from '@/store/habitsStore'
+import { FINANCE_TOOLS, FINANCE_TOOL_NAMES, executeFinanceTool } from './financeTools'
 
 // ─── Context provided by the React component ─────────────────────────────────
 
@@ -370,6 +371,12 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
     description: "Get a snapshot of today's productivity: tasks due/done today, habits completed, and upcoming events.",
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
+
+  // ── Money ────────────────────────────────────────────────────────────────────
+  // Read the ledger, work things out from it, and write to it. They live in
+  // financeTools.ts, because money has its own rules — the lock, the currency
+  // conversion, what counts as paid — and none of them belong in here.
+  ...FINANCE_TOOLS,
 ]
 
 // ─── Tool executor ────────────────────────────────────────────────────────────
@@ -380,6 +387,10 @@ export async function executeTool(
   ctx: ToolContext,
 ): Promise<unknown> {
   const acctEmail = input.account_email as string | undefined
+
+  // Money answers for itself: the finance lock, the base currency and the
+  // ledger's own arithmetic are all in there.
+  if (FINANCE_TOOL_NAMES.has(name)) return executeFinanceTool(name, input)
 
   switch (name) {
 

@@ -448,6 +448,40 @@ an overspend cannot run past its own pill. The title says which limit it used.
   goes to the front: its interest outruns anything below it. Plan tab, screen
   and icon are gone.
 
+## Finance — what the assistant may do with the money
+`lib/financeTools.ts`, merged into `ASSISTANT_TOOLS` and dispatched ahead of the
+switch in `assistantTools.ts` (`FINANCE_TOOL_NAMES`). The assistant could read
+your mail, calendar, tasks and habits and knew nothing about the one module
+where being wrong is expensive. Four rules hold the file together:
+- **The lock is the lock.** The panel opens over every screen, so reading the
+  ledger aloud while Finance is locked would walk around the door. Every tool
+  refuses while `isLocked()` and says so; the system prompt tells it not to work
+  around that.
+- **Names, not ids.** A model handed a uuid guesses, and a guess here files rent
+  under school fees. `pick()` resolves by id, then exact name, then contains —
+  and an ambiguous term is an **error naming the candidates**, never the first
+  match.
+- **The arithmetic is the app's own.** `liveBalances`, `toBase`, `settled` /
+  `whenPaid` / `isUnpaid`, `findDuplicates`, `monthlyAmount` / `activeIn`,
+  `capacityFrom` / `planGoals` / `debtGoals` — all imported. A second
+  implementation that rounds differently is a second answer to the same question.
+- **A write is one entry, it says what it did, and it can be taken back.**
+  `delete_transaction` needs `confirm: true`; deletion goes through the store's
+  undo; every write calls `notify()`.
+Reading: `finance_overview` (the one-call answer — cash, owed, assets, this
+month, unpaid, envelopes over, a normal month, spare, goals with dates),
+`list_finance_accounts`, `list_transactions`, `spending_by_category`,
+`list_budget_envelopes`, `list_goals`, `find_duplicate_entries`. Writing:
+`add_transaction`, `update_transaction`, `set_transaction_paid`,
+`delete_transaction`, `add_goal`, `update_goal`, `set_exchange_rate`.
+- **One year is loaded at a time**, so `ensureYear()` switches the year for a
+  range in another one and refuses a range that spans two — otherwise "nothing"
+  is an answer about a year that was never fetched.
+- **`unpaid_only` covers the whole year**, not the month to date: what is owed
+  is mostly dated ahead, and stopping at today reported none of it.
+- Amounts are magnitudes; `type` carries the direction, and a write that is
+  handed a negative amount says so rather than filing it.
+
 ## Finance — Bills is gone, table and all
 There were two places to write down a recurring payment and only one of them
 did anything. A budget rule with a `dueDay` says what leaves and when **and**
