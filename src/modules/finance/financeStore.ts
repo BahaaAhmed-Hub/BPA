@@ -17,7 +17,7 @@ import {
   loadCellComments, saveCellComment, deleteCellComment,
   loadGoals, saveGoal, deleteGoal as dbDeleteGoal,
   loadBudgets, saveBudget, deleteBudget as dbDeleteBudget,
-  type PlanRow, type OverrideRow, type CommentRow,
+  type PlanRow, type OverrideRow, type CommentRow, type TransactionRow,
   type GoalRow, type BudgetRow,
 } from './financeDb'
 
@@ -111,6 +111,31 @@ const goalToRow = (g: Goal, userId: string): GoalRow => ({
   target_amount: g.targetAmount, current_amount: g.currentAmount,
   color: g.color, sub_label: g.sub || null, is_active: true,
   rank: g.rank ?? null, deadline: g.deadline ?? null, currency: g.currency ?? null,
+})
+
+/** A row as the ledger holds it, as the app's own shape.
+ *
+ *  Exported because a screen reading a span of years — a category's whole
+ *  history, say — gets rows from the same table and must turn them into the
+ *  same objects. A second copy of this mapping is a second answer to what a
+ *  transaction is, and it drifts the first time a column is added. */
+export const txFromRow = (r: TransactionRow): Transaction => ({
+  id: r.id,
+  accountId: r.account_id,
+  toAccountId: r.to_account_id ?? undefined,
+  amount: r.amount,
+  currency: r.currency as Transaction['currency'],
+  type: r.tx_type as Transaction['type'],
+  payee: r.payee,
+  categoryId: r.category_id,
+  date: r.date,
+  paidAt: r.paid_at ?? undefined,
+  note: r.note,
+  isCleared: r.is_cleared,
+  isRecurring: r.is_recurring,
+  tags: r.tags?.length ? r.tags : undefined,
+  attachments: r.attachments?.length ? r.attachments : undefined,
+  createdAt: r.created_at,
 })
 
 const budgetToRow = (b: Budget, userId: string): BudgetRow => ({
@@ -236,24 +261,7 @@ export const useFinanceStore = create<FinanceState>()(
           // not place any of it. Anything dated today or earlier is given its
           // own date as the day the money moved; anything dated ahead is left
           // alone, because that money genuinely has not moved yet.
-          const mappedTransactions: Transaction[] = transactions.map(r => ({
-            id: r.id,
-            accountId: r.account_id,
-            toAccountId: r.to_account_id ?? undefined,
-            amount: r.amount,
-            currency: r.currency as Transaction['currency'],
-            type: r.tx_type as Transaction['type'],
-            payee: r.payee,
-            categoryId: r.category_id,
-            date: r.date,
-            paidAt: r.paid_at ?? undefined,
-            note: r.note,
-            isCleared: r.is_cleared,
-            isRecurring: r.is_recurring,
-            tags: r.tags?.length ? r.tags : undefined,
-            attachments: r.attachments?.length ? r.attachments : undefined,
-            createdAt: r.created_at,
-          }))
+          const mappedTransactions: Transaction[] = transactions.map(txFromRow)
 
           // A transfer whose destination the server could not store keeps it
           // from here, or it lands nowhere and the card stops moving.

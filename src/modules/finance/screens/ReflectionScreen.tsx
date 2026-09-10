@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef, Fragment } from 'react'
 import { Button, Card, Segmented } from '@/components/ui'
 import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, GripVertical, X, Trash2, Plus, Eye, EyeOff, Pencil, ArrowLeft } from 'lucide-react'
-import { useFinanceStore } from '../financeStore'
+import { useFinanceStore, txFromRow } from '../financeStore'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
@@ -14,6 +14,7 @@ import { isUnpaid, UNPAID_TITLE } from '../unpaid'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
 import { todayISO } from '../dates'
+import { loadTransactionsSpan, loadYearBounds } from '../financeDb'
 import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
 import { notify } from '@/lib/undo'
@@ -838,18 +839,79 @@ export function ReflectionScreen(_props?: any) {
     setDrill({ ids, label, month, kind })
   }
 
+  // ── The same category, across every year ──────────────────────────────────
+  //
+  //  The store holds one year, deliberately: everything that writes depends on
+  //  that bound. So "what has school cost me over five years" was a question
+  //  the app could not answer at all — the only way to see another year was to
+  //  leave this one, and then you were comparing from memory.
+  //
+  //  This is a *reading*, and it keeps its answer to itself: a separate query,
+  //  a separate list, never merged into the store. No write path, no poll and
+  //  no year change has to know it exists.
+  const [span, setSpan] = useState<number>(1)
+  const [history, setHistory] = useState<Transaction[] | null>(null)
+  const [bounds, setBounds] = useState<{ first: number; last: number } | null>(null)
+  const [loadingSpan, setLoadingSpan] = useState(false)
+
+  // Closing the panel, or opening a different figure, puts it back to this
+  // year — a span left set from the last thing you looked at is a surprise.
+  useEffect(() => { setSpan(1); setHistory(null) }, [drill?.label])
+
+  useEffect(() => {
+    if (!drill) return
+    void loadYearBounds().then(setBounds).catch(() => setBounds(null))
+  }, [drill])
+
+  useEffect(() => {
+    if (!drill || span <= 1) { setHistory(null); return }
+    // "All" means every year the ledger has, and that takes a question of its
+    // own to answer. Falling back to this year while it is in flight would
+    // quietly show one year under a button that says all of them.
+    if (span === Infinity && !bounds) { setLoadingSpan(true); return }
+    let alive = true
+    setLoadingSpan(true)
+    const from = span === Infinity ? bounds!.first : year - span + 1
+    const to = span === Infinity ? bounds!.last : year
+    void loadTransactionsSpan(from, to)
+      .then(rows => { if (alive) setHistory(rows.map(txFromRow)) })
+      .catch(() => { if (alive) setHistory([]) })
+      .finally(() => { if (alive) setLoadingSpan(false) })
+    return () => { alive = false }
+  }, [drill, span, year, bounds])
+
   const drillTx = useMemo(() => {
     if (!drill) return []
+    const ids = drill.ids ? new Set(drill.ids) : null
+    const wanted = (t: string) => drill.kind === 'both' ? (t === 'income' || t === 'expense') : t === drill.kind
+    const pick = (list: Transaction[], prefix: string | null) => list
+      .filter(tx => wanted(tx.type) && (prefix === null || filedIn(tx, prefix)))
+      .filter(tx => (ids ? !!tx.categoryId && ids.has(tx.categoryId) : true))
+      .sort((a, b) => b.date.localeCompare(a.date))
+    // A span drops the month: "August, over five years" is a different question
+    // and not the one the control asks.
+    if (history) return pick(history, null)
     const prefix = drill.month === null
       ? String(year)
       : `${year}-${String(drill.month + 1).padStart(2, '0')}`
-    const ids = drill.ids ? new Set(drill.ids) : null
-    const wanted = (t: string) => drill.kind === 'both' ? (t === 'income' || t === 'expense') : t === drill.kind
-    return transactions
-      .filter(tx => wanted(tx.type) && filedIn(tx, prefix))
-      .filter(tx => (ids ? !!tx.categoryId && ids.has(tx.categoryId) : true))
-      .sort((a, b) => b.date.localeCompare(a.date))
-  }, [drill, transactions, year, filedIn])
+    return pick(transactions, prefix)
+  }, [drill, transactions, history, year, filedIn])
+
+  /** The span's totals, year by year — the shape of the question. A list of
+   *  four hundred entries does not answer "is this getting worse". */
+  const byYear = useMemo(() => {
+    if (!history) return []
+    const acc = new Map<string, number>()
+    for (const tx of drillTx) {
+      const d = filedOn(tx)
+      if (!d) continue
+      const v = toBase(Math.abs(tx.amount), tx.currency, base)
+      if (v === null) continue
+      const y = d.slice(0, 4)
+      acc.set(y, (acc.get(y) ?? 0) + (tx.type === 'income' ? v : -v))
+    }
+    return [...acc.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [history, drillTx, filedOn, base])
 
   /** A figure covering exactly one category can say where a new entry goes; one
    *  covering a whole section cannot, so the entry asks. And a month figure
@@ -1382,15 +1444,72 @@ export function ReflectionScreen(_props?: any) {
 
             <div style={{ flexShrink: 0 }}>
               <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)' }}>
-                {drill.label}
+                {/* The label carries the year, so a span has to replace it —
+                    "School · 2026" over five years of entries is the panel
+                    lying about what you are looking at. */}
+                {byYear.length > 1
+                  ? `${drill.label.replace(/ · \d{4}$/, '')} · ${byYear[0][0]}–${byYear[byYear.length - 1][0]}`
+                  : drill.label}
               </div>
               <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 3 }}>
-                {drillTx.length} {drillTx.length === 1 ? 'entry' : 'entries'} ·{' '}
-                {acct(drillTx.reduce((n, t) => {
-                  const v = toBase(Math.abs(t.amount), t.currency, base) ?? 0
-                  return n + (t.type === 'income' ? v : -v)
-                }, 0), { currency: base })}
+                {loadingSpan ? 'reading the other years…' : <>
+                  {drillTx.length} {drillTx.length === 1 ? 'entry' : 'entries'} ·{' '}
+                  {acct(drillTx.reduce((n, t) => {
+                    const v = toBase(Math.abs(t.amount), t.currency, base) ?? 0
+                    return n + (t.type === 'income' ? v : -v)
+                  }, 0), { currency: base })}
+                </>}
               </div>
+
+              {/* How far back to look. The store holds one year on purpose, so
+                  this asks the ledger directly and keeps the answer here —
+                  nothing else on the screen changes. */}
+              {drill.ids && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)' }}>HOW FAR BACK</span>
+                  {([[1, 'This year'], [3, '3 years'], [5, '5 years'], [Infinity, 'All']] as const).map(([n, label]) => {
+                    const on = span === n
+                    const reach = n === Infinity ? bounds : { first: year - Number(n) + 1, last: year }
+                    return (
+                      <button key={String(n)} onClick={() => setSpan(n as number)}
+                        title={n === 1 ? `Only ${year}`
+                          : reach ? `${reach.first} to ${reach.last}` : 'every year in the ledger'}
+                        style={{
+                          height: 24, padding: '0 9px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
+                          background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+                          border: `var(--sb-border-width) solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+                          color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
+                          fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                        }}>{label}</button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Year by year, because four hundred entries do not answer
+                  "is this getting worse" and six figures in a column do. */}
+              {byYear.length > 1 && (
+                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {(() => {
+                    const most = Math.max(...byYear.map(([, v]) => Math.abs(v)), 1)
+                    return byYear.map(([y, v]) => (
+                      <div key={y} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--sb-t-meta)' }}>
+                        <span style={{ width: 34, flexShrink: 0, fontFamily: 'var(--sb-font-num)', color: 'var(--sb-ink-3)' }}>{y}</span>
+                        <span style={{ flex: 1, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
+                          <span style={{
+                            display: 'block', height: '100%', width: `${(Math.abs(v) / most) * 100}%`,
+                            background: v >= 0 ? OLIVE : RUST, borderRadius: 'var(--sb-r-pill)',
+                          }} />
+                        </span>
+                        <span style={{
+                          flexShrink: 0, fontFamily: 'var(--sb-font-num)', fontVariantNumeric: 'tabular-nums',
+                          color: v >= 0 ? OLIVE : RUST, fontWeight: 600,
+                        }}>{acct(v, { currency: base })}</span>
+                      </div>
+                    ))
+                  })()}
+                </div>
+              )}
             </div>
 
             <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '14px 0 2px' }} />
