@@ -54,7 +54,12 @@ export interface BudgetRule {
   frequency: Frequency
   rollover: boolean
   warn80: boolean
-  starts: string          // YYYY-MM — the first month it applies to
+  /** The first month it applies to, 'YYYY-MM'. **Absent means every month**,
+   *  which is what a budget usually is. It used to be filled in with whatever
+   *  month the rule happened to be created in — never a choice anybody made —
+   *  so stepping back to July showed a page of "set a budget" for budgets that
+   *  plainly existed. A month is only a *start* when you say it is. */
+  starts?: string
   /** The last month it applies to. Absent means it runs on. */
   ends?: string           // YYYY-MM
   /** What the amount is denominated in. There are no exchange rates in this
@@ -123,10 +128,8 @@ export function ordinal(n: number): string {
 }
 
 export function defaultRule(): BudgetRule {
-  const d = new Date()
   return {
     amount: 0, frequency: 'monthly', rollover: false, warn80: true,
-    starts: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
     bucket: 'guiltfree',
     schedule: 'repeat',
   }
@@ -941,8 +944,9 @@ export function BudgetRuleModal({
             <span style={LABEL}>Runs</span>
             <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 7 }}>
               <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'center' }} title="First month this budget applies to">
-                {monthLabel(rule.starts)}
-                <input type="month" value={rule.starts} onChange={e => onChange({ ...rule, starts: e.target.value })}
+                {rule.starts ? monthLabel(rule.starts) : 'every month'}
+                <input type="month" value={rule.starts ?? ''}
+                  onChange={e => onChange({ ...rule, starts: e.target.value || undefined })}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
               </label>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>to</span>

@@ -1264,8 +1264,12 @@ export function BudgetScreen(_props?: any) {
       // a monthly figure they become 15,000 a month, which never leaves the
       // account on any day of the year — so a dated budget shows its total and
       // is measured against the year, not against one twelfth of itself.
-      const ownDated = isDated(rule)
       const running  = activeIn(rule, monthKey)
+      // A rule that is not in force this month is not a *dated* one this month
+      // either. Left true, the envelope kept reporting a whole year of spending
+      // against no budget at all — a figure ten times the month's, with nothing
+      // beside it to say what it was.
+      const ownDated = isDated(rule) && running
       const own      = running ? (ownDated ? budgetTotal(rule, String(year)) : monthlyAmount(rule, monthKey)) : 0
       // What *this month* asks for, whatever shape the budget is. Every total
       // on the page is a month, so this is the figure that goes into them —
@@ -1281,8 +1285,8 @@ export function BudgetScreen(_props?: any) {
         const r = rules[child.id]
         // A part can carry its own dates — school fees split into terms, say —
         // and it is read the same way its parent would be.
-        const kidDated = isDated(r)
         const kidRuns  = activeIn(r, monthKey)
+        const kidDated = isDated(r) && kidRuns
         const own      = kidRuns ? (kidDated ? budgetTotal(r, String(year)) : monthlyAmount(r, monthKey)) : 0
         const ownMonth = kidRuns ? monthlyAmount(r, monthKey) : 0
         const childCur = r?.currency ?? cur
@@ -1358,6 +1362,34 @@ export function BudgetScreen(_props?: any) {
   })
   // Asked of the transactions, not the envelopes: money in a currency can be
   // sitting in a category whose budget is in the base one.
+  /**
+   *  Budgets that exist and do not apply to the month on screen, because they
+   *  begin after it.
+   *
+   *  `starts` used to be filled in with whatever month a rule was created in —
+   *  never a choice anybody made — so stepping back a month showed a page of
+   *  "set a budget" for budgets plainly sitting there. New rules no longer
+   *  carry one, but every rule written before this does, and thirty of them is
+   *  not something to fix one at a time.
+   */
+  const startLater = useMemo(
+    () => Object.entries(rules)
+      .filter(([id, r]) => r?.starts && r.starts > monthKey && categories.some(c => c.id === id))
+      .map(([id]) => id),
+    [rules, monthKey, categories],
+  )
+
+  function applyFromTheStart() {
+    if (!window.confirm(
+      `${startLater.length} budget${startLater.length === 1 ? '' : 's'} begin${startLater.length === 1 ? 's' : ''} after `
+      + `${new Date(monthKey + '-01T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}. `
+      + 'Apply them to every month instead?\n\nA budget that should genuinely begin on a date keeps it — set that on the budget itself.',
+    )) return
+    const next = { ...rules }
+    for (const id of startLater) next[id] = { ...next[id], starts: undefined }
+    putRules(next)
+  }
+
   const needRates = useMemo(
     // A budget written in a currency counts as money here even before anything
     // has been spent in it — otherwise a USD sub-budget silently drops out of
@@ -1480,6 +1512,29 @@ export function BudgetScreen(_props?: any) {
           <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', display: 'block', marginTop: 3 }}>
             what {year} leaves behind · {parents.length} categor{parents.length === 1 ? 'y' : 'ies'}
           </span>
+          {startLater.length > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 7, flexWrap: 'wrap' }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 10px',
+                borderRadius: 'var(--sb-r-pill)', fontSize: 'var(--sb-t-micro)', whiteSpace: 'nowrap',
+                background: 'color-mix(in srgb, var(--sb-accent) 14%, transparent)',
+                border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent) 40%, transparent)',
+                color: 'var(--sb-accent-deep)',
+              }}>
+                <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} />
+                {startLater.length} budget{startLater.length === 1 ? '' : 's'} begin{startLater.length === 1 ? 's' : ''} after this month
+              </span>
+              <button onClick={applyFromTheStart}
+                title="Take the start month off them, so they apply to every month"
+                style={{
+                  height: 24, padding: '0 10px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
+                  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                  color: 'var(--sb-ink-2)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                }}>
+                Apply them to every month
+              </button>
+            </span>
+          )}
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>

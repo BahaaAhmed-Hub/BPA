@@ -608,6 +608,18 @@ written before this reads unchanged):
 - **`custom`** — `lines[]`, each a date and its own amount, with `linesRepeat`
   for a set that comes round every year (school fees) against one that does not
   (a build's payment plan).
+- **`starts` is absent by default, and absent means every month.** It used to
+  be filled in with whatever month the rule happened to be created in — never a
+  choice anybody made — so stepping back from September to July showed a page of
+  "set a budget" for budgets that were plainly sitting there, and every figure
+  beside them was measured against nothing. A month is only a *start* when you
+  say it is. Rules written before this still carry one, so the Budget header
+  counts them for the month on screen (`startLater`) and offers to take it off
+  them; a budget that should genuinely begin on a date keeps it.
+- **A rule not in force this month is not a *dated* one this month either.**
+  `ownDated = isDated(rule) && running`. Left ungated, an envelope whose budget
+  did not apply still reported a whole **year** of spending — ten times the
+  month's, with nothing beside it to say what it was.
 - **A dated budget is never divided.** Four instalments of 45,000 are four
   instalments of 45,000; as a monthly figure they become 15,000 a month, which
   leaves the account on no day of the year — and measuring a month's spending
