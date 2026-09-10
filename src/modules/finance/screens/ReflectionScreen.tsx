@@ -16,6 +16,7 @@ import type { Transaction } from '../types'
 import { todayISO } from '../dates'
 import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
+import { MoneyInput } from '../components/MoneyInput'
 import { notify } from '@/lib/undo'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
@@ -258,24 +259,70 @@ function LinesChart({ series, hidden, onToggle, fmt, through }: {
  *  closing it and finding the figure again. It is the same column now, and the
  *  arrow at the top left is the way back to the list.
  */
-function EntryFace({ tx, categories, accounts, onBack, onEdit, onDelete, onClose }: {
+function EntryFace({ tx, categories, accounts, onBack, onSave, onDelete, onClose }: {
   tx: Transaction
   categories: Category[]
   accounts: { id: string; name: string }[]
   onBack: () => void
-  onEdit: () => void
+  onSave: (next: Transaction) => void
   onDelete: () => void
   onClose: () => void
 }) {
+  // Words are held so a keystroke is not a write; everything else — a date, a
+  // picker, the paid switch — writes the moment it changes, because there is
+  // nothing to debounce about a choice you made once.
+  const [payee, setPayee] = useState(tx.payee ?? '')
+  const [note, setNote] = useState(tx.note ?? '')
+  const [amount, setAmount] = useState(Math.abs(tx.amount))
+  useEffect(() => {
+    setPayee(tx.payee ?? ''); setNote(tx.note ?? ''); setAmount(Math.abs(tx.amount))
+  }, [tx.id, tx.payee, tx.note, tx.amount])
+
+  const push = (patch: Partial<Transaction>) => onSave({ ...tx, ...patch })
+  /** A held write, so typing a payee is one save rather than one a letter. */
+  const held = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const later = (patch: Partial<Transaction>) => {
+    if (held.current) clearTimeout(held.current)
+    held.current = setTimeout(() => push(patch), 700)
+  }
+  useEffect(() => () => { if (held.current) clearTimeout(held.current) }, [])
+
   const cat = categories.find(c => c.id === tx.categoryId)
-  const from = accounts.find(a => a.id === tx.accountId)
-  const to = accounts.find(a => a.id === tx.toAccountId)
-  const row = (label: string, value: React.ReactNode) => (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '7px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
-      <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', width: 92, flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', minWidth: 0, wordBreak: 'break-word' }}>{value}</span>
+  const spendable = categories.filter(c => c.txType !== (tx.type === 'income' ? 'expense' : 'income'))
+
+  const FIELD: React.CSSProperties = {
+    width: '100%', boxSizing: 'border-box', height: 30, padding: '0 8px',
+    borderRadius: 'var(--sb-r-chip)', background: 'transparent',
+    border: 'var(--sb-border-width) solid transparent',
+    fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)',
+    outline: 'none', cursor: 'text',
+  }
+  // The field only draws its box when it is being used. Eight boxed inputs in
+  // a 400px column is a form; the panel is a record you can correct, and it
+  // should read as the record until you reach for it.
+  const lit = (e: React.FocusEvent<HTMLElement>) => {
+    e.currentTarget.style.background = 'var(--sb-field)'
+    e.currentTarget.style.borderColor = 'var(--sb-border)'
+  }
+  const dim = (e: React.FocusEvent<HTMLElement>) => {
+    e.currentTarget.style.background = 'transparent'
+    e.currentTarget.style.borderColor = 'transparent'
+  }
+  const hoverOn = (e: React.MouseEvent<HTMLElement>) => {
+    if (document.activeElement !== e.currentTarget) e.currentTarget.style.background = 'var(--sb-field)'
+  }
+  const hoverOff = (e: React.MouseEvent<HTMLElement>) => {
+    if (document.activeElement !== e.currentTarget) e.currentTarget.style.background = 'transparent'
+  }
+  const edit = { style: FIELD, onFocus: lit, onBlur: dim, onMouseEnter: hoverOn, onMouseLeave: hoverOff }
+
+  const row = (label: string, control: React.ReactNode) => (
+    <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '4px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+      <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', width: 84, flexShrink: 0 }}>{label}</span>
+      <span style={{ flex: 1, minWidth: 0 }}>{control}</span>
     </div>
   )
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
@@ -285,7 +332,9 @@ function EntryFace({ tx, categories, accounts, onBack, onEdit, onDelete, onClose
             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
             background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
           }}><ArrowLeft size={ICON.sm} /></button>
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>One entry</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+          One entry · every field here is live
+        </span>
         <span style={{ flex: 1 }} />
         <button onClick={onClose} title="Close"
           style={{
@@ -295,30 +344,115 @@ function EntryFace({ tx, categories, accounts, onBack, onEdit, onDelete, onClose
           }}><X size={ICON.sm} /></button>
       </div>
 
-      <div style={{ fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>
-        {tx.payee?.trim() || cat?.name || 'Entry'}
-      </div>
-      <div style={{
-        fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-display)', fontWeight: 700, letterSpacing: '-0.03em',
-        color: tx.type === 'income' ? OLIVE : RUST, margin: '2px 0 12px', fontVariantNumeric: 'tabular-nums',
-      }}>
-        {tx.type === 'income' ? acct(Math.abs(tx.amount), { currency: tx.currency }) : outflow(Math.abs(tx.amount), { currency: tx.currency })}
+      {/* Who it was with */}
+      <input
+        value={payee}
+        onChange={e => { setPayee(e.target.value); later({ payee: e.target.value }) }}
+        placeholder={cat?.name ?? 'Who it was with'}
+        {...edit}
+        style={{
+          ...FIELD, height: 34, marginLeft: -8, width: 'calc(100% + 8px)',
+          fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-h2)', fontWeight: 600,
+          letterSpacing: '-0.02em',
+        }} />
+
+      {/* What it was for. A magnitude, with `type` carrying the direction —
+          the sign is not something to type. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '2px 0 12px', marginLeft: -8 }}>
+        <MoneyInput
+          value={amount} min={0}
+          onChange={v => { setAmount(v); later({ amount: v }) }}
+          style={{
+            ...FIELD, height: 40, width: 'auto', minWidth: 150, flex: '0 1 auto',
+            fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-display)', fontWeight: 700,
+            letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums',
+            color: tx.type === 'income' ? OLIVE : RUST,
+          }} />
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{tx.currency}</span>
+        <span style={{ flex: 1 }} />
+        {/* Which way it went is the one thing the figure cannot say for itself */}
+        <span style={{ display: 'inline-flex', borderRadius: 'var(--sb-r-pill)', overflow: 'hidden', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
+          {(['expense', 'income'] as const).map(k => (
+            <button key={k} onClick={() => push({ type: k })}
+              title={k === 'income' ? 'Money that came in' : 'Money that went out'}
+              style={{
+                padding: '0 10px', height: 26, cursor: 'pointer', border: 'none', fontFamily: 'inherit',
+                fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                background: tx.type === k ? (k === 'income' ? OLIVE : RUST) : 'var(--sb-field)',
+                color: tx.type === k ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
+              }}>{k === 'income' ? 'In' : 'Out'}</button>
+          ))}
+        </span>
       </div>
 
       <div>
-        {row('Filed on', txDate(tx.date))}
-        {row('Paid', tx.paidAt
-          ? txDate(tx.paidAt)
-          : <span style={{ color: 'var(--sb-negative)' }}>not yet — it is in no total</span>)}
-        {row('Category', cat?.name ?? 'none')}
-        {row('Account', from?.name ?? 'none')}
-        {to && row('Into', to.name)}
-        {tx.note?.trim() ? row('Note', tx.note.trim()) : null}
-        {isBudgetEntry(tx) ? row('Made by', 'a budget with dates on it') : null}
+        {row('Filed on',
+          <input type="date" value={tx.date}
+            onChange={e => e.target.value && push({ date: e.target.value })}
+            {...edit} style={{ ...FIELD, fontFamily: 'var(--sb-font-num)' }} />)}
+
+        {row('Paid',
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="date" value={tx.paidAt ?? ''}
+              onChange={e => push({ paidAt: e.target.value || undefined, isCleared: !!e.target.value })}
+              {...edit} style={{ ...FIELD, fontFamily: 'var(--sb-font-num)', flex: 1 }} />
+            {tx.paidAt
+              ? <button onClick={() => push({ paidAt: undefined, isCleared: false })}
+                  title="Mark it unpaid — it leaves every total and is owed instead"
+                  style={{
+                    height: 26, padding: '0 9px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', flexShrink: 0,
+                    background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                    color: 'var(--sb-ink-4)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                  }}>not yet</button>
+              : <button onClick={() => push({ paidAt: tx.date, isCleared: true })}
+                  title="It moved on the day it is filed"
+                  style={{
+                    height: 26, padding: '0 9px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', flexShrink: 0,
+                    background: 'var(--sb-positive-tint)', border: 'var(--sb-border-width) solid var(--sb-positive)',
+                    color: 'var(--sb-positive)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+                  }}>mark paid</button>}
+          </span>)}
+
+        {tx.type !== 'transfer' && row('Category',
+          <select value={tx.categoryId ?? ''}
+            onChange={e => push({ categoryId: e.target.value || undefined })}
+            {...edit} style={{ ...FIELD, cursor: 'pointer' }}>
+            <option value="">none</option>
+            {spendable.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>)}
+
+        {row('Account',
+          <select value={tx.accountId ?? ''}
+            onChange={e => push({ accountId: e.target.value || undefined })}
+            {...edit} style={{ ...FIELD, cursor: 'pointer' }}>
+            <option value="">none</option>
+            {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>)}
+
+        {tx.type === 'transfer' && row('Into',
+          <select value={tx.toAccountId ?? ''}
+            onChange={e => push({ toAccountId: e.target.value || undefined })}
+            {...edit} style={{ ...FIELD, cursor: 'pointer' }}>
+            <option value="">none</option>
+            {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>)}
+
+        {row('Note',
+          <input value={note}
+            onChange={e => { setNote(e.target.value); later({ note: e.target.value || undefined }) }}
+            placeholder="—" {...edit} />)}
+
+        {isBudgetEntry(tx) && (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', padding: '7px 0' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', width: 84, flexShrink: 0 }}>Made by</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+              a budget with dates on it — the rule rewrites it while it is unpaid
+            </span>
+          </div>
+        )}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-        <Button variant="accent" onClick={onEdit}>Edit</Button>
+      <div style={{ display: 'flex', marginTop: 16 }}>
         <span style={{ flex: 1 }} />
         <button onClick={onDelete} title="Delete this entry"
           style={{
@@ -1053,7 +1187,7 @@ export function ReflectionScreen(_props?: any) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--sb-page)', overflow: 'hidden' }}>
 
       {/* Header */}
-      <div style={{ flexShrink: 0, borderBottom: 'var(--sb-border-width) solid var(--sb-border)', padding: '14px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
+      <div style={{ flexShrink: 0, padding: '14px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
         <div>
           <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>FINANCE · REFLECT</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1200,6 +1334,14 @@ export function ReflectionScreen(_props?: any) {
             <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', color: netColor(totalNet) }}>
               {acct(totalNet, { currency: 'EGP', zero: '–' })}
             </div>
+            {/* This is a *flow* — what {year} has netted — and Goals shows a
+                *stock*, what the accounts hold. They differ by the opening
+                balances and by what Goals holds back, and one is not the other
+                being wrong. */}
+            <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}
+              title={`What ${year} earned less what it spent. It is not what the accounts hold — that is the opening balances plus this, and it is on Balances and on Goals as "spare now".`}>
+              what {year} netted, not what is held
+            </div>
           </div>
         </div>
       </div>
@@ -1210,7 +1352,14 @@ export function ReflectionScreen(_props?: any) {
           it that gives it meaning. Docked, like the task panel beside its board. */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
       <div
-        style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        style={{
+          // The rule under the header is the *table's* — it separates the
+          // header from the figures. Run full width it also crossed the top of
+          // the docked panel, which is a card floating beside the table, and a
+          // line over a floating card reads as a lid somebody forgot to remove.
+          flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          borderTop: 'var(--sb-border-width) solid var(--sb-border)',
+        }}
         onClick={e => {
           // Anywhere that is not a row puts every category back on the chart.
           if (!(e.target as HTMLElement).closest('.sb-fin-row, .sb-keep-selection')) setSelectedId(null)
@@ -1381,7 +1530,7 @@ export function ReflectionScreen(_props?: any) {
 
             {openTx ? <EntryFace tx={openTx} categories={categories} accounts={accounts}
               onBack={() => setOpenTx(null)}
-              onEdit={() => setEditing(openTx)}
+              onSave={next => { setOpenTx(next); void upsertTransaction(next) }}
               onDelete={() => {
                 if (!window.confirm(`Delete ${openTx.payee?.trim() || 'this entry'} of ${acct(Math.abs(openTx.amount), { currency: openTx.currency })}?`)) return
                 void removeTransaction(openTx.id)
