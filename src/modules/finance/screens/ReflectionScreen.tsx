@@ -924,7 +924,11 @@ export function ReflectionScreen(_props?: any) {
               ]}
             />
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          {/* The caption hangs *out* of the layout. Inside it, it made this
+              control taller than the ones beside it, and a row of pills aligned
+              on their bottoms then sat at two different heights — and jumped by
+              the height of a line every time the caption appeared. */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', position: 'relative' }}>
             <Segmented
               size="sm"
               aria-label="Which date a figure is filed under"
@@ -936,7 +940,10 @@ export function ReflectionScreen(_props?: any) {
               ]}
             />
             {basis === 'paid' && unpaidThisYear > 0 && (
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-warning)' }}>
+              <span style={{
+                position: 'absolute', top: 'calc(100% + 3px)', right: 0, whiteSpace: 'nowrap',
+                fontSize: 'var(--sb-t-micro)', color: 'var(--sb-warning)', pointerEvents: 'none',
+              }}>
                 {unpaidThisYear} not paid yet, so not in this view
               </span>
             )}
