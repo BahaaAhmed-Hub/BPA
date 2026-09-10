@@ -66,8 +66,8 @@ function Grip({ onGrab, lifted }: { onGrab: (e: React.PointerEvent) => void; lif
       onClick={e => e.stopPropagation()}
       title="Drag to reorder"
       style={{
-        display: 'inline-flex', flexShrink: 0, marginLeft: 3, padding: '3px 0',
-        color: lifted ? 'var(--sb-ink-1)' : 'var(--sb-border)',
+        display: 'inline-flex', flexShrink: 0, padding: '4px 1px',
+        color: lifted ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
         cursor: lifted ? 'grabbing' : 'grab', touchAction: 'none',
       }}>
       <GripVertical size={ICON.sm} strokeWidth={STROKE.rest} />
@@ -137,6 +137,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
       >
         <td style={{ padding: '0 14px', height: ROW_H, position: 'sticky', left: 0, background: bg, zIndex: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <Grip lifted={lifted} onGrab={onGrab(row.cat as Category)} />
             {/* The arrow opens the row; it must not also hide it. */}
             {kids.length > 0 ? (
               <button
@@ -157,8 +158,6 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
             {kids.length > 0 && !open && (
               <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-border)' }}>+{kids.length}</span>
             )}
-            <span style={{ flex: 1 }} />
-            <Grip lifted={lifted} onGrab={onGrab(row.cat as Category)} />
           </div>
         </td>
         {months.map((v, mi) => (
@@ -185,14 +184,14 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
             }}
           >
             <td style={{ padding: '0 14px', height: ROW_H - 4, position: 'sticky', left: 0, background: kidBg, zIndex: 2 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, paddingLeft: 23 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <Grip lifted={kidLifted} onGrab={onGrab(kid.cat as Category)} />
+                <span style={{ width: 16, flexShrink: 0 }} />
                 <span style={{ width: 8, height: 1, background: 'var(--sb-border)', flexShrink: 0 }} />
                 <span style={{ display: 'inline-flex', color: kid.cat.color }}><CategoryGlyph icon={kid.cat.icon} size={11} /></span>
                 <span style={{ fontSize: 'var(--sb-t-body-s)', color: kidHidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)', textDecoration: hidden(kid.cat.id) ? 'line-through' : 'none' }}>
                   {kid.cat.name}
                 </span>
-                <span style={{ flex: 1 }} />
-                <Grip lifted={kidLifted} onGrab={onGrab(kid.cat as Category)} />
               </div>
             </td>
             {kid.amounts.map((v, mi) => (

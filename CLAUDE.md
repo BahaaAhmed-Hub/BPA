@@ -316,10 +316,15 @@ does the moving. Resizing needs no live transform either: it is worked out from
   propagation (the row's own click hides it) and passes the exact id set the figure
   used — a hidden part is out of both. The panel deletes and edits through the store,
   so the table behind it recalculates.
-- **Rows are reordered by dragging them.** The grip at the right of the name column
-  moves a row among *its own siblings* — the top-level rows of one section, or the
-  parts of one category — and the set it may be dropped into is fixed when it is
-  picked up. Pointer events, not HTML5 drag: `dragstart` never fires for a finger,
+- **Rows are reordered by dragging them.** The grip is a **gutter down the left of
+  the name column**, at the same x on a category and on a part of one, so the
+  handles read as one column and a sub-category's is as findable as its parent's.
+  It used to be pushed to the far right of the name cell by a `flex: 1` spacer,
+  where it was a long way from the name it moved and looked like furniture. The
+  16px a parent's chevron occupies is what indents a child, so the name still
+  steps in under its category. It moves a row among *its own siblings* — the
+  top-level rows of one section, or the parts of one category — and the set it may
+  be dropped into is fixed when it is picked up. Pointer events, not HTML5 drag: `dragstart` never fires for a finger,
   and this table is reordered on an iPad. The drop writes positions (`sortOrder`
   0..n) for the whole sibling list, and `justDragged` swallows the click that would
   otherwise hide the row it landed on.
