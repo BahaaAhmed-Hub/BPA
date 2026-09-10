@@ -60,7 +60,15 @@ export interface BudgetRule {
   /** What the amount is denominated in. There are no exchange rates in this
    *  app, so it is also which transactions the envelope counts. */
   currency?: string
-  fixedType: 'fixed' | 'flexible'
+  /** Which of the four a budget belongs to. Two — fixed against flexible —
+   *  only ever said whether you could move it, which is not a plan. These four
+   *  are, and they are the ones people actually work to: what you must pay,
+   *  what you put to work, what you put by, and what is left to enjoy without
+   *  keeping score. Kept as `fixedType` for the rules already written with it;
+   *  read it through `bucketOf`. */
+  bucket?: Bucket
+  /** @deprecated the two-way version. `bucketOf` still reads it. */
+  fixedType?: 'fixed' | 'flexible'
   /** The day of the month the money actually has to move, 1–31, where there is
    *  one. A budget says how much a category gets; this says when. A month too
    *  short for the day takes its last day rather than skipping. Absent means
@@ -119,10 +127,58 @@ export function defaultRule(): BudgetRule {
   return {
     amount: 0, frequency: 'monthly', rollover: false, warn80: true,
     starts: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-    fixedType: 'flexible',
+    bucket: 'guiltfree',
     schedule: 'repeat',
   }
 }
+
+// ─── The four a budget can belong to ─────────────────────────────────────────
+//
+//  A month's money divides four ways and the split is the plan: what you are
+//  committed to, what you put to work, what you put by, and what is genuinely
+//  yours to spend. "Fixed or flexible" answered a smaller question — whether a
+//  line could be moved — and answered it about one line at a time, so nothing
+//  on any screen could add them up.
+
+export type Bucket = 'fixed' | 'investment' | 'savings' | 'guiltfree'
+
+export const BUCKETS: {
+  id: Bucket
+  /** What fits on a pill four-across. */
+  short: string
+  /** What it is actually called. */
+  name: string
+  /** What belongs in it. */
+  help: string
+  color: string
+}[] = [
+  { id: 'fixed',      short: 'Fixed',      name: 'Fixed costs',
+    help: 'Rent, school fees, utilities, insurance, a loan — what leaves whether or not you think about it.',
+    color: 'var(--sb-ink-2)' },
+  { id: 'investment', short: 'Invest',     name: 'Investments',
+    help: 'Money put to work rather than put by — a fund, a pension, a stake in something.',
+    color: 'var(--sb-info)' },
+  { id: 'savings',    short: 'Save',       name: 'Savings',
+    help: 'Money set aside and kept as money: a goal, a deposit, the buffer.',
+    color: 'var(--sb-positive)' },
+  { id: 'guiltfree',  short: 'Guilt-free', name: 'Guilt-free spending',
+    help: 'What is left after the other three, and the whole point of them — spend it without keeping score.',
+    color: 'var(--sb-accent-deep)' },
+]
+
+/**
+ *  Which of the four a rule belongs to.
+ *
+ *  A rule written before this carries `fixedType` instead: `fixed` was the
+ *  same thing, and `flexible` meant money you steer, which is guilt-free
+ *  spending. Nothing has to be re-answered for the old ones to read.
+ */
+export function bucketOf(r?: Pick<BudgetRule, 'bucket' | 'fixedType'>): Bucket {
+  if (r?.bucket) return r.bucket
+  return r?.fixedType === 'fixed' ? 'fixed' : 'guiltfree'
+}
+
+export const bucketMeta = (b: Bucket) => BUCKETS.find(x => x.id === b) ?? BUCKETS[3]
 
 /** Absent is `repeat`, so nothing written before this changed meaning. */
 export const scheduleOf = (r?: Pick<BudgetRule, 'schedule'>): Schedule => r?.schedule ?? 'repeat'
@@ -709,25 +765,45 @@ export function BudgetRuleModal({
             </span>
           </div>
 
-          <div style={ROW}>
-            <span style={LABEL}>Kind</span>
-            <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
-              {(['flexible', 'fixed'] as const).map(t => {
-                const on = rule.fixedType === t
+          {/* Four across one line. Two 42px pills had the room for whole words;
+              four do not, so these are short labels with the real name in the
+              title, a smaller pill, and a dot in the bucket's own colour — the
+              same colour the Budget header splits the month by, so the pill and
+              the bar are recognisably the same four things. They wrap rather
+              than crush below about 370px. */}
+          {/* The label is narrowed for this row alone. Four pills need every
+              pixel of a 320px modal, "Kind" is four letters, and the caption
+              under them names the one that is chosen anyway. */}
+          <div style={{ ...ROW, gap: 8 }}>
+            <span style={{ ...LABEL, width: 44 }}>Kind</span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {BUCKETS.map(b => {
+                const on = bucketOf(rule) === b.id
                 return (
-                  <button key={t} onClick={() => onChange({ ...rule, fixedType: t })}
-                    title={t === 'fixed' ? 'A commitment you cannot move' : 'Spending you can steer'}
+                  <button key={b.id} onClick={() => onChange({ ...rule, bucket: b.id, fixedType: undefined })}
+                    title={`${b.name} — ${b.help}`}
                     style={{
-                      ...PILL, flex: 1, justifyContent: 'center', whiteSpace: 'nowrap',
+                      ...PILL, flex: '1 1 auto', justifyContent: 'center', gap: 4,
+                      height: 34, padding: '0 7px', minWidth: 0,
+                      fontSize: 'var(--sb-t-meta)', whiteSpace: 'nowrap',
                       background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                       border: on ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
                       color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                       fontWeight: on ? 600 : 400,
-                    }}>{t === 'fixed' ? 'Fixed' : 'Flexible'}</button>
+                    }}>
+                    <span aria-hidden style={{
+                      width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+                      background: b.color, opacity: on ? 1 : 0.75,
+                    }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.short}</span>
+                  </button>
                 )
               })}
             </span>
           </div>
+          <p style={{ margin: '-2px 0 0 52px', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+            {bucketMeta(bucketOf(rule)).name} — {bucketMeta(bucketOf(rule)).help}
+          </p>
 
           {/* When the money actually has to move. A budget on its own is an
               allowance for the month; a rent is a day. The other two shapes

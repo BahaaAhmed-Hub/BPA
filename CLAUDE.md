@@ -561,6 +561,26 @@ written before this reads unchanged):
   dates, and leaving a day set would write a second entry every month beside the
   instalments.
 
+## Finance — a budget belongs to one of four
+`BUCKETS` / `bucketOf` in `BudgetRuleModal.tsx`. **Kind** used to be *fixed* or
+*flexible*, which only ever answered whether one line could be moved — about one
+line at a time, so nothing on any screen could add them up. The four are what a
+month is actually shaped like: **Fixed costs**, **Investments**, **Savings**,
+**Guilt-free spending**.
+- `bucket` is the field; `fixedType` is kept and still read, so every rule
+  written before this reads without being re-answered — `fixed` is fixed costs,
+  `flexible` is guilt-free spending, which is what "money you steer" meant.
+- **Four pills on one line, at 320px.** Two 42px pills had room for whole words;
+  four do not. Short labels (`Fixed / Invest / Save / Guilt-free`), the real name
+  in the `title`, a 34px pill, a dot in the bucket's colour, and the `Kind` label
+  narrowed to 44px for that row alone. The caption under them names the chosen
+  one in full, so nothing is lost to the abbreviation.
+- **It is read, not just set.** The Budget section header draws the four-way
+  split of what is budgeted this month — a 6px bar plus a percentage per bucket
+  — in the same colours as the pills, so the control and the bar are visibly the
+  same four things. A budget set *from its parts* is split across the parts' own
+  buckets in proportion, since that is where the money is really filed.
+
 ## Finance — a budget with a day writes the entry
 `budgetEntries.ts`. `BudgetRule.dueDay` + `dueAccountId` (the **Paid on** row) means
 the money leaves on that day, so the entry goes in the ledger on that day, **unpaid**

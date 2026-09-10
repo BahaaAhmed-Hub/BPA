@@ -12,7 +12,8 @@ import { suggestIcon, isPlaceholderIcon, isLucideIcon } from '../categoryIcons'
 import { toBase, rateFor, currenciesNeedingRates } from '../fx'
 import { useUIStore } from '@/store/uiStore'
 import {
-  BudgetRuleModal, defaultRule, monthlyAmount, activeIn, ordinal, type BudgetRule,
+  BudgetRuleModal, defaultRule, monthlyAmount, activeIn, ordinal, bucketOf, BUCKETS,
+  type BudgetRule, type Bucket,
 } from '../modals/BudgetRuleModal'
 import type { Category, Transaction } from '../types'
 import { acct } from '../format'
@@ -676,6 +677,35 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
   dragging: string | null
 }) {
   const total = rows.reduce((s, r) => s + (r.actualBase ?? 0), 0)
+
+  // ── What this month's budget is *for*, four ways ────────────────────────
+  //
+  // The Kind on a budget rule used to be fixed-or-flexible, which only ever
+  // said whether one line could be moved. Four buckets say what a month is
+  // actually shaped like, and the only way to see a shape is to add them up —
+  // so the header does. A budget set from its parts is split across the parts'
+  // own buckets, in proportion, since that is where the money is really filed.
+  const split = new Map<Bucket, number>()
+  let planned = 0
+  for (const r of rows) {
+    const amt = r.plannedBase ?? 0
+    if (amt <= 0) continue
+    planned += amt
+    if (r.plannedFrom === 'parts' && r.children.length > 0) {
+      const parts = r.children.filter(c => (c.inEnvelope ?? 0) > 0)
+      const whole = parts.reduce((n, c) => n + (c.inEnvelope ?? 0), 0)
+      if (whole > 0) {
+        for (const c of parts) {
+          const b = bucketOf(rules[c.cat.id])
+          split.set(b, (split.get(b) ?? 0) + amt * ((c.inEnvelope ?? 0) / whole))
+        }
+        continue
+      }
+    }
+    const b = bucketOf(rules[r.cat.id])
+    split.set(b, (split.get(b) ?? 0) + amt)
+  }
+  const parts = BUCKETS.map(b => ({ ...b, amt: split.get(b.id) ?? 0 })).filter(p => p.amt > 0)
   // Envelopes in a currency with no rate: counted, named, never folded in.
   const stranded = [...new Set(rows.filter(r => r.actualBase === null).map(r => r.cur))]
   // Counting the children too: a sub-category with a budget is an envelope
@@ -704,6 +734,35 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
           )}
         </span>
       </div>
+
+      {planned > 0 && parts.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{
+            display: 'flex', gap: 2, height: 6, borderRadius: 'var(--sb-r-pill)', overflow: 'hidden',
+            background: 'var(--sb-hairline)',
+          }}>
+            {parts.map(p => (
+              <span key={p.id}
+                title={`${p.name} — ${money(p.amt, currency)} of ${money(planned, currency)} budgeted`}
+                style={{ width: `${(p.amt / planned) * 100}%`, background: p.color, borderRadius: 'var(--sb-r-pill)' }} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 12px', marginTop: 6 }}>
+            {parts.map(p => (
+              <span key={p.id} title={p.help} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)',
+              }}>
+                <span aria-hidden style={{ width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', background: p.color }} />
+                {p.name}
+                <b style={{ fontFamily: 'var(--sb-font-num)', fontVariantNumeric: 'tabular-nums', color: 'var(--sb-ink-2)', fontWeight: 600 }}>
+                  {Math.round((p.amt / planned) * 100)}%
+                </b>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>{empty}</div>
