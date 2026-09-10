@@ -322,12 +322,31 @@ does the moving. Resizing needs no live transform either: it is worked out from
   It used to be pushed to the far right of the name cell by a `flex: 1` spacer,
   where it was a long way from the name it moved and looked like furniture. The
   16px a parent's chevron occupies is what indents a child, so the name still
-  steps in under its category. It moves a row among *its own siblings* — the
-  top-level rows of one section, or the parts of one category — and the set it may
-  be dropped into is fixed when it is picked up. Pointer events, not HTML5 drag: `dragstart` never fires for a finger,
+  steps in under its category.
+  Pointer events, not HTML5 drag: `dragstart` never fires for a finger,
   and this table is reordered on an iPad. The drop writes positions (`sortOrder`
-  0..n) for the whole sibling list, and `justDragged` swallows the click that would
-  otherwise hide the row it landed on.
+  0..n) for the whole sibling list it lands in, and `justDragged` swallows the
+  click that would otherwise hide the row it landed on.
+- **One drag both reorders and re-parents**, because they are the same thought —
+  *this belongs there* — and where in the target row the pointer sits is what
+  says which. Near an edge the row lands **beside** the target, as its sibling;
+  in the middle of a top-level row it goes **inside** it. So a part dropped
+  beside a top-level row is also how you take it back out; there is no separate
+  promote, and no second gesture to learn. Only rows in the **same section** are
+  candidates — spending filed inside earning would make each section's total sum
+  out of the other's rows. The three refusals are the Budget screen's, word for
+  word, because both screens move the same categories: a category with parts of
+  its own cannot become a part (one level is all the model has), income and
+  expense do not mix, and a part takes its new parent's `txType`.
+  A drop that would nest and cannot **says so while you are still holding it** —
+  the row shows `HAS PARTS OF ITS OWN` instead of `INSIDE`, and the drop falls
+  back to a reorder rather than quietly doing the other thing.
+- **`parent_id: c.parentId ?? null`.** `undefined` is dropped on the way to JSON,
+  so the upsert's `ON CONFLICT` never *set* `parent_id`: un-nesting reached the
+  store and stopped there, and the next load brought the row back nested, which
+  read as the move being refused. `CategoryRow.parent_id` is `string | null`, and
+  the load maps `null` back to `undefined`, which is what every consumer tests
+  for. The Budget screen's Promote button had the same hole.
 - **Exchange rates are a setting.** Settings → Finance owns them; screens that find
   unconvertible money say so and link there.
 
