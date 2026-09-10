@@ -61,9 +61,20 @@ Three rules any change here must keep:
 - **`markLocalWrite(domain)`** on every write path, or a reload pulls the old row back
   over an edit in progress. Stores call it; `financeDb.ts` calls it in its 11 helpers.
 - **Dirty sets** (`professor-habits-dirty`, `professor-tasks-dirty`) answer "is this
-  device's copy newer?" A row missing from the server is *deleted elsewhere* unless it
-  is dirty — otherwise every delete undoes itself. Seeded with all local ids on a device
-  that predates the key.
+  row missing from the server because it was made here?" A row missing from the server
+  is *deleted elsewhere* unless it is dirty — otherwise every delete undoes itself.
+  Seeded with all local ids on a device that predates the key, because that question
+  has to fail safe.
+- **That seed is a claim about provenance, not about time — and habits used to read it
+  as both.** One list answered "might not be on the server" *and* "my copy of these
+  fields is newer", so on a device that had never edited a habit in its life every
+  habit counted as newer here: an edit made on the laptop never appeared on the iPad,
+  and the iPad then pushed its untouched copy back over it. Two devices, one right,
+  and the wrong one won. `professor-habits-edited` is the second list: written only by
+  `addHabit`/`updateHabit`/`deleteHabit`, cleared on a successful push, **never
+  seeded**, and it is the only thing the field merge may read. Absence of an edit is
+  not evidence of one. **`taskStore.loadFromDB` still reads `professor-tasks-dirty` for
+  both questions and has the same bug.**
 - **Push the hydration merge back only when it differs from what the server just sent**,
   or two open devices trade writes forever.
 

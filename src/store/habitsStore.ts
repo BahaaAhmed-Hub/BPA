@@ -130,30 +130,53 @@ export function saveQuantityLogs(logs: HabitQuantityLogs): void {
   try { localStorage.setItem(QTY_LOGS_KEY, JSON.stringify(logs)) } catch { /* quota */ }
 }
 
-// ─── Which habits this device has changed since it last pushed ───────────────
-// The merge below needs to answer one question: is this device's copy of a
-// habit newer than the server's? It used to assume yes, always, which is why a
-// habit's icon, colour and type never arrived on a second device — see the
-// comment in loadFromDB. This is the answer: a habit is only newer here if it
-// was edited here and the edit has not been pushed yet.
+// ─── What this device has changed, and what it merely holds ─────────────────
+//
+// The merge below asks two questions, and they had one answer between them:
+//
+//   A. Is this habit missing from the server because it was **made here** and
+//      not pushed — rather than **deleted** on another device?
+//   B. Is this device's copy of a habit's fields **newer** than the server's?
+//
+// One list answered both, and it is seeded with every local id on a device that
+// predates it, because A must fail safe: losing a habit is worse than a
+// redundant push. But that seed is a claim about *provenance*, and B read it as
+// a claim about *time*. On a device that had never edited a habit in its life,
+// every habit therefore counted as "newer here" — so an edit made on the laptop
+// never appeared on the iPad, and worse, the iPad pushed its untouched copy
+// back over it. Two devices, one of them right, and the wrong one won.
+//
+// So they are two lists now. `DIRTY_KEY` still means "might not be on the
+// server" and is still seeded. `EDITED_KEY` means "someone changed this here
+// and it has not been pushed yet" — written only by an actual edit, **never
+// seeded**, and that is the only thing B may read. Absence of an edit is not
+// evidence of one.
 
-const DIRTY_KEY = 'professor-habits-dirty'
+const DIRTY_KEY  = 'professor-habits-dirty'
+const EDITED_KEY = 'professor-habits-edited'
 
-function loadDirty(): Set<string> {
+function loadIds(key: string): Set<string> {
   try {
-    const raw = localStorage.getItem(DIRTY_KEY)
+    const raw = localStorage.getItem(key)
     return new Set(raw ? (JSON.parse(raw) as string[]) : [])
   } catch { return new Set() }
 }
 
-function saveDirty(ids: Set<string>): void {
-  try { localStorage.setItem(DIRTY_KEY, JSON.stringify([...ids])) } catch { /* quota */ }
+function saveIds(key: string, ids: Set<string>): void {
+  try { localStorage.setItem(key, JSON.stringify([...ids])) } catch { /* quota */ }
 }
 
+const loadDirty  = () => loadIds(DIRTY_KEY)
+const saveDirty  = (ids: Set<string>) => saveIds(DIRTY_KEY, ids)
+/** The edits this device has actually made and not yet pushed. */
+const loadEdited = () => loadIds(EDITED_KEY)
+const saveEdited = (ids: Set<string>) => saveIds(EDITED_KEY, ids)
+
 function markDirty(...ids: string[]): void {
-  const set = loadDirty()
-  for (const id of ids) set.add(id)
-  saveDirty(set)
+  const dirty = loadDirty(), edited = loadEdited()
+  for (const id of ids) { dirty.add(id); edited.add(id) }
+  saveDirty(dirty)
+  saveEdited(edited)
   markLocalWrite('habits')
 }
 
@@ -164,6 +187,10 @@ if (localStorage.getItem(DIRTY_KEY) == null) {
   const existing = loadHabits().map(h => h.id)
   if (existing.length) saveDirty(new Set(existing))
 }
+// The edited list is never seeded. An edit made before this existed and never
+// pushed is lost to the server's copy, which is the safe direction: the other
+// way round is what overwrote a real edit with an untouched one.
+if (localStorage.getItem(EDITED_KEY) == null) saveEdited(new Set())
 
 /** The fields that actually travel, in a form two copies can be compared by.
  *  Hydration pushes its merge back so this device's own data reaches the
@@ -191,10 +218,12 @@ function scheduleHabitsSync(habits: Habit[], logs?: HabitLogs) {
     // that cannot store what it is being sent.
     void saveHabitsToDB(habits)
       .then(() => {
-        // Landed. These are no longer newer here than they are there.
-        const still = loadDirty()
-        for (const id of pushing) still.delete(id)
+        // Landed. These are no longer newer here than they are there, and they
+        // are certainly on the server now.
+        const still = loadDirty(), edits = loadEdited()
+        for (const id of pushing) { still.delete(id); edits.delete(id) }
         saveDirty(still)
+        saveEdited(edits)
       })
       .catch(e => {
         reportSyncGap('habits', 'error', e instanceof Error ? e.message : String(e))
@@ -268,6 +297,7 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
     saveHabits([])
     saveLogs({})
     saveDirty(new Set())
+    saveEdited(new Set())
     set({ habits: [] })
   },
 
@@ -293,9 +323,12 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
         // rule was actually protecting — and everything else defers.
         const local = get().habits
         const dirty = loadDirty()
+        // Only a real, unpushed edit made *here* outranks the server's copy.
+        // Merely having a habit is not an opinion about it.
+        const edited = loadEdited()
         const merged: Habit[] = dbHabits.map((h, i) => {
           const localH = local.find(l => l.id === h.id)
-          const mine = !!localH && dirty.has(h.id)
+          const mine = !!localH && edited.has(h.id)
 
           const fromDb: Partial<Habit> = {
             name: h.name, frequency: h.frequency, isActive: h.isActive,
