@@ -1116,7 +1116,7 @@ export function ReflectionScreen(_props?: any) {
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 'var(--sb-t-micro)', letterSpacing: '0.1em', fontWeight: 700, color: 'var(--sb-ink-4)' }}>NET THROUGH {throughLabel}</div>
             <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', color: netColor(totalNet) }}>
-              {acct(totalNet, { currency: 'EGP', zero: '–' })}
+              {acct(totalNet, { currency: base, zero: '–' })}
             </div>
             {/* This is a *flow* — what {year} has netted — and Goals shows a
                 *stock*, what the accounts hold. They differ by the opening

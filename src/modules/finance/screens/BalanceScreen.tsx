@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button, Segmented } from '@/components/ui'
 import { GripVertical, Pencil, X } from 'lucide-react'
 import {
@@ -15,7 +15,8 @@ import { AccountModal } from '../modals/AccountModal'
 import { TransactionModal } from '../modals/TransactionModal'
 import { IconPicker } from '../components/IconPicker'
 import type { Account, AccountType, Transaction } from '../types'
-import { acct } from '../format'
+import { acct, group } from '../format'
+import { capacityFrom } from '../goalPlan'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { BudgetMark } from '../components/BudgetMark'
@@ -331,6 +332,28 @@ export function BalanceScreen() {
   const netPos    = totalHeld - totalOwed
   const heldPct   = totalHeld + totalOwed > 0 ? Math.round(totalHeld / (totalHeld + totalOwed) * 100) : 100
 
+  // ── What is actually safe to spend ────────────────────────────────────────
+  //
+  //  This read `netPos − totalOwed × 0.1` and called it "after committed
+  //  bills". Three things were wrong with one line:
+  //
+  //  - **The 10% was invented.** A minimum card repayment nobody set, from no
+  //    rate anybody gave, in a module whose first rule is that no figure is
+  //    made up.
+  //  - **It touched no committed bill.** The label named the one thing the
+  //    arithmetic did not do: an unpaid entry dated next week was not in it.
+  //  - **It counted the gold.** `netPos` includes every asset, and Goals is
+  //    explicit that the plan never sells them. Two screens, one question,
+  //    opposite answers.
+  //
+  //  `capacityFrom` already answers this and the Goals screen already trusts
+  //  it: cash in spendable accounts, less what is dated ahead and unpaid.
+  const spendable = useMemo(
+    () => capacityFrom(accounts, transactions, 0),
+    [accounts, transactions],
+  )
+  const safeToSpend = Math.max(0, spendable.held - Math.max(0, spendable.committed))
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden' }}>
       {/* Header */}
@@ -376,7 +399,7 @@ export function BalanceScreen() {
         <div style={{ flexShrink: 0, width: 240 }}>
           <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6, display: 'block', marginBottom: 4 }}>NET POSITION</span>
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums', display: 'block' }}>
-            {acct(netPos, { currency: 'EGP' })}
+            {acct(netPos, { currency: base })}
           </span>
           <span style={{ fontSize: 'var(--sb-t-meta)', opacity: 0.65, display: 'block', marginTop: 4 }}>
             EGP {totalHeld.toLocaleString('en-US')} held · EGP {totalOwed.toLocaleString('en-US')} owed
@@ -399,10 +422,16 @@ export function BalanceScreen() {
         {/* Safe to spend */}
         <div style={{ width: 160, flexShrink: 0 }}>
           <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55, display: 'block', marginBottom: 4 }}>SAFE TO SPEND</span>
-          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', display: 'block' }}>
-            {acct(Math.max(0, netPos - totalOwed * 0.1), { currency: 'EGP' })}
+          <span
+            title={`${group(Math.round(spendable.held))} in current accounts and wallets`
+              + (spendable.committed > 0 ? `, less ${group(Math.round(spendable.committed))} dated ahead and unpaid` : '')
+              + (spendable.assets > 0 ? `. ${group(Math.round(spendable.assets))} in assets is not counted — you cannot spend a flat or a bar of gold without selling it first.` : '')}
+            style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', display: 'block', cursor: 'help' }}>
+            {acct(safeToSpend, { currency: base })}
           </span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', opacity: 0.6, display: 'block', marginTop: 2 }}>After committed bills</span>
+          <span style={{ fontSize: 'var(--sb-t-micro)', opacity: 0.6, display: 'block', marginTop: 2 }}>
+            {spendable.assets > 0 ? 'Cash only, after unpaid bills' : 'After unpaid bills'}
+          </span>
         </div>
       </div>
 
@@ -426,7 +455,7 @@ export function BalanceScreen() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', marginBottom: 7, boxSizing: 'border-box' as const }}>
                 <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{group.label}</span>
                 <span style={{ marginLeft: 'auto', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 600, color: group.totalColor, fontVariantNumeric: 'tabular-nums' }}>
-                  {acct(group.owed ? -Math.abs(group.total) : group.total, { currency: 'EGP' })}
+                  {acct(group.owed ? -Math.abs(group.total) : group.total, { currency: base })}
                 </span>
               </div>
               <DndContext
@@ -490,9 +519,15 @@ export function BalanceScreen() {
               clips whatever is last rather than moving it. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap', rowGap: 8 }}>
             <div style={{
+              // Two date fields and a three-way switch do not fit a right pane
+              // at 820px on one line, and a group that cannot wrap pushes its
+              // last control off the edge instead of moving it down.
               display: 'inline-flex',
               alignItems: 'center',
+              flexWrap: 'wrap',
               gap: 6,
+              rowGap: 6,
+              maxWidth: '100%',
               padding: '5px 8px 5px 12px',
               background: 'var(--sb-card)',
               border: 'var(--sb-border-width) solid var(--sb-border)',

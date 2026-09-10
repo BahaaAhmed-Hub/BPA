@@ -9,7 +9,7 @@ import { useFinanceStore } from '../financeStore'
 import { CategoryModal } from '../modals/CategoryModal'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { suggestIcon, isPlaceholderIcon, isLucideIcon } from '../categoryIcons'
-import { toBase, rateFor, currenciesNeedingRates } from '../fx'
+import { toBase, rateFor, currenciesNeedingRates, baseCurrency } from '../fx'
 import { useUIStore } from '@/store/uiStore'
 import {
   BudgetRuleModal, defaultRule, monthlyAmount, activeIn, ordinal, bucketOf, BUCKETS,
@@ -1095,9 +1095,9 @@ export function BudgetScreen(_props?: any) {
     try { localStorage.setItem('finance-icons-reviewed', '1') } catch { /* quota */ }
   }, [categories, upsertCategory])
   const monthKey = `${year}-${String(monthIdx + 1).padStart(2, '0')}`
-  const currency = (() => {
-    try { return localStorage.getItem('finance-currency') || 'EGP' } catch { return 'EGP' }
-  })()
+  // The base currency is a setting, and `fx.ts` is what reads it. Spelling the
+  // localStorage key out again here was a second answer to the same question.
+  const currency = baseCurrency()
 
   // Parent categories only (for list)
   const parents = useMemo(
@@ -1939,7 +1939,7 @@ export function BudgetScreen(_props?: any) {
                         </div>
                         <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginBottom: 3, whiteSpace: 'nowrap' }}>{cat?.name ?? selectedCat.name}</div>
                         <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: RUST, fontFamily: 'var(--sb-font-num)' }}>
-                          {acct(total, { currency: 'EGP' })}
+                          {acct(total, { currency })}
                         </div>
                         <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>{txs.length} txns</div>
                       </div>
@@ -2023,7 +2023,7 @@ export function BudgetScreen(_props?: any) {
                     )}
                   </div>
                   <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: RUST, letterSpacing: '-0.02em' }}>
-                    {acct(totalSpend, { currency: 'EGP' })}
+                    {acct(totalSpend, { currency })}
                   </div>
                 </div>
                 {excludedSpend > 0 && (
@@ -2032,14 +2032,14 @@ export function BudgetScreen(_props?: any) {
                     <div>
                       <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>EXCLUDED</div>
                       <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-4)', letterSpacing: '-0.02em' }}>
-                        {acct(-excludedSpend, { currency: 'EGP' })}
+                        {acct(-excludedSpend, { currency })}
                       </div>
                     </div>
                     <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--sb-border)' }} />
                     <div>
                       <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>NET</div>
                       <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em' }}>
-                        {acct(netSpend, { currency: 'EGP' })}
+                        {acct(netSpend, { currency })}
                       </div>
                     </div>
                   </>
