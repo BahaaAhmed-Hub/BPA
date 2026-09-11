@@ -591,6 +591,24 @@ the app in. On one twelve-month ledger the same data reported anywhere between
   when it is really 23,800, the "then each month" line is wrong and so is every
   date read off it.
 
+## Finance — the open goal is one panel, not five cards
+`GoalDetail` used to be five white cards loose on the page ground, each
+spacing itself with a `marginBottom`. It is now **the calendar composer's
+shell**, to the token: a panel in the page's own cream, bordered so it reads as
+a box against a ground of the same colour, holding white cards whose separation
+is that ground rather than a rule. Five banded sections in a column do not
+scan, and five floating cards do not read as one thing.
+- **The shell's `gap` spaces the sections**, so a card cannot be double-spaced
+  by being both inside the shell and pushing its sibling.
+- **Every section carries its eyebrow inside its own card, top left.** Some had
+  one and some did not, which is most of why the column looked like parts of
+  different pages stacked up. The two without now read *The goal* / *The card*
+  and *Where it stands*.
+- A section's ground says what kind it is: white for the ordinary ones, the
+  positive/negative tint for the verdict, the accent tint for *What would
+  change it* — which holds its own white cards a level down, at `--sb-r-nav`
+  rather than `--sb-r-card`, so the nesting is legible rather than repeated.
+
 ## Finance — "never" is not an answer
 `goalAdvice.ts`. The plan could say a goal lands in March 2031, or that nothing
 ever reaches it, and stop — which hands the whole problem back. `adviseGoal()`

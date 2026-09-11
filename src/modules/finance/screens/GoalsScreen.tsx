@@ -955,9 +955,11 @@ function WhatWouldChangeIt({ advice, sooner, money }: {
   money: (n: number) => string
 }) {
   const [openCuts, setOpenCuts] = useState(false)
+  // The same box as every other section of the panel — this one is a section
+  // of it, not a card floating beside it.
   const card: React.CSSProperties = {
     background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
-    borderRadius: 'var(--sb-r-card)', padding: '16px 18px',
+    borderRadius: 'var(--sb-r-card)', padding: '18px 20px',
   }
   const lead =
     advice.reason === 'never'
@@ -1081,13 +1083,31 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
 
   const card: React.CSSProperties = {
     background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
-    padding: '18px 20px', marginBottom: 12,
+    // No marginBottom: the shell's own gap spaces these now, so a card cannot
+    // be double-spaced by being both inside the shell and pushing its sibling.
+    padding: '18px 20px',
   }
 
   return (
-    <div style={{ maxWidth: 720 }}>
+    // One box holding the sections, rather than five boxes loose on the page.
+    // The idiom is the calendar composer's `ComposerShell`, to the token: a
+    // panel in the page's own cream, bordered so it reads as a box against a
+    // ground of the same colour, holding white cards whose separation is that
+    // ground rather than a rule. Five banded sections in a column do not scan,
+    // and five floating cards do not read as one thing.
+    //
+    // Every section carries its eyebrow **inside** its own card, top left.
+    // Some had one and some did not, which is what made the column look like
+    // parts of different pages stacked up.
+    <div style={{
+      maxWidth: 720,
+      background: C.bg, border: `var(--sb-border-width) solid ${C.border}`,
+      borderRadius: 'var(--sb-r-frame, var(--sb-r-card))', boxShadow: 'var(--sb-shadow-control)',
+      display: 'flex', flexDirection: 'column', gap: 12, padding: '12px 14px 14px',
+    }}>
       <div style={card}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={EYEBROW}>{debt ? 'The card' : 'The goal'}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
           <span style={{
             width: 22, height: 22, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1143,7 +1163,8 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
       {/* The verdict, in a sentence */}
       <div style={{ ...card, background: done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentBg,
         border: `var(--sb-border-width) solid ${done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentBr}` }}>
-        <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink1, lineHeight: 1.6 }}>
+        <span style={EYEBROW}>Where it stands</span>
+        <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink1, lineHeight: 1.6, marginTop: 8 }}>
           {done
             ? (debt ? 'This card is clear. Anything ranked below it now gets what it was taking.' : 'This one is there. Anything ranked below it now gets what it was taking.')
             : coveredNow
