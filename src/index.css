@@ -448,14 +448,14 @@ textarea:focus,
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
-  /* `inline-flex` sizes to its options, but as a flex *item* in a column it is
-     stretched to the column's width and the track grows behind them — 230px of
-     track around 212px of buttons, with the slack all on one side. It showed up
-     under the Goals policy picker, where a caption under it set the column
-     width; the two pickers without a caption looked fine, which is what made it
-     read as a state rather than a layout. `data-block` is the opt-in for
-     filling the width, so nothing else may. */
-  align-self: start;
+  /* `inline-flex` sizes to its options, but as a flex *item* whose parent
+     stretches it, the track grows behind them. This used to be fixed here with
+     `align-self: start`, which was too big a hammer: it also overrode a row
+     that aligns its items on `center`, and put the pills on a different line
+     from the figures beside them in the Financials header. Only a parent that
+     *stretches* is the problem, so it is fixed at that parent — the Goals
+     policy picker sets `alignSelf` on its own. `data-block` is still the opt-in
+     for deliberately filling the width. */
   padding: 3px;
   box-sizing: border-box;
   border-radius: var(--sb-r-pill);

@@ -323,6 +323,30 @@ does the moving. Resizing needs no live transform either: it is worked out from
   and leaves out anything with no `paidAt` (saying how many). One `filedOn(tx)` decides
   it for the rows, the totals and the drill-down alike. Settings holds the default,
   `finance-financials-basis` what was last looked at.
+- **The header is one line, always.** It aligned on `flex-end`, which is only
+  the same line while every item is the same height — the net figure is three
+  lines and the pills are one — and the unpaid caption hung *below* the basis
+  toggle in absolute position, so the row became two rows whenever it appeared.
+  Everything shares one centre line now, the caption is a chip on that line
+  (and clicking it switches to the basis that counts those entries), and the
+  bar does not wrap: the title beside it gives way, and past that the bar
+  scrolls sideways rather than stacking.
+  `.sb-segmented` used to carry `align-self: start` to stop a column parent
+  stretching it. That also overrode a row aligning on `center`, which is what
+  put the pills on a different line from the figures. Only a parent that
+  stretches is the problem, so it is fixed at that parent — the Goals policy
+  picker sets `alignSelf` itself.
+- **A duplicate can be acknowledged.** `duplicateAcks.ts`. Detection points at
+  pairs and never decides; some pairs are real — a second tank of petrol, a
+  bill paid in halves — and the list had no way to say so, so the chip sat at
+  "10 to check" for ever, which is a count you learn to ignore. A tick takes
+  one out of the list and out of the chip, the panel says how many were checked
+  and offers them back, and nothing about the entry changes: it is a note about
+  having looked, kept beside the other finance preferences.
+  **The note is against the entry as it was when you looked at it** — the key
+  carries the fields that made it a duplicate plus its date, so editing any of
+  them brings it back rather than leaving an acknowledgement outliving the
+  thing it was about.
 - **Every figure in Financials opens what it was summed from.** A cell click stops
   propagation (the row's own click hides it) and passes the exact id set the figure
   used — a hidden part is out of both. The panel deletes and edits through the store,

@@ -696,6 +696,10 @@ export function GoalsScreen(_props?: any) {
             </span>
             <Segmented
               aria-label="Which gets the money"
+              // This sits in a column whose width is set by the caption under
+              // it, and a flex item is stretched by its parent unless it says
+              // otherwise — 230px of track around 212px of buttons.
+              style={{ alignSelf: 'flex-start' }}
               value={policy}
               onChange={pickPolicy}
               options={[

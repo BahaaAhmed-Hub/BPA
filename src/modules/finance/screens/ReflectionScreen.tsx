@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect, useCallback, useRef, Fragment } from 'react'
 import { Button, Card, Segmented } from '@/components/ui'
-import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, GripVertical, X, Trash2, Plus, Eye, EyeOff, Pencil, ArrowLeft } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, GripVertical, X, Trash2, Plus, Eye, EyeOff, Pencil, ArrowLeft, Check } from 'lucide-react'
 import { useFinanceStore, txFromRow } from '../financeStore'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { acct, outflow, group } from '../format'
 import { findDuplicates } from '../duplicates'
+import { loadAcks, acknowledge, forgetAllAcks, isAcknowledged, ACKS_EVENT } from '../duplicateAcks'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { BudgetMark } from '../components/BudgetMark'
 import { isBudgetEntry } from '../budgetEntries'
@@ -548,10 +549,25 @@ export function ReflectionScreen(_props?: any) {
     [transactions, year, filedIn],
   )
   const dupes = useMemo(() => findDuplicates(yearTx), [yearTx])
-  const suspects = useMemo(
+  // What has already been looked at and left alone. Re-read on the event so
+  // acknowledging one updates the chip and the list in the same tick, and on
+  // `storage` so another tab's decision arrives too.
+  const [acks, setAcks] = useState<Set<string>>(loadAcks)
+  useEffect(() => {
+    const sync = () => setAcks(loadAcks())
+    window.addEventListener(ACKS_EVENT, sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener(ACKS_EVENT, sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
+  const flagged = useMemo(
     () => yearTx.filter(t => dupes.has(t.id)).sort((a, b) => b.date.localeCompare(a.date)),
     [yearTx, dupes],
   )
+  const suspects = useMemo(() => flagged.filter(t => !isAcknowledged(acks, t)), [flagged, acks])
+  const settled = flagged.length - suspects.length
 
   const [fxTick, setFxTick] = useState(0)
   useEffect(() => {
@@ -1034,7 +1050,10 @@ export function ReflectionScreen(_props?: any) {
 
       {/* Header */}
       <div style={{ flexShrink: 0, padding: '14px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
-        <div>
+        {/* The title is what gives way when the row is tight. It has a caption
+            that can wrap; the controls beside it cannot, and a control that
+            wraps onto a second line is the thing this header kept doing. */}
+        <div style={{ minWidth: 0, flexShrink: 1 }}>
           <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>FINANCE · REFLECT</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={() => void setYear(year - 1)} style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-h2)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
@@ -1053,8 +1072,22 @@ export function ReflectionScreen(_props?: any) {
           </span>
         </div>
 
-        {/* Stats bar */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 20, paddingBottom: 4, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        {/* Stats bar — one line, always.
+            It used to align on `flex-end`, which is only the same line while
+            every item is the same height: the net figure is three lines tall
+            and the pills are one, so they sat at two different baselines. And
+            the unpaid caption hung *below* the basis toggle in absolute
+            position, so the row read as two rows whenever it appeared.
+            Everything shares one centre line now, and the caption is a chip on
+            that line rather than something dangling off it. */}
+        <div style={{
+          marginLeft: 'auto', display: 'flex', gap: 14, alignItems: 'center',
+          // Never wrap. Wrapping is what put the pills on one line and the
+          // figures on another, which is the whole complaint. If it genuinely
+          // cannot fit it scrolls sideways, which is visible and recoverable;
+          // a silently stacked row is neither.
+          flexWrap: 'nowrap', flexShrink: 0, maxWidth: '100%', overflowX: 'auto', scrollbarWidth: 'none',
+        }}>
           <Segmented
             size="sm"
             aria-label="How to read the year"
@@ -1077,30 +1110,33 @@ export function ReflectionScreen(_props?: any) {
               ]}
             />
           )}
-          {/* The caption hangs *out* of the layout. Inside it, it made this
-              control taller than the ones beside it, and a row of pills aligned
-              on their bottoms then sat at two different heights — and jumped by
-              the height of a line every time the caption appeared. */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', position: 'relative' }}>
-            <Segmented
-              size="sm"
-              aria-label="Which date a figure is filed under"
-              value={basis}
-              onChange={pickBasis}
-              options={[
-                { value: 'due'  as const, label: 'When it is due',  title: 'Every entry in the month it belongs to, paid or not' },
-                { value: 'paid' as const, label: 'When it was paid', title: 'Only money that has actually moved, in the month it moved' },
-              ]}
-            />
-            {basis === 'paid' && unpaidThisYear > 0 && (
-              <span style={{
-                position: 'absolute', top: 'calc(100% + 3px)', right: 0, whiteSpace: 'nowrap',
-                fontSize: 'var(--sb-t-micro)', color: 'var(--sb-warning)', pointerEvents: 'none',
+          <Segmented
+            size="sm"
+            aria-label="Which date a figure is filed under"
+            value={basis}
+            onChange={pickBasis}
+            options={[
+              { value: 'due'  as const, label: 'When it is due',  title: 'Every entry in the month it belongs to, paid or not' },
+              { value: 'paid' as const, label: 'When it was paid', title: 'Only money that has actually moved, in the month it moved' },
+            ]}
+          />
+          {/* What this view is leaving out, on the line rather than under it —
+              and shaped like the "to check" chip beside it, because both are
+              the same kind of thing: a count of entries wanting an answer. */}
+          {basis === 'paid' && unpaidThisYear > 0 && (
+            <button
+              onClick={() => pickBasis('due')}
+              title={`${unpaidThisYear} entries have no payment date, so no money has moved for them and this view cannot place them. Click to switch to "When it is due", which counts them.`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, height: 28, flexShrink: 0,
+                padding: '0 11px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
+                background: 'var(--sb-negative-tint)', border: 'var(--sb-border-width) solid var(--sb-negative-tint)',
+                color: 'var(--sb-negative)', fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
+                whiteSpace: 'nowrap',
               }}>
-                {unpaidThisYear} not paid yet, so not in this view
-              </span>
-            )}
-          </div>
+              {unpaidThisYear} not paid yet
+            </button>
+          )}
           {suspects.length > 0 && (
             <span style={{ position: 'relative' }}>
               <button
@@ -1152,6 +1188,20 @@ export function ReflectionScreen(_props?: any) {
                           {acct(Math.abs(t.amount), { currency: t.currency })}
                         </span>
                       </span>
+                      {/* Two answers, and only one of them is destructive. Most
+                          flagged pairs are fine — a second tank of petrol, a
+                          bill paid in halves — and without a way to say so the
+                          chip sits at "10 to check" for ever, which is a count
+                          you learn to ignore. */}
+                      <button
+                        onClick={() => acknowledge(t)}
+                        title="Checked — this one is fine. It leaves the list; editing it brings it back."
+                        style={{
+                          width: 24, height: 24, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                          color: 'var(--sb-positive)', cursor: 'pointer',
+                        }}><Check size={ICON.sm} strokeWidth={STROKE.active} /></button>
                       <button
                         onClick={() => {
                           if (!window.confirm(`Delete ${t.payee?.trim() || 'this entry'} of ${acct(Math.abs(t.amount), { currency: t.currency })} on ${t.date}?`)) return
@@ -1165,6 +1215,21 @@ export function ReflectionScreen(_props?: any) {
                         }}><Trash2 size={ICON.sm} /></button>
                     </div>
                   ))}
+                  {settled > 0 && (
+                    <div style={{
+                      display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10, paddingTop: 8,
+                      borderTop: 'var(--sb-border-width) solid var(--sb-accent-tint)',
+                      fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)',
+                    }}>
+                      <span>{settled} checked and left alone</span>
+                      <button onClick={forgetAllAcks}
+                        title="Put every one you have checked back in the list"
+                        style={{
+                          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                          color: 'var(--sb-ink-3)', textDecoration: 'underline', fontSize: 'var(--sb-t-micro)', fontFamily: 'inherit',
+                        }}>show them again</button>
+                    </div>
+                  )}
                 </Card>
               )}
             </span>
@@ -1175,7 +1240,7 @@ export function ReflectionScreen(_props?: any) {
               <button onClick={() => setHiddenIds(new Set())} style={{ marginLeft: 8, background: 'none', border: 'none', color: 'var(--sb-ink-3)', cursor: 'pointer', fontSize: 'var(--sb-t-meta)', textDecoration: 'underline', padding: 0 }}>Show all</button>
             </span>
           )}
-          <div style={{ textAlign: 'right' }}>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div style={{ fontSize: 'var(--sb-t-micro)', letterSpacing: '0.1em', fontWeight: 700, color: 'var(--sb-ink-4)' }}>NET THROUGH {throughLabel}</div>
             <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', color: netColor(totalNet) }}>
               {acct(totalNet, { currency: base, zero: '–' })}
