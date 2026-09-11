@@ -20,6 +20,7 @@ import {
   type ForecastState,
 } from '../forecast'
 import { loadRules } from '../modals/BudgetRuleModal'
+import { adviseGoal, ifFound, type Advice, type Move } from '../goalAdvice'
 
 
 // ─── 21 · Goals ───────────────────────────────────────────────────────────────
@@ -417,6 +418,34 @@ export function GoalsScreen(_props?: any) {
     [allGoals, capacity, runOpts])
 
   const selected = plans.find(p => p.goal.id === selectedId) ?? plans[0] ?? null
+
+  // What it would take. Only worked out for the goal that is open — it reads
+  // the whole ledger a category at a time, and doing that for every goal on
+  // every render would be the same answer twelve times.
+  const advice = useMemo(() => {
+    if (!selected) return null
+    const a = adviseGoal({
+      plan: selected, plans, capacity, transactions, categories,
+      budgets: loadRules(), policy: runOpts,
+    })
+    return a.reason === 'fine' || a.gap <= 0 ? null : a
+  }, [selected, plans, capacity, transactions, categories, runOpts])
+
+  // Closing a gap is never about one goal: the money that gets this one there
+  // sooner gets everything behind it there sooner too, and that is the half of
+  // the answer a single date can never carry.
+  const sooner = useMemo(() => {
+    if (!advice || advice.gap <= 0) return []
+    const after = ifFound(advice.gap, plans, capacity, runOpts)
+    return plans
+      .filter(p => p.goal.id !== advice.goalId)
+      .filter(p => {
+        const was = p.eta
+        const now = after.get(p.goal.id) ?? null
+        return now != null && (was == null || now < was)
+      })
+      .map(p => p.goal.name)
+  }, [advice, plans, capacity, runOpts])
 
   function addGoal() {
     if (!newName.trim() || newTarget <= 0) return
@@ -847,6 +876,8 @@ export function GoalsScreen(_props?: any) {
             surplus={capacity.surplus}
             startMonth={monthsOn(selected.startsIn)}
             schedule={schedule}
+            advice={advice}
+            sooner={sooner}
             onChange={g => void upsertGoal(g)}
             onDelete={g => {
               if (!window.confirm(`Delete the goal "${g.name}"?`)) return
@@ -881,14 +912,109 @@ export function GoalsScreen(_props?: any) {
   )
 }
 
+
+// ─── What would change it ────────────────────────────────────────────────────
+
+function WhatWouldChangeIt({ advice, sooner, money }: {
+  advice: Advice
+  sooner: string[]
+  money: (n: number) => string
+}) {
+  const [openCuts, setOpenCuts] = useState(false)
+  const card: React.CSSProperties = {
+    background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
+    borderRadius: 'var(--sb-r-card)', padding: '16px 18px',
+  }
+  const lead =
+    advice.reason === 'never'
+      ? `Nothing reaches this at the moment. It needs ${money(advice.gap)} a month that the plan has not got.`
+    : advice.reason === 'late'
+      ? `It is ${money(advice.gap)} a month short of the date you wanted.`
+    : advice.reason === 'queued'
+      ? `It is waiting behind the ones above it. ${money(advice.gap)} a month more and it does not have to.`
+      : `${money(advice.gap)} a month more and it lands on time.`
+
+  const cuts = advice.cuts.slice(0, 6)
+
+  return (
+    <div style={{ ...card, background: 'var(--sb-accent-tint)', border: `var(--sb-border-width) solid ${C.accentBr}` }}>
+      <span style={EYEBROW}>What would change it</span>
+      <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink1, lineHeight: 1.6, marginTop: 8 }}>{lead}</div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+        {advice.moves.map((m: Move, i: number) => (
+          <div key={m.kind + i} style={{
+            background: C.surface, border: `var(--sb-border-width) solid ${C.hair}`,
+            borderRadius: 'var(--sb-r-nav)', padding: '10px 12px',
+          }}>
+            <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink1, fontWeight: 600 }}>{m.title}</div>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, lineHeight: 1.55, marginTop: 3 }}>{m.detail}</div>
+            {m.kind === 'cut' && cuts.length > 0 && (
+              <>
+                <button onClick={() => setOpenCuts(v => !v)} style={{
+                  marginTop: 8, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+                  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-ink)', fontWeight: 600,
+                }}>
+                  {openCuts ? 'Hide' : `Where it could come from (${cuts.length})`}
+                </button>
+                {openCuts && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+                    {cuts.map(c => (
+                      <div key={c.categoryId} style={{
+                        display: 'flex', alignItems: 'baseline', gap: 8,
+                        fontSize: 'var(--sb-t-meta)', color: C.ink2,
+                      }}>
+                        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {c.name}
+                          {c.bucket && <span style={{ color: C.ink4 }}> · {c.bucket === 'guiltfree' ? 'guilt-free' : c.bucket}</span>}
+                        </span>
+                        <span style={{ fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', color: C.ink3 }}>
+                          {group(Math.round(c.monthly))}
+                        </span>
+                        <span style={{
+                          fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', minWidth: 64, textAlign: 'right',
+                          color: c.take > 0 ? C.red : C.ink4, fontWeight: c.take > 0 ? 600 : 400,
+                        }}>
+                          {c.take <= 0 ? 'untouched' : c.take >= c.monthly ? 'all of it' : `−${group(Math.round(c.take))}`}
+                        </span>
+                      </div>
+                    ))}
+                    <div style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, marginTop: 4, lineHeight: 1.5 }}>
+                      What each costs a month, and what this combination takes from it. Filled
+                      in the order a cut is least painful — what a budget says is guilt-free
+                      first, rent last — so the ones at the bottom stay untouched.
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {sooner.length > 0 && (
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, lineHeight: 1.55, marginTop: 10 }}>
+          Any of these also brings {sooner.slice(0, 3).join(', ')}
+          {sooner.length > 3 ? ` and ${sooner.length - 3} more` : ''} forward — the money that
+          gets this one there does not stop when it lands.
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── The open goal ────────────────────────────────────────────────────────────
 
-function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedule, onChange, onDelete }: {
+function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedule, advice, sooner, onChange, onDelete }: {
   plan: GoalPlan
   place: number
   policy: Policy
   currency: string
   surplus: number
+  /** What it would take, if it is not already fine. */
+  advice: Advice | null
+  /** Which other goals land sooner once the gap is closed, by name. */
+  sooner: string[]
   /** 'YYYY-MM' the money first reaches it, when it is still in the queue. */
   startMonth: string | null
   schedule: Schedule
@@ -1033,6 +1159,13 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
           )}
         </div>
       )}
+
+      {/* ── What would change it ──
+          A plan that says "March 2031" or "never" and stops has handed the
+          problem back. Every move here is arithmetic on figures already on the
+          screen, and each one names the category it comes out of — "spend less"
+          is not a move. */}
+      {advice && <WhatWouldChangeIt advice={advice} sooner={sooner} money={money} />}
 
       {/* What can be changed about it — for a card, nothing here: the balance
           is the ledger's, and it moves from Balances. */}
