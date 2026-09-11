@@ -2,13 +2,30 @@
 /**
  * BPA Migration Runner
  * Usage: node scripts/migrate.mjs
- * Reads credentials from .env.local and runs all pending migrations.
+ * Reads credentials from .env.local and runs all *pending* migrations.
+ *
+ * It used to run every file in the directory on every invocation, and the CI
+ * workflow invokes it on any push that touches supabase/migrations. So adding
+ * one unrelated migration re-ran all of them — including the one-time data
+ * repairs, which is how a whole finance ledger was marked paid a second time,
+ * over the answers a person had since given it.
+ *
+ * A migration that has been applied is now recorded in `public.schema_migrations`
+ * and skipped. A file whose contents have changed since it was recorded is run
+ * again and says so, because in this repo a migration is re-assertable DDL and
+ * editing one is how it is corrected — but that is now a visible decision
+ * rather than what happens to every file, every time, silently.
+ *
+ * A failure also fails the run. Errors used to be printed and then followed by
+ * "✅ Done" and exit 0, so a broken migration deployed green.
  */
 
 import { readFileSync, readdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { createHash } from 'crypto'
 import https from 'https'
+import http from 'http'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const root  = join(__dir, '..')
@@ -40,13 +57,26 @@ if (!REF || REF.includes('paste_')) {
   process.exit(1)
 }
 
+/** The Management API answers a select with an array of row objects, and a
+ *  statement with something that is not one. Only the first shape is rows. */
+function rowsOf(res) {
+  return Array.isArray(res) ? res : []
+}
+
 // ── Run SQL via Supabase Management API ──────────────────────────────────────
+// Point at something other than Supabase — a local Postgres proxy, or a stand-in
+// that records what it was asked to run. The default is the real project.
+const ENDPOINT = process.env.MIGRATE_ENDPOINT
+
 function runSQL(sql) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({ query: sql })
-    const req  = https.request({
-      hostname: 'api.supabase.com',
-      path:     `/v1/projects/${REF}/database/query`,
+    const target = ENDPOINT ? new URL(ENDPOINT) : null
+    const transport = target && target.protocol === 'http:' ? http : https
+    const req  = transport.request({
+      hostname: target ? target.hostname : 'api.supabase.com',
+      port:     target ? target.port : undefined,
+      path:     target ? target.pathname : `/v1/projects/${REF}/database/query`,
       method:   'POST',
       headers:  {
         'Authorization': `Bearer ${TOKEN}`,
@@ -70,23 +100,55 @@ function runSQL(sql) {
   })
 }
 
+// ── The ledger of what has already been applied ──────────────────────────────
+// Created by the runner rather than by a migration of its own, so it exists
+// before the first file is considered.
+await runSQL(`
+  create table if not exists public.schema_migrations (
+    name       text primary key,
+    checksum   text        not null,
+    applied_at timestamptz not null default now()
+  );
+`)
+
+const applied = new Map()
+for (const row of rowsOf(await runSQL('select name, checksum from public.schema_migrations;'))) {
+  applied.set(row.name, row.checksum)
+}
+
 // ── Load and run migration files ─────────────────────────────────────────────
 const migrationsDir = join(root, 'supabase', 'migrations')
 const files = readdirSync(migrationsDir)
   .filter(f => f.endsWith('.sql'))
   .sort()
 
-console.log(`\n🚀  Running ${files.length} migration(s)...\n`)
+const sum = sql => createHash('sha256').update(sql).digest('hex')
+
+let ran = 0, skipped = 0, failed = 0
+
+console.log(`\n🚀  ${files.length} migration(s) on disk, ${applied.size} already applied\n`)
 
 for (const file of files) {
-  const sql = readFileSync(join(migrationsDir, file), 'utf8')
-  process.stdout.write(`  → ${file} ... `)
+  const sql  = readFileSync(join(migrationsDir, file), 'utf8')
+  const hash = sum(sql)
+  const seen = applied.get(file)
+
+  if (seen === hash) { skipped++; continue }
+
+  process.stdout.write(`  → ${file}${seen ? ' (changed since it was applied)' : ''} ... `)
   try {
     await runSQL(sql)
+    await runSQL(`
+      insert into public.schema_migrations (name, checksum) values ($$${file}$$, $$${hash}$$)
+      on conflict (name) do update set checksum = excluded.checksum, applied_at = now();
+    `)
     console.log('✓')
+    ran++
   } catch (err) {
     console.log(`✗\n     ${err.message}`)
+    failed++
   }
 }
 
-console.log('\n✅  Done.\n')
+console.log(`\n${failed ? '❌' : '✅'}  ${ran} applied, ${skipped} already up to date, ${failed} failed.\n`)
+process.exit(failed ? 1 : 0)

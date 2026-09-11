@@ -29,6 +29,12 @@ update public.tasks
  where task_type is null
    and description in ('meeting','call','followup','email','research','study','deepwork','do');
 
+-- Only clear what the statement above just moved. Unqualified, this re-ran on
+-- every push and would delete a note whose whole text a person had written as
+-- one of these eight words — the same class of bug as 20260009, where a
+-- one-time repair kept firing and could not tell its own data from a later
+-- decision.
 update public.tasks
    set description = null
- where description in ('meeting','call','followup','email','research','study','deepwork','do');
+ where description in ('meeting','call','followup','email','research','study','deepwork','do')
+   and task_type = description;

@@ -226,6 +226,32 @@ export async function loadUnpaidTransactions(): Promise<TransactionRow[]> {
   return data as TransactionRow[]
 }
 
+/** Every entry claiming it was paid on a day that has not happened yet, in any
+ *  year.
+ *
+ *  Money cannot have moved on a future date, so each of these is a mistake —
+ *  and they are a known one. `20260009` used to stamp `paid_at = date` over
+ *  every entry with no payment date, and the runner re-ran it on any push that
+ *  touched the migrations directory, so a ledger's worth of deliberately
+ *  unpaid entries — bills dated ahead, future budget instalments, a salary due
+ *  next month — came back marked paid on their own due dates.
+ *
+ *  This is the half of that which can be identified with certainty afterwards.
+ *  An entry dated in the *past* that was deliberately unpaid is indistinguishable
+ *  from one that was genuinely paid on its due date; nothing recorded which was
+ *  which, so those are left alone rather than guessed at. */
+export async function loadPaidInFuture(today: string): Promise<TransactionRow[]> {
+  const userId = await uid()
+  const { data, error } = await supabase
+    .from('finance_transactions')
+    .select('*')
+    .eq('user_id', userId)
+    .gt('paid_at', today)
+    .order('date', { ascending: true })
+  if (error || !data) return []
+  return data as TransactionRow[]
+}
+
 export async function saveTransaction(row: TransactionRow): Promise<void> {
   markLocalWrite('finance')
   await upsertRows('finance_transactions', [row])

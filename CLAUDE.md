@@ -874,6 +874,40 @@ pushes to Google Calendar — nothing here knows about calendars.
 - Configured in Settings → Finance (MONEY REMINDERS); `App.tsx` runs it on load, on
   `professor:moneyRemindersChanged`, and every 12h.
 
+## Migrations — the runner remembers what it has applied
+`scripts/migrate.mjs` used to read every `.sql` in `supabase/migrations` and run
+all of them, every time, and `.github/workflows/migrate.yml` invokes it on any
+push that touches that directory. So **adding one unrelated migration re-ran all
+of them.** That is how a whole finance ledger was marked paid a second time:
+`20260009` carried an unconditional
+`update finance_transactions set paid_at = date, is_cleared = true where paid_at is null`,
+and after its first run `paid_at is null` no longer means "logged before the
+column existed" — it means **an entry somebody deliberately marked unpaid**. A
+salary not yet received, a bill dated ahead, every future instalment
+`budgetEntries.ts` writes. The file's own comment claimed it was safe to run
+more than once, and the claim was the bug.
+- **`public.schema_migrations`** (name, checksum, applied_at) is the ledger; the
+  runner creates it before considering any file and skips anything whose
+  checksum matches. A file whose contents *changed* runs again and says so —
+  in this repo a migration is re-assertable DDL and editing one is how it is
+  corrected — but that is now a visible decision rather than what silently
+  happens to every file on every deploy.
+- **A failure fails the run.** Errors used to print and then be followed by
+  "✅ Done" and exit 0, so a broken migration deployed green.
+- **`MIGRATE_ENDPOINT`** points it somewhere other than the real project, which
+  is how the skip/re-run behaviour is tested without touching production.
+- **No migration may repair data it cannot identify.** The three that did are
+  fixed: `20260006` and `20260009` are DDL only now, and `20260003` clears a
+  task's description only where it equals the `task_type` it just moved there.
+  A one-time repair is something a person asks for once — Settings → Finance →
+  PAYMENT DATES — not something a deploy does to them.
+- **The way back** is `unmarkPaidInFuture()` beside it: money cannot have moved
+  on a day that has not happened, so an entry marked paid on a future date is
+  wrong with certainty and the stamp comes off. An entry dated in the **past**
+  cannot be recovered — deliberately unpaid and genuinely paid on its due date
+  are identical once stamped, and nothing recorded which it was — so those are
+  left alone rather than guessed at.
+
 ## Finance — a year at a time
 `loadTransactions(year)` fetches `date` between Jan 1 and Dec 31 and `loadFromDB`
 **replaces** the list with what it fetched. So an entry dated outside `currentYear`

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { paidAtSupported } from '../finance/unpaid'
+import { todayISO } from '../finance/dates'
 import { stepFor, setHabitStep, loadHabitSteps } from '@/lib/habitSteps'
 import { loadWeekStart, saveWeekStart, WEEKDAY_NAMES, type Weekday } from '@/lib/weekStart'
 import { ACCENTS, loadAccent, saveAccent, loadCompact, saveCompact, COMPACT_SCALE } from '@/lib/accent'
@@ -2945,7 +2946,14 @@ function FinanceSection() {
   const finTransactions = useFinanceStore(s => s.transactions)
   const finYear         = useFinanceStore(s => s.currentYear)
   const markAllPaid     = useFinanceStore(s => s.markAllPaidOnDueDate)
+  const unmarkFuture    = useFinanceStore(s => s.unmarkPaidInFuture)
   const [filling, setFilling] = useState<'idle' | 'working' | number>('idle')
+  const [undoing, setUndoing] = useState<'idle' | 'working' | number>('idle')
+  // Entries claiming they were paid on a day that has not happened. Counted
+  // from the loaded year only, so it is a floor — the repair covers every year.
+  const futurePaid = useMemo(
+    () => finTransactions.filter(t => t.paidAt && t.paidAt > todayISO()).length,
+    [finTransactions])
   // Only the loaded year can be counted from here — the repair itself covers
   // every year, so the count is a floor, not the total.
   const undatedHere = useMemo(
@@ -3291,6 +3299,39 @@ function FinanceSection() {
             {typeof filling === 'number' && (
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: filling > 0 ? 'var(--sb-positive)' : 'var(--sb-ink-3)', fontWeight: 600 }}>
                 {filling > 0 ? `${filling} updated` : 'nothing was waiting'}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* The way back from the repair above having been run when nobody
+            asked for it. A migration used to do exactly what that button does,
+            on every deploy, over the answers you had since given. */}
+        {paidAtSupported() && (
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap', marginTop: 16, paddingTop: 16, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+            <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', flex: 1, minWidth: 320, maxWidth: 640, lineHeight: 1.5 }}>
+              Money cannot have moved on a day that has not happened, so an entry marked paid on a
+              future date is a mistake — a salary not yet received, a bill dated ahead, an
+              instalment a budget wrote. This takes those payment dates back off, in every year.{' '}
+              <b>Entries dated in the past are left alone</b>: once a payment date is on one,
+              deliberately unpaid and genuinely paid on its due date look identical, and nothing
+              recorded which it was.{' '}
+              {futurePaid > 0 && `${futurePaid} ${futurePaid === 1 ? 'is' : 'are'} marked that way in ${finYear} alone.`}
+            </div>
+            <Button
+              variant="secondary"
+              disabled={undoing === 'working'}
+              onClick={async () => {
+                if (!window.confirm('Take the payment date off every entry marked paid on a future date, in every year?')) return
+                setUndoing('working')
+                setUndoing(await unmarkFuture())
+              }}
+              style={{ flexShrink: 0 }}>
+              {undoing === 'working' ? 'Working…' : 'Un-mark entries paid in the future'}
+            </Button>
+            {typeof undoing === 'number' && (
+              <span style={{ fontSize: 'var(--sb-t-body-s)', color: undoing > 0 ? 'var(--sb-positive)' : 'var(--sb-ink-3)', fontWeight: 600 }}>
+                {undoing > 0 ? `${undoing} put back` : 'none were'}
               </span>
             )}
           </div>

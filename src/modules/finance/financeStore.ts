@@ -7,10 +7,11 @@ import { rememberLimit, withLocalLimits } from './creditLimits'
 import { rememberTarget, forgetTarget, withLocalTargets } from './transferTargets'
 import { rememberGoalPlanning, forgetGoalPlanning, withLocalPlanning } from './goalPlanning'
 import { setPaidAtSupported } from './unpaid'
+import { todayISO } from './dates'
 import {
   loadAccounts, saveAccount, deleteAccount as dbDeleteAccount,
   loadCategories, saveCategory, deleteCategory as dbDeleteCategory,
-  loadTransactions, loadUnpaidTransactions, saveTransaction, saveTransactionsBulk,
+  loadTransactions, loadUnpaidTransactions, loadPaidInFuture, saveTransaction, saveTransactionsBulk,
   deleteTransaction as dbDeleteTransaction,
   loadPlans, savePlan,
   loadActualsOverride, saveActualOverride, deleteActualOverride,
@@ -62,6 +63,8 @@ interface FinanceState {
    *  paid, in every year, and say how many that was. Asked for, never
    *  automatic. */
   markAllPaidOnDueDate: () => Promise<number>
+  /** Undo a payment date that is still in the future. Returns how many. */
+  unmarkPaidInFuture: () => Promise<number>
 
   // Goals CRUD
   upsertGoal: (g: Goal) => Promise<void>
@@ -465,6 +468,30 @@ export const useFinanceStore = create<FinanceState>()(
         await saveTransactionsBulk(rows.map(r => ({ ...r, paid_at: r.date, is_cleared: true })))
         // The loaded year is a copy of some of what just changed; read it back
         // rather than trying to patch it in two places.
+        await get().loadFromDB()
+        return rows.length
+      },
+
+      /** Take back a payment date that has not happened yet.
+       *
+       *  `20260009` stamped `paid_at = date` over every entry that had none,
+       *  and the migration runner re-ran it on any push touching the
+       *  migrations directory — so entries deliberately left unpaid came back
+       *  marked paid, incomes included, on dates still in the future.
+       *
+       *  Money cannot have moved on a day that has not happened, so every one
+       *  of those is wrong and can be put back with certainty. An entry dated
+       *  in the *past* cannot: deliberately unpaid and genuinely paid on its
+       *  due date look identical once the stamp is on, and nothing recorded
+       *  which it was. Those are left alone — a repair that guesses is how
+       *  this started. */
+      unmarkPaidInFuture: async () => {
+        const userId = await getUserId()
+        if (!userId) return 0
+        const today = todayISO()
+        const rows = await loadPaidInFuture(today).catch(() => [] as Awaited<ReturnType<typeof loadPaidInFuture>>)
+        if (rows.length === 0) return 0
+        await saveTransactionsBulk(rows.map(r => ({ ...r, paid_at: null, is_cleared: false })))
         await get().loadFromDB()
         return rows.length
       },
