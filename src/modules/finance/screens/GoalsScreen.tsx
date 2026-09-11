@@ -581,8 +581,22 @@ export function GoalsScreen(_props?: any) {
       kind: 'add' as const,
       muted: !m.used,
     })),
-    { label: `middle of the ${capacity.months} that count`, amount: `${fig(capacity.monthlyIn)} − ${fig(capacity.monthlyOut)}`, kind: 'add' as const },
+    { label: `a usual month, read category by category`, amount: `${fig(capacity.monthlyIn)} − ${fig(capacity.monthlyOut)}`, kind: 'add' as const },
     { label: 'a month leaves over', amount: fig(capacity.surplus), kind: 'total' as const },
+    // Each category is read on its own and the middles are added. The middle
+    // of each month's *total* was unstable: on one ledger the same twelve
+    // months reported anywhere between 10,500 and 78,000 a month depending
+    // only on which month the app was opened in.
+    { label: 'each category is read on its own, and the middles added — the middle of a month\u2019s total moves every time the window slides', kind: 'note' as const },
+    ...(d.lumpy.length > 0
+      ? [
+          { label: `${d.lumpy.length} cost${d.lumpy.length === 1 ? ' does' : 's do'} not happen most months, so ${d.lumpy.length === 1 ? 'it is' : 'they are'} in no monthly figure:`, kind: 'note' as const },
+          ...d.lumpy.slice(0, 5).map(l => ({
+            label: `${categories.find(c => c.id === l.categoryId)?.name ?? 'unfiled'} — ${l.months} month${l.months === 1 ? '' : 's'} of ${capacity.months}, charged on those dates instead`,
+            amount: fig(l.total), kind: 'note' as const,
+          })),
+        ]
+      : []),
   ]
 
   // One line about the forecast, and it has to be about *this* ledger or it is
@@ -625,7 +639,7 @@ export function GoalsScreen(_props?: any) {
           <Stat label="A month leaves over" value={money(capacity.surplus)}
             tone={capacity.surplus >= 0 ? C.green : C.red}
             terms={monthTerms}
-            help={`What is left after a typical month's spending, and therefore what can go into goals each month from now on. It is the middle month of the last ${WINDOW_MONTHS} — the middle, so one bonus or one boiler does not reset the plan.`}
+            help={`What is left after a usual month's spending, and therefore what can go into goals each month from now on. Every category is read on its own across the last ${WINDOW_MONTHS} months and the middle of each is added, so one bonus or one boiler does not reset the plan — and a cost that only happens some months is charged on its own dates rather than smeared across all of them.`}
             sub={capacity.months > 0
               ? 'click for the breakdown'
               : `nothing paid in the last ${WINDOW_MONTHS} months, so there is nothing to read`} />

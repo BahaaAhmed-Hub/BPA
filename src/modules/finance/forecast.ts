@@ -1,10 +1,9 @@
 import type { Account, Category, Transaction } from './types'
 import type { Capacity } from './goalPlan'
-import { WINDOW_MONTHS } from './goalPlan'
-import { occurrencesFor, isBudgetEntry } from './budgetEntries'
+import { WINDOW_MONTHS, typicalMonth } from './goalPlan'
+import { occurrencesFor } from './budgetEntries'
 import { scheduleOf, type BudgetRule } from './modals/BudgetRuleModal'
 import { toBase, baseCurrency } from './fx'
-import { whenPaid, settled } from './unpaid'
 import { todayISO } from './dates'
 
 // ─── What next year actually looks like ──────────────────────────────────────
@@ -32,7 +31,7 @@ import { todayISO } from './dates'
 //     nothing later overwrites it.
 
 export type RuleId =
-  | 'income' | 'spend' | 'bonus' | 'budgets' | 'committed' | 'buffer' | 'cash' | 'inflation'
+  | 'income' | 'spend' | 'bonus' | 'lumpy' | 'budgets' | 'committed' | 'buffer' | 'cash' | 'inflation'
 
 export type Source = 'ledger' | 'budget' | 'setting' | 'published'
 
@@ -115,30 +114,6 @@ export function addMonths(month: string, n: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-/** Each month's income and expense, from what has actually been paid. */
-function byMonth(txs: Transaction[], base: string, months: number, today: string) {
-  const first = addMonths(monthKey(today), -months)
-  const inc = new Map<string, number>()
-  const out = new Map<string, number>()
-  for (const tx of settled(txs)) {
-    const key = monthKey(whenPaid(tx))
-    if (key < first || key > monthKey(today)) continue
-    const v = toBase(Math.abs(tx.amount), tx.currency, base)
-    if (v === null) continue
-    const into = tx.type === 'income' ? inc : tx.type === 'expense' ? out : null
-    if (!into) continue
-    into.set(key, (into.get(key) ?? 0) + v)
-  }
-  return { inc, out }
-}
-
-const median = (xs: number[]): number => {
-  if (xs.length === 0) return 0
-  const s = [...xs].sort((a, b) => a - b)
-  const h = s.length >> 1
-  return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2
-}
-
 const money = (v: number, cur: string) => `${cur} ${Math.round(v).toLocaleString('en-US')}`
 
 export interface ForecastInput {
@@ -182,12 +157,35 @@ export function buildForecast(input: ForecastInput): Forecast {
   const isOff = (id: RuleId) => state.off.includes(id)
   const mine = (id: RuleId) => state.values[id]
 
-  const { inc, out } = byMonth(input.transactions, base, WINDOW_MONTHS, today)
-  const incs = [...inc.values()]
-  const outs = [...out.values()]
-  const medIn = median(incs)
-  const medOut = median(outs)
+  // One reading of a normal month, shared with `capacityFrom`. Two medians of
+  // the same ledger disagreeing is two answers to one question, and the screen
+  // showing the working then explains a figure nothing else uses.
+  const norm = typicalMonth(input.transactions, base, today)
+  const inc = norm.inBy
+  const incs = norm.live.map(k => norm.inBy.get(k) ?? 0)
+  const outs = norm.live.map(k => norm.outBy.get(k) ?? 0)
   const meanIn = incs.length ? incs.reduce((a, b) => a + b, 0) / incs.length : 0
+
+  // A category charged on its own dates below must come out of the monthly
+  // figure, or the same money is spent twice: once smeared across the year and
+  // once on the day it actually leaves. This is what the old `already` set was
+  // reaching for — it counted the collisions and then wrote a sentence about
+  // them without ever subtracting one.
+  const datedCats = new Set<string>()
+  for (const [categoryId, rule] of Object.entries(input.budgets)) {
+    if (rule && scheduleOf(rule) !== 'repeat') datedCats.add(categoryId)
+  }
+  let pulledIn = 0
+  let pulledOut = 0
+  const pulled: string[] = []
+  for (const r of norm.regular) {
+    if (!datedCats.has(r.categoryId)) continue
+    if (r.kind === 'income') pulledIn += r.monthly
+    else pulledOut += r.monthly
+    pulled.push(input.categories.find(c => c.id === r.categoryId)?.name ?? 'a category')
+  }
+  const medIn = Math.max(0, norm.monthlyIn - pulledIn)
+  const medOut = Math.max(0, norm.monthlyOut - pulledOut)
 
   // ── the bonus: one month more than double the rest ────────────────────────
   let bonusMonth: string | null = null
@@ -217,16 +215,29 @@ export function buildForecast(input: ForecastInput): Forecast {
     }
   }
 
-  // Money the median already carries: an instalment paid inside the window is
-  // in `medOut` as well as in the schedule above, and counting it twice is how
-  // a plan invents a bill nobody has.
-  const already = new Set<string>()
-  for (const tx of settled(input.transactions)) {
-    if (!isBudgetEntry(tx) || !tx.categoryId) continue
-    const key = monthKey(whenPaid(tx))
-    if (key > monthKey(today) || key < addMonths(monthKey(today), -WINDOW_MONTHS)) continue
-    already.add(tx.categoryId)
+  // ── costs that are real, but not monthly ──────────────────────────────────
+  // School fees, an annual premium, a service every spring. They are out of
+  // the normal month by construction now — a category that happens in three
+  // months of six has no honest monthly figure — so if nothing charged them
+  // they would simply have stopped existing, and the plan would be richer than
+  // the ledger. Each is put back on the month of the year it actually landed
+  // on, at the amount it actually was.
+  const lumpCats = norm.lumpy.filter(l => !datedCats.has(l.categoryId))
+  const lump = new Array<number>(months + 1).fill(0)
+  const thisYear = Number(monthKey(today).slice(0, 4))
+  for (const l of lumpCats) {
+    const sign = l.kind === 'income' ? 1 : -1
+    for (const at of l.at) {
+      const mo = at.month.slice(5, 7)
+      for (let y = 0; y <= Math.ceil(months / 12) + 1; y++) {
+        const m = monthsFrom(monthKey(today), `${thisYear + y}-${mo}`)
+        if (m < 1 || m > months) continue
+        lump[m] += sign * at.amount
+      }
+    }
   }
+  const lumpYearly = lump.slice(1, 13).reduce((a, b) => a + Math.abs(b), 0)
+  const lumpNames = lumpCats.map(l => input.categories.find(c => c.id === l.categoryId)?.name ?? 'unfiled')
 
   const flatSurplus = medIn - medOut
 
@@ -275,6 +286,23 @@ export function buildForecast(input: ForecastInput): Forecast {
       ] : ['Nothing in the window stands out far enough to be one.'],
     },
     {
+      id: 'lumpy', source: 'ledger', unit: `${base} a year, on the months it landed on`,
+      on: !isOff('lumpy') && lumpCats.length > 0,
+      value: mine('lumpy') ?? (lumpYearly > 0 ? lumpYearly : null),
+      yours: mine('lumpy') != null,
+      dormant: lumpCats.length > 0 ? undefined : 'every category you spend on turns up in most months, so there is nothing lumpy to separate',
+      title: 'A cost that does not happen most months is not part of a normal month',
+      when: 'Fires for every category that turned up in half the months read or fewer.',
+      why: [
+        lumpCats.length > 0
+          ? `${lumpCats.length} of them: ${lumpNames.slice(0, 4).join(', ')}${lumpNames.length > 4 ? `, and ${lumpNames.length - 4} more` : ''}.`
+          : 'Nothing in the window behaves this way.',
+        `Left in the monthly figure they would land as roughly ${money(lumpYearly / 12, base)} a month — a figure that leaves the account on no day of the year, and that moves every time the six-month window slides by one.`,
+        `Charged instead on the months they were actually paid, repeated each year: ${money(lumpYearly, base)} across the next twelve months.`,
+        `Read from ${norm.live.length} month${norm.live.length === 1 ? '' : 's'}, so only those months of the year carry one. Giving the cost a budget with dates is how the rest of the year gets charged.`,
+      ],
+    },
+    {
       id: 'budgets', source: 'budget', unit: `${base} a year, on their own dates`, on: !isOff('budgets'),
       value: mine('budgets') ?? (datedYearly > 0 ? datedYearly : null),
       yours: mine('budgets') != null,
@@ -284,9 +312,9 @@ export function buildForecast(input: ForecastInput): Forecast {
       why: [
         `${money(datedYearly, base)} falls in the next twelve months, across ${dated.slice(0, 12).filter(v => v !== 0).length} of them.`,
         `Spread flat that would be ${money(datedYearly / 12, base)} a month — a figure that leaves the account on no day of the year.`,
-        already.size > 0
-          ? `${already.size} of these already appear in the six months the median read, so that much is not counted twice.`
-          : 'None of them fall inside the six months the median read, so none is counted twice.',
+        pulled.length > 0
+          ? `${pulled.join(', ')} also turned up in most of the months a normal month was read from, so ${money(pulledIn + pulledOut, base)} a month is taken back out of it — charged here, on the dates, and nowhere else.`
+          : 'None of these is in the normal month as well, so nothing is counted twice.',
       ],
     },
     {
@@ -360,6 +388,11 @@ export function buildForecast(input: ForecastInput): Forecast {
   const bonusIdx = bonusMonth ? Number(bonusMonth.slice(5, 7)) - 1 : -1
   const thisMonthIdx = Number(monthKey(today).slice(5, 7)) - 1
   const budgetsOn = rules.find(r => r.id === 'budgets')?.on ?? false
+  const lumpyOn = rules.find(r => r.id === 'lumpy')?.on ?? false
+  // A figure typed over ours is a year's worth, so it is scaled onto the same
+  // months rather than replacing the shape of them.
+  const lumpScale = mine('lumpy') != null && lumpYearly > 0 ? mine('lumpy')! / lumpYearly : 1
+  const lumpAt = (m: number) => (lumpyOn ? (lump[m] ?? 0) * lumpScale : 0)
 
   const ownAt = (m: number) => {
     let n = 0
@@ -379,16 +412,16 @@ export function buildForecast(input: ForecastInput): Forecast {
     return income - spend * Math.pow(growth, m) + bonus + ownAt(m)
   }
   const outflowAt = (m: number) => {
-    if (!budgetsOn) return 0
     // Month 0 is deliberately nothing. An instalment dated later *this* month
     // is already an unpaid entry in the ledger, which is what `committed` is,
     // and which the spare cash the plan starts from has already had taken off
     // it. Taking it a second time here would charge it twice. `dated[0]` is
     // still filled in, because a screen drawing the year should show it.
     if (m === 0) return 0
-    return Math.max(0, -(dated[m] ?? 0))
+    return Math.max(0, -(budgetsOn ? dated[m] ?? 0 : 0)) + Math.max(0, -lumpAt(m))
   }
-  const inflowAt  = (m: number) => (budgetsOn ? Math.max(0, dated[m] ?? 0) : 0)
+  const inflowAt  = (m: number) =>
+    (budgetsOn ? Math.max(0, dated[m] ?? 0) : 0) + (m === 0 ? 0 : Math.max(0, lumpAt(m)))
 
   // The capacity the plan runs on. Only the pieces a rule can switch are
   // changed; the rest is the ledger's own reading.

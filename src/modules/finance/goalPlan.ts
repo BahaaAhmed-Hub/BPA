@@ -114,6 +114,10 @@ export interface CapacityDetail {
   months: { key: string; inc: number; out: number; used: boolean }[]
   /** How the cushion was arrived at. */
   bufferMonths: number
+  /** Categories that did not happen in most months, so a median of them is
+   *  zero and they are in no monthly figure. Named rather than smeared: they
+   *  are charged on their own dates by the forecast. */
+  lumpy: { categoryId: string; kind: 'income' | 'expense'; months: number; total: number }[]
   /** True when a forecast rule has folded the assets into what is held, so the
    *  breakdown can say they are counted rather than named and set aside. */
   assetsCounted?: boolean
@@ -138,6 +142,114 @@ function windowKeys(today: string, n = WINDOW_MONTHS): string[] {
     out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
   }
   return out
+}
+
+/** What a month *usually* looks like.
+ *
+ *  This used to be the median of each month's **total** spending, and that is
+ *  the single number the whole plan hangs off. It was unstable, because real
+ *  spending is lumpy: some months carry a school-fee instalment and most do
+ *  not, so the median landed on a heavy month or a quiet one depending only on
+ *  which month you happened to open the app in. On one twelve-month ledger the
+ *  same data reported anywhere between 10,500 and 78,000 a month — a
+ *  seven-fold swing, and every reading wrong.
+ *
+ *  **The median of a sum is unstable; a sum of medians is not.** So each
+ *  category is read on its own and the medians are added. A category that
+ *  turns up in most months contributes its usual amount. One that turns up in
+ *  four months of twelve has a median of zero and drops out — which is right,
+ *  because it is not what a month usually costs, and it is already counted
+ *  where it belongs: on its own dates, as a dated outflow.
+ *
+ *  This is the same judgement the forecast's bonus rule makes about income —
+ *  one unusual March is not money you have every month — applied to the side
+ *  where it was missing.
+ */
+export function typicalMonth(
+  transactions: Transaction[],
+  base: string,
+  today = todayISO(),
+): {
+  monthlyIn: number
+  monthlyOut: number
+  /** Month → total, kept so a breakdown can show the window it read. */
+  inBy: Map<string, number>
+  outBy: Map<string, number>
+  live: string[]
+  /** Every category that *is* in the monthly figure, and how much of it is
+   *  its. A forecast charging one of these on its own dates has to take its
+   *  share back out, or the same money is counted twice. */
+  regular: { categoryId: string; kind: 'income' | 'expense'; monthly: number }[]
+  /** Categories left out of the monthly figure because they do not happen
+   *  most months — named, so the screen can say which and why, and carrying
+   *  the months they *did* happen in so they can be charged as dates. */
+  lumpy: {
+    categoryId: string; kind: 'income' | 'expense'; months: number; total: number
+    at: { month: string; amount: number }[]
+  }[]
+} {
+  const keys = windowKeys(today)
+  const inBy = new Map<string, number>()
+  const outBy = new Map<string, number>()
+  for (const k of keys) { inBy.set(k, 0); outBy.set(k, 0) }
+
+  // Per category, per month.
+  const cell = new Map<string, Map<string, number>>()
+  const kindOf = new Map<string, 'income' | 'expense'>()
+  for (const tx of settled(transactions)) {
+    const k = monthKey(whenPaid(tx))
+    if (!inBy.has(k)) continue
+    const v = toBase(Math.abs(tx.amount), tx.currency, base)
+    if (v === null) continue
+    if (tx.type === 'income') inBy.set(k, inBy.get(k)! + v)
+    else if (tx.type === 'expense') outBy.set(k, outBy.get(k)! + v)
+    else continue
+    const id = `${tx.type}:${tx.categoryId ?? ''}`
+    kindOf.set(id, tx.type as 'income' | 'expense')
+    const row = cell.get(id) ?? new Map<string, number>()
+    row.set(k, (row.get(k) ?? 0) + v)
+    cell.set(id, row)
+  }
+
+  // Months with nothing in them at all are months this ledger did not cover,
+  // not months you earned nothing — counting them would halve the median.
+  const live = keys.filter(k => inBy.get(k)! > 0 || outBy.get(k)! > 0)
+
+  let monthlyIn = 0
+  let monthlyOut = 0
+  const regular: { categoryId: string; kind: 'income' | 'expense'; monthly: number }[] = []
+  const lumpy: {
+    categoryId: string; kind: 'income' | 'expense'; months: number; total: number
+    at: { month: string; amount: number }[]
+  }[] = []
+  for (const [id, row] of cell) {
+    const categoryId = id.slice(id.indexOf(':') + 1)
+    const kind = kindOf.get(id)!
+    const hits = live.filter(k => (row.get(k) ?? 0) > 0)
+    // In or out, with nothing in between. A category that happened in three
+    // of six months has a median of half its instalment — a figure that is
+    // neither what a month costs nor what the instalment is, and that moves
+    // the moment the window slides by one month. Either it is what a month
+    // usually looks like, or it is a date; the dates are charged as dates.
+    if (hits.length * 2 > live.length) {
+      const m = median(live.map(k => row.get(k) ?? 0))
+      if (kind === 'income') monthlyIn += m
+      else monthlyOut += m
+      if (m > 0) regular.push({ categoryId, kind, monthly: m })
+      continue
+    }
+    const total = hits.reduce((s, k) => s + (row.get(k) ?? 0), 0)
+    if (total > 0) {
+      lumpy.push({
+        categoryId, kind, months: hits.length, total,
+        at: hits.map(k => ({ month: k, amount: row.get(k)! })),
+      })
+    }
+  }
+  regular.sort((a, b) => b.monthly - a.monthly)
+  lumpy.sort((a, b) => b.total - a.total)
+
+  return { monthlyIn, monthlyOut, inBy, outBy, live, regular, lumpy }
 }
 
 export function capacityFrom(
@@ -177,23 +289,8 @@ export function capacityFrom(
   }
 
   // A normal month, from what actually moved.
-  const keys = windowKeys(today)
-  const inBy = new Map<string, number>()
-  const outBy = new Map<string, number>()
-  for (const k of keys) { inBy.set(k, 0); outBy.set(k, 0) }
-  for (const tx of settled(transactions)) {
-    const k = monthKey(whenPaid(tx))
-    if (!inBy.has(k)) continue
-    const v = toBase(Math.abs(tx.amount), tx.currency, base)
-    if (v === null) continue
-    if (tx.type === 'income')  inBy.set(k, inBy.get(k)! + v)
-    if (tx.type === 'expense') outBy.set(k, outBy.get(k)! + v)
-  }
-  // Months with nothing in them at all are months this ledger did not cover,
-  // not months you earned nothing — counting them would halve the median.
-  const live = keys.filter(k => inBy.get(k)! > 0 || outBy.get(k)! > 0)
-  const monthlyIn  = median(live.map(k => inBy.get(k)!))
-  const monthlyOut = median(live.map(k => outBy.get(k)!))
+  const norm = typicalMonth(transactions, base, today)
+  const { monthlyIn, monthlyOut, inBy, outBy, live } = norm
 
   // Dated ahead and not paid: owed, whatever the account balance says.
   let committed = 0
@@ -228,8 +325,9 @@ export function capacityFrom(
     detail: {
       accounts: acctRows,
       earmarks,
-      months: keys.map(k => ({ key: k, inc: inBy.get(k)!, out: outBy.get(k)!, used: live.includes(k) })),
+      months: [...inBy.keys()].map(k => ({ key: k, inc: inBy.get(k)!, out: outBy.get(k)!, used: live.includes(k) })),
       bufferMonths,
+      lumpy: norm.lumpy,
     },
   }
 }
