@@ -322,6 +322,14 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
       <rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7.5l8.5 6 8.5-6"/>
     </svg>
   ),
+  // The dashboard had no glyph: with a label beside it nobody noticed, and
+  // collapsed it drew an empty pill. Four panes, which is what the screen is.
+  dashboard: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/>
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/>
+    </svg>
+  ),
   settings: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>
@@ -336,6 +344,24 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
  *  --sb-h-header, which a theme moves, and the two screens that size
  *  themselves against it read it the same way. */
 export const NAV_H = 'var(--sb-h-header)'
+
+/** True while the viewport is narrower than `px`. The header is the only place
+ *  that needs this: its three sections do not share space, so the right-hand
+ *  group is drawn *over* the nav rather than pushing it — "Dashboard" is
+ *  unreachable from 1100px down, and "Finance" from 800px. Both are ordinary
+ *  laptop-window widths, not edge cases. */
+function useNarrowerThan(px: number): boolean {
+  const [hit, setHit] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia(`(max-width: ${px}px)`).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${px}px)`)
+    const on = () => setHit(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [px])
+  return hit
+}
 
 const NAV_ITEMS = [
   { id: 'morning',   label: 'Today'    },
@@ -528,6 +554,11 @@ function TopNav() {
 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  // Measured, not guessed: the search box starts covering "Dashboard" at
+  // 1100px and "Finance" at 800px. Dropping the search wording buys ~70px,
+  // which clears the first; below that the nav labels have to go too.
+  const tightSearch = useNarrowerThan(1180)
+  const tightNav = useNarrowerThan(1080)
   useEffect(() => {
     if (!menuOpen) return
     const away = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false) }
@@ -553,7 +584,14 @@ function TopNav() {
         <BeLogo variant="amber" size={60} title="Be" />
       </div>
 
-      {/* Nav pills — center */}
+      {/* Nav pills — center.
+          `collapsed` is NavRow's own answer to not having the room: the label
+          goes, the icon centres, and the label becomes the button's title so it
+          is still announced and still shown on hover. Seven labelled pills need
+          about 660px and simply do not fit beside a search box on a 1000px
+          window — and what happened instead was that they were covered by it,
+          which is worse than small, because a covered button cannot be
+          clicked. */}
       <nav style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
         {NAV_ITEMS.map(item => {
           const active = activeModule === item.id
@@ -562,9 +600,14 @@ function TopNav() {
               key={item.id}
               onClick={() => setActiveModule(item.id)}
               active={active}
+              collapsed={tightNav}
               icon={NAV_ICONS[item.id]}
               label={item.label}
-              style={{ width: 'auto' }}
+              // `width: auto` is what lets a labelled pill size to its word.
+              // Collapsed, NavRow wants its own square instead — forcing auto
+              // there shrinks the button to the glyph and leaves nothing to
+              // aim at.
+              style={tightNav ? undefined : { width: 'auto' }}
             />
           )
         })}
@@ -583,12 +626,18 @@ function TopNav() {
             borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
           }}>
           <Search size={ICON.sm} color="var(--sb-ink-3)" />
-          <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', userSelect: 'none' }}>Search</span>
-          <span style={{
-            marginLeft: 4,
-            fontSize: 'var(--sb-t-micro)', fontFamily: 'var(--sb-font-mono)',
-            color: 'var(--sb-ink-4)', opacity: 0.7,
-          }}>⌘K</span>
+          {/* The word and the shortcut go before the nav does: the magnifier
+              says the same thing in 70px less, and ⌘K still works. */}
+          {!tightSearch && (
+            <>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', userSelect: 'none' }}>Search</span>
+              <span style={{
+                marginLeft: 4,
+                fontSize: 'var(--sb-t-micro)', fontFamily: 'var(--sb-font-mono)',
+                color: 'var(--sb-ink-4)', opacity: 0.7,
+              }}>⌘K</span>
+            </>
+          )}
         </div>
 
         <NotificationBell />
