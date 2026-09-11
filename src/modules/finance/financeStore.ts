@@ -111,6 +111,7 @@ const goalToRow = (g: Goal, userId: string): GoalRow => ({
   target_amount: g.targetAmount, current_amount: g.currentAmount,
   color: g.color, sub_label: g.sub || null, is_active: true,
   rank: g.rank ?? null, deadline: g.deadline ?? null, currency: g.currency ?? null,
+  monthly_commit: g.monthlyCommit ?? null,
 })
 
 /** A row as the ledger holds it, as the app's own shape.
@@ -168,6 +169,7 @@ const goalFromRow = (r: GoalRow): Goal => ({
   rank: r.rank ?? undefined,
   deadline: r.deadline ?? undefined,
   currency: (r.currency as Goal['currency']) ?? undefined,
+  monthlyCommit: r.monthly_commit ?? undefined,
 })
 
 const budgetFromRow = (r: BudgetRow): Budget => ({

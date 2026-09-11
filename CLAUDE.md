@@ -487,14 +487,38 @@ beside it). The denominator is the part's **own** budget where it has one, and t
 Amber under, red over, nothing at all where nothing was spent; capped at 100% so
 an overspend cannot run past its own pill. The title says which limit it used.
 
+## Finance — a normal month is a sum of medians, not the median of a sum
+`typicalMonth()` in `goalPlan.ts`, and it is the figure the whole plan hangs off.
+It used to be the median of each month's **total** spending. Real spending is
+lumpy: some months carry a school-fee instalment and most do not, so the median
+landed on a heavy month or a quiet one depending only on which month you opened
+the app in. On one twelve-month ledger the same data reported anywhere between
+**10,500 and 78,000** a month — a seven-fold swing, every reading wrong.
+- **Each category is read on its own and the middles are added**, with nothing
+  in between: a category in three of six months has a median of half its
+  instalment, which is neither what a month costs nor what the instalment is,
+  and which moves the moment the window slides. So a category is **regular**
+  (it happened in *more* than half the live months → its median counts) or
+  **lumpy** (it does not → it counts for nothing here and is charged as dates).
+- **`capacityFrom` and `forecast.ts` both read through it.** Two medians of one
+  ledger disagreeing is two answers to one question, and the screen showing its
+  working was explaining a figure nothing else used.
+- **A category charged on its own dates is subtracted from the monthly figure.**
+  The old `already` set counted the collisions and wrote a sentence about them
+  without ever subtracting one.
+- **The `lumpy` forecast rule puts those costs back** on the month of the year
+  they landed on, at the amount they were, repeated each year — otherwise they
+  would simply stop existing and the plan would be richer than the ledger. It
+  names them, says it read six months so only those months carry a charge, and
+  points at dated budgets for the rest.
+
 ## Finance — goals are planned, not wished
 `goalPlan.ts` turns a target and a date into a plan out of the ledger already there.
 - **`capacityFrom(accounts, txs, bufferMonths)`** answers what there is: `held` (live
   balances, converted, net of card debt), `buffer` (months of typical spending held
-  back), `free` = held − buffer − what is committed, and a **median** month of income
-  and expense over the last `WINDOW_MONTHS`. Median, not mean — one bonus or one
-  boiler must not reset the plan. Months with nothing in them are dropped, or a
-  ledger that starts halfway through the window halves its own median.
+  back), `free` = held − buffer − what is committed, and a normal month of income
+  and expense via `typicalMonth` (above). Months with nothing in them are dropped,
+  or a ledger that starts halfway through the window halves its own answer.
 - **Spare is cash, not everything you own.** Only `SPENDABLE` accounts (`payment`,
   `wallet`) count toward `held`; gold, a flat, anything filed as an `asset` comes
   back as `assets` and is never spent by the plan. Counting it made every goal
@@ -535,6 +559,51 @@ an overspend cannot run past its own pill. The title says which limit it used.
   `finance-debt-goal-ranks` (prefSync) since it has no row. Unranked, a card
   goes to the front: its interest outruns anything below it. Plan tab, screen
   and icon are gone.
+
+## Finance — three ways to split a month, and one of them is yours
+`Policy` is `ladder` | `share` | `commit`, and the picker in the Goals header is
+`Top first / Split / I decide`.
+- **`commit`** reads `Goal.monthlyCommit` (`20260014`, `monthly_commit`, kept in
+  `goalPlanning.ts` until the migration runs). Each goal takes the amount you
+  set and no more, in rank order; what is left once every commitment is met runs
+  down the ladder. The other two work the figure out from what is left over,
+  which answers *when will this land* and cannot answer *I want 5,000 a month
+  going into the car* — a decision somebody made rather than an outcome.
+- **The header says whether it adds up**: committed against what a month leaves
+  over, and either what runs down the list or that the ones lower down will not
+  get theirs. It is the only mode that can be under- or over-committed.
+- The **Each month** field only appears in that mode. A field that changes
+  nothing about the plan on screen is one you have to be told to ignore.
+- **A goal can be reached twice inside one month** — its commitment, then a
+  share of what the commitments left over — so `put()` accumulates the first
+  month's figure instead of keeping whichever call was first. Reported as 20,000
+  when it is really 23,800, the "then each month" line is wrong and so is every
+  date read off it.
+
+## Finance — "never" is not an answer
+`goalAdvice.ts`. The plan could say a goal lands in March 2031, or that nothing
+ever reaches it, and stop — which hands the whole problem back. `adviseGoal()`
+answers the next question, and every move is arithmetic on figures already on
+the screen. Two rules hold it together:
+- **Name the category, or say nothing.** "Spend less" is not a move. Cuts come
+  out of `typicalMonth`'s regular categories, filled greedily in the order a cut
+  is least painful — a budget's `guiltfree` bucket first, unfiled next, savings
+  and investments after (moving those into a goal is not a cut, it is the same
+  money differently aimed), `fixed` last. Each row says what *this combination*
+  takes from it; a column of "not enough" against every row is true of each and
+  useless about all of them.
+- **Never propose what cannot be measured.** A gap larger than everything you
+  spend regularly is not a category problem, so it says that and sends you to
+  the date, the target or income. The earn move states the gap as a share of
+  what you actually earn, **unclamped** — 112% and 100% are different decisions.
+The moves: raise the commitment (first, in `commit` mode — the figure is the
+thing you set), free up X a month, bring in X a month, find X once, hold one
+month less of the cushion back, move it up the ranking, give it until the date
+it really lands (first when there is one, being the only move that costs
+nothing), aim at what it actually reaches. `ifFound()` re-runs the whole ranking
+with the gap closed, so the card can name the other goals that come forward too.
+`monthsUntil` is imported from `goalPlan`, or the advice and the verdict above it
+disagree about the same goal on the same screen.
 
 ## Finance — the forecast, and why the goal dates move
 `forecast.ts`. `capacityFrom` answers what a *normal* month leaves over, out of

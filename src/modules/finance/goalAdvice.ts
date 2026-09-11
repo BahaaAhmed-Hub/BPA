@@ -1,6 +1,6 @@
 import type { Category, Transaction } from './types'
 import type { Capacity, GoalPlan, Policy, ScheduleOptions } from './goalPlan'
-import { typicalMonth, isDebtGoal, scheduleGoals, byRank } from './goalPlan'
+import { typicalMonth, isDebtGoal, scheduleGoals, byRank, commitOf, monthsUntil } from './goalPlan'
 import { bucketOf, type Bucket, type BudgetRule } from './modals/BudgetRuleModal'
 import { todayISO } from './dates'
 
@@ -23,7 +23,7 @@ import { todayISO } from './dates'
 //     is not just the gap restated, so the earn move says the gap as a share of
 //     what you actually earn and leaves the how to you.
 
-export type MoveKind = 'cut' | 'earn' | 'lump' | 'wait' | 'rank' | 'target' | 'cushion'
+export type MoveKind = 'commit' | 'cut' | 'earn' | 'lump' | 'wait' | 'rank' | 'target' | 'cushion'
 
 export interface Move {
   kind: MoveKind
@@ -101,7 +101,9 @@ export function adviseGoal(input: AdviceInput): Advice {
   const g = plan.goal
 
   const need = Math.max(0, plan.remaining - plan.lump)
-  const by = g.deadline ? Math.max(1, monthsUntil(g.deadline, today)) : null
+  // The same count the verdict above it uses, or the two sentences disagree
+  // about the same goal on the same screen.
+  const by = g.deadline ? monthsUntil(g.deadline, today) : null
   const have = plan.monthly
   // With a date it is the date that sets the bar. Without one, the bar is
   // simply landing at all inside the horizon the plan runs to.
@@ -158,9 +160,24 @@ export function adviseGoal(input: AdviceInput): Advice {
     })
   }
 
+  // In the mode where you set the figure, the figure is the first answer. The
+  // others are about finding money; this one is about a number you typed.
+  const pol = typeof input.policy === 'string' ? input.policy : input.policy.policy
+  if (gap > 0 && pol === 'commit') {
+    const has = commitOf(g, base)
+    moves.push({
+      kind: 'commit',
+      title: has > 0 ? `Put in ${round(has + gap)} a month instead of ${round(has)}` : `Commit ${round(want)} a month to it`,
+      monthly: gap,
+      detail: has > 0
+        ? `You set this one at ${round(has)}. ${round(want)} is what the date asks for. Everything below is about where that ${round(gap)} comes from.`
+        : `Nothing is committed to this yet, so it is only getting what the committed goals leave behind. ${round(want)} a month is what the date asks for.`,
+    })
+  }
+
   const cuttable = cuts.reduce((n, c) => n + c.monthly, 0)
   if (gap > 0) {
-    const easiest = cuts.find(c => c.share <= 1)
+    const taken = cuts.filter(c => c.take > 0)
     moves.push({
       kind: 'cut',
       title: gap > cuttable ? `Cutting alone cannot reach it` : `Free up ${round(gap)} a month`,
@@ -171,9 +188,12 @@ export function adviseGoal(input: AdviceInput): Advice {
           // Saying "cut something" about a gap larger than everything you spend
           // is not a plan, it is a shrug. The figure is the answer.
           ? `Everything you spend regularly comes to ${round(cuttable)} a month, and the gap is ${round(gap)}. Stopping all of it would still not be enough, so this one is about the date, the target, or what comes in.`
-        : easiest
-          ? `${easiest.name} costs ${round(easiest.monthly)} a month. ${pct(easiest.share)} of it is ${round(easiest.take)}, which is exactly the gap.`
-          : `No single category covers it, so: ${combine(cuts)}.`,
+        : taken.length === 1
+          // One sentence, describing the same set the rows below show. Two
+          // descriptions of one combination — "a third of Rent" over a list
+          // that starts with Dining out — is how a screen loses its reader.
+          ? `${taken[0].name} costs ${round(taken[0].monthly)} a month, and ${pct(taken[0].take / taken[0].monthly)} of it is the gap.`
+          : `It comes out of ${combine(cuts)}.`,
     })
 
     if (capacity.monthlyIn > 0) {
@@ -214,7 +234,7 @@ export function adviseGoal(input: AdviceInput): Advice {
 
   // ── the queue ─────────────────────────────────────────────────────────────
   const ahead = aheadOf(plans, g.id).filter(p => !isDone(p))
-  if ((reason === 'queued' || reason === 'late' || reason === 'never') && ahead.length > 0) {
+  if (pol !== 'commit' && (reason === 'queued' || reason === 'late' || reason === 'never') && ahead.length > 0) {
     const taking = ahead.reduce((n, p) => n + p.monthly, 0)
     const first = ahead[0]
     moves.push({
@@ -270,12 +290,6 @@ function aheadOf(plans: GoalPlan[], id: string): GoalPlan[] {
   if (i <= 0) return []
   const ids = new Set(ordered.slice(0, i).map(g => g.id))
   return plans.filter(p => ids.has(p.goal.id))
-}
-
-function monthsUntil(deadline: string, today: string): number {
-  const [dy, dm] = deadline.split('-').map(Number)
-  const [ty, tm] = today.split('-').map(Number)
-  return (dy - ty) * 12 + (dm - tm)
 }
 
 const round = (n: number) => Math.round(n).toLocaleString('en-US')

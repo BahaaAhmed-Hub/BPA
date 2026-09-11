@@ -79,4 +79,9 @@ export interface Goal {
   deadline?: string
   /** What it is counted in. Everything else converts into the base. */
   currency?: Currency
+  /** A standing order you decided on, in the goal's own currency: *this much,
+   *  every month, into this*. Only the `commit` policy reads it. The other two
+   *  work out what each goal gets from what is left over, which answers "when
+   *  will it land" and cannot answer "I want 5,000 a month going here". */
+  monthlyCommit?: number
 }

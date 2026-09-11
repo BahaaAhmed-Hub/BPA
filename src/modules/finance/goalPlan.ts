@@ -334,7 +334,16 @@ export function capacityFrom(
 
 // ─── Pouring the money down the ranking ──────────────────────────────────────
 
-export type Policy = 'ladder' | 'share'
+/** How a month's money is split between the goals.
+ *  - `ladder` — everything to the top one until it lands, then the next.
+ *  - `share`  — divided among them all at once, weighted by rank.
+ *  - `commit` — each goal takes the amount you decided on and no more; what is
+ *    left after every commitment is met runs down the ladder. This is the only
+ *    one where the figure per goal is yours rather than worked out, which is
+ *    the whole point of it: "5,000 a month into the car" is a decision, and the
+ *    plan's job is then to say what that gets you rather than to choose for
+ *    you. */
+export type Policy = 'ladder' | 'share' | 'commit'
 
 export interface GoalPlan {
   goal: Goal
@@ -452,6 +461,12 @@ export interface Schedule {
   unfinished: boolean
 }
 
+/** What you committed to this goal each month, in the base currency. */
+export function commitOf(g: Goal, base: string): number {
+  if (!g.monthlyCommit || g.monthlyCommit <= 0) return 0
+  return toBase(g.monthlyCommit, g.currency ?? base, base) ?? 0
+}
+
 function remainingOf(g: Goal, base: string): number {
   const target = toBase(g.targetAmount, g.currency ?? base, base) ?? g.targetAmount
   const saved  = toBase(g.currentAmount, g.currency ?? base, base) ?? g.currentAmount
@@ -511,7 +526,13 @@ export function scheduleGoals(
     const take = Math.min(left, amount)
     if (take <= 0) return 0
     need.set(g.id, left - take)
+    // A goal can be reached twice inside one month — its commitment, then a
+    // share of what the commitments left over — so the first month's figure
+    // accumulates rather than being set by whichever call happened to be
+    // first. Reported as 20,000 when it is really getting 23,800, the whole
+    // "then each month" line is wrong and so is every date read off it.
     if (month > 0 && !startsIn.has(g.id)) { startsIn.set(g.id, month); monthly.set(g.id, take) }
+    else if (month > 0 && startsIn.get(g.id) === month) monthly.set(g.id, (monthly.get(g.id) ?? 0) + take)
     const lands = (need.get(g.id) ?? 0) <= 0.005
     if (lands && !landsIn.has(g.id)) landsIn.set(g.id, addMonths(today, month))
     const at = shares.find(x => x.goalId === g.id)
@@ -544,6 +565,26 @@ export function scheduleGoals(
     }
 
     let spent = 0
+    if (policy === 'commit') {
+      // Each goal takes what you committed to it, in rank order, and no more —
+      // a month that cannot cover every commitment funds them top down, which
+      // is what the ranking is for. A goal with no commitment set takes
+      // nothing here; it is funded out of the remainder below, which is also
+      // what happens to the money once every commitment is met.
+      for (const g of hungry) {
+        if (left <= 0) break
+        const c = commitOf(g, base)
+        if (c <= 0) continue
+        const took = put(g, Math.min(left, c), month, shares)
+        left -= took; spent += took
+      }
+      for (const g of hungry) {
+        if (left <= 0) break
+        const took = put(g, left, month, shares)
+        left -= took; spent += took
+      }
+      return spent
+    }
     for (const g of hungry) {
       if (left <= 0) break
       const owing = need.get(g.id) ?? 0

@@ -261,7 +261,7 @@ export async function saveTransactionsBulk(rows: TransactionRow[]): Promise<void
 const OPTIONAL: Record<string, string[]> = {
   finance_transactions: ['paid_at', 'tags', 'attachments', 'to_account_id'],
   finance_accounts:     ['credit_limit'],
-  finance_goals:        ['rank', 'deadline', 'currency'],
+  finance_goals:        ['rank', 'deadline', 'currency', 'monthly_commit'],
 }
 
 const absent = new Map<string, Set<string>>()
@@ -492,6 +492,8 @@ export interface GoalRow {
   rank?: number | null
   deadline?: string | null
   currency?: string | null
+  /** What you put into it each month, from 20260014. Same treatment. */
+  monthly_commit?: number | null
   created_at?: string
 }
 

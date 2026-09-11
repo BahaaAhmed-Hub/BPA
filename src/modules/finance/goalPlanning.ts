@@ -1,14 +1,15 @@
 import type { Goal } from './types'
 
 // ─── Goal fields the server may not have yet ─────────────────────────────────
-// rank, deadline and currency arrive with 20260010. Until it runs, saveGoal
-// drops what the server has not got — so keep them here as well, or a rank set
-// on Monday is gone on Tuesday. The server's value wins wherever it has one:
-// this is a stand-in, not a second source of truth.
+// rank, deadline and currency arrive with 20260010, monthlyCommit with
+// 20260014. Until those run, saveGoal drops what the server has not got — so
+// keep them here as well, or a rank set on Monday is gone on Tuesday. The
+// server's value wins wherever it has one: this is a stand-in, not a second
+// source of truth.
 
 const KEY = 'finance-goal-planning'
 
-type Extra = { rank?: number; deadline?: string; currency?: string }
+type Extra = { rank?: number; deadline?: string; currency?: string; monthlyCommit?: number }
 
 function read(): Record<string, Extra> {
   try {
@@ -24,6 +25,7 @@ export function rememberGoalPlanning(g: Goal): void {
   if (typeof g.rank === 'number') extra.rank = g.rank
   if (g.deadline) extra.deadline = g.deadline
   if (g.currency) extra.currency = g.currency
+  if (typeof g.monthlyCommit === 'number') extra.monthlyCommit = g.monthlyCommit
   if (Object.keys(extra).length === 0) delete all[g.id]
   else all[g.id] = extra
   try { localStorage.setItem(KEY, JSON.stringify(all)) } catch { /* quota */ }
@@ -45,6 +47,7 @@ export function withLocalPlanning(goals: Goal[]): Goal[] {
       rank:     g.rank     ?? extra.rank,
       deadline: g.deadline ?? extra.deadline,
       currency: g.currency ?? (extra.currency as Goal['currency']),
+      monthlyCommit: g.monthlyCommit ?? extra.monthlyCommit,
     }
   })
 }

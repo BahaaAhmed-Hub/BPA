@@ -8,7 +8,7 @@ import { todayISO } from '../dates'
 import { ICON, STROKE } from '@/lib/type'
 import {
   capacityFrom, planGoals, scheduleGoals, byRank, monthsUntil, debtGoals, isDebtGoal,
-  DEFAULT_BUFFER_MONTHS, WINDOW_MONTHS,
+  DEFAULT_BUFFER_MONTHS, WINDOW_MONTHS, commitOf,
   type Policy, type GoalPlan, type Schedule,
 } from '../goalPlan'
 import { Segmented } from '@/components/ui'
@@ -335,7 +335,10 @@ export function GoalsScreen(_props?: any) {
     try { return Number(localStorage.getItem(BUFFER_KEY) ?? DEFAULT_BUFFER_MONTHS) } catch { return DEFAULT_BUFFER_MONTHS }
   })
   const [policy, setPolicy] = useState<Policy>(() => {
-    try { return (localStorage.getItem(POLICY_KEY) as Policy) === 'share' ? 'share' : 'ladder' } catch { return 'ladder' }
+    try {
+      const p = localStorage.getItem(POLICY_KEY) as Policy
+      return p === 'share' || p === 'commit' ? p : 'ladder'
+    } catch { return 'ladder' }
   })
   function pickPolicy(p: Policy) {
     setPolicy(p)
@@ -418,6 +421,9 @@ export function GoalsScreen(_props?: any) {
     [allGoals, capacity, runOpts])
 
   const selected = plans.find(p => p.goal.id === selectedId) ?? plans[0] ?? null
+  const committed = useMemo(
+    () => allGoals.reduce((n, g) => n + commitOf(g, capacity.currency), 0),
+    [allGoals, capacity.currency])
 
   // What it would take. Only worked out for the goal that is open — it reads
   // the whole ledger a category at a time, and doing that for every goal on
@@ -691,8 +697,22 @@ export function GoalsScreen(_props?: any) {
               options={[
                 { value: 'ladder' as const, label: 'Top first', title: 'Number 1 is filled before number 2 gets anything. Things arrive one after another, each as early as it can.' },
                 { value: 'share'  as const, label: 'Split',     title: 'Every goal gets something every month, more the higher it is ranked. Nothing arrives as early, but nothing sits still.' },
+                { value: 'commit' as const, label: 'I decide',   title: 'You set the amount that goes into each goal every month. The plan says what that gets you, rather than choosing for you. Anything left after every commitment is met runs down the list.' },
               ]}
             />
+            {/* The other two work the figure out; this one is told it. So it
+                is the only mode that can be under-committed or over-committed,
+                and either is worth saying before a date is read off a plan
+                built on it. */}
+            {policy === 'commit' && (
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: committed > capacity.surplus ? C.red : C.ink4, lineHeight: 1.45, maxWidth: 230 }}>
+                {committed <= 0
+                  ? 'Nothing is committed yet — open a goal and set what goes into it each month.'
+                  : committed > capacity.surplus
+                    ? `${money(committed)} committed against ${money(capacity.surplus)} a month. The ones lower down will not get theirs.`
+                    : `${money(committed)} of ${money(capacity.surplus)} committed · ${money(capacity.surplus - committed)} runs down the list`}
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -953,7 +973,9 @@ function WhatWouldChangeIt({ advice, sooner, money }: {
               <>
                 <button onClick={() => setOpenCuts(v => !v)} style={{
                   marginTop: 8, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
-                  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-ink)', fontWeight: 600,
+                  // `--sb-accent-ink` is the ink *on* the accent fill — near-white
+                  // in Warm Minimal and Evergreen — and this sits on a card.
+                  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-deep)', fontWeight: 600,
                 }}>
                   {openCuts ? 'Hide' : `Where it could come from (${cuts.length})`}
                 </button>
@@ -1026,7 +1048,11 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
   const money = (n: number) => acct(n, { currency: g.currency ?? currency })
   const [saved, setSaved] = useState(g.currentAmount)
   const [target, setTarget] = useState(g.targetAmount)
-  useEffect(() => { setSaved(g.currentAmount); setTarget(g.targetAmount) }, [g.id, g.currentAmount, g.targetAmount])
+  const [commit, setCommit] = useState(g.monthlyCommit ?? 0)
+  useEffect(() => {
+    setSaved(g.currentAmount); setTarget(g.targetAmount); setCommit(g.monthlyCommit ?? 0)
+  }, [g.id, g.currentAmount, g.targetAmount, g.monthlyCommit])
+  const dirty = target !== g.targetAmount || saved !== g.currentAmount || commit !== (g.monthlyCommit ?? 0)
 
   const done = plan.remaining <= 0
   const coveredNow = !done && plan.lump >= plan.remaining
@@ -1087,7 +1113,9 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
             tone={plan.monthly > 0 ? C.green : queued ? C.ink1 : C.red}
             help="What next month puts in. Zero for a goal still waiting behind another — the line under it says which month that changes."
             sub={plan.monthly > 0
-              ? (policy === 'ladder' ? 'it is top of the queue' : 'its share of what a month leaves over')
+              ? (policy === 'ladder' ? 'it is top of the queue'
+                : policy === 'commit' ? (g.monthlyCommit ? 'the amount you committed to it' : 'what is left once the committed goals have theirs')
+                : 'its share of what a month leaves over')
               : queued ? `waiting until ${monthLabel(startMonth)}` : 'no money reaches it'} />
           <Stat label="Fully funded" value={done ? 'Reached' : coveredNow ? 'Today' : monthLabel(plan.eta)}
             tone={plan.onTime === false ? C.red : plan.onTime ? C.green : C.ink1}
@@ -1200,17 +1228,26 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
               onChange={e => onChange({ ...g, deadline: e.target.value || undefined, sub: e.target.value ? `by ${e.target.value}` : 'no deadline' })}
               style={{ ...FIELD, fontFamily: DISPLAY }} />
           </span>
+          {/* Only the mode that reads it shows it. A field that changes nothing
+              about the plan on screen is a field you have to be told to ignore. */}
+          {policy === 'commit' && (
+            <span style={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Each month</span>
+              <MoneyInput value={commit} min={0} onChange={setCommit}
+                style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
+            </span>
+          )}
           <span style={{ display: 'flex', alignItems: 'flex-end' }}>
             <button
-              onClick={() => onChange({ ...g, targetAmount: target, currentAmount: saved })}
-              disabled={target === g.targetAmount && saved === g.currentAmount}
+              onClick={() => onChange({ ...g, targetAmount: target, currentAmount: saved, monthlyCommit: commit > 0 ? commit : undefined })}
+              disabled={!dirty}
               style={{
                 height: 38, paddingInline: 16, borderRadius: 'var(--sb-r-nav)', display: 'inline-flex',
                 alignItems: 'center', gap: 7, fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
-                cursor: target === g.targetAmount && saved === g.currentAmount ? 'default' : 'pointer',
-                background: target === g.targetAmount && saved === g.currentAmount ? 'var(--sb-field)' : C.ink1,
-                border: `var(--sb-border-width) solid ${target === g.targetAmount && saved === g.currentAmount ? C.border : C.ink1}`,
-                color: target === g.targetAmount && saved === g.currentAmount ? C.ink4 : 'var(--sb-ink-on-dark)',
+                cursor: dirty ? 'pointer' : 'default',
+                background: dirty ? C.ink1 : 'var(--sb-field)',
+                border: `var(--sb-border-width) solid ${dirty ? C.ink1 : C.border}`,
+                color: dirty ? 'var(--sb-ink-on-dark)' : C.ink4,
               }}>
               <Check size={ICON.sm} /> Save
             </button>
