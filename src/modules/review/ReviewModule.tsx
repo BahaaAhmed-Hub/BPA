@@ -499,7 +499,7 @@ export function ReviewModule() {
         </div>
 
         {/* ─── Stats grid ─────────────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: 14, marginBottom: 28 }}>
           <StatCard label="Tasks Shipped" value={completedTasks.length} sub="This week" icon={CheckSquare} color="var(--sb-positive)" />
           <StatCard label="Tasks Slipped" value={slipped} sub={slipped > 0 ? 'Past due date' : 'All on track'} icon={TrendingUp} color={slipped > 0 ? 'var(--sb-negative)' : 'var(--sb-positive)'} />
           <StatCard label="Focus Hours" value={focusHours} sub="Click to edit" icon={Clock} color="var(--sb-info)" editable onChange={v => { setFocusHours(v); saveHours(v, meetingHours) }} />

@@ -1228,10 +1228,16 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
         {/* A grid, not a wrapping flex row. With `flex: 1` the field that
             wrapped onto a line of its own took the whole width — four fields
             read as three and a stray. Equal columns keep their width however
-            many there are, and the Save button is one of them. */}
+            many there are, and the Save button is one of them.
+
+            `min(100%, 150px)` rather than a bare 150px: a track's floor is a
+            demand, and a bare one larger than the container makes the grid
+            wider than the card around it — which is how the By field came to
+            hang over the panel's own edge. Capped at the container, a track
+            can never ask for more room than there is. */}
         <div style={{
           display: 'grid', gap: 12, marginTop: 10,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
           alignItems: 'end',
         }}>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
