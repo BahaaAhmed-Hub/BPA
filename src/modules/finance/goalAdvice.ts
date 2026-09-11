@@ -165,13 +165,18 @@ export function adviseGoal(input: AdviceInput): Advice {
   const pol = typeof input.policy === 'string' ? input.policy : input.policy.policy
   if (gap > 0 && pol === 'commit') {
     const has = commitOf(g, base)
+    // `want` is the whole figure, not `has + gap`: `gap` is measured against
+    // what the goal is actually *getting*, which is not what you committed
+    // when the month has not got it to give.
+    const asks = by ? 'what the date asks for' : 'what it takes to land inside ten years'
     moves.push({
       kind: 'commit',
-      title: has > 0 ? `Put in ${round(has + gap)} a month instead of ${round(has)}` : `Commit ${round(want)} a month to it`,
+      title: has > 0 ? `Put in ${round(want)} a month instead of ${round(has)}` : `Commit ${round(want)} a month to it`,
       monthly: gap,
       detail: has > 0
-        ? `You set this one at ${round(has)}. ${round(want)} is what the date asks for. Everything below is about where that ${round(gap)} comes from.`
-        : `Nothing is committed to this yet, so it is only getting what the committed goals leave behind. ${round(want)} a month is what the date asks for.`,
+        ? `You set this one at ${round(has)}, and it is getting ${round(have)}. ${round(want)} is ${asks}.${
+            have < has ? ' Raising it is not enough on its own while the month does not bring that much — the moves below are where it would come from.' : ''}`
+        : `Nothing is committed to this yet, so it is only getting what the committed goals leave behind. ${round(want)} a month is ${asks}.`,
     })
   }
 

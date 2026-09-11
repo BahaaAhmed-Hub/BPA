@@ -34,7 +34,17 @@ import { liveBalances } from '@/modules/finance/balances'
 import { toBase, baseCurrency, loadRates, setRate, rateFor } from '@/modules/finance/fx'
 import { settled, whenPaid, isUnpaid } from '@/modules/finance/unpaid'
 import { findDuplicates } from '@/modules/finance/duplicates'
-import { capacityFrom, planGoals, debtGoals, isDebtGoal } from '@/modules/finance/goalPlan'
+import { capacityFrom, planGoals, debtGoals, isDebtGoal, type Policy } from '@/modules/finance/goalPlan'
+import { adviseGoal } from '@/modules/finance/goalAdvice'
+
+/** The split the Goals screen is set to. Reading it here means the assistant
+ *  quotes the dates that are actually on screen rather than its own. */
+function goalPolicy(): Policy {
+  try {
+    const p = localStorage.getItem('finance-goal-policy') as Policy
+    return p === 'share' || p === 'commit' ? p : 'ladder'
+  } catch { return 'ladder' }
+}
 import {
   loadRules, saveRules, defaultRule, monthlyAmount, activeIn, scheduleOf,
   type BudgetRule,
@@ -204,6 +214,19 @@ export const FINANCE_TOOLS: Anthropic.Tool[] = [
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
   {
+    name: 'what_would_change_a_goal',
+    description:
+      'Why a goal lands when it does, and what would change it: how much a month it is short, which categories that could '
+      + 'come out of (named, with what each costs and what the combination takes from it), what it would take as one sum, '
+      + 'and the other levers — the cushion, the ranking, the date, the target. Use this whenever someone asks how to '
+      + 'reach a goal or clear a card sooner, or why one is never reached.',
+    input_schema: {
+      type: 'object' as const,
+      properties: { goal: { type: 'string', description: 'The goal name, or the card to clear' } },
+      required: ['goal'],
+    },
+  },
+  {
     name: 'find_duplicate_entries',
     description: 'Entries that look like the same thing recorded twice — same payee, amount, account and category, on one day or in one month.',
     input_schema: { type: 'object' as const, properties: {}, required: [] },
@@ -289,6 +312,7 @@ export const FINANCE_TOOLS: Anthropic.Tool[] = [
         saved:  { type: 'number', description: 'Already put aside (default 0)' },
         by:     { type: 'string', description: 'YYYY-MM-DD it has to be there by' },
         icon:   { type: 'string', description: 'An emoji for it' },
+        each_month: { type: 'number', description: 'What goes into it every month. Only read when the Goals screen is set to "I decide"; the other two splits work the figure out from what is left over.' },
       },
       required: ['name', 'target'],
     },
@@ -304,6 +328,7 @@ export const FINANCE_TOOLS: Anthropic.Tool[] = [
         saved:  { type: 'number' },
         by:     { type: 'string', description: 'YYYY-MM-DD, or an empty string to remove the deadline' },
         rank:   { type: 'number', description: '0 is funded first' },
+        each_month: { type: 'number', description: 'What goes into it every month, when the Goals screen is set to "I decide". Zero removes the commitment.' },
       },
       required: ['goal'],
     },
@@ -575,9 +600,10 @@ export async function executeFinanceTool(
 
     case 'list_goals': {
       const capacity = capacityFrom(accounts, transactions, 1, today, goals)
-      const plans = planGoals([...goals, ...debtGoals(accounts, transactions)], capacity)
+      const plans = planGoals([...goals, ...debtGoals(accounts, transactions)], capacity, goalPolicy())
       return {
         currency: base,
+        split: goalPolicy(),
         spare_now: money(capacity.free),
         a_normal_month_leaves: money(capacity.surplus),
         goals: plans.map((p, i) => ({
@@ -586,12 +612,44 @@ export async function executeFinanceTool(
           still_to_find: money(p.remaining),
           from_spare_now: money(p.lump),
           each_month: money(p.monthly),
+          ...(p.goal.monthlyCommit ? { committed_each_month: p.goal.monthlyCommit } : {}),
           ...(p.startsIn ? { starts_in_months: p.startsIn } : {}),
           lands: p.eta ?? 'not at this rate',
           deadline: p.goal.deadline ?? null,
           on_time: p.onTime,
           is_a_card_to_clear: isDebtGoal(p.goal),
         })),
+      }
+    }
+
+    case 'what_would_change_a_goal': {
+      const policy = goalPolicy()
+      const capacity = capacityFrom(accounts, transactions, 1, today, goals)
+      const all = [...goals, ...debtGoals(accounts, transactions)]
+      const plans = planGoals(all, capacity, policy)
+      const r = pick('goal', all, str('goal'))
+      if (isErr(r)) return r
+      const plan = plans.find(p => p.goal.id === r.hit.id)
+      if (!plan) return { error: `No plan for "${r.hit.name}".` }
+      const a = adviseGoal({ plan, plans, capacity, transactions, categories, budgets: loadRules(), policy, today })
+      if (a.reason === 'fine' || a.gap <= 0) {
+        return { goal: r.hit.name, on_track: true, lands: plan.eta ?? 'not at this rate', note: 'Nothing has to change.' }
+      }
+      return {
+        goal: r.hit.name,
+        currency: a.currency,
+        why: a.reason,
+        lands: plan.eta ?? 'not at this rate',
+        deadline: r.hit.deadline ?? null,
+        still_to_find: money(a.need),
+        getting_each_month: money(a.have),
+        needs_each_month: money(a.want),
+        short_by_each_month: money(a.gap),
+        or_one_sum_of: money(a.lumpGap),
+        moves: a.moves.map(m => ({ what: m.title, why: m.detail })),
+        could_come_out_of: a.cuts
+          .filter(c => c.take > 0)
+          .map(c => ({ category: c.name, costs_a_month: money(c.monthly), this_takes: money(c.take), filed_as: c.bucket ?? 'no budget set' })),
       }
     }
 
@@ -720,12 +778,13 @@ export async function executeFinanceTool(
         sub: str('by') ? `by ${str('by')}` : 'no deadline',
         rank: goals.length,
         ...(str('by') ? { deadline: str('by') } : {}),
+        ...(num('each_month') ? { monthlyCommit: num('each_month') } : {}),
         currency: base as Currency,
       }
       await s.upsertGoal(g)
       notify(`Added the goal "${g.name}"`)
       const capacity = capacityFrom(accounts, transactions, 1, today, [...goals, g])
-      const plan = planGoals([...goals, g], capacity).find(p => p.goal.id === g.id)
+      const plan = planGoals([...goals, g], capacity, goalPolicy()).find(p => p.goal.id === g.id)
       return { ok: true, goal: g.name, lands: plan?.eta ?? 'not at this rate', each_month: money(plan?.monthly ?? 0) }
     }
 
@@ -736,6 +795,7 @@ export async function executeFinanceTool(
       if (num('target') !== undefined) next.targetAmount = num('target') as number
       if (num('saved')  !== undefined) next.currentAmount = num('saved') as number
       if (num('rank')   !== undefined) next.rank = num('rank') as number
+      if (num('each_month') !== undefined) next.monthlyCommit = (num('each_month') as number) > 0 ? num('each_month') : undefined
       if (str('by') !== undefined) {
         next.deadline = str('by') || undefined
         next.sub = str('by') ? `by ${str('by')}` : 'no deadline'
@@ -743,8 +803,8 @@ export async function executeFinanceTool(
       await s.upsertGoal(next)
       notify(`Changed the goal "${next.name}"`)
       const capacity = capacityFrom(accounts, transactions, 1, today, goals.map(g => g.id === next.id ? next : g))
-      const plan = planGoals(goals.map(g => g.id === next.id ? next : g), capacity).find(p => p.goal.id === next.id)
-      return { ok: true, goal: next.name, still_to_find: money(plan?.remaining ?? 0), lands: plan?.eta ?? 'not at this rate' }
+      const plan = planGoals(goals.map(g => g.id === next.id ? next : g), capacity, goalPolicy()).find(p => p.goal.id === next.id)
+      return { ok: true, goal: next.name, still_to_find: money(plan?.remaining ?? 0), each_month: money(plan?.monthly ?? 0), lands: plan?.eta ?? 'not at this rate' }
     }
 
     case 'set_exchange_rate': {

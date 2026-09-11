@@ -697,10 +697,14 @@ where being wrong is expensive. Four rules hold the file together:
 Reading: `finance_overview` (the one-call answer — cash, owed, assets, this
 month, unpaid, envelopes over, a normal month, spare, goals with dates),
 `list_finance_accounts`, `list_transactions`, `spending_by_category`,
-`list_budget_envelopes`, `list_goals`, `find_duplicate_entries`. Writing:
-`add_transaction`, `update_transaction`, `set_transaction_paid`,
-`delete_transaction`, `add_goal`, `update_goal`, `set_exchange_rate`,
-`set_budget_envelope`, `remove_budget_envelope`.
+`list_budget_envelopes`, `list_goals`, `what_would_change_a_goal`,
+`find_duplicate_entries`. Writing: `add_transaction`, `update_transaction`,
+`set_transaction_paid`, `delete_transaction`, `add_goal`, `update_goal`,
+`set_exchange_rate`, `set_budget_envelope`, `remove_budget_envelope`.
+- **Every goal call reads `goalPolicy()`** — the split the Goals screen is set
+  to — so the assistant quotes the dates that are on screen rather than its own.
+  `what_would_change_a_goal` is `goalAdvice.ts` through the same door, and
+  `add_goal`/`update_goal` take `each_month` for the `commit` split.
 - **A budget was the one thing it could read and not change**, and an envelope
   *is* the budget — there is no second object to edit, so "budget Groceries at
   14,000" and "raise it" are one call. `set_budget_envelope` changes **only what
