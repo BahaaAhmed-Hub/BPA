@@ -30,6 +30,7 @@ alter table public.health_links enable row level security;
 -- the service role and looks a link up by token, which is why the token has to
 -- be long and random rather than guessable.
 drop policy if exists "health_links: own rows only" on public.health_links;
+drop policy if exists "health_links: own rows only" on public.health_links;
 create policy "health_links: own rows only"
   on public.health_links for all
   using  (auth.uid() = user_id)

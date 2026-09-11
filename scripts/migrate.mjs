@@ -57,10 +57,19 @@ if (!REF || REF.includes('paste_')) {
   process.exit(1)
 }
 
-/** The Management API answers a select with an array of row objects, and a
- *  statement with something that is not one. Only the first shape is rows. */
+/** Rows out of whatever shape the endpoint answers a select with.
+ *
+ *  Read defensively on purpose. If this returns [] when the ledger is in fact
+ *  populated, nothing breaks loudly — every migration simply runs again, every
+ *  time, which is precisely the silent behaviour that cost a finance ledger.
+ *  So it accepts the bare array the Management API sends today and the common
+ *  wrappers, and `checkLedger` below shouts if the answer looks wrong anyway. */
 function rowsOf(res) {
-  return Array.isArray(res) ? res : []
+  if (Array.isArray(res)) return res
+  for (const key of ['result', 'rows', 'data']) {
+    if (Array.isArray(res?.[key])) return res[key]
+  }
+  return []
 }
 
 // ── Run SQL via Supabase Management API ──────────────────────────────────────
@@ -147,6 +156,21 @@ for (const file of files) {
   } catch (err) {
     console.log(`✗\n     ${err.message}`)
     failed++
+  }
+}
+
+// Did the ledger actually take? A runner that writes rows it cannot read back
+// reports a clean run and then re-applies everything on the next push — the
+// failure is invisible until a data migration fires a second time over data
+// somebody has since changed. So prove the round trip rather than assume it.
+if (ran > 0 && failed === 0) {
+  const back = rowsOf(await runSQL('select name from public.schema_migrations;')).length
+  if (back < ran) {
+    console.error(
+      `\n⚠️   Wrote ${ran} ledger row(s) and read back ${back}. The ledger is not\n` +
+      `    working, so every migration will run again on the next push. Check the\n` +
+      `    shape this endpoint answers a select with — see rowsOf().\n`)
+    process.exit(1)
   }
 }
 

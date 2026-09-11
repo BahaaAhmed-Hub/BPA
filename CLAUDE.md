@@ -896,6 +896,19 @@ more than once, and the claim was the bug.
   "✅ Done" and exit 0, so a broken migration deployed green.
 - **`MIGRATE_ENDPOINT`** points it somewhere other than the real project, which
   is how the skip/re-run behaviour is tested without touching production.
+- **Every `create` is guarded**, because a run whose result cannot be trusted is
+  a run nobody reads — and that is what hid this. Three migrations had always
+  failed on re-run (`create table public.users`, `create policy` on every finance
+  table, and a `drop policy if exists` on a table `20260013` had already dropped
+  — that form still needs the table). Nobody knew, because the old runner printed
+  ✗ and then "✅ Done" and exited 0. `create table/index` take `if not exists`;
+  `create policy` and `create trigger` have no such form, so each is preceded by
+  a `drop … if exists` of the same name.
+- **The runner proves the ledger round-trips.** Writing rows it cannot read back
+  would report a clean run and then re-apply everything next push — invisible
+  until a data migration fires a second time. `rowsOf` accepts the bare array the
+  Management API sends and the usual wrappers, and the run fails loudly if fewer
+  rows come back than went in.
 - **No migration may repair data it cannot identify.** The three that did are
   fixed: `20260006` and `20260009` are DDL only now, and `20260003` clears a
   task's description only where it equals the `task_type` it just moved there.

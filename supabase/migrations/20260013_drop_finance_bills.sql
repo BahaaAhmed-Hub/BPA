@@ -18,7 +18,9 @@ begin
   end if;
 end $$;
 
-drop policy if exists "finance_bills: own rows" on public.finance_bills;
+-- `drop policy if exists` still requires the table to exist, so on a second run
+-- it raised 42P01 and failed the whole migration. Dropping the table takes its
+-- policies with it, so the policy line was redundant as well as fatal.
 drop table if exists public.finance_bills;
 
 -- Verify: expect zero rows.

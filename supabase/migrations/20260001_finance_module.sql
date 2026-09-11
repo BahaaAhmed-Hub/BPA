@@ -19,6 +19,7 @@ create table if not exists public.finance_accounts (
   created_at   timestamptz not null default now()
 );
 alter table public.finance_accounts enable row level security;
+drop policy if exists "finance_accounts: own rows" on public.finance_accounts;
 create policy "finance_accounts: own rows"
   on public.finance_accounts for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -37,6 +38,7 @@ create table if not exists public.finance_categories (
   created_at timestamptz not null default now()
 );
 alter table public.finance_categories enable row level security;
+drop policy if exists "finance_categories: own rows" on public.finance_categories;
 create policy "finance_categories: own rows"
   on public.finance_categories for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -58,6 +60,7 @@ create table if not exists public.finance_transactions (
   created_at   timestamptz not null default now()
 );
 alter table public.finance_transactions enable row level security;
+drop policy if exists "finance_transactions: own rows" on public.finance_transactions;
 create policy "finance_transactions: own rows"
   on public.finance_transactions for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -75,6 +78,7 @@ create table if not exists public.finance_plans (
   unique(user_id, category_id, year, month)
 );
 alter table public.finance_plans enable row level security;
+drop policy if exists "finance_plans: own rows" on public.finance_plans;
 create policy "finance_plans: own rows"
   on public.finance_plans for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -84,6 +88,7 @@ create or replace function public.finance_set_updated_at()
 returns trigger language plpgsql as $$
 begin new.updated_at = now(); return new; end;
 $$;
+drop trigger if exists finance_plans_updated_at on public.finance_plans;
 create trigger finance_plans_updated_at
   before update on public.finance_plans
   for each row execute function public.finance_set_updated_at();
@@ -101,9 +106,11 @@ create table if not exists public.finance_actuals_override (
   unique(user_id, category_id, year, month)
 );
 alter table public.finance_actuals_override enable row level security;
+drop policy if exists "finance_actuals_override: own rows" on public.finance_actuals_override;
 create policy "finance_actuals_override: own rows"
   on public.finance_actuals_override for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop trigger if exists finance_overrides_updated_at on public.finance_actuals_override;
 create trigger finance_overrides_updated_at
   before update on public.finance_actuals_override
   for each row execute function public.finance_set_updated_at();
@@ -121,9 +128,11 @@ create table if not exists public.finance_cell_comments (
   unique(user_id, category_id, year, month)
 );
 alter table public.finance_cell_comments enable row level security;
+drop policy if exists "finance_cell_comments: own rows" on public.finance_cell_comments;
 create policy "finance_cell_comments: own rows"
   on public.finance_cell_comments for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop trigger if exists finance_comments_updated_at on public.finance_cell_comments;
 create trigger finance_comments_updated_at
   before update on public.finance_cell_comments
   for each row execute function public.finance_set_updated_at();
@@ -145,6 +154,7 @@ create table if not exists public.finance_bills (
   created_at  timestamptz not null default now()
 );
 alter table public.finance_bills enable row level security;
+drop policy if exists "finance_bills: own rows" on public.finance_bills;
 create policy "finance_bills: own rows"
   on public.finance_bills for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -163,6 +173,7 @@ create table if not exists public.finance_goals (
   created_at     timestamptz not null default now()
 );
 alter table public.finance_goals enable row level security;
+drop policy if exists "finance_goals: own rows" on public.finance_goals;
 create policy "finance_goals: own rows"
   on public.finance_goals for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
