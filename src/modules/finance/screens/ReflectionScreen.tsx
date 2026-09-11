@@ -544,6 +544,41 @@ export function ReflectionScreen(_props?: any) {
   // monthly sums, so the flag cannot sit on a figure — it sits in the header,
   // with the list of what to go and look at.
   const [dupesOpen, setDupesOpen] = useState(false)
+  // The panel is positioned from the button's own rect and drawn `fixed`, not
+  // `absolute`. The bar it sits in scrolls sideways so the controls can stay on
+  // one line, and a scroll container clips its descendants — `overflow-x: auto`
+  // computes `overflow-y: auto` as well, so a panel hanging below the bar was
+  // cut off at the bar's own 63px and read as a button that does not open.
+  // Fixed positioning leaves the clipping context entirely.
+  const dupesBtn = useRef<HTMLButtonElement | null>(null)
+  const [dupesAt, setDupesAt] = useState<{ top: number; right: number } | null>(null)
+  useEffect(() => {
+    if (!dupesOpen) { setDupesAt(null); return }
+    const place = () => {
+      const r = dupesBtn.current?.getBoundingClientRect()
+      if (r) setDupesAt({ top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) })
+    }
+    place()
+    // A panel that floats over the page has to close when you look away from
+    // it. Anchored to a button it used to be, the button was the only way out.
+    const away = (e: PointerEvent) => {
+      const t = e.target as HTMLElement
+      if (dupesBtn.current?.contains(t)) return        // the button toggles itself
+      if (t.closest('.sb-dupes-panel')) return
+      setDupesOpen(false)
+    }
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setDupesOpen(false) }
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    document.addEventListener('pointerdown', away)
+    document.addEventListener('keydown', key)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+      document.removeEventListener('pointerdown', away)
+      document.removeEventListener('keydown', key)
+    }
+  }, [dupesOpen])
   const yearTx = useMemo(
     () => transactions.filter(t => filedIn(t, String(year))),
     [transactions, year, filedIn],
@@ -1140,6 +1175,7 @@ export function ReflectionScreen(_props?: any) {
           {suspects.length > 0 && (
             <span style={{ position: 'relative' }}>
               <button
+                ref={dupesBtn}
                 onClick={() => setDupesOpen(o => !o)}
                 title="Identical entries filed twice on one day, or twice in one month"
                 style={{
@@ -1152,8 +1188,12 @@ export function ReflectionScreen(_props?: any) {
                 }}>
                 {suspects.length} to check
               </button>
-              {dupesOpen && (
-                <Card style={{ position: 'absolute', top: 34, right: 0, zIndex: 30, width: 384, maxHeight: 320, overflowY: 'auto', padding: 12, textAlign: 'left' }}>
+              {dupesOpen && dupesAt && (
+                <Card className="sb-dupes-panel" style={{
+                  position: 'fixed', top: dupesAt.top, right: dupesAt.right, zIndex: 60,
+                  width: 384, maxHeight: 'min(320px, calc(100vh - 120px))', overflowY: 'auto',
+                  padding: 12, textAlign: 'left', boxShadow: 'var(--sb-shadow-pop, 0 10px 30px -12px rgba(25,23,18,.35))',
+                }}>
                   <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5, marginBottom: 10 }}>
                     Same amount, account, category and payee. Filed twice on one day is
                     usually a slip; twice in one month may be real. Nothing has been changed —

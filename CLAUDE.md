@@ -336,6 +336,17 @@ does the moving. Resizing needs no live transform either: it is worked out from
   put the pills on a different line from the figures. Only a parent that
   stretches is the problem, so it is fixed at that parent — the Goals policy
   picker sets `alignSelf` itself.
+- **The "to check" panel is `fixed`, positioned from the button's own rect.**
+  The bar it hangs off scrolls sideways so the controls stay on one line, and a
+  scroll container clips its descendants — `overflow-x: auto` computes
+  `overflow-y: auto` with it, so the panel was cut off at the bar's own 63px
+  and the chip read as a button that does not open. A DOM-text assertion passed
+  right through that: the panel was there, it was simply not *seen*. Anything
+  that opens over the page from a control inside a scroller has to leave the
+  clipping context, and the test for it has to measure the rect against its
+  ancestors and `elementFromPoint`, not the text.
+  Floating means it closes like a floating thing: pointer-down away from it, or
+  Escape, with the button itself and `.sb-dupes-panel` exempt.
 - **A duplicate can be acknowledged.** `duplicateAcks.ts`. Detection points at
   pairs and never decides; some pairs are real — a second tank of petrol, a
   bill paid in halves — and the list had no way to say so, so the chip sat at
