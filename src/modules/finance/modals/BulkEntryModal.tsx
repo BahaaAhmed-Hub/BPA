@@ -14,9 +14,11 @@ import {
 } from './pickers'
 import { Segmented } from '@/components/ui'
 
-/** One line being typed. Everything the whole batch shares — which way the
- *  money went, which account, which currency — lives above the grid, so a line
- *  is only what actually differs between them.
+/** One line being typed. What the whole batch shares — which way the money
+ *  went — lives above the grid. The account and the currency are up there too,
+ *  but as a *setter* rather than a fact about the batch: they fill every line
+ *  and every line can then be changed, because a page of receipts typed up at
+ *  once comes off whichever card was in your hand.
  *
  *  A line can also stand for the same entry repeated: `from` to `to` at
  *  `every`. `to` follows `from` until it is touched, so a line is a single
@@ -34,6 +36,16 @@ interface Draft {
   payee: string
   categoryId: string
   amount: number
+  /** Which account this line leaves from or lands in. A batch used to be one
+   *  account for every line, which is right for a month of card spending and
+   *  wrong for a page of receipts typed up at once — those come off whichever
+   *  card was in your hand. The picker at the top sets every line, the way the
+   *  Paid control does; a line can still be changed after. */
+  accountId: string
+  /** Follows the line's own account, because an entry is stored in the money
+   *  it was actually in. A USD card's entry filed as EGP is not wrong by much
+   *  on one line and is nonsense on a page of them. */
+  currency: Currency
   /** Whether the money has actually moved. Unpaid entries carry no payment
    *  date at all, which is what every screen reads to mark them. */
   paid: boolean
@@ -57,10 +69,11 @@ const INTERVALS: { id: Interval; label: string }[] = [
 
 const BLANK_ROWS = 5
 
-function blank(date: string, paid: boolean): Draft {
+function blank(date: string, paid: boolean, accountId: string, currency: Currency): Draft {
   return {
     key: crypto.randomUUID(), from: date, to: date, toTouched: false, every: '',
-    payee: '', categoryId: '', amount: 0, paid, paidOn: date, paidOnTouched: false,
+    payee: '', categoryId: '', amount: 0, accountId, currency,
+    paid, paidOn: date, paidOnTouched: false,
   }
 }
 
@@ -108,8 +121,8 @@ const CELL: React.CSSProperties = {
 // The date tracks are sized for the longest thing a browser puts in one:
 // Safari spells it "5 Sep 2026" and adds a picker glyph, where Chromium shows
 // a narrower 09/05/2026.
-const COLS = '142px 142px 100px minmax(140px, 1fr) minmax(158px, 196px) 108px 158px 30px'
-const GRID_MIN = 1034
+const COLS = '142px 142px 100px minmax(140px, 1fr) minmax(150px, 186px) minmax(150px, 186px) 108px 158px 30px'
+const GRID_MIN = 1196
 const CELL_BOX: React.CSSProperties = { minWidth: 0, display: 'flex' }
 
 export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
@@ -122,12 +135,14 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
   const year  = useFinanceStore(s => s.currentYear)
 
   const [kind, setKind]           = useState<'expense' | 'income'>('expense')
-  // A batch is written to one account, and which one is not something to
-  // guess. Preselecting the first account in the list filed whole batches
-  // against whatever happened to sort first — the entries were saved, they
-  // were simply nowhere the person who typed them thought to look. So the
-  // field starts empty and the batch cannot be written until it is answered,
-  // unless there is only one account and there is nothing to get wrong.
+  // Which account is not something to guess. Preselecting the first in the
+  // list filed whole batches against whatever happened to sort first — the
+  // entries were saved, they were simply nowhere the person who typed them
+  // thought to look. So it starts empty and nothing can be written until it is
+  // answered, unless there is only one account and there is nothing to get
+  // wrong. The difference now is that this fills the lines rather than
+  // standing for them: each line carries its own, and the footer says when
+  // they differ.
   const only = accounts.length === 1 ? accounts[0] : undefined
   const [accountId, setAccountId] = useState(only?.id ?? '')
   const [currency, setCurrency]   = useState<Currency>(
@@ -137,7 +152,8 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
   // away, and either way a line can be set on its own afterwards.
   const [batchPaid, setBatchPaid] = useState(true)
   const [rows, setRows]           = useState<Draft[]>(() =>
-    Array.from({ length: BLANK_ROWS }, () => blank(today, true)))
+    Array.from({ length: BLANK_ROWS }, () =>
+      blank(today, true, only?.id ?? '', (only?.currency ?? baseCurrency()) as Currency)))
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -155,10 +171,20 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
     .filter(r => r.amount > 0)
     .map(r => ({ row: r, dates: datesFor(r) }))
   const count = ready.reduce((n, r) => n + r.dates.length, 0)
-  const total = ready.reduce((s, r) => s + r.row.amount * r.dates.length, 0)
+  // One total per currency. Lines can now sit on different accounts, and
+  // adding 250 USD to 4,000 EGP gives a number that is true of nothing — the
+  // one rule this module has never broken.
+  const totals = new Map<string, number>()
+  for (const r of ready) {
+    totals.set(r.row.currency, (totals.get(r.row.currency) ?? 0) + r.row.amount * r.dates.length)
+  }
   const unpaid = ready.filter(r => !r.row.paid).reduce((n, r) => n + r.dates.length, 0)
-  const account = accounts.find(a => a.id === accountId)
-  const canSave = count > 0 && !!account
+  // Every line that will be written needs an account of its own; the header's
+  // is only what fills them in.
+  const noAccount = ready.filter(r => !r.row.accountId).length
+  const spread = new Set(ready.map(r => r.row.accountId)).size
+  const whereOne = accounts.find(a => a.id === ready[0]?.row.accountId)?.name ?? 'one account'
+  const canSave = count > 0 && noAccount === 0
 
   // Everything in this app is fetched a year at a time. A line dated outside
   // the year on screen is saved and then shows up nowhere, which reads as
@@ -180,14 +206,35 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
       return next
     }))
   }
-  function addRow() { setRows(rs => [...rs, blank(rs[rs.length - 1]?.from ?? today, batchPaid)]) }
+  function addRow() {
+    // A new line picks up where the last one left off — its date, and the
+    // account and currency it was on. Typing five receipts from one card and
+    // having the sixth land back on the batch default is the kind of small
+    // wrongness nobody checks for.
+    setRows(rs => {
+      const last = rs[rs.length - 1]
+      return [...rs, blank(last?.from ?? today, batchPaid, last?.accountId ?? accountId, last?.currency ?? currency)]
+    })
+  }
   function dropRow(key: string) {
-    setRows(rs => (rs.length > 1 ? rs.filter(r => r.key !== key) : [blank(today, batchPaid)]))
+    setRows(rs => (rs.length > 1 ? rs.filter(r => r.key !== key) : [blank(today, batchPaid, accountId, currency)]))
   }
   /** The batch control sets every line; a line can still be changed after. */
   function setAllPaid(paid: boolean) {
     setBatchPaid(paid)
     setRows(rs => rs.map(r => ({ ...r, paid })))
+  }
+  /** Same contract as Paid: fill every line, then let any line differ. The
+   *  currency goes with it, because it is a fact about the account. */
+  function setAllAccount(id: string) {
+    setAccountId(id)
+    const a = accounts.find(x => x.id === id)
+    if (a) setCurrency(a.currency)
+    setRows(rs => rs.map(r => ({ ...r, accountId: id, ...(a ? { currency: a.currency } : {}) })))
+  }
+  function setAllCurrency(c: Currency) {
+    setCurrency(c)
+    setRows(rs => rs.map(r => ({ ...r, currency: c })))
   }
 
   function handleSave() {
@@ -197,9 +244,9 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
       rememberPayee(row.payee)
       return dates.map(date => ({
         id:         crypto.randomUUID(),
-        accountId,
+        accountId:  row.accountId,
         amount:     row.amount,
-        currency,
+        currency:   row.currency,
         type:       kind,
         payee:      row.payee.trim(),
         categoryId: row.categoryId || undefined,
@@ -270,27 +317,24 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
             ]}
           />
 
-          {/* Where the whole batch lands. Unanswered it is outlined and says
-              so, because everything below it is filed against this one field. */}
+          {/* Fills every line, the way Paid does — not a fact about the batch.
+              Outlined while any line that would be written still has no
+              account, because that is the one thing that cannot be guessed. */}
           <span style={{
             flex: 1, minWidth: 200, display: 'flex', borderRadius: 'var(--sb-r-nav)',
-            boxShadow: account ? 'none' : `0 0 0 2px var(--sb-accent)`,
+            boxShadow: noAccount === 0 ? 'none' : `0 0 0 2px var(--sb-accent)`,
           }}>
             <PillPicker
               value={accountId}
-              onChange={id => {
-                setAccountId(id)
-                const a = accounts.find(x => x.id === id)
-                if (a) setCurrency(a.currency)
-              }}
-              placeholder="Which account?"
+              onChange={setAllAccount}
+              placeholder="Put every line on…"
               compact
               options={accounts.map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
           </span>
 
           <span style={{ position: 'relative', display: 'inline-flex' }}>
             <span style={{ ...PILL, height: 'var(--sb-h-pill)', padding: '0 12px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600 }}>{currency}</span>
-            <select value={currency} onChange={e => setCurrency(e.target.value as Currency)}
+            <select value={currency} onChange={e => setAllCurrency(e.target.value as Currency)}
               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', cursor: 'pointer', border: 'none' }}>
               {['EGP', 'USD', 'AED'].map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -313,6 +357,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           <span style={{ minWidth: 0 }} title="Leave this empty and the line is a single entry on its start date">Every</span>
           <span style={{ minWidth: 0 }}>Paid to</span>
           <span style={{ minWidth: 0 }}>Category</span>
+          <span style={{ minWidth: 0 }} title="Which account this line leaves from or lands in">Account</span>
           <span style={{ textAlign: 'right', minWidth: 0 }}>Amount</span>
           <span style={{ minWidth: 0 }} title="Clear the tick and the entry is money still owed">Paid</span>
           <span />
@@ -360,6 +405,21 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
               <span style={CELL_BOX}>
                 <PillPicker value={r.categoryId} onChange={id => patch(r.key, { categoryId: id })}
                   placeholder="Uncategorised" compact options={options} />
+              </span>
+              <span style={{
+                ...CELL_BOX, borderRadius: 'var(--sb-r-sm)',
+                // Only a line that would actually be written is asked for one.
+                boxShadow: !r.accountId && r.amount > 0 ? '0 0 0 2px var(--sb-accent)' : 'none',
+              }}>
+                <PillPicker
+                  value={r.accountId}
+                  onChange={id => {
+                    const a = accounts.find(x => x.id === id)
+                    patch(r.key, { accountId: id, ...(a ? { currency: a.currency } : {}) })
+                  }}
+                  placeholder="Which account?"
+                  compact
+                  options={accounts.map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
               </span>
               <span style={CELL_BOX}>
               <MoneyInput
@@ -427,17 +487,17 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
         <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '14px 0' }} />
 
         {/* What is about to be written */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 'var(--sb-t-body-s)', color: !account && count > 0 ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: noAccount > 0 && count > 0 ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)' }}>
             {count === 0
               ? 'Nothing to add yet — a line counts once it has an amount'
-              : !account
-                ? `Pick the account these ${count === 1 ? 'goes' : 'go'} to`
+              : noAccount > 0
+                ? `${noAccount} ${noAccount === 1 ? 'line has' : 'lines have'} no account yet`
                 : `${count} ${count === 1 ? 'entry' : 'entries'}${
                     count > ready.length ? ` from ${ready.length} ${ready.length === 1 ? 'line' : 'lines'}` : ''
-                  } → ${account.name}${unpaid > 0 ? `, ${unpaid} not paid` : ''}`}
+                  } → ${spread === 1 ? whereOne : `${spread} accounts`}${unpaid > 0 ? `, ${unpaid} not paid` : ''}`}
           </span>
-          {elsewhere.length > 0 && account && (
+          {elsewhere.length > 0 && noAccount === 0 && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 'var(--sb-r-pill)',
               background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent)', padding: '4px 11px',
@@ -446,20 +506,23 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
               dated {elsewhere.join(' & ')}, not {year} — saving goes there
             </span>
           )}
-          {count > 0 && account && (
-            <span style={{
+          {/* One figure per currency. Two of them is the honest answer when the
+              lines are in two currencies, and it is also the tell that a line
+              is on an account you did not mean. */}
+          {count > 0 && noAccount === 0 && [...totals].map(([cur, sum]) => (
+            <span key={cur} style={{
               fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: tone,
               fontVariantNumeric: 'tabular-nums',
             }}>
-              {acct(kind === 'income' ? total : -total, { currency })}
+              {acct(kind === 'income' ? sum : -sum, { currency: cur })}
             </span>
-          )}
+          ))}
           <span style={{ flex: 1 }} />
           <button onClick={onClose} style={{ ...PILL, height: 38, color: 'var(--sb-ink-3)' }}>Cancel</button>
           <button
             onClick={handleSave}
             disabled={!canSave}
-            title={count > 0 && !account ? 'Pick the account this batch is written to' : undefined}
+            title={count > 0 && noAccount > 0 ? 'Every line needs an account before it can be written' : undefined}
             style={{
               ...PILL, height: 38, paddingInline: 20, fontWeight: 600,
               background: canSave ? 'var(--sb-ink-1)' : 'var(--sb-field)',

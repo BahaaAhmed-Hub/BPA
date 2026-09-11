@@ -254,9 +254,20 @@ does the moving. Resizing needs no live transform either: it is worked out from
 
 ## Finance — bulk entry and duplicate review
 - `modals/BulkEntryModal.tsx` — a line is **Starts / Ends / Every / payee / category /
-  amount**. `Ends` mirrors `Starts` until it is touched (`toTouched`), and `Every` is
-  empty by default, so a line is one entry unless deliberately made a repeat. The
-  footer counts *entries*, not lines.
+  account / amount**. `Ends` mirrors `Starts` until it is touched (`toTouched`), and
+  `Every` is empty by default, so a line is one entry unless deliberately made a
+  repeat. The footer counts *entries*, not lines.
+- **The account is per line, and so is the currency.** A batch used to be one
+  account for all of it, which is right for a month of card spending and wrong
+  for a page of receipts — those come off whichever card was in your hand. The
+  pickers in the header are *setters*, the same contract the Paid control has:
+  they fill every line and every line can then differ. A new line inherits the
+  last line's account rather than the header's, or the sixth receipt from one
+  card quietly lands somewhere else. The currency follows the line's own
+  account, because an entry is stored in the money it was actually in, and the
+  footer totals **per currency** — adding 250 USD to 4,000 EGP gives a number
+  true of nothing. Every line that would be written needs an account: the count
+  of those without one is what the footer says and what disables Add.
 - `duplicates.ts` — same type, amount, currency, account, category and normalised
   payee, ignoring the date. Two on one date → `day`; two in one month → `month`; the
   same thing in a *different* month is a recurring payment and is never flagged.
