@@ -448,6 +448,14 @@ textarea:focus,
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+  /* `inline-flex` sizes to its options, but as a flex *item* in a column it is
+     stretched to the column's width and the track grows behind them — 230px of
+     track around 212px of buttons, with the slack all on one side. It showed up
+     under the Goals policy picker, where a caption under it set the column
+     width; the two pickers without a caption looked fine, which is what made it
+     read as a state rather than a layout. `data-block` is the opt-in for
+     filling the width, so nothing else may. */
+  align-self: start;
   padding: 3px;
   box-sizing: border-box;
   border-radius: var(--sb-r-pill);
@@ -457,7 +465,7 @@ textarea:focus,
      on a light theme, up on a dark one. */
   background: color-mix(in srgb, var(--sb-ink-1) 18%, var(--sb-field));
 }
-.sb-segmented[data-block] { display: flex; width: 100%; }
+.sb-segmented[data-block] { display: flex; width: 100%; align-self: stretch; }
 .sb-segmented[data-block] .sb-segmented-opt { flex: 1; justify-content: center; }
 
 .sb-segmented-opt {

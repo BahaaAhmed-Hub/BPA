@@ -142,6 +142,11 @@ export interface Forecast {
   /** A normal month, before and after the dated bills are counted. */
   flatSurplus: number
   datedYearly: number
+  /** What the lumpy-cost rule puts back on its own dates over the next twelve
+   *  months. Separate from `datedYearly`, which is budgets you wrote — these
+   *  are costs read out of the ledger — but both leave on a date rather than
+   *  being spread, so a screen reporting one has to report the other. */
+  lumpyYearly: number
   /** Every month's dated total, so a screen can draw them. */
   dated: number[]
 }
@@ -438,6 +443,7 @@ export function buildForecast(input: ForecastInput): Forecast {
     dated,
     flatSurplus,
     datedYearly,
+    lumpyYearly: lumpyOn ? lumpYearly * lumpScale : 0,
     capacity: {
       ...capacity,
       held, buffer, committed, free,

@@ -734,6 +734,32 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
     return () => ro.disconnect()
   }, [])
 
+  // How many lines the title may take is whatever is left after the rows that
+  // have to fit — the time above all. It used to be a ladder of card heights
+  // (78 → 4 lines, 52 → 3, else 2) which knew nothing about the rows under it,
+  // so a three-line title on a one-hour card pushed "1:30 PM – 2:30 PM" half
+  // out of the bottom of its own box. A title is the thing that can afford to
+  // be cut; the time is the thing you came to read.
+  const footRef = useRef<HTMLDivElement | null>(null)
+  const titleRef = useRef<HTMLDivElement | null>(null)
+  const [footH, setFootH] = useState(0)
+  const [lineH, setLineH] = useState(0)
+  useEffect(() => {
+    const el = footRef.current
+    if (!el || typeof ResizeObserver === 'undefined') { setFootH(0); return }
+    const ro = new ResizeObserver(([entry]) => setFootH(entry.contentRect.height))
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
+  useEffect(() => {
+    const el = titleRef.current
+    if (!el) return
+    // The used value, in px — the token behind it is a clamp() that resolves
+    // differently per theme and per viewport, so it is read rather than known.
+    const lh = parseFloat(getComputedStyle(el).lineHeight)
+    if (Number.isFinite(lh) && lh > 0) setLineH(prev => (prev === lh ? prev : lh))
+  })
+
   const w = isDragOverlay ? 130 : cardW || 999
   const tiny     = height < 28
   // Wrapping needs enough width for a line to be a line. Under that, three
@@ -742,6 +768,14 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   const canWrap  = w >= 52 && height >= 34
   const showTime = w >= 104 && height >= 38
   const showHost = w >= 104 && height >= 56
+
+  const padV = tiny ? 6 : 13                       // the card's own 5px + 8px
+  const room = height - padV - footH
+  const titleLines = lineH > 0 && footH >= 0
+    ? Math.max(1, Math.floor((room + 0.5) / lineH))
+    // Before the first measurement lands, the old ladder is still the best
+    // guess available — and it is what one frame will look like, not the page.
+    : (height >= 78 ? 4 : height >= 52 ? 3 : 2)
 
   return (
     <div
@@ -778,7 +812,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
       {/* Done is a tick in front of the name; cancelled strikes the name
           through. Neither touches the card's colour — that belongs to the
           calendar the event is on, not to what happened to it. */}
-      <div style={{
+      <div ref={titleRef} style={{
         // The micro *size*, not the micro level: a card's title is not a capsed
         // caption, and spreading T.micro would put it in capitals.
         fontFamily: SANS,
@@ -790,7 +824,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         // A card only wraps when it is wide enough for a wrapped line to be a
         // line. In a shared column it stays on one line and trails off.
         ...(canWrap
-          ? { display: '-webkit-box', WebkitLineClamp: height >= 78 ? 4 : height >= 52 ? 3 : 2, WebkitBoxOrient: 'vertical' as const }
+          ? { display: '-webkit-box', WebkitLineClamp: titleLines, WebkitBoxOrient: 'vertical' as const }
           : { whiteSpace: 'nowrap' as const, textOverflow: 'ellipsis' }),
       }}>
         {isDone && (
@@ -815,31 +849,37 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           textDecorationThickness: 1.5,
         }}>{displayTitle(fromTask ? stripTaskMark(event.summary) : event.summary)}</span>
       </div>
-      {showHost && (() => {
-        const host = meetingHost(event)
-        return host ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, overflow: 'hidden' }}>
-            <Video size={ICON.sm} color={evTimeInk} style={{ flexShrink: 0 }} />
+      {/* Everything the title must leave room for, in one box so its height can
+          be measured rather than assumed. `flow-root` keeps the children's top
+          margins inside it — collapsed through, the measurement would be short
+          by exactly the gap it is meant to include. */}
+      <div ref={footRef} style={{ display: 'flow-root' }}>
+        {showHost && (() => {
+          const host = meetingHost(event)
+          return host ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, overflow: 'hidden' }}>
+              <Video size={ICON.sm} color={evTimeInk} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {host}
+              </span>
+            </div>
+          ) : null
+        })()}
+        {showTime && (
+          <div style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+            {fmtShort(event.start.dateTime!)}
+            {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
+          </div>
+        )}
+        {showHost && height >= 74 && event.location && !meetingHost(event) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3, overflow: 'hidden' }}>
+            <MapPin size={ICON.sm} color={evTimeInk} style={{ flexShrink: 0 }} />
             <span style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {host}
+              {event.location}
             </span>
           </div>
-        ) : null
-      })()}
-      {showTime && (
-        <div style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-          {fmtShort(event.start.dateTime!)}
-          {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
-        </div>
-      )}
-      {showHost && height >= 74 && event.location && !meetingHost(event) && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3, overflow: 'hidden' }}>
-          <MapPin size={ICON.sm} color={evTimeInk} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {event.location}
-          </span>
-        </div>
-      )}
+        )}
+      </div>
       {/* Inline Done / Cancel icon buttons — visible on hover, or always if active */}
       {height >= 48 && !isDragOverlay && (
         <div

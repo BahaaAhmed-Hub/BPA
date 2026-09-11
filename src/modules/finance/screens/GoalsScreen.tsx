@@ -638,11 +638,15 @@ export function GoalsScreen(_props?: any) {
   // decoration. What is applied, what you corrected, and the one thing a flat
   // monthly figure could never have said.
   const applied = forecast.rules.filter(r => r.on && !r.dormant)
+  const datedNextYear = forecast.datedYearly + forecast.lumpyYearly
   const yours = forecast.rules.filter(r => r.yours).length
   const forecastLine = [
     `${applied.length} of ${forecast.rules.length} forecast rules applied`,
-    forecast.datedYearly > 0
-      ? `${money(forecast.datedYearly)} of the next year lands on dates of its own, not spread across it`
+    // Budgets you wrote *and* the lumpy costs read out of the ledger. Counting
+    // only the first said "nothing lands on a date of its own" directly above a
+    // timeline lane drawing a year of exactly that.
+    datedNextYear > 0
+      ? `${money(datedNextYear)} of the next year lands on dates of its own, not spread across it`
       : 'nothing in the next year lands on a date of its own',
     yours > 0 ? `${yours} figure${yours === 1 ? '' : 's'} yours` : null,
   ].filter(Boolean).join(' · ')
@@ -704,6 +708,16 @@ export function GoalsScreen(_props?: any) {
                 is the only mode that can be under-committed or over-committed,
                 and either is worth saying before a date is read off a plan
                 built on it. */}
+            {/* "Split" reads as equal, and it is not: the weights are 1/(rank+1),
+                so number 1 takes twice number 2 and three times number 3. A
+                label that needs its own tooltip not to mislead is the bug, so
+                the ratio is said on the page. */}
+            {policy === 'share' && (
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, lineHeight: 1.45, maxWidth: 230 }}>
+                Weighted by rank, not equal — number 1 gets twice what number 2
+                does, and three times number 3.
+              </span>
+            )}
             {policy === 'commit' && (
               <span style={{ fontSize: 'var(--sb-t-micro)', color: committed > capacity.surplus ? C.red : C.ink4, lineHeight: 1.45, maxWidth: 230 }}>
                 {committed <= 0
@@ -1211,18 +1225,29 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
       ) : (
       <div style={card}>
         <span style={EYEBROW}>The goal itself</span>
-        <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
-          <span style={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {/* A grid, not a wrapping flex row. With `flex: 1` the field that
+            wrapped onto a line of its own took the whole width — four fields
+            read as three and a stray. Equal columns keep their width however
+            many there are, and the Save button is one of them. */}
+        <div style={{
+          display: 'grid', gap: 12, marginTop: 10,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          alignItems: 'end',
+        }}>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
             <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Target</span>
             <MoneyInput value={target} min={0} onChange={setTarget}
               style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
           </span>
-          <span style={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
             <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Saved so far</span>
-            <MoneyInput value={saved} min={0} onChange={setSaved}
+            {/* A money field renders zero as an empty box on purpose, so a
+                fresh one is not a "0" you have to delete first. Without a
+                placeholder that reads as a field that failed to load. */}
+            <MoneyInput value={saved} min={0} onChange={setSaved} placeholder="0"
               style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
           </span>
-          <span style={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
             <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>By</span>
             <input type="date" value={g.deadline ?? ''} min={todayISO()}
               onChange={e => onChange({ ...g, deadline: e.target.value || undefined, sub: e.target.value ? `by ${e.target.value}` : 'no deadline' })}
@@ -1231,9 +1256,9 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
           {/* Only the mode that reads it shows it. A field that changes nothing
               about the plan on screen is a field you have to be told to ignore. */}
           {policy === 'commit' && (
-            <span style={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
               <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Each month</span>
-              <MoneyInput value={commit} min={0} onChange={setCommit}
+              <MoneyInput value={commit} min={0} onChange={setCommit} placeholder="nothing yet"
                 style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
             </span>
           )}
