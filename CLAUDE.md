@@ -390,7 +390,16 @@ does the moving. Resizing needs no live transform either: it is worked out from
 ## Finance — what an account holds
 `balances.ts` is the only thing that answers this. `account.balance` is the **opening**
 figure; the live one is that plus every entry filed against the account, so nothing
-ever writes back to the row. Sign convention: positive is held, negative is owed —
+ever writes back to the row.
+- **"Not paid yet" is what is due by now, not the rest of the year.** Unpaid
+  entries come back split at `asOf` (today by default): `pending` is dated on or
+  before it — money you actually owe — and `ahead` is dated later. They used to
+  be one figure, so a card carrying four months of instalments still to fall
+  read as 324,550 outstanding when nothing was late. It was arbitrary as well as
+  wrong: one year is loaded at a time, so that number grew every January and
+  shrank to nothing every December. A row with nothing overdue says what is
+  coming instead — *dated ahead*, in the muted ink, because it is a fact about
+  the diary rather than a debt. Sign convention: positive is held, negative is owed —
 spending on a card takes it below zero, paying it brings it back up.
 A **transfer carries `toAccountId`** (`20260007`): out of `accountId`, into
 `toAccountId`. Without it, paying a card was money leaving and arriving nowhere.

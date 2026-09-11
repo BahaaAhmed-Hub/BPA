@@ -1,6 +1,7 @@
 import type { Account, Transaction } from './types'
 import { convert } from './fx'
 import { isUnpaid } from './unpaid'
+import { todayISO } from './dates'
 
 // ─── What an account actually holds ──────────────────────────────────────────
 // The balance on an account row is where it started, not where it is. Nothing
@@ -10,8 +11,9 @@ import { isUnpaid } from './unpaid'
 // A live balance is that opening figure plus everything filed against the
 // account that has actually been paid. An entry with no payment date is money
 // that has not moved: the bill is owed, the account still holds what it held.
-// What is waiting comes back separately as `pending`, so a row can say how
-// much is coming without pretending it has gone.
+// What is waiting comes back separately — `pending` for what is due by now,
+// `ahead` for what is dated later — so a row can say what is actually late
+// without counting money that is not owed yet.
 //
 // The sign convention is the one the screen already assumes: a positive
 // balance is money held, a negative one is money owed, so spending on a credit
@@ -65,19 +67,34 @@ export function liveBalance(account: Account, transactions: Transaction[]): numb
 /** Every account's live balance in one pass, so a list of eight accounts does
  *  not walk the transactions eight times. `unconverted` names the currencies an
  *  account holds entries in that nothing could convert, so a balance that is
- *  quietly short can say why. `pending` is what unpaid entries would do to the
- *  account once they are paid — kept out of the balance, but not hidden. */
+ *  quietly short can say why.
+ *
+ *  Unpaid entries are kept out of the balance but not hidden, and they come
+ *  back split in two, because they are two different facts:
+ *  - **`pending`** is what is **due by now and has not been paid** — money you
+ *    owe today. This is what a row says.
+ *  - **`ahead`** is what is dated later and not yet due. It used to be in
+ *    `pending`, which made "not paid yet" the whole rest of the *year*: a
+ *    debit card with four months of instalments still to fall read as 324,550
+ *    outstanding when nothing was actually late. One year is loaded at a time,
+ *    so the figure was also arbitrary — it grew every January and shrank to
+ *    nothing every December.
+ *
+ *  `asOf` is the line between them; it defaults to today. */
 export function liveBalances(
   accounts: Account[],
   transactions: Transaction[],
+  asOf: string = todayISO(),
 ): {
   balances: Map<string, number>
   unconverted: Map<string, Set<string>>
   pending: Map<string, number>
+  ahead: Map<string, number>
 } {
   const balances = new Map(accounts.map(a => [a.id, a.balance]))
   const unconverted = new Map<string, Set<string>>()
   const pending = new Map<string, number>()
+  const ahead = new Map<string, number>()
   const byId = new Map(accounts.map(a => [a.id, a]))
 
   const apply = (a: Account, tx: Transaction) => {
@@ -88,7 +105,12 @@ export function liveBalances(
       unconverted.set(a.id, set)
       return
     }
-    if (isUnpaid(tx)) { pending.set(a.id, (pending.get(a.id) ?? 0) + d); return }
+    if (isUnpaid(tx)) {
+      // Its own date is when it is owed — an unpaid entry has no other.
+      const into = tx.date <= asOf ? pending : ahead
+      into.set(a.id, (into.get(a.id) ?? 0) + d)
+      return
+    }
     balances.set(a.id, balances.get(a.id)! + d)
   }
 
@@ -103,5 +125,5 @@ export function liveBalances(
     const a = tx.accountId ? byId.get(tx.accountId) : undefined
     if (a) apply(a, tx)
   }
-  return { balances, unconverted, pending }
+  return { balances, unconverted, pending, ahead }
 }

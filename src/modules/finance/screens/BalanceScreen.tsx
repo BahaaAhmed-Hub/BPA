@@ -60,15 +60,19 @@ function formatBalance(bal: number, currency = 'EGP'): string {
   return acct(bal, { currency })
 }
 
-function AccountRow({ account, balance, unconverted, pending, selected, hovered, onSelect, onHover, onEdit, onSettle, onIcon }: {
+function AccountRow({ account, balance, unconverted, pending, ahead, selected, hovered, onSelect, onHover, onEdit, onSettle, onIcon }: {
   account: Account
   balance: number
   /** Currencies filed against this account that nothing could convert. */
   unconverted: string[]
-  /** What unpaid entries would do to this account once they are paid. Out of
-   *  the balance — the money has not moved — but said out loud, or an account
-   *  with a fortnight of bills against it looks better off than it is. */
+  /** What is **due by now** and has not been paid. Out of the balance — the
+   *  money has not moved — but said out loud, or an account with a fortnight of
+   *  bills against it looks better off than it is. */
   pending: number
+  /** Unpaid and dated later. It used to be counted in `pending`, which made
+   *  this line the rest of the year rather than what is actually late. Named in
+   *  the tooltip rather than on the row: it is not money you owe today. */
+  ahead: number
   selected: boolean
   onSelect: (a: Account) => void
   hovered: boolean
@@ -177,9 +181,18 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
           </span>
         ) : pending !== 0 ? (
           <span
-            title="Entries filed here with no payment date. The money has not moved, so it is not in the balance."
+            title={`Due by today and not paid. The money has not moved, so it is not in the balance.${
+              ahead !== 0 ? ` A further ${formatBalance(ahead, account.currency)} is dated later and not yet owed.` : ''}`}
             style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-negative)' }}>
             {formatBalance(pending, account.currency)} not paid yet
+          </span>
+        ) : ahead !== 0 ? (
+          // Nothing late, but something is coming. Said in the muted ink, not
+          // the negative one — it is a fact about the diary, not a debt.
+          <span
+            title="Entries filed here with no payment date, all of them dated later. Nothing is overdue."
+            style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>
+            {formatBalance(ahead, account.currency)} dated ahead
           </span>
         ) : account.last4 ? (
           <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>cleared</span>
@@ -282,6 +295,7 @@ export function BalanceScreen() {
   const balanceOf = (a: Account) => live.balances.get(a.id) ?? a.balance
   const unratedOn = (a: Account) => [...(live.unconverted.get(a.id) ?? [])]
   const pendingOn = (a: Account) => live.pending.get(a.id) ?? 0
+  const aheadOn   = (a: Account) => live.ahead.get(a.id) ?? 0
 
   const inBase = (list: typeof accounts) =>
     list.reduce((s, a) => s + (toBase(balanceOf(a), a.currency, base) ?? 0), 0)
@@ -480,6 +494,7 @@ export function BalanceScreen() {
                         balance={balanceOf(acc)}
                         unconverted={unratedOn(acc)}
                         pending={pendingOn(acc)}
+                        ahead={aheadOn(acc)}
                         selected={focusId === acc.id}
                         onSelect={a => setFocusId(id => (id === a.id ? null : a.id))}
                         hovered={hoveredAccountId === acc.id}

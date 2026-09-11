@@ -410,7 +410,7 @@ export async function executeFinanceTool(
     // ── Reading ───────────────────────────────────────────────────────────────
 
     case 'finance_overview': {
-      const { balances, pending, unconverted } = liveBalances(accounts, transactions)
+      const { balances, pending, ahead, unconverted } = liveBalances(accounts, transactions)
       let cash = 0, owed = 0, assets = 0
       const rows = accounts.map(a => {
         const bal = balances.get(a.id) ?? a.balance
@@ -423,7 +423,8 @@ export async function executeFinanceTool(
         return {
           name: a.name, kind: a.accountType, currency: a.currency,
           balance: money(bal),
-          ...(pending.get(a.id) ? { waiting_on_unpaid: money(pending.get(a.id)!) } : {}),
+          ...(pending.get(a.id) ? { overdue_unpaid: money(pending.get(a.id)!) } : {}),
+          ...(ahead.get(a.id) ? { unpaid_dated_later: money(ahead.get(a.id)!) } : {}),
           ...(unconverted.get(a.id)?.size ? { not_counted: [...unconverted.get(a.id)!] } : {}),
         }
       })
@@ -489,13 +490,14 @@ export async function executeFinanceTool(
     }
 
     case 'list_finance_accounts': {
-      const { balances, pending, unconverted } = liveBalances(accounts, transactions)
+      const { balances, pending, ahead, unconverted } = liveBalances(accounts, transactions)
       return accounts.map(a => ({
         name: a.name, bank: a.bank, kind: a.accountType, currency: a.currency,
         balance: money(balances.get(a.id) ?? a.balance),
         opening_balance: a.balance,
         ...(a.creditLimit ? { credit_limit: a.creditLimit } : {}),
-        ...(pending.get(a.id) ? { waiting_on_unpaid: money(pending.get(a.id)!) } : {}),
+        ...(pending.get(a.id) ? { overdue_unpaid: money(pending.get(a.id)!) } : {}),
+        ...(ahead.get(a.id) ? { unpaid_dated_later: money(ahead.get(a.id)!) } : {}),
         ...(unconverted.get(a.id)?.size ? { currencies_not_counted: [...unconverted.get(a.id)!] } : {}),
       }))
     }
