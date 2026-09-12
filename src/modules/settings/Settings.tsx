@@ -68,6 +68,7 @@ import {
   type MoneyReminder,
 } from '@/modules/finance/reminders'
 import { alpha } from '@/lib/alpha'
+import { SearchSelect } from '@/components/SearchSelect'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -142,6 +143,14 @@ const ALL_TZ = (() => {
     return { value: tz, label: `(${o}) ${tz.replace(/_/g,' ')}`, offset: s*((parseInt(p[0])||0)*60+(parseInt(p[1])||0)) }
   }).sort((a,b) => a.offset - b.offset || a.value.localeCompare(b.value))
 })()
+
+/** ALL_TZ as the shared picker wants it. `keywords` carries the bare city so
+ *  "cairo" finds it without the label having to repeat itself. */
+const TZ_OPTIONS = ALL_TZ.map(tz => ({
+  value: tz.value,
+  label: tz.label,
+  keywords: tz.value.replace(/[_/]/g, ' '),
+}))
 
 // Framework options live in FRAMEWORK_SEGMENTS (11A segmented control).
 const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
@@ -462,9 +471,16 @@ function ProfileSection({
       </DRow>
 
       <DRow label="Timezone" sub={tzSyncNote}>
-        <select value={s.timezone} onChange={e => set({ timezone: e.target.value })} style={pillSelectStyle}>
-          {ALL_TZ.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
-        </select>
+        {/* Four hundred zones. A native select here is a list you scroll
+            past the one you wanted; this one you type into. */}
+        <SearchSelect
+          value={s.timezone}
+          onChange={v => set({ timezone: v })}
+          options={TZ_OPTIONS}
+          placeholder="Choose a timezone"
+          ariaLabel="Timezone"
+          style={pillSelectStyle}
+        />
         {/* Nothing asks for your location until you press this. */}
         <button
           onClick={async () => {
@@ -2546,27 +2562,27 @@ function BlockingRulesSection() {
               <label style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>
                 Source calendar (events to watch)
               </label>
-              <select value={srcCal} onChange={e => setSrcCal(e.target.value)} style={{ ...selectStyle, width: '100%' }}>
-                <option value="">— choose —</option>
-                {cals.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.summary ?? c.id} ({c.accountEmail})
-                  </option>
-                ))}
-              </select>
+              <SearchSelect
+                value={srcCal}
+                onChange={setSrcCal}
+                options={cals.map(c => ({ value: c.id, label: c.summary ?? c.id, hint: c.accountEmail }))}
+                placeholder="— choose —"
+                ariaLabel="Source calendar"
+                style={{ ...selectStyle, width: '100%' }}
+              />
             </div>
             <div>
               <label style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>
                 Target calendar (where blocks are created)
               </label>
-              <select value={tgtCal} onChange={e => setTgtCal(e.target.value)} style={{ ...selectStyle, width: '100%' }}>
-                <option value="">— choose —</option>
-                {cals.filter(c => c.id !== srcCal).map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.summary ?? c.id} ({c.accountEmail})
-                  </option>
-                ))}
-              </select>
+              <SearchSelect
+                value={tgtCal}
+                onChange={setTgtCal}
+                options={cals.filter(c => c.id !== srcCal).map(c => ({ value: c.id, label: c.summary ?? c.id, hint: c.accountEmail }))}
+                placeholder="— choose —"
+                ariaLabel="Target calendar"
+                style={{ ...selectStyle, width: '100%' }}
+              />
             </div>
             <div>
               <label style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>
