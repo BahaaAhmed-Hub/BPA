@@ -867,11 +867,17 @@ export function BudgetRuleModal({
               same colour the Budget header splits the month by, so the pill and
               the bar are recognisably the same four things. They wrap rather
               than crush below about 370px. */}
-          {/* The label is narrowed for this row alone. Four pills need every
-              pixel of a 320px modal, "Kind" is four letters, and the caption
-              under them names the one that is chosen anyway. */}
-          <div style={{ ...ROW, gap: 8 }}>
-            <span style={{ ...LABEL, width: 44 }}>Kind</span>
+          {/* This row used to narrow its own label to 44px to buy the four
+              pills another 30px. It bought them at the cost of the one thing
+              a column of labelled rows has: a single left edge. The pills and
+              the caption under them started 32px left of every other control
+              in the panel and ran off the card, which reads as a row that has
+              come loose rather than as a row with more in it. The label stays
+              at LABEL like everything else; the pills give up the padding
+              instead, and wrap when even that is not enough — a second line is
+              still aligned, and an overflow never is. */}
+          <div style={ROW}>
+            <span style={LABEL}>Kind</span>
             <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               {BUCKETS.map(b => {
                 const on = bucketOf(rule) === b.id
@@ -879,8 +885,8 @@ export function BudgetRuleModal({
                   <button key={b.id} onClick={() => onChange({ ...rule, bucket: b.id, fixedType: undefined })}
                     title={`${b.name} — ${b.help}`}
                     style={{
-                      ...PILL, flex: '1 1 auto', justifyContent: 'center', gap: 4,
-                      height: 34, padding: '0 7px', minWidth: 0,
+                      ...PILL, flex: '1 1 auto', justifyContent: 'center', gap: 3,
+                      height: 34, padding: '0 5px', minWidth: 0,
                       fontSize: 'var(--sb-t-meta)', whiteSpace: 'nowrap',
                       background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                       border: on ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
@@ -897,9 +903,15 @@ export function BudgetRuleModal({
               })}
             </span>
           </div>
-          <p style={{ margin: '-2px 0 0 52px', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
-            {bucketMeta(bucketOf(rule)).name} — {bucketMeta(bucketOf(rule)).help}
-          </p>
+          {/* The caption hangs off the same LABEL spacer the other captions in
+              this panel use, rather than a hand-set margin that has to be kept
+              in step with the label width by hand. */}
+          <div style={{ ...ROW, marginTop: -4, alignItems: 'flex-start' }}>
+            <span style={LABEL} />
+            <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+              {bucketMeta(bucketOf(rule)).name} — {bucketMeta(bucketOf(rule)).help}
+            </p>
+          </div>
 
           {/* When the money actually has to move. A budget on its own is an
               allowance for the month; a rent is a day. The other two shapes
@@ -1043,12 +1055,19 @@ export function BudgetRuleModal({
 
         </>)}
 
+        {/* `block` is width:100%, and 100% of the row is the whole row — so
+            Done claimed all of it and pushed More… 50px past the panel's right
+            edge, in every theme. The panel then had a horizontal scroll it
+            never showed, which is what dragged the rest of the column out of
+            line. Done takes the space that is left instead. */}
         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
-          <Button variant="primary" onClick={onClose} block>
-            <Check size={ICON.sm} strokeWidth={STROKE.active} /> Done
-          </Button>
+          <span style={{ flex: 1, minWidth: 0, display: 'flex' }}>
+            <Button variant="primary" onClick={onClose} block>
+              <Check size={ICON.sm} strokeWidth={STROKE.active} /> Done
+            </Button>
+          </span>
           <button onClick={onEditCategory} title="Colour, type, parent, delete"
-            style={{ ...PILL, color: 'var(--sb-ink-3)' }}>More…</button>
+            style={{ ...PILL, flexShrink: 0, color: 'var(--sb-ink-3)' }}>More…</button>
         </div>
         <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 10, textAlign: 'center' }}>
           Name, icon and budget save as you change them
