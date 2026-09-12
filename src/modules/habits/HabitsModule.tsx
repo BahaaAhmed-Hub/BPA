@@ -200,7 +200,7 @@ export function EmojiBtn({ value, onSelect, size = 24 }: {
         {value}
       </button>
       {open && (
-        <div className="sb-blur-surface" style={{ position: 'absolute', top: size + 6, left: 0, zIndex: 300, background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: 'var(--sb-shadow-menu)' }}>
+        <div className="sb-blur-surface" style={{ position: 'absolute', top: size + 6, left: 0, zIndex: 300, background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: 'var(--sb-shadow-menu)' }}>
           {EMOJIS.map(e => (
             <button key={e} onClick={() => { onSelect(e); setOpen(false) }}
               style={{ fontSize: 'var(--sb-t-h3)', width: 32, height: 32, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', border: 'var(--sb-border-width) solid', borderColor: e === value ? 'var(--sb-border)' : 'transparent', background: e === value ? 'var(--sb-field)' : 'transparent' }}>{e}</button>

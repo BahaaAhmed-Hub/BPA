@@ -167,7 +167,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
           left: 0,
           zIndex: 200,
           width: 320,
-          background: 'var(--sb-card)',
+          background: 'var(--sb-overlay)',
           border: `var(--sb-border-width) solid ${'var(--sb-border)'}`,
           borderRadius: 'var(--sb-r-card)',
           boxShadow: 'var(--sb-shadow-frame)',

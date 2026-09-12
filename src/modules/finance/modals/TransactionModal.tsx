@@ -442,7 +442,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   <div className="sb-blur-surface" style={{
                     position: 'absolute', top: 46, left: 0, right: 0, zIndex: 20, padding: 5,
                     maxHeight: 210, overflowY: 'auto',
-                    background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+                    background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
                     boxShadow: 'var(--sb-shadow-menu)',
                   }}>
                     {payeeHits.map(name => (

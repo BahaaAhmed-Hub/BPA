@@ -163,7 +163,7 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
     <div ref={ref} style={{
       position: 'fixed', zIndex: 9999, top: '50%', left: '50%',
       transform: 'translate(-50%, -50%)',
-      background: 'var(--sb-card)',
+      background: 'var(--sb-overlay)',
       border: 'var(--sb-border-width) solid var(--sb-border)',
       borderRadius: 'var(--sb-r-card)', width: 340, maxHeight: '80vh', overflowY: 'auto',
       boxShadow: 'var(--sb-shadow-frame)',

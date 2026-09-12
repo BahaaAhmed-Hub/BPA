@@ -468,7 +468,7 @@ function NotificationBell() {
         <div role="menu" style={{
           position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120,
           width: 340, maxHeight: 460, overflowY: 'auto', scrollbarWidth: 'thin',
-          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
+          background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
           boxShadow: 'var(--sb-shadow-frame)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 10px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
@@ -666,7 +666,7 @@ function TopNav() {
           {menuOpen && (
             <div role="menu" style={{
               position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120, minWidth: 216,
-              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
+              background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
               boxShadow: 'var(--sb-shadow-frame)',
             }}>
               <div style={{ padding: '8px 10px 10px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', marginBottom: 5 }}>

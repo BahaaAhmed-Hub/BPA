@@ -267,7 +267,7 @@ export function TaskCommand() {
             {filterOpen && (
               <div style={{
                 position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 100,
-                background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)',
                 borderRadius: 'var(--sb-r-card)', padding: '8px 16px 14px', width: 308,
                 boxShadow: 'var(--sb-shadow-frame)',
               }}>

@@ -292,7 +292,7 @@ function EventContextMenu({
         position: 'fixed',
         top: adjPos.y, left: adjPos.x,
         width: 210,
-        background: 'var(--sb-card)',
+        background: 'var(--sb-overlay)',
         border: 'var(--sb-border-width) solid var(--sb-border)',
         borderRadius: 'var(--sb-r-nav)',
         boxShadow: 'var(--sb-shadow-menu)',

@@ -1,10 +1,12 @@
-import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, Check } from 'lucide-react'
+import { ChevronDown, Check, Search } from 'lucide-react'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
+import { SEARCH_FROM, searchTerms, matchesTerms } from '@/lib/pickSearch'
+import { useInkOnKeeping } from '@/lib/ink'
 
 // ─── The panel vocabulary ─────────────────────────────────────────────────────
 // Same set the calendar's event panel uses: one pill for every value whether
@@ -50,13 +52,25 @@ export interface PickOption {
  *  knew only about pictures and emoji, so once categories moved to line icons
  *  every one of them rendered the literal text "lucide:ShoppingCart" crushed
  *  into a 22px box. CategoryGlyph is the one place that knows all three. */
-export function Glyph({ glyph, tint, size = 22 }: { glyph?: string; tint?: string; size?: number }) {
+export function Glyph({ glyph, tint, size = 22, under = 'var(--sb-card)' }: {
+  glyph?: string
+  tint?: string
+  size?: number
+  /** The surface the disc is drawn on, so a translucent tint can be measured
+   *  against what is actually behind it. A picker's list is an overlay. */
+  under?: string
+}) {
+  const inkKeeping = useInkOnKeeping()
+  const disc = tint ? alpha(tint, 13.3) : 'var(--sb-field)'
   return (
     <span style={{
       width: size, height: size, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, overflow: 'hidden',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: tint ? alpha(tint, 13.3) : 'var(--sb-field)',
-      color: tint ?? 'var(--sb-ink-3)',
+      background: disc,
+      // Keep the category's own colour where it reads on its own tint, which
+      // is every light theme. On a dark ground both composite to nearly the
+      // same near-black and the glyph disappears into its disc.
+      color: tint ? inkKeeping(tint, disc, 3, under) : 'var(--sb-ink-3)',
     }}>
       <CategoryGlyph icon={glyph} size={Math.round(size * 0.68)} />
     </span>
@@ -80,6 +94,22 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
   const list = useRef<HTMLDivElement>(null)
   const chosen = options.find(o => o.id === value)
   const h = compact ? 34 : 42
+
+  // ─── Narrowing the list ────────────────────────────────────────────────────
+  // A picker holding every category, or every account, is a list you scroll
+  // rather than a list you read. Typing is how you find one thing in it. The
+  // box appears only once the list is long enough to be worth filtering
+  // (SEARCH_FROM) — over four options it is furniture that pushes the answers
+  // down the panel.
+  const [query, setQuery] = useState('')
+  const [active, setActive] = useState(0)
+  const field = useRef<HTMLInputElement>(null)
+  const searchable = options.length >= SEARCH_FROM
+  const shown = useMemo(() => {
+    const terms = searchTerms(query)
+    if (terms.length === 0) return options
+    return options.filter(o => matchesTerms(terms, o.label, o.parent, o.hint))
+  }, [options, query])
 
   // The list is drawn into the body, not next to the button. Absolutely
   // positioned it was clipped by whatever scrolling panel the field happened to
@@ -124,6 +154,44 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
     return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc) }
   }, [open])
 
+  // Opening starts from a clean query and from whatever is already chosen, so
+  // Enter on an untouched picker re-picks the current value rather than the
+  // first row in the list.
+  useEffect(() => {
+    if (!open) { setQuery(''); return }
+    const at = options.findIndex(o => o.id === value)
+    setActive(at < 0 ? 0 : at)
+  }, [open, options, value])
+
+  // Typing moves the highlight back to the top: the row that was active is
+  // usually no longer in the filtered list, and a highlight on nothing is
+  // worse than none.
+  useEffect(() => { setActive(0) }, [query])
+
+  // Keep the highlighted row on screen while arrowing through a long list.
+  useEffect(() => {
+    if (!open) return
+    const el = list.current?.querySelector<HTMLElement>('[data-active="1"]')
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [open, active, shown.length])
+
+  const keys = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (shown.length === 0) return
+      const step = e.key === 'ArrowDown' ? 1 : -1
+      setActive(i => (i + step + shown.length) % shown.length)
+      return
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const pick = shown[active]
+      if (pick) { onChange(pick.id); setOpen(false) }
+      return
+    }
+    if (e.key === 'Escape') { e.preventDefault(); setOpen(false) }
+  }
+
   return (
     <span ref={box} style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
       <button type="button" onClick={() => setOpen(o => !o)}
@@ -139,34 +207,66 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
       </button>
 
       {open && place && createPortal(
-        <div className="sb-blur-surface" ref={list} style={{
+        <div className="sb-blur-surface" ref={list} onKeyDown={keys} style={{
           position: 'fixed', top: place.top, left: place.left, width: place.width, zIndex: 2000,
           maxHeight: place.maxHeight, overflowY: 'auto', padding: 5, boxSizing: 'border-box',
-          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+          background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
           boxShadow: 'var(--sb-shadow-menu)',
         }}>
+          {searchable && (
+            // Sticky, because the list scrolls under it and a search box that
+            // scrolls away is one you have to scroll back up to correct.
+            <div style={{ position: 'sticky', top: -5, zIndex: 1, background: 'var(--sb-overlay)', padding: '1px 0 6px', margin: '-1px 0 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 32, padding: '0 9px', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)' }}>
+                <Search size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+                <input
+                  ref={field}
+                  autoFocus
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="Search"
+                  aria-label="Search the list"
+                  style={{
+                    flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent',
+                    fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', padding: 0,
+                  }} />
+              </div>
+            </div>
+          )}
+
           {options.length === 0 && (
             <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>Nothing to choose from yet</div>
           )}
-          {options.map(o => {
+          {options.length > 0 && shown.length === 0 && (
+            <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
+              Nothing matches “{query.trim()}”
+            </div>
+          )}
+          {shown.map((o, i) => {
             const on = o.id === value
+            const hot = i === active
             return (
               <button key={o.id} type="button"
+                data-active={hot ? '1' : '0'}
                 title={o.parent ? `${o.label} — inside ${o.parent}` : o.label}
+                onPointerEnter={() => setActive(i)}
                 onClick={() => { onChange(o.id); setOpen(false) }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                  padding: '9px 10px', paddingLeft: o.nested ? 26 : 10,
+                  padding: '9px 10px',
+                  // A filtered list is no longer a tree, so the indent that
+                  // meant "inside the row above" would be pointing at nothing.
+                  paddingLeft: o.nested && !query.trim() ? 26 : 10,
                   border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                  background: on ? 'rgba(var(--sb-accent-rgb),0.18)' : 'transparent',
+                  background: on ? 'rgba(var(--sb-accent-rgb),0.18)' : hot ? 'var(--sb-field)' : 'transparent',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', textAlign: 'left',
                 }}>
-                <Glyph glyph={o.glyph} tint={o.tint} />
+                <Glyph glyph={o.glyph} tint={o.tint} under='var(--sb-overlay)' />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
-                  {o.hint && (
+                  {(o.hint || (query.trim() && o.parent)) && (
                     <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {o.hint}
+                      {o.hint ?? `inside ${o.parent}`}
                     </span>
                   )}
                 </span>

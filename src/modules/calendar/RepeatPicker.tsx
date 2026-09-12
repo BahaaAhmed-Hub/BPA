@@ -20,7 +20,7 @@ import {
 
 const CARD: React.CSSProperties = {
   position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 95,
-  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+  background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
   boxShadow: 'var(--sb-shadow-frame)',
   padding: 6, maxHeight: 'min(62vh, 460px)', overflowY: 'auto', scrollbarWidth: 'thin',
 }

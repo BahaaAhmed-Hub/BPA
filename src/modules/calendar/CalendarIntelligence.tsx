@@ -582,7 +582,7 @@ function ColorPickerPopover({ current, onPick, onClose }: { current: string; onP
   return (
     <div className="sb-blur-surface" ref={ref} onClick={e => e.stopPropagation()} style={{
       position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
-      background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+      background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
       padding: '10px 10px 8px', boxShadow: 'var(--sb-shadow-menu)',
       display: 'grid', gridTemplateColumns: 'repeat(11, 22px)', gap: 7,
     }}>
@@ -1062,7 +1062,7 @@ function EventContextMenu({
         position: 'fixed',
         top: adjPos.y, left: adjPos.x,
         width: 210,
-        background: 'var(--sb-card)',
+        background: 'var(--sb-overlay)',
         border: 'var(--sb-border-width) solid var(--sb-border)',
         borderRadius: 'var(--sb-r-nav)',
         boxShadow: 'var(--sb-shadow-menu)',

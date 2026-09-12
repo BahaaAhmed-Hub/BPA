@@ -112,7 +112,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 5px)', left: 0, zIndex: 90, width: '100%', minWidth: 124,
-          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
+          background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
           boxShadow: 'var(--sb-shadow-frame)',
         }}>
           <input
@@ -249,7 +249,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
         // columns and its footer to the column's edges.
         position: 'fixed', zIndex: 80, width: PANEL_W,
         top: pos.top, left: pos.left, visibility: pos.placed ? 'visible' : 'hidden',
-        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 12,
+        background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 12,
         boxShadow: 'var(--sb-shadow-frame)', textAlign: 'left',
       }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>

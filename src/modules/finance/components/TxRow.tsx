@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { acct } from '../format'
 import { CategoryGlyph } from './CategoryGlyph'
+import { useInkOnKeeping } from '@/lib/ink'
 
 // ─── One entry, in every feed that lists entries ─────────────────────────────
 // There were four of these — Today, Balances, and the Budget and Financials
@@ -87,7 +88,9 @@ export function TxRow({
   icon, tone, title, marks, meta, type, amount, currency, direction,
   trailing, unpaid, faded, struck, onClick, hoverTitle, style,
 }: TxRowProps) {
+  const inkKeeping = useInkOnKeeping()
   const medallion = tone ?? (type === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)')
+  const disc = `color-mix(in srgb, ${medallion} 14%, transparent)`
   return (
     <div
       onClick={onClick}
@@ -112,8 +115,13 @@ export function TxRow({
       <span style={{
         width: 40, height: 40, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: `color-mix(in srgb, ${medallion} 14%, transparent)`,
-        color: medallion,
+        background: disc,
+        // The glyph keeps the category's own colour wherever it can still be
+        // read on that colour's own tint — which is every light theme. On a
+        // dark ground the tint composites to a muddy near-black and the
+        // full-strength colour lands within a whisker of it, so the icon was
+        // there and invisible. inkOnKeeping measures it rather than guessing.
+        color: inkKeeping(medallion, disc),
       }}>
         <CategoryGlyph icon={icon} size={18} />
       </span>

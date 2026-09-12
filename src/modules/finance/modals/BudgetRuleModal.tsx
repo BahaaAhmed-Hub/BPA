@@ -459,7 +459,7 @@ function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: F
       {open && (
         <div className="sb-blur-surface" style={{
           position: 'absolute', top: 46, right: 0, minWidth: 168, zIndex: 30, padding: 5,
-          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+          background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
           boxShadow: 'var(--sb-shadow-menu)',
         }}>
           {choices.map(v => {
