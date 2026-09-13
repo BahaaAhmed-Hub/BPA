@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { CAL_COLORS } from '@/lib/palettes'
-import { Button, Segmented } from '@/components/ui'
+import { Button } from '@/components/ui'
 import {
-  ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
+  ChevronLeft, ChevronRight, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Check, ExternalLink, AlertCircle, Shield, Copy, Trash2, CheckSquare, Plus,
 } from 'lucide-react'
@@ -34,12 +34,13 @@ import {
 } from '@/lib/googleCalendar'
 import { uploadToDrive } from '@/lib/googleDrive'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
+import { CalendarRail, Label as CalLabel, type RailEvent } from './CalendarRail'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
 import { loadEventStatuses, saveEventStatuses } from '@/lib/eventStatus'
 import { isCalendarHiddenByCompany } from '@/lib/companyVisibility'
 import { isTaskEvent, stripTaskMark } from '@/lib/taskEvent'
 import { loadWeather, weatherGlyph, type WeatherByHour } from '@/lib/weather'
-import { T, SANS, DISPLAY, ICON, STROKE } from '@/lib/type'
+import { T, SANS, DISPLAY, MONO, ICON, STROKE } from '@/lib/type'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
@@ -56,7 +57,6 @@ import {
   loadBlockingRules, applyBlockingRules, cleanupStaleBlocks,
   loadApplied, saveApplied, type AppliedBlocksMap, type SourceEvent,
 } from '@/lib/blockingRules'
-import { alpha } from '@/lib/alpha'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const HOUR_PX  = 54     // pixels per hour (Sunlit Bento: 54px/hr)
@@ -112,16 +112,15 @@ const MOCK_COMPANIES: DbCompany[] = [
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // ─── Date/time helpers ────────────────────────────────────────────────────────
-const CAL_ICON_BTN: React.CSSProperties = {
-  width: 'var(--sb-h-nav)', height: 'var(--sb-h-nav)', boxSizing: 'border-box', borderRadius: 'var(--sb-r-nav)', flexShrink: 0,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer', padding: 0,
-}
-const CAL_PILL: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 7, height: 'var(--sb-h-nav)', boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
-  fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer',
+/** A 34px round white icon button. The header cluster is one line of these,
+ *  so they are round rather than rounded-rect: at 34px a nav radius reads as a
+ *  small box and the row looks like a toolbar again. */
+const CAL_DISC: React.CSSProperties = {
+  width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)', boxSizing: 'border-box',
+  borderRadius: 999, flexShrink: 0, padding: 0,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+  color: 'var(--sb-ink-2)', cursor: 'pointer',
 }
 
 /** Where an online meeting actually happens, as the host you would recognise:
@@ -172,9 +171,6 @@ function getWeekEnd(start: Date): Date {
   d.setHours(23, 59, 59, 999)
   return d
 }
-function isThisWeek(start: Date): boolean {
-  return start.getTime() === getWeekStart(new Date()).getTime()
-}
 function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
@@ -182,11 +178,6 @@ function fmtWeekRange(start: Date): string {
   const end  = getWeekEnd(start)
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
   return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)}`
-}
-function getWeekNumber(d: Date): number {
-  const jan1 = new Date(d.getFullYear(), 0, 1)
-  const days = Math.floor((d.getTime() - jan1.getTime()) / 86400000)
-  return Math.ceil((days + jan1.getDay() + 1) / 7)
 }
 function fmtShort(iso: string): string {
   const d = new Date(iso)
@@ -678,49 +669,36 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   const isTentative = event.status === 'tentative'
   const fromTask = isTaskEvent(event.summary, event.description)
 
-  // Sunlit Bento event styles
-  // Only a cancelled event goes grey. Done and simply-past events keep their
-  // calendar's colour — an event you attended is not an event that went away.
-  // A solid tint of the calendar's colour, not a wash you can see the grid
-  // lines through: the ground is mixed in rather than left to show, so the
-  // card is an object on the grid instead of a stain on it. The title is the
-  // same colour taken down to text weight, which is what makes a block
-  // readable at a glance as *that* calendar rather than as a coloured smear.
+  // ── P14: the theme paints the card, the data paints a rail ────────────────
+  // Every event used to be filled with its own calendar's colour — 22 Google
+  // hues plus a hex per company — so the screen's palette was whatever the
+  // sources happened to be and the theme's accent survived only in the logo.
+  // A grid of tinted blocks also says nothing: the colour is an identity, not
+  // a state, and identity does not need a whole surface to carry it.
   //
-  // The mix is into --sb-card because that is what the grid is painted in.
-  // On Glass & Depth that token is itself a wash over the page, so the result
-  // there is translucent by the theme's own definition — every surface in it
-  // is.
-  //
-  // The card keeps its calendar's colour whether the event is done, cancelled
-  // or neither — the tick and the strike-through say what happened to it.
-  //
-  // Two events are drawn inverted rather than tinted: the one happening right
-  // now, and the one you have selected. They are the two an eye should find
-  // without looking, and a slightly stronger wash of the same hue is not that.
-  // The tokens do the inverting, so on a dark theme — where --sb-ink-1 is the
-  // light end of the ramp — the block goes light and its text dark, which is
-  // the same statement the other way up.
+  // The card is now the theme's white, and the source colour is a single 3px
+  // rail down its left inner edge. Everything else a card can say — running,
+  // chosen, cancelled — is said in theme tokens, so the same three states read
+  // the same way whichever calendar an event happens to live on.
   const nowMs = Date.now()
   const isNow = new Date(event.start.dateTime!).getTime() <= nowMs
     && new Date(event.end.dateTime ?? event.start.dateTime!).getTime() > nowMs
-  const inverted = isNow || isSelected
-
-  const evBg   = inverted
-    ? 'var(--sb-ink-1)'
-    : `color-mix(in srgb, ${color} 26%, var(--sb-card))`
-  const evInk  = inverted
-    ? 'var(--sb-ink-on-dark)'
-    : `color-mix(in srgb, ${color} 55%, var(--sb-ink-1))`
+  // Selected is a fill, and it beats "now": you chose it, so it is the one the
+  // eye should land on even on a card that is already running.
+  const inverted = isSelected
+  const evBg = inverted ? 'var(--sb-ink-1)'
+    : isNow ? 'var(--sb-accent-tint2)'
+    : 'var(--sb-card)'
+  const evInk = inverted ? 'var(--sb-ink-on-dark)'
+    : isCancelled ? 'var(--sb-ink-4)'
+    : 'var(--sb-ink-1)'
   const evTimeInk = inverted
     ? 'color-mix(in srgb, var(--sb-ink-on-dark) 76%, transparent)'
-    : `color-mix(in srgb, ${color} 30%, var(--sb-ink-2))`
-  // No outline in the ordinary case: a solid fill already has an edge. What is
-  // left is the two states an edge is the only way to say — a tentative event,
-  // and the one you have selected.
+    : 'var(--sb-ink-4)'
   const evBorder = isTentative
-    ? `var(--sb-border-width) dashed ${color}`
-    : 'var(--sb-border-width) solid transparent'
+    ? 'var(--sb-border-width) dashed var(--sb-border)'
+    : inverted ? 'var(--sb-border-width) solid transparent'
+    : 'var(--sb-border-width) solid var(--sb-border)'
 
   // What a card can say depends on how much of it there is — in pixels, not in
   // percent, since a third of a day column is a different size on every screen.
@@ -792,9 +770,11 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         width:  isDragOverlay ? 130 : `${layout.width}%`,
         height: isDragOverlay ? Math.max(38, height) : height,
         background: evBg,
-        borderRadius: 'var(--sb-r-nav)',
+        borderRadius: 14,
         border: evBorder,
-        padding: tiny ? '3px 6px' : '5px 8px 8px',
+        // The extra 6px on the left is the rail's lane: the text starts after
+        // it rather than on top of it.
+        padding: tiny ? '3px 6px 3px 12px' : '9px 11px 9px 14px',
         overflow: 'hidden',
         cursor: isDragOverlay ? 'grabbing' : 'pointer',
         // iOS scrolls the grid instead of dragging the event without this.
@@ -803,12 +783,22 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         transition: isDragging ? 'none' : 'box-shadow 0.12s, opacity 0.12s',
         boxSizing: 'border-box',
         zIndex: isSelected ? 4 : 2,
-        boxShadow: isSelected
-          ? `0 0 0 2px ${color}, 0 6px 18px -8px color-mix(in srgb, var(--sb-ink-1) 35.0%, transparent)`
-          : '0 1px 2px color-mix(in srgb, var(--sb-ink-1) 5.0%, transparent)',
+        // No shadow. A white card with its own border on a white grid has an
+        // edge already, and a shadow under every event is what made the grid
+        // read as a pile of receipts.
+        boxShadow: 'none',
         userSelect: 'none',
       }}
     >
+      {/* The identity rail. Full card height, the calendar's own colour at
+          full opacity, and the one place on this card where a source colour is
+          allowed to be drawn. A cancelled event keeps it at 40% — the event is
+          still that calendar's, it is simply off. */}
+      <span aria-hidden style={{
+        position: 'absolute', left: 5, top: 5, bottom: 5, width: 3, borderRadius: 999,
+        background: color, opacity: isCancelled ? 0.4 : 1,
+      }} />
+
       {/* Done is a tick in front of the name; cancelled strikes the name
           through. Neither touches the card's colour — that belongs to the
           calendar the event is on, not to what happened to it. */}
@@ -827,6 +817,14 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           ? { display: '-webkit-box', WebkitLineClamp: titleLines, WebkitBoxOrient: 'vertical' as const }
           : { whiteSpace: 'nowrap' as const, textOverflow: 'ellipsis' }),
       }}>
+        {/* Running right now: a 6px dot in the live colour, before the name.
+            It is the one thing on the grid that is true only at this minute. */}
+        {isNow && !inverted && (
+          <span aria-hidden style={{
+            display: 'inline-block', verticalAlign: '1px', width: 6, height: 6,
+            borderRadius: '50%', background: 'var(--sb-cal-live)', marginRight: 5,
+          }} />
+        )}
         {isDone && (
           <Check
             size={tiny ? 11 : 12}
@@ -1109,6 +1107,9 @@ export function CalendarIntelligence() {
   // The focused day. Week and day views both hang off it; the grid loads by week.
   const [anchorDate,      setAnchorDate]     = useState<Date>(() => new Date())
 
+  /** The day the rail is answering for, when you pointed it at one from a
+   *  month cell. Null means "whatever the range in front of you implies". */
+  const [pickedDay,       setPickedDay]      = useState<string | null>(null)
   const [calView,         setCalView]        = useState<'day' | 'week' | 'month'>(() => {
     try { return (localStorage.getItem('cal-view') as 'day' | 'week' | 'month') ?? 'week' } catch { return 'week' }
   })
@@ -1958,6 +1959,63 @@ export function CalendarIntelligence() {
   const grouped  = groupByDay(displayedEvents)
   const today    = localDateStr(new Date())
 
+  // ── What the header's one sentence says ─────────────────────────────────────
+  // Two readings the old "N events · N meetings" line could not give: how many
+  // of them collide, and how long until the next one starts. A meeting count is
+  // a fact about the list; a clash is a decision waiting to be made.
+  //
+  // The day the rail describes is the anchor day in day view, and today in the
+  // wider views — the day you are most likely to be asking about. Both are
+  // computed here so the header and the rail can never disagree.
+  // A day picked in month view wins, while it is still on screen — step to
+  // another month and it is no longer a day this grid is showing, so the rail
+  // goes back to answering for the range in front of you.
+  const inRange = (ds: string) =>
+    monthCells.some(d => localDateStr(d) === ds) || weekDays.some(d => localDateStr(d) === ds)
+
+  const railDateStr = (pickedDay && inRange(pickedDay)) ? pickedDay
+    : calView === 'day' ? localDateStr(anchorDate)
+    : inRange(today) ? today
+    : localDateStr(calView === 'month' ? anchorDate : weekStart)
+
+  const railEvents = useMemo<RailEvent[]>(() => {
+    const list = grouped.get(railDateStr) ?? []
+    return list.map(e => {
+      const cal = allCalendars.find(c => c.id === (e as GCalEventExt).calendarId)
+      return { event: e, tone: cal ? calEffectiveColor(cal) : undefined, own: eventStatuses[e.id] }
+    })
+    // grouped is rebuilt on every render, so it cannot be a dependency without
+    // re-running this every frame; the date and the inputs it derives from are
+    // the real signal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [railDateStr, displayedEvents, allCalendars, eventStatuses])
+
+  const clashCount = useMemo(() => {
+    const ms = (v?: string) => (v ? new Date(v).getTime() : 0)
+    const timed = railEvents
+      .filter(r => r.event.start?.dateTime && r.event.end?.dateTime)
+      .sort((a, b) => ms(a.event.start.dateTime) - ms(b.event.start.dateTime))
+    let n = 0
+    for (let i = 0; i < timed.length; i++) {
+      for (let j = i + 1; j < timed.length; j++) {
+        if (ms(timed[j].event.start.dateTime) < ms(timed[i].event.end.dateTime)) { n++; break }
+      }
+    }
+    return n
+  }, [railEvents])
+
+  /** Minutes until the next event that has not started, or null when the rest
+   *  of the day is empty — a "next in" that has nothing to point at is worse
+   *  than saying nothing. */
+  const nextInMin = useMemo(() => {
+    const now = Date.now()
+    const ups = railEvents
+      .map(r => (r.event.start?.dateTime ? new Date(r.event.start.dateTime).getTime() : 0))
+      .filter(t => t > now)
+      .sort((a, b) => a - b)
+    return ups.length ? Math.max(1, Math.round((ups[0] - now) / 60000)) : null
+  }, [railEvents])
+
   // ── Where the grid opens ────────────────────────────────────────────────────
   //
   // It used to open at 07:00 always, which quietly hid anything earlier: a task
@@ -2090,37 +2148,147 @@ export function CalendarIntelligence() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--sb-page)', color: 'var(--sb-ink-1)', fontFamily: SANS, overflow: 'hidden' }}>
+    <div className={`cal-ground${creatingEvt ? ' cal-grid-creating' : ''}`} style={{ color: 'var(--sb-ink-1)', fontFamily: SANS }}>
+     <div className="cal-panel">
 
-      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '18px 26px 14px', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      {/* ── Header ──────────────────────────────────────────────────────────────
+          One row, one display-size element. It used to be two stacked medium
+          titles — the route's name above the month's name — plus a separate
+          full-width control strip below them, which is three levels of chrome
+          saying one thing and no hierarchy at all. The route's name is now an
+          overline in mono, the month is the only thing at display size, and the
+          strip's contents have moved into the cluster on the right. */}
+      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '0 4px' }}>
           {/* Which stretch of time you are looking at */}
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 3 }}>
-              {calView === 'month' ? anchorDate.toLocaleDateString('en-GB', { year: 'numeric' })
-                : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { weekday: 'long' })
-                : `Week ${getWeekNumber(weekStart)}`}
-            </div>
-            <div style={{ fontFamily: DISPLAY, fontSize: 'var(--sb-t-h1)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
+          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{
+              fontFamily: MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: '0.14em',
+              color: 'var(--sb-ink-4)', textTransform: 'uppercase',
+            }}>
+              BPA Group · Calendar
+            </span>
+            <span className="cal-display" style={{
+              fontFamily: DISPLAY, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1,
+              color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums',
+            }}>
               {calView === 'month' ? anchorDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
                 : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
                 : fmtWeekRange(weekStart)}
-            </div>
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 5 }}>
+            </span>
+            {/* One live sentence, not a row of labels. Anything it cannot
+                honestly say, it leaves out rather than printing a zero. */}
+            <span style={{ fontSize: 13, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
               {(() => {
                 const scope = calView === 'month' ? monthCells : weekDays
                 const keys = new Set(scope.map(localDateStr))
                 const inScope = displayedEvents.filter(e => keys.has((e.start?.dateTime ?? e.start?.date ?? '').slice(0, 10)))
-                const meetings = inScope.filter(e => (e.attendees?.length ?? 0) > 1).length
-                return `${inScope.length} event${inScope.length === 1 ? '' : 's'} · ${meetings} meeting${meetings === 1 ? '' : 's'}`
+                const bits = [`${inScope.length} event${inScope.length === 1 ? '' : 's'}`]
+                if (clashCount > 0) bits.push(`${clashCount} clash${clashCount === 1 ? '' : 'es'}`)
+                if (nextInMin !== null) {
+                  bits.push(nextInMin < 60
+                    ? `next in ${nextInMin} min`
+                    : `next in ${Math.round(nextInMin / 60)}h`)
+                }
+                return bits.join(' · ')
               })()}
-            </div>
+            </span>
           </div>
 
-          {/* Step through time, and come back to now */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, alignSelf: 'center' }}>
+          {/* ── Control cluster ────────────────────────────────────────────────
+              Everything that was a full-width strip below the titles, on one
+              34px line at the header's right. Order is the order you reach for
+              them: what you are looking at, then where, then making one. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', flexShrink: 0 }}>
+
+            {/* The tools with no home in the concept, kept as quiet discs. */}
             <button
+              onClick={async () => {
+                if (refreshing) return
+                setRefreshing(true)
+                Object.keys(localStorage).filter(k => k.startsWith(EVENTS_CACHE_PREFIX)).forEach(k => localStorage.removeItem(k))
+                setLoadingEvents(true)
+                try {
+                  const c = await reloadCalendars()
+                  if (c) await loadEvents(weekStart, c, hiddenCals)
+                } finally { setRefreshing(false) }
+              }}
+              disabled={refreshing}
+              title="Refresh"
+              className="cal-ctl"
+              style={{ ...CAL_DISC, cursor: refreshing ? 'default' : 'pointer', opacity: refreshing ? 0.6 : 1 }}
+            ><RefreshCw size={ICON.sm} strokeWidth={STROKE.rest} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }} /></button>
+
+            <button
+              onClick={() => void handleApplyRules()}
+              disabled={applyingRules}
+              title={applyingRules ? 'Applying rules…' : 'Apply productivity blocking rules'}
+              className="cal-ctl"
+              style={{ ...CAL_DISC, cursor: applyingRules ? 'default' : 'pointer', opacity: applyingRules ? 0.6 : 1 }}
+            ><Shield size={ICON.sm} strokeWidth={STROKE.rest} /></button>
+
+            <button
+              onClick={() => setOriginalsOnly(v => !v)}
+              title={originalsOnly ? 'Showing originals only — click to show all events' : 'Show originals only (hide created blocks)'}
+              className={`cal-ctl${originalsOnly ? ' cal-ctl-ink' : ''}`}
+              style={{
+                ...CAL_DISC,
+                background: originalsOnly ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+                borderColor: originalsOnly ? 'var(--sb-ink-1)' : 'var(--sb-border)',
+                color: originalsOnly ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-2)',
+              }}
+            >{originalsOnly ? <EyeOff size={ICON.sm} strokeWidth={STROKE.rest} /> : <Eye size={ICON.sm} strokeWidth={STROKE.rest} />}</button>
+
+            <button
+              onClick={() => {
+                const next = !showCalendars
+                setShowCalendars(next)
+                try { localStorage.setItem('cal-show-calendars', String(next)) } catch { /* noop */ }
+              }}
+              title={showCalendars ? 'Hide calendars list' : 'Show calendars list'}
+              className={`cal-ctl${showCalendars ? ' cal-ctl-ink' : ''}`}
+              style={{
+                ...CAL_DISC,
+                background: showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+                borderColor: showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-border)',
+                color: showCalendars ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-2)',
+              }}
+            ><Layers size={ICON.sm} strokeWidth={STROKE.rest} /></button>
+
+            {/* Month · Week · Day as ONE pill group, not three buttons and not
+                a stacked nav: the three are one answer to one question, so they
+                share one container and the chosen one is an ink pill inside it. */}
+            <div role="tablist" aria-label="Calendar range" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 2, flexShrink: 0,
+              height: 'var(--sb-h-pill)', boxSizing: 'border-box', padding: 3, borderRadius: 999,
+              background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
+            }}>
+              {([['month', 'Month'], ['week', 'Week'], ['day', 'Day']] as const).map(([v, label]) => {
+                const on = calView === v
+                return (
+                  <button
+                    key={v}
+                    role="tab"
+                    aria-selected={on}
+                    onClick={() => { setCalView(v); try { localStorage.setItem('cal-view', v) } catch { /* noop */ } }}
+                    className={`cal-ctl${on ? ' cal-ctl-ink' : ''}`}
+                    style={{
+                      height: '100%', padding: '0 13px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                      background: on ? 'var(--sb-ink-1)' : 'transparent',
+                      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-2)',
+                      fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+                    }}>{label}</button>
+                )
+              })}
+            </div>
+
+            <span aria-hidden style={{ width: 1, height: 22, background: 'var(--sb-border)', flexShrink: 0 }} />
+
+            {/* Step through time, and come back to now */}
+            <button
+              title="Previous"
+              aria-label="Previous"
+              className="cal-ctl"
               onClick={() => setAnchorDate(d => {
                 const n = new Date(d)
                 if (calView === 'day') n.setDate(n.getDate() - 1)
@@ -2128,8 +2296,20 @@ export function CalendarIntelligence() {
                 else n.setDate(n.getDate() - 7)
                 return n
               })}
-              style={{ ...CAL_ICON_BTN }}><ChevronLeft size={ICON.md} /></button>
+              style={CAL_DISC}><ChevronLeft size={ICON.md} strokeWidth={STROKE.rest} /></button>
             <button
+              onClick={() => setAnchorDate(new Date())}
+              className="cal-ctl"
+              title="Back to today"
+              style={{
+                height: 'var(--sb-h-pill)', boxSizing: 'border-box', padding: '0 14px', borderRadius: 999, flexShrink: 0,
+                background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                color: 'var(--sb-ink-1)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+              }}>Today</button>
+            <button
+              title="Next"
+              aria-label="Next"
+              className="cal-ctl"
               onClick={() => setAnchorDate(d => {
                 const n = new Date(d)
                 if (calView === 'day') n.setDate(n.getDate() + 1)
@@ -2137,101 +2317,29 @@ export function CalendarIntelligence() {
                 else n.setDate(n.getDate() + 7)
                 return n
               })}
-              style={{ ...CAL_ICON_BTN }}><ChevronRight size={ICON.md} /></button>
-            {!isThisWeek(weekStart) && (
-              <Button variant="secondary" size="sm" onClick={() => setAnchorDate(new Date())}>Today</Button>
-            )}
+              style={CAL_DISC}><ChevronRight size={ICON.md} strokeWidth={STROKE.rest} /></button>
+
+            {/* The one deliberate way in, now that a bare click on the grid does
+                nothing. Drawing a span on the grid is the other; a finger cannot
+                draw, so on a touch screen this is the only one. */}
+            <button
+              className="cal-ctl cal-ctl-ink"
+              onClick={() => {
+                const d = localDateStr(calView === 'month' ? anchorDate : (weekDays.find(x => localDateStr(x) === today) ?? anchorDate))
+                const nextHour = Math.min(23, new Date().getHours() + 1) * 60
+                setSelectedEvent(null)
+                setNewEventDraft({ dateStr: d, startMin: nextHour, endMin: nextHour + 60, anchorX: 0, anchorY: 0 })
+              }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+                height: 'var(--sb-h-pill)', boxSizing: 'border-box', padding: '0 16px', borderRadius: 999,
+                background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
+                border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 13, fontWeight: 600,
+              }}>
+              <Plus size={15} strokeWidth={STROKE.active} /> New event
+            </button>
           </div>
-
-          <span style={{ flex: 1 }} />
-
-          {/* Keep the tools that have no home in the design, quietly */}
-          <button
-            onClick={async () => {
-              if (refreshing) return
-              setRefreshing(true)
-              Object.keys(localStorage).filter(k => k.startsWith(EVENTS_CACHE_PREFIX)).forEach(k => localStorage.removeItem(k))
-              setLoadingEvents(true)
-              try {
-                const c = await reloadCalendars()
-                if (c) await loadEvents(weekStart, c, hiddenCals)
-              } finally { setRefreshing(false) }
-            }}
-            disabled={refreshing}
-            title="Refresh"
-            style={{ ...CAL_ICON_BTN, cursor: refreshing ? 'default' : 'pointer', opacity: refreshing ? 0.6 : 1 }}
-          ><RefreshCw size={ICON.sm} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }} /></button>
-
-          <button
-            onClick={() => void handleApplyRules()}
-            disabled={applyingRules}
-            title={applyingRules ? 'Applying rules…' : 'Apply productivity blocking rules'}
-            style={{ ...CAL_ICON_BTN, cursor: applyingRules ? 'default' : 'pointer', opacity: applyingRules ? 0.6 : 1 }}
-          ><Shield size={ICON.sm} /></button>
-
-          <button
-            onClick={() => setOriginalsOnly(v => !v)}
-            title={originalsOnly ? 'Showing originals only — click to show all events' : 'Show originals only (hide created blocks)'}
-            style={{
-              ...CAL_ICON_BTN,
-              background: originalsOnly ? 'var(--sb-ink-1)' : 'var(--sb-card)',
-              borderColor: originalsOnly ? 'var(--sb-ink-1)' : 'var(--sb-border)',
-              color: originalsOnly ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-            }}
-          >{originalsOnly ? <EyeOff size={ICON.sm} /> : <Eye size={ICON.sm} />}</button>
-
-          {/* Calendars */}
-          <button
-            onClick={() => {
-              const next = !showCalendars
-              setShowCalendars(next)
-              try { localStorage.setItem('cal-show-calendars', String(next)) } catch { /* noop */ }
-            }}
-            title={showCalendars ? 'Hide calendars list' : 'Show calendars list'}
-            style={{
-              ...CAL_PILL,
-              background: showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-card)',
-              border: `var(--sb-border-width) solid ${showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-              color: showCalendars ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-1)',
-            }}
-          >
-            <Layers size={ICON.sm} strokeWidth={STROKE.rest} />
-            Calendars
-            <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ transform: showCalendars ? 'rotate(180deg)' : 'none', transition: 'transform .14s' }} />
-          </button>
-
-          {/* Day · Week · Month */}
-          <Segmented
-            size="lg"
-            aria-label="Calendar range"
-            value={calView}
-            onChange={v => { setCalView(v); try { localStorage.setItem('cal-view', v) } catch { /* noop */ } }}
-            options={[
-              { value: 'day' as const,   label: 'Day' },
-              { value: 'week' as const,  label: 'Week' },
-              { value: 'month' as const, label: 'Month' },
-            ]}
-          />
-
-          {/* The one deliberate way in, now that a bare click on the grid does
-              nothing. Drawing a span on the grid is the other; a finger cannot
-              draw, so on a touch screen this is the only one. */}
-          <button
-            onClick={() => {
-              const d = localDateStr(calView === 'month' ? anchorDate : (weekDays.find(x => localDateStr(x) === today) ?? anchorDate))
-              const nextHour = Math.min(23, new Date().getHours() + 1) * 60
-              setSelectedEvent(null)
-              setNewEventDraft({ dateStr: d, startMin: nextHour, endMin: nextHour + 60, anchorX: 0, anchorY: 0 })
-            }}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
-              height: 'var(--sb-h-nav)', padding: '0 14px', borderRadius: 'var(--sb-r-pill)',
-              background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
-              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-              fontSize: 'var(--sb-t-body-s)', fontWeight: 700,
-            }}>
-            <Plus size={ICON.sm} strokeWidth={STROKE.active} /> New event
-          </button>
         </div>
 
         {/* Rules result toast */}
@@ -2278,12 +2386,18 @@ export function CalendarIntelligence() {
                 <div key={chipKey} style={{ position: 'relative' }}>
                   <div
                     title={cal.accountEmail}
+                    // P14: the key is a key, not twenty-two coloured chips. A
+                    // tint and a border per calendar put every source colour on
+                    // screen at once, at chip size, which is exactly the noise
+                    // demoting the cards to a rail was meant to remove. The dot
+                    // is the second and last place a source colour appears.
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 0,
-                      borderRadius: 'var(--sb-r-card)', overflow: 'visible',
-                      border: `var(--sb-border-width) solid ${hidden ? 'var(--sb-border)' : color}`,
-                      background: hidden ? 'var(--sb-page)' : alpha(color, 9.4),
-                      transition: 'all 0.12s',
+                      display: 'flex', alignItems: 'center', gap: 0, height: 22,
+                      borderRadius: 999, overflow: 'visible',
+                      border: 'var(--sb-border-width) solid var(--sb-border)',
+                      background: 'var(--sb-card)',
+                      opacity: hidden ? 0.55 : 1,
+                      transition: 'opacity 0.12s, background 0.12s',
                     }}
                   >
                     {/* Color dot — click to open picker */}
@@ -2291,13 +2405,13 @@ export function CalendarIntelligence() {
                       onClick={e => { e.stopPropagation(); setPickerOpenId(pickerOpenId === cal.id ? null : cal.id) }}
                       title="Change color"
                       style={{
-                        width: 24, height: 26, borderRadius: 'var(--sb-r-card) 0 0 var(--sb-r-card)',
+                        width: 22, height: 20, borderRadius: '999px 0 0 999px',
                         background: 'none', border: 'none', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         flexShrink: 0,
                       }}
                     >
-                      <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: hidden ? 'var(--sb-border)' : color, border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)' }} />
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: hidden ? 'var(--sb-border)' : color }} />
                     </button>
 
                     {/* Name + eye toggle */}
@@ -2306,14 +2420,19 @@ export function CalendarIntelligence() {
                       style={{
                         background: 'none', border: 'none', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 4,
-                        padding: '3px 8px 3px 2px', fontSize: 'var(--sb-t-micro)',
+                        padding: '0 9px 0 2px', fontSize: 12.5, fontFamily: 'inherit',
                         color: hidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)',
                       }}
                     >
-                      <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {cal.summary}
                       </span>
-                      {hidden ? <EyeOff size={ICON.sm} color="var(--sb-ink-4)" /> : <Eye size={ICON.sm} color={color} />}
+                      {/* The eye takes the theme's ink, not the calendar's hue:
+                          a glyph tinted per source is a third place data colour
+                          would be drawn. */}
+                      {hidden
+                        ? <EyeOff size={ICON.sm} strokeWidth={STROKE.rest} color="var(--sb-ink-4)" />
+                        : <Eye size={ICON.sm} strokeWidth={STROKE.rest} color="var(--sb-ink-2)" />}
                     </button>
 
                     {/* Subtle reconnect badge — only shown when this account needs reconnect */}
@@ -2350,36 +2469,45 @@ export function CalendarIntelligence() {
         )}
       </div>
 
-      {/* ── The grid, and whatever panel is open, side by side ───────────────── */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'stretch', gap: 16, padding: '0 26px 22px', minWidth: 0 }}>
+      {/* ── The view, and the day rail beside it ──────────────────────────────
+          Two columns: what is on, and where it stands. An open event panel
+          takes the rail's column rather than covering the grid — the same
+          spatial contract the task panel has beside its board, and the reason
+          the rail is 324px rather than something the panel has to match. */}
+      <div className="cal-body">
 
-      {/* The calendar itself. An open panel takes width from here rather than
-          covering it, and both start at the top of the calendar area. */}
+      {/* The calendar itself. In month view it is the panel's own ground
+          showing between tiles, so it carries no surface of its own; in the
+          time views it is one white card, because an hour grid drawn on cream
+          has nothing to separate its rows from the panel. */}
       <div style={{
-        flex: 1, minWidth: 0, minHeight: 0, position: 'relative',
+        minWidth: 0, minHeight: 0, position: 'relative', alignSelf: 'stretch',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
-        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-        boxShadow: 'var(--sb-shadow-control)',
+        background: calView === 'month' ? 'transparent' : 'var(--sb-card)',
+        borderRadius: calView === 'month' ? 0 : 22,
       }}>
 
-      {/* ── Month grid ───────────────────────────────────────────────────────── */}
+      {/* ── Month grid ─────────────────────────────────────────────────────────
+          Seven columns of separate rounded tiles on the panel's cream, not a
+          bordered table. The old grid drew its lines by painting the container
+          --sb-border and leaving 1px gaps, which is a hairline table however it
+          is built: at 1px the ground reads as a rule rather than as space, and
+          every cell shared its neighbour's edge. The gutter is 8px now and the
+          cells own their corners. */}
       {calView === 'month' ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: '0 14px 14px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', padding: '10px 0 6px' }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+          <div className="cal-weekhead">
             {rotateDays(DAY_LABELS, firstDow).map(d => (
-              <span key={d} style={{ textAlign: 'center', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>
-                {d}
-              </span>
+              // Left-aligned, because the date under it is: a centred column
+              // header over a left-aligned column is two alignments in one grid.
+              <CalLabel key={d}>{d}</CalLabel>
             ))}
           </div>
-          <div style={{
-            flex: 1, minHeight: 0, display: 'grid',
-            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gridAutoRows: 'minmax(96px, 1fr)',
-            background: 'var(--sb-border)', gap: 1, border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', overflow: 'hidden',
-          }}>
+          <div className="cal-month-grid">
             {monthCells.map(day => {
               const ds = localDateStr(day)
               const isToday = ds === today
+              const picked  = ds === railDateStr && !isToday
               const outside = day.getMonth() !== anchorDate.getMonth()
               const dayEvents = (grouped.get(ds) ?? []).slice().sort((a, b) =>
                 (a.start.dateTime ?? a.start.date ?? '').localeCompare(b.start.dateTime ?? b.start.date ?? ''))
@@ -2387,26 +2515,30 @@ export function CalendarIntelligence() {
               return (
                 <div
                   key={ds}
+                  className="cal-cell"
+                  data-empty={dayEvents.length === 0 ? '1' : undefined}
                   onClick={() => { setAnchorDate(new Date(day)); setCalView('day'); try { localStorage.setItem('cal-view', 'day') } catch { /* noop */ } }}
                   title="Open this day"
                   style={{
-                    background: outside ? 'var(--sb-field)' : 'var(--sb-card)', padding: '6px 7px',
-                    display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, cursor: 'pointer',
+                    background: picked ? 'var(--sb-accent-tint2)' : outside ? 'var(--sb-field)' : 'var(--sb-card)',
+                    borderRadius: 18, padding: 11, minWidth: 0, cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', gap: 7, overflow: 'hidden',
                   }}>
+                  {/* Today is an ink disc, not an accent pill: the accent is the
+                      theme's, and a date is not a state to be warned about. */}
                   <span style={{
-                    alignSelf: 'flex-start', minWidth: 21, height: 21, padding: '0 5px', borderRadius: 'var(--sb-r-pill)',
+                    alignSelf: 'flex-start', width: isToday ? 26 : 'auto', height: isToday ? 26 : 'auto',
+                    borderRadius: isToday ? '50%' : 0,
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    background: isToday ? 'var(--sb-accent)' : 'transparent',
-                    // A day outside this month is lighter in weight, not in
-                    // contrast: var(--sb-border) was 1.7:1, which is a date nobody can read.
-                    // Today's number sits on the accent, so it takes whatever
-                    // that accent carries — pale on Evergreen's green.
-                    color: isToday ? 'var(--sb-accent-ink)' : outside ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
-                    fontSize: 'var(--sb-t-meta)', fontWeight: isToday ? 700 : outside ? 400 : 600, fontVariantNumeric: 'tabular-nums',
+                    background: isToday ? 'var(--sb-ink-1)' : 'transparent',
+                    color: isToday ? 'var(--sb-ink-on-dark)' : outside ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
+                    fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, lineHeight: 1,
+                    fontVariantNumeric: 'tabular-nums',
                   }}>{day.getDate()}</span>
+
                   {shown.map(e => {
                     const cal = allCalendars.find(c => c.id === (e as GCalEventExt).calendarId)
-                    const col = cal ? calEffectiveColor(cal) : 'var(--sb-info)'
+                    const col = cal ? calEffectiveColor(cal) : undefined
                     const t = e.start.dateTime ? new Date(e.start.dateTime) : null
                     const st = eventStatuses[e.id]
                     return (
@@ -2416,21 +2548,29 @@ export function CalendarIntelligence() {
                         // The chip opens the event; only the cell around it opens the day
                         onClick={ev => { ev.stopPropagation(); setSelectedEvent(e as GCalEventExt) }}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
-                          padding: '2px 6px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                          // Solid, like the week grid: the same tint of the
-                          // calendar's colour, and its name in that colour
-                          // taken down to text weight.
-                          background: `color-mix(in srgb, ${col} 26%, var(--sb-card))`,
-                          border: 'var(--sb-border-width) solid transparent',
-                          fontSize: 'var(--sb-t-micro)', fontWeight: 700,
-                          color: `color-mix(in srgb, ${col} 55%, var(--sb-ink-1))`,
+                          display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, position: 'relative',
+                          padding: '5px 7px 5px 9px', borderRadius: 10, cursor: 'pointer',
+                          // P14: the theme paints the chip. Its calendar's own
+                          // colour is the 3px rail and nothing else — a tinted
+                          // fill per calendar is what drowned the accent.
+                          background: 'var(--sb-field)',
+                          fontSize: 11.5, fontWeight: 600,
+                          color: st === 'cancelled' ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
-                        {t && <span style={{ color: 'var(--sb-ink-3)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-                          {String(t.getHours()).padStart(2, '0')}:{String(t.getMinutes()).padStart(2, '0')}
-                        </span>}
-                        {st === 'done' && <Check size={ICON.sm} strokeWidth={STROKE.active} style={{ flexShrink: 0 }} />}
+                        <span aria-hidden style={{
+                          position: 'absolute', left: 3, top: 4, bottom: 4, width: 3, borderRadius: 999,
+                          background: col ?? 'var(--sb-border)', opacity: st === 'cancelled' ? 0.4 : 1,
+                        }} />
+                        {/* A time on every chip in a busy cell is four numbers
+                            competing with four titles; it earns its place only
+                            where the cell is quiet enough to read. */}
+                        {t && shown.length <= 2 && (
+                          <span style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--sb-ink-4)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                            {String(t.getHours()).padStart(2, '0')}:{String(t.getMinutes()).padStart(2, '0')}
+                          </span>
+                        )}
+                        {st === 'done' && <Check size={11} strokeWidth={STROKE.active} style={{ flexShrink: 0, color: 'var(--sb-positive-deep)' }} />}
                         <span style={{
                           minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
                           textDecoration: st === 'cancelled' ? 'line-through' : 'none',
@@ -2439,8 +2579,20 @@ export function CalendarIntelligence() {
                       </span>
                     )
                   })}
+
                   {dayEvents.length > shown.length && (
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>+{dayEvents.length - shown.length} more</span>
+                    <button
+                      type="button"
+                      // Points the day rail at this day rather than opening a
+                      // popover: the rail already answers "what is on this day"
+                      // in full, and a second floating answer beside it is one
+                      // more thing to close.
+                      onClick={ev => { ev.stopPropagation(); setPickedDay(ds) }}
+                      style={{
+                        alignSelf: 'flex-start', padding: 0, border: 'none', background: 'transparent',
+                        cursor: 'pointer', fontFamily: MONO, fontSize: 10.5, fontWeight: 500,
+                        letterSpacing: '.06em', color: 'var(--sb-accent-deep)',
+                      }}>+{dayEvents.length - shown.length} more</button>
                   )}
                 </div>
               )
@@ -2462,15 +2614,20 @@ export function CalendarIntelligence() {
               const isToday = ds === today
               return (
                 <div key={ds} style={{ flex: 1, textAlign: 'center', padding: '9px 4px 8px', minWidth: 0 }}>
-                  <div style={{ fontSize: 'var(--sb-t-micro)', color: isToday ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, fontFamily: SANS }}>
-                    {DAY_LABELS[day.getDay()]}
-                  </div>
+                  {/* The weekday is the panel's one label voice — mono, capsed,
+                      gold when it is the day you are on. It used to be a
+                      sentence-case 13px run in the generic secondary grey,
+                      which is the chrome the rest of the panel stopped using. */}
+                  <CalLabel current={isToday}>{DAY_LABELS[day.getDay()]}</CalLabel>
                   <div style={{
-                    fontSize: 'var(--sb-t-h2)', fontWeight: 700, lineHeight: 1.2, marginTop: 3,
-                    color: isToday ? 'var(--sb-accent-ink)' : 'var(--sb-ink-1)',
-                    background: isToday ? 'var(--sb-accent)' : 'transparent',
+                    fontSize: 'var(--sb-t-h2)', fontWeight: 600, lineHeight: 1.2, marginTop: 3,
+                    // Ink, not accent: the same disc the month grid draws today
+                    // in, so the two views mark the same day the same way.
+                    color: isToday ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-1)',
+                    background: isToday ? 'var(--sb-ink-1)' : 'transparent',
+                    fontVariantNumeric: 'tabular-nums',
                     width: isToday ? 32 : undefined, height: isToday ? 32 : undefined,
-                    borderRadius: isToday ? 'var(--sb-r-pill)' : undefined,
+                    borderRadius: isToday ? '50%' : undefined,
                     display: isToday ? 'flex' : undefined, alignItems: isToday ? 'center' : undefined, justifyContent: isToday ? 'center' : undefined,
                     margin: isToday ? '3px auto 0' : undefined,
                     fontFamily: DISPLAY,
@@ -2801,7 +2958,21 @@ export function CalendarIntelligence() {
         />
       )}
 
+      {/* ── The day rail ───────────────────────────────────────────────────────
+          The right column when nothing else is claiming it. An open event or a
+          composer is *about* one event and belongs in the same place the rail
+          would be, so the two never stack: whichever you opened is the column. */}
+      {!selectedEvent && !newEventDraft && (
+        <CalendarRail
+          rows={railEvents}
+          dayLabel={new Date(`${railDateStr}T12:00:00`)
+            .toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+          onOpen={e => { setSelectedEvent(e as GCalEventExt); setPrep(null); setPrepError(null) }}
+        />
+      )}
+
       </div>
+     </div>
 
       {/* Context menu */}
       {ctxMenu && (

@@ -11,9 +11,39 @@
    them. They are declared once, here, and never written at runtime.
    ─────────────────────────────────────────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 @import "tailwindcss";
+
+/* ─── Webfont delivery ────────────────────────────────────────────────────────
+   The families are requested once, from a <link> in the document head next to
+   its preconnects, so the request goes out with the HTML. They used to *also*
+   be pulled in by an @import here — a second, later round trip that the
+   browser cannot start until this stylesheet has itself arrived and parsed, so
+   the first frame painted in a fallback face and then reflowed.
+
+   Each family keeps `display: swap`, which means a first frame in the fallback
+   is expected rather than avoided. What must not happen is the display title
+   changing width when the real face lands. These faces are the local stacks
+   re-declared with Outfit's and Instrument Sans's own metrics, so the fallback
+   occupies the same box: `size-adjust` matches the average glyph width and the
+   ascent/descent overrides match the line box. Name them ahead of the generic
+   stack wherever a themed font token is declared.
+   ──────────────────────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Outfit Fallback';
+  src: local('Arial'), local('Helvetica Neue'), local('Liberation Sans');
+  size-adjust: 97%;
+  ascent-override: 100%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Instrument Fallback';
+  src: local('Arial'), local('Helvetica Neue'), local('Liberation Sans');
+  size-adjust: 101%;
+  ascent-override: 96%;
+  descent-override: 24%;
+  line-gap-override: 0%;
+}
 
 :root {
   /* ══ THEME-DEPENDENT ═════════════════════════════════════════════════════
@@ -86,8 +116,8 @@
   /* Faces. A theme owns the two it speaks in; the mono face is in the fixed
      half, because a figure lining up with the figure above it is not a matter
      of taste. */
-  --sb-font-ui:   'Instrument Sans', system-ui, sans-serif;
-  --sb-font-num:  'Outfit', system-ui, sans-serif;
+  --sb-font-ui:   'Instrument Sans', 'Instrument Fallback', system-ui, sans-serif;
+  --sb-font-num:  'Outfit', 'Outfit Fallback', system-ui, sans-serif;
 
   /* How much the surfaces blur what is behind them. 0 on an opaque theme —
      a no-op the browser can skip. */
@@ -586,3 +616,110 @@ img { max-width: 100%; }
    be invisible, and on a touch screen there is no hover to find it with. */
 .sb-fin-row:hover .sb-row-tools,
 .sb-fin-row:focus-within .sb-row-tools { opacity: 1 !important; }
+
+/* ─── Calendar shell ──────────────────────────────────────────────────────────
+   The calendar is not a dashboard page. It is one framed panel floating on a
+   ground a step deeper than the page, holding white cards whose separation is
+   that ground rather than a rule. The route therefore owns its own background
+   and its own gutter, and nothing on it sits outside the panel.
+
+   These four rules are here rather than inline because each carries a media
+   query, and a width watched in JavaScript reports a number that lags the
+   layout by a frame.
+   ──────────────────────────────────────────────────────────────────────────── */
+.cal-ground {
+  background: var(--sb-cal-ground);
+  padding: 20px;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 900px) { .cal-ground { padding: 14px; } }
+
+.cal-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--sb-page);
+  border-radius: 28px;
+  padding: 24px 22px 22px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px -30px rgba(25, 23, 18, .5);
+}
+@media (max-width: 900px) { .cal-panel { border-radius: 22px; padding: 18px 14px 14px; } }
+
+/* The view on the left, the day rail on the right. Under 1180px the rail goes
+   below the grid at full width rather than squeezing to nothing. */
+.cal-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 324px;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 1180px) {
+  .cal-body { grid-template-columns: minmax(0, 1fr); overflow-y: auto; align-content: start; }
+}
+
+/* Month cells are separate tiles on the panel's ground — no borders, no table.
+   Under 760px the seven columns become one and the weekday header goes with
+   them, since a column header over a single column names nothing. */
+.cal-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: minmax(112px, auto);
+  gap: 8px;
+}
+.cal-weekhead {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 0 4px 4px;
+}
+@media (max-width: 760px) {
+  .cal-month-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; }
+  .cal-weekhead { display: none; }
+}
+
+/* Every control in the header cluster answers a press, and keeps a visible
+   focus ring. On touch the 34px box is padded out to a 44px tap area without
+   moving the box itself. */
+.cal-ctl { transition: background 120ms ease-out, transform 90ms ease-out; }
+.cal-ctl:hover { background: var(--sb-field); }
+.cal-ctl:active { transform: scale(0.97); }
+.cal-ctl:focus-visible { outline: 2px solid var(--sb-accent); outline-offset: 2px; }
+.cal-ctl-ink:hover { background: #221F19; }
+@media (hover: none) {
+  .cal-ctl { position: relative; }
+  .cal-ctl::after { content: ''; position: absolute; inset: -5px; }
+}
+
+/* The one display-size element on the route. Sized here so the step down at
+   narrow widths is a media query rather than a width watched in JavaScript. */
+.cal-display { font-size: 34px; }
+@media (max-width: 900px) { .cal-display { font-size: 27px; } }
+
+/* A month cell with nothing in it offers the one thing you would do there.
+   The glyph is drawn on hover only, and only where there is room for it —
+   a permanent + in every empty cell is 20 plus signs on a quiet month. */
+.cal-cell { position: relative; transition: background 120ms ease-out; }
+.cal-cell:active { background: var(--sb-field) !important; }
+.cal-cell[data-empty]:hover { background: var(--sb-field) !important; }
+.cal-cell[data-empty]:hover::after {
+  content: '+';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 20px/1 var(--sb-font-num), system-ui, sans-serif;
+  color: var(--sb-ink-4);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cal-ctl:active { transform: none; }
+}
