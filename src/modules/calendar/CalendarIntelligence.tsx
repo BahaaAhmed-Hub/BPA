@@ -2474,7 +2474,7 @@ export function CalendarIntelligence() {
           takes the rail's column rather than covering the grid — the same
           spatial contract the task panel has beside its board, and the reason
           the rail is 324px rather than something the panel has to match. */}
-      <div className="cal-body">
+      <div className="cal-body" data-panel={(selectedEvent || newEventDraft) ? '1' : undefined}>
 
       {/* The calendar itself. In month view it is the panel's own ground
           showing between tiles, so it carries no surface of its own; in the

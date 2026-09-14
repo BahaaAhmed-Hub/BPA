@@ -664,6 +664,17 @@ img { max-width: 100%; }
 @media (max-width: 1180px) {
   .cal-body { grid-template-columns: minmax(0, 1fr); overflow-y: auto; align-content: start; }
 }
+/* The rail is 324px, but the event panel and the composer are the app's own
+   docked panel — clamp(289px, 30.6vw, 400px), and wider again when expanded.
+   Pinning the track at 324px cropped their right-hand edge against the
+   calendar panel's own `overflow: hidden`: the Organiser pill, the attendee
+   hint and the cards' right border were all simply cut off, with no scrollbar
+   to say so. When a panel holds the column, the column is whatever the panel
+   is. */
+.cal-body[data-panel] { grid-template-columns: minmax(0, 1fr) auto; }
+@media (max-width: 1180px) {
+  .cal-body[data-panel] { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* Month cells are separate tiles on the panel's ground — no borders, no table.
    Under 760px the seven columns become one and the weekday header goes with
