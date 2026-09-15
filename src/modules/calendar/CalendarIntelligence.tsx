@@ -61,6 +61,18 @@ import {
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const HOUR_PX  = 54     // pixels per hour (Sunlit Bento: 54px/hr)
 const SNAP_MIN = 15     // snap to 15-minute increments
+/** How long a finger must hold still before the grid starts drawing a span
+ *  rather than scrolling the day. Long enough not to fire on a flick, short
+ *  enough that nobody thinks the screen ignored them. */
+const HOLD_MS   = 320
+/** How far it may drift inside that hold and still count as holding still. */
+const HOLD_SLOP = 10
+
+/** Stops the page scrolling while a finger is drawing a span. It is a module
+ *  function rather than a closure so that whoever ends the gesture can remove
+ *  the very listener that was added — `removeEventListener` matches on
+ *  identity, and a fresh arrow per gesture silently never matches. */
+function eatScroll(te: TouchEvent) { if (te.cancelable) te.preventDefault() }
 const GRID_H   = HOUR_PX * 24  // total grid height (24h)
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1195,15 +1207,30 @@ export function CalendarIntelligence() {
       document.removeEventListener('pointermove',   onMove)
       document.removeEventListener('pointerup',     onUp)
       document.removeEventListener('pointercancel', onUp)
+      // Whether the span was committed or abandoned, the page scrolls again.
+      document.removeEventListener('touchmove', eatScroll)
     }
   }, [!!creatingEvt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Putting an event on the grid by hand ──────────────────────────────────
-  // This only ever listened for mouse events, and only ever created anything
-  // after an 8px drag — so on a touch screen there was no way to add an event
-  // at all, and even with a mouse a plain click did nothing. A finger cannot
-  // draw here either: a vertical drag has to stay available for scrolling the
-  // day, so touch gets the tap and the mouse keeps the drag as well.
+  // Press where it starts, drag to where it ends, let go. The span you draw is
+  // the event: it says when it is and how long it runs, which a bare click says
+  // neither of.
+  //
+  // With a mouse that is simply a drag, committed after 8px so a click that
+  // wobbles is still a click.
+  //
+  // A finger is the harder case, because a vertical drag on this grid already
+  // means "scroll the day", and the two gestures are identical for as long as
+  // they are both just a finger moving down the screen. So touch has to say
+  // which it meant before it moves: **hold still for 320ms and the grid starts
+  // drawing**, and the span appearing under the finger is the confirmation
+  // that it did. Move before that and it is a scroll, as it always was.
+  //
+  // Once drawing has started the page must stop scrolling under it, and
+  // `touch-action` cannot be changed mid-gesture — the browser decided what
+  // this touch was for when it began. A non-passive `touchmove` listener that
+  // preventDefaults is the one thing that still works from here.
   function handleGridPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if ((e.target as HTMLElement).closest('.event-card, button, [role="button"], select, input, textarea')) return
     if (draggingEvt) return
@@ -1228,24 +1255,45 @@ export function CalendarIntelligence() {
     const rawMin  = Math.max(0, Math.min(23 * 60 + 59, (relY / HOUR_PX) * 60))
     const dragMin = Math.round(rawMin / SNAP_MIN) * SNAP_MIN
     const startX = e.clientX, startY = e.clientY
-    // A finger scrolls; only a mouse draws.
     const coarse = e.pointerType !== 'mouse'
+    const pointerId = e.pointerId
+    const surface = e.currentTarget
     let started = false
+    let holdTimer: ReturnType<typeof setTimeout> | null = null
+
+    const begin = () => {
+      started = true
+      cleanup()
+      if (coarse) {
+        document.addEventListener('touchmove', eatScroll, { passive: false })
+        try { surface.setPointerCapture(pointerId) } catch { /* gesture already gone */ }
+      }
+      setCreatingEvt({ dateStr, originMin: dragMin, currentMin: dragMin })
+      setSelectedEvent(null); setNewEventDraft(null)
+    }
 
     const cleanup = () => {
+      if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null }
       document.removeEventListener('pointermove',   onMove)
       document.removeEventListener('pointerup',     onUp)
       document.removeEventListener('pointercancel', onCancelled)
     }
     const travelled = (ev: PointerEvent) => Math.hypot(ev.clientX - startX, ev.clientY - startY)
 
+    // The hold is what tells a finger's drawing apart from its scrolling, and
+    // it has to be answered before the finger moves — after that the browser
+    // has already committed the touch to the scroller.
+    if (coarse) holdTimer = setTimeout(begin, HOLD_MS)
+
     const onMove = (me: PointerEvent) => {
-      if (started || coarse) return
-      if (travelled(me) >= 8) {
-        started = true; cleanup()
-        setCreatingEvt({ dateStr, originMin: dragMin, currentMin: dragMin })
-        setSelectedEvent(null); setNewEventDraft(null)
+      if (started) return
+      if (coarse) {
+        // Moved before the hold landed: they are scrolling. Stand down and
+        // leave the gesture entirely alone.
+        if (travelled(me) > HOLD_SLOP) cleanup()
+        return
       }
+      if (travelled(me) >= 8) begin()
     }
     const onUp = (ue: PointerEvent) => {
       cleanup()
@@ -1254,7 +1302,6 @@ export function CalendarIntelligence() {
       // A bare tap does not create an event. Drawing a span says when it is
       // and how long it runs; a tap says neither, and a composer opening under
       // every stray click on the grid is a panel you spend the day closing.
-      // Touch, which cannot draw, uses New event in the header.
       setSelectedEvent(null)
     }
     // iOS fires this the moment it decides the gesture is a scroll.
@@ -2716,7 +2763,11 @@ export function CalendarIntelligence() {
             </div>
 
             {/* Day columns */}
-            <div style={{ flex: 1, display: 'flex', position: 'relative' }} onPointerDown={handleGridPointerDown}>
+            {/* The drawing surface. Marked so a test can find the box whose
+                top is minute zero — every span the grid reads is measured from
+                this rect, and a test that guesses at it is measuring its own
+                guess. */}
+            <div data-cal-cols style={{ flex: 1, display: 'flex', position: 'relative' }} onPointerDown={handleGridPointerDown}>
               {weekDays.map(day => {
                 const ds        = localDateStr(day)
                 const isToday   = ds === today
@@ -2740,14 +2791,31 @@ export function CalendarIntelligence() {
                       const top  = sMin / 60 * HOUR_PX
                       const h    = Math.max(SNAP_MIN / 60 * HOUR_PX, (eMin - sMin) / 60 * HOUR_PX)
                       return (
-                        <div style={{
+                        // The span is the event, so it is drawn as one: the
+                        // card's own radius, the accent tint rather than a raw
+                        // wash, and the two figures the gesture is setting.
+                        // The length is the third — it is what you are actually
+                        // deciding while you drag, and reading it off two clock
+                        // times is arithmetic nobody should do mid-gesture.
+                        <div data-cal-ghost style={{
                           position: 'absolute', top, left: '1%', right: '1%', height: h, zIndex: 10,
-                          background: 'rgba(var(--sb-accent-rgb),0.35)', border: 'var(--sb-border-emphasis) solid var(--sb-accent)',
-                          borderRadius: 'var(--sb-r-chip)', pointerEvents: 'none', boxSizing: 'border-box',
+                          background: 'var(--sb-accent-tint2)', border: 'var(--sb-border-emphasis) solid var(--sb-accent)',
+                          borderRadius: 14, pointerEvents: 'none', boxSizing: 'border-box',
+                          padding: '3px 8px', overflow: 'hidden',
                         }}>
-                          <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-1)', padding: '2px 5px', fontWeight: 600 }}>
+                          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                             {fmtShort(minToIso(ds, sMin))} – {fmtShort(minToIso(ds, eMin))}
                           </div>
+                          {h >= 34 && (
+                            <div style={{ fontSize: 10.5, color: 'var(--sb-accent-deep)', fontVariantNumeric: 'tabular-nums' }}>
+                              {(() => {
+                                const m = eMin - sMin
+                                return m < 60 ? `${m} min`
+                                  : m % 60 === 0 ? `${m / 60}h`
+                                  : `${Math.floor(m / 60)}h ${m % 60}m`
+                              })()}
+                            </div>
+                          )}
                         </div>
                       )
                     })()}
