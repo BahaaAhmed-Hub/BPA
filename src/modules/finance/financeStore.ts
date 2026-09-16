@@ -358,7 +358,13 @@ export const useFinanceStore = create<FinanceState>()(
             //  earlier build could, so the rows have to be cleared rather than
             //  merely stopped: dropped from the list here and deleted on the
             //  server, once, so the next device does not read them back.
-            goals:   withLocalPlanning(adopt(dropStoredDebtGoals(goals), goalFromRow, prev.goals,
+            //  The *local* list is filtered too. `adopt` falls back to it when
+            //  the server has no goals and this device was never marked
+            //  seeded, and it then pushes what it returns — so an unfiltered
+            //  ghost in `professor-finance-v2` would be uploaded rather than
+            //  cleared.
+            goals:   withLocalPlanning(adopt(dropStoredDebtGoals(goals), goalFromRow,
+                           prev.goals.filter(g => !isDebtGoal(g)),
                            g => saveGoal(goalToRow(g, userId!)))),
             // finance_budgets only exists from 20260005. Until the migration
             // runs, loadBudgets returns empty for a reason that is not "you
