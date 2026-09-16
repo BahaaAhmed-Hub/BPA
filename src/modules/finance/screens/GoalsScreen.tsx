@@ -222,7 +222,15 @@ function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onG
   currency: string
 }) {
   const g = plan.goal
-  const pct = g.targetAmount > 0
+  const debt = isDebtGoal(g)
+  // A debt never "saves up". Its `currentAmount` is 0 for ever and its target
+  // is the live balance, so the savings bar sat empty at 0% however much of
+  // the card had been paid off — the one reading that is always wrong. Paying
+  // it down shrinks the target instead, so progress is what the balance has
+  // fallen by since the plan was drawn, and there is nothing honest to draw
+  // before that. The bar is simply not drawn for a debt.
+  const pct = debt ? 0
+    : g.targetAmount > 0
     ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100)) : 0
   // A goal that spare cash already covers is not "September", it is now —
   // there is nothing to wait for.
@@ -301,16 +309,23 @@ function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onG
         </span>
       </div>
 
-      <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
-        <div style={{
-          width: `${pct}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
-          background: verdict === 'done' ? C.green : C.accent,
-        }} />
-      </div>
+      {!debt && (
+        <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
+          <div style={{
+            width: `${pct}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
+            background: verdict === 'done' ? C.green : C.accent,
+          }} />
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 'var(--sb-t-meta)', color: C.ink3 }}>
-        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {group(g.currentAmount)} of {group(g.targetAmount)} {g.currency ?? currency}
+        {/* A debt is written the way every other screen writes one — bracketed,
+            in the negative ink — not as "0 of 11", which reads as a savings
+            target nobody has started. */}
+        <span style={{ fontVariantNumeric: 'tabular-nums', color: debt ? C.red : undefined }}>
+          {debt
+            ? `${acct(-g.targetAmount, { currency: g.currency ?? currency })} owed`
+            : `${group(g.currentAmount)} of ${group(g.targetAmount)} ${g.currency ?? currency}`}
         </span>
         <span style={{ flex: 1 }} />
         {plan.monthly > 0 ? (

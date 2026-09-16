@@ -189,9 +189,11 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               onChange={setBalance}
             />
             <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 5, lineHeight: 1.45 }}>
-              Where this account stood before anything was logged. Entries move it from
-              here — a card goes below zero as it is spent on, and back towards zero as
-              it is paid off.
+              Where this account stood <b style={{ fontWeight: 600 }}>before the year you are looking at</b>.
+              Entries move it from here — a card goes below zero as it is spent on, and
+              back towards zero as it is paid off. Nothing is read from earlier years,
+              so this figure is the whole of the past: keep it right and the balance is
+              right.
             </div>
           </div>
 

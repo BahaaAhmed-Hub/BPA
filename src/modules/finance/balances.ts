@@ -9,7 +9,15 @@ import { todayISO } from './dates'
 // for ever — usually zero — while the entries piled up beside it.
 //
 // A live balance is that opening figure plus everything filed against the
-// account that has actually been paid. An entry with no payment date is money
+// account that has actually been paid.
+//
+// **The opening figure is the whole of the past, and nothing looks further
+// back.** One year of entries is loaded at a time, so the entries this walks
+// are the loaded year's. That makes `account.balance` the account's position
+// *before* that year rather than a figure from the day it was created, and it
+// is the user's to keep right — the app never goes fetching older years to
+// reconstruct it, and never assumes entries it cannot see. A balance is
+// therefore exactly: what you said it held, plus what this year did to it. An entry with no payment date is money
 // that has not moved: the bill is owed, the account still holds what it held.
 // What is waiting comes back separately — `pending` for what is due by now,
 // `ahead` for what is dated later — so a row can say what is actually late
@@ -37,6 +45,11 @@ export function deltaFor(account: Account, tx: Transaction): number | null {
   // expressed in its own account's currency, so moving USD onto an EGP card
   // takes dollars off one and puts pounds on the other.
   if (tx.type === 'transfer') {
+    // Both ends on the same account is money that went nowhere. Left to the
+    // two tests below it matched the first one and came back as a withdrawal,
+    // and `liveBalances` applies a transfer once per end — so one 100 move
+    // onto itself took the account down 200.
+    if (tx.accountId === account.id && tx.toAccountId === account.id) return 0
     if (tx.accountId === account.id) {
       const v = into(Math.abs(tx.amount))
       return v === null ? null : -v
@@ -119,7 +132,11 @@ export function liveBalances(
       const from = tx.accountId ? byId.get(tx.accountId) : undefined
       const to   = tx.toAccountId ? byId.get(tx.toAccountId) : undefined
       if (from) apply(from, tx)
-      if (to)   apply(to, tx)
+      // A transfer filed with the same account at both ends is one account, not
+      // two, and `deltaFor` already answers 0 for it. Applying it twice would
+      // put that 0 in `pending` twice, which is harmless, and any future delta
+      // twice, which is not.
+      if (to && to.id !== from?.id) apply(to, tx)
       continue
     }
     const a = tx.accountId ? byId.get(tx.accountId) : undefined

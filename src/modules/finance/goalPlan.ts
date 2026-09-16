@@ -763,9 +763,35 @@ export const isDebtGoal = (g: Pick<Goal, 'id'>): boolean => g.id.startsWith(DEBT
 /** The account a debt goal stands for. */
 export const debtAccountId = (g: Pick<Goal, 'id'>): string => g.id.slice(DEBT_PREFIX.length)
 
+/** A debt is only worth planning for if the screen it came from admits it is
+ *  one. Balances writes a figure with no decimals, so anything that rounds to
+ *  zero there reads as a settled account — and a goal for it is the two screens
+ *  disagreeing about the same number. Half a unit of the currency is the line:
+ *  below it, `acct()` prints 0. */
+const DEBT_FLOOR = 0.5
+
+/** Which accounts can carry a debt worth clearing.
+ *
+ *  `capacityFrom` counts only `SPENDABLE` accounts as cash and files everything
+ *  else as an asset it will never spend. A credit card is neither — it is the
+ *  thing that goes into the red in the first place — so the three of them
+ *  together are what can owe money. **An asset cannot.** Gold or a flat below
+ *  zero is a bookkeeping matter, not a plan to fund, and offering to "Clear
+ *  Gold" put a goal in the ladder that the capacity ladder had already decided
+ *  was not spendable money. */
+const CAN_OWE: AccountType[] = [...SPENDABLE, 'credit_card']
+
 /**
  * One goal per account in the red. `ranks` is where each was dragged to; one
  * never ranked goes to the front, since interest on a card outruns any saving.
+ *
+ * Three things stop an account becoming a goal, and each one is a case where
+ * the goal would have disagreed with a figure already on screen:
+ * - **under `DEBT_FLOOR`** — Balances prints it as zero.
+ * - **not an account that can owe** — an asset in the red is not a debt.
+ * - **no exchange rate** — `capacityFrom` files such an account as `no-rate`
+ *   and counts its debt as nothing, so a goal for it would be funded out of a
+ *   capacity that never knew the debt existed.
  */
 export function debtGoals(
   accounts: Account[],
@@ -773,10 +799,14 @@ export function debtGoals(
   ranks: Record<string, number> = {},
 ): Goal[] {
   const { balances } = liveBalances(accounts, transactions)
+  const base = baseCurrency()
   const out: Goal[] = []
   accounts.forEach((a, i) => {
     const bal = balances.get(a.id) ?? a.balance
     if (bal >= 0) return
+    if (-bal < DEBT_FLOOR) return
+    if (!CAN_OWE.includes(a.accountType)) return
+    if (toBase(bal, a.currency, base) === null) return
     const id = `${DEBT_PREFIX}${a.id}`
     out.push({
       id,

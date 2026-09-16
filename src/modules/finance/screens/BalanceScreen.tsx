@@ -180,11 +180,24 @@ function AccountRow({ account, balance, unconverted, pending, ahead, selected, h
             {unconverted.join(' ')} not counted
           </span>
         ) : pending !== 0 ? (
+          // **Which way the money is going decides how this reads.** Unpaid
+          // entries net out to a signed figure, and it used to be painted red
+          // and called "not paid yet" whichever sign it carried — so a salary
+          // of 21,000 you are still waiting for was drawn in the same colour,
+          // with the same words, as a bill 21,000 overdue. One of those is
+          // good news. Money coming in is positive and says so; money going
+          // out keeps the red and the brackets.
           <span
-            title={`Due by today and not paid. The money has not moved, so it is not in the balance.${
-              ahead !== 0 ? ` A further ${formatBalance(ahead, account.currency)} is dated later and not yet owed.` : ''}`}
-            style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-negative)' }}>
-            {formatBalance(pending, account.currency)} not paid yet
+            title={pending > 0
+              ? `Owed to you and not received. The money has not arrived, so it is not in the balance.${
+                  ahead !== 0 ? ` A further ${formatBalance(ahead, account.currency)} is dated later.` : ''}`
+              : `Due by today and not paid. The money has not moved, so it is not in the balance.${
+                  ahead !== 0 ? ` A further ${formatBalance(ahead, account.currency)} is dated later and not yet owed.` : ''}`}
+            style={{
+              fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+              color: pending > 0 ? 'var(--sb-positive)' : 'var(--sb-negative)',
+            }}>
+            {formatBalance(pending, account.currency)} {pending > 0 ? 'due to you' : 'not paid yet'}
           </span>
         ) : ahead !== 0 ? (
           // Nothing late, but something is coming. Said in the muted ink, not
@@ -192,7 +205,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, selected, h
           <span
             title="Entries filed here with no payment date, all of them dated later. Nothing is overdue."
             style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>
-            {formatBalance(ahead, account.currency)} dated ahead
+            {formatBalance(ahead, account.currency)} {ahead > 0 ? 'due to you, dated ahead' : 'dated ahead'}
           </span>
         ) : account.last4 ? (
           <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>cleared</span>
