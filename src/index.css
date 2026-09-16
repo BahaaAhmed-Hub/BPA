@@ -665,7 +665,22 @@ img { max-width: 100%; }
   grid-template-columns: minmax(0, 1fr) 324px;
   gap: 14px;
   align-items: start;
+  /* ── The row may never be taller than the body ─────────────────────────────
+     An auto row is as tall as its tallest item, and on a busy day that is the
+     rail, not the grid: 24 events made it 3090px. The calendar column stretches
+     to the row, so its scroll box became as tall as its own content — 3014 of
+     3014, nothing left to scroll — and the 2,395px below the panel's edge were
+     simply clipped away. The day ended wherever the panel did, with no
+     scrollbar and no way down. Capping the row at the body's own height gives
+     the grid a window again, and each column scrolls inside it. */
+  grid-auto-rows: minmax(0, 100%);
 }
+
+/* The rail is a column of its own now rather than something that can stretch
+   the row it sits in. On a quiet day it is shorter than the grid and looks
+   exactly as before; on a busy one it scrolls instead of running off the page,
+   which is also the only way its later events were ever reachable. */
+.cal-rail { min-height: 0; max-height: 100%; overflow-y: auto; }
 @media (max-width: 1180px) {
   .cal-body { grid-template-columns: minmax(0, 1fr); overflow-y: auto; align-content: start; }
   /* `align-content: start` sizes the row to its content, which is right for

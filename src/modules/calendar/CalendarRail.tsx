@@ -405,7 +405,7 @@ export function CalendarRail({ rows, dayLabel, onOpen }: {
 
   let plain = 0
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+    <div className="cal-rail" style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
       <div style={CARD}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <Label current>{dayLabel}</Label>
