@@ -2202,19 +2202,14 @@ export function CalendarIntelligence() {
           One row, one display-size element. It used to be two stacked medium
           titles — the route's name above the month's name — plus a separate
           full-width control strip below them, which is three levels of chrome
-          saying one thing and no hierarchy at all. The route's name is now an
-          overline in mono, the month is the only thing at display size, and the
-          strip's contents have moved into the cluster on the right. */}
+          saying one thing and no hierarchy at all. The month is the only thing
+          at display size and the strip's contents have moved into the cluster
+          on the right. The route's name was an overline above it, which named
+          the page you had just navigated to and were already looking at. */}
       <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '0 4px' }}>
           {/* Which stretch of time you are looking at */}
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{
-              fontFamily: MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: '0.14em',
-              color: 'var(--sb-ink-4)', textTransform: 'uppercase',
-            }}>
-              BPA Group · Calendar
-            </span>
             <span className="cal-display" style={{
               fontFamily: DISPLAY, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1,
               color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums',
