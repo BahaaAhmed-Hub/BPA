@@ -6,6 +6,7 @@ import {
   useDraggable, useDroppable, DragOverlay, type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { useFinanceStore } from '../financeStore'
+import { CategoryReviewCard } from './CategoryReviewCard'
 import { CategoryModal } from '../modals/CategoryModal'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { suggestIcon, isPlaceholderIcon, isLucideIcon } from '../categoryIcons'
@@ -1573,6 +1574,16 @@ export function BudgetScreen(_props?: any) {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '18px 26px 26px' }}>
+
+        {/* ── Folded away until the envelopes stop telling you anything ──
+            Every figure on this screen is measured against categories you made
+            up, and nothing has ever looked at them. This does, says what the
+            ledger suggests, and leaves the decision alone. */}
+        <div style={{ marginBottom: 14 }}>
+          <CategoryReviewCard
+            input={{ categories, transactions, rules, base: baseCurrency() }}
+            onOpenCategory={id => setSelectedId(id)} />
+        </div>
 
         {/* ── The year ─────────────────────────────────────────────────────── */}
         <div style={{ ...CARD, padding: '16px 18px 12px' }}>
