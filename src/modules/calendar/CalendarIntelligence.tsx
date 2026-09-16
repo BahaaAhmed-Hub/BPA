@@ -2527,8 +2527,11 @@ export function CalendarIntelligence() {
           showing between tiles, so it carries no surface of its own; in the
           time views it is one white card, because an hour grid drawn on cream
           has nothing to separate its rows from the panel. */}
-      <div style={{
-        minWidth: 0, minHeight: 0, position: 'relative', alignSelf: 'stretch',
+      {/* `minHeight` lives in `.cal-col`, not here: inline wins over any
+          stylesheet rule, and the stacked layout below 1180px has to raise it
+          off zero or the whole grid collapses to its own header. */}
+      <div className="cal-col" style={{
+        minWidth: 0, position: 'relative', alignSelf: 'stretch',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         background: calView === 'month' ? 'transparent' : 'var(--sb-card)',
         borderRadius: calView === 'month' ? 0 : 22,

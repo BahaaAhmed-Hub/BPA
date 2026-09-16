@@ -324,6 +324,36 @@ function saveMemory(m: Memory): void {
 
 const pad = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m }
+// ─── Writing an address down ─────────────────────────────────────────────────
+//
+//  Google stores an address in whatever case it was typed and hands that back
+//  unchanged, so the same mailbox arrives as `Bahaa.Ahmed@Teradix.Com` in one
+//  field and `bahaa.ahmed@teradix.com` in another. Displayed as they come, the
+//  panel looked like it could not decide how to write a name; compared as they
+//  come, one person counted as two.
+
+/** The form an address is written and compared in. Lower case throughout: the
+ *  domain is case-insensitive by RFC, and no mail system anybody uses here
+ *  distinguishes local parts by case. */
+export function normaliseEmail(e: string | undefined): string {
+  return (e ?? '').trim().toLowerCase()
+}
+
+/** Whether two addresses are the same mailbox, whatever case they arrived in. */
+export function sameEmail(a: string | undefined, b: string | undefined): boolean {
+  const x = normaliseEmail(a)
+  return x !== '' && x === normaliseEmail(b)
+}
+
+/** A readable name out of an address: `bahaa.ahmed@teradix.com` → `Bahaa
+ *  Ahmed`. Capitalised per word, because the lower-casing above is about
+ *  identity and this is about reading. */
+export function nameFromEmail(e: string | undefined): string {
+  const local = normaliseEmail(e).split('@')[0]
+  if (!local) return 'You'
+  return local.replace(/[._-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
 function initialsOf(s: string): string {
   const name = s.includes('@') ? s.split('@')[0].replace(/[._-]+/g, ' ') : s
   return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?'
@@ -406,6 +436,22 @@ export function NewEventPanel({
   const [until, setUntil] = useState(existing?.repeat?.until ?? '')
 
   const [people, setPeople] = useState<ComposerInvitee[]>(existing?.invitees ?? [])
+
+  // ── You are not your own guest ────────────────────────────────────────────
+  //
+  //  Google returns the organiser in `attendees` as well as in `organizer`,
+  //  with `self`/`organizer` set — so drawing the organiser row and then every
+  //  attendee listed you twice: once as "Organiser", once as a guest who has
+  //  said Yes. Worse, the two copies rarely match character for character.
+  //  Google hands back whatever case each side was stored in, so the header
+  //  read `Bahaa.Ahmed@Teradix.Com` and the attendee `bahaa.ahmed@teradix.com`
+  //  — which a `===` treats as two different people, and a reader treats as a
+  //  bug. A mailbox is case-insensitive in its domain and, in every practice
+  //  that matters here, its local part too, so the comparison is made on the
+  //  normalised form and only ever on that.
+  const attendeeRows = useMemo(
+    () => people.filter(p => !sameEmail(p.email, organiser)),
+    [people, organiser])
   // Every avatar in the Attendees card takes its ink from its own swatch. The
   // hook, not the bare function, because both swatches are `var()`s and the
   // answer stops being true the moment the theme moves.
@@ -510,7 +556,9 @@ export function NewEventPanel({
   }, [calId, calendars, organiser])
 
   const minutes = Math.max(0, toMin(endTime) - toMin(startTime))
-  const guests = people.filter(p => !p.optional).length
+  // Not `people`: the organiser is in Google's attendee list as well, so
+  // inviting one other person offered to "Create & invite 2".
+  const guests = attendeeRows.filter(p => !p.optional).length
 
   const startDateObj = useMemo(() => new Date(`${startDate}T12:00:00`), [startDate])
   const weekday = startDateObj.toLocaleDateString('en-GB', { weekday: 'short' })
@@ -537,7 +585,7 @@ export function NewEventPanel({
     : repeat.freq === 'MONTHLY' ? 'monthly' : 'custom'
 
   function addPerson(raw: string) {
-    const email = raw.trim().toLowerCase().replace(/,$/, '')
+    const email = normaliseEmail(raw.replace(/,$/, ''))
     if (!email) { setInvitee(''); setInviteeError(null); return }
     // Silently dropping what you typed is the worst possible answer: it reads
     // exactly like the field being broken, which is what it was reported as.
@@ -545,8 +593,15 @@ export function NewEventPanel({
       setInviteeError(`${email} is not an email address`)
       return
     }
-    if (people.some(p => p.email === email)) {
+    // Compared on the normalised form, or `Bahaa.Ahmed@…` typed against a
+    // stored `bahaa.ahmed@…` is a second copy of one person.
+    if (people.some(p => sameEmail(p.email, email))) {
       setInviteeError(`${email} is already invited`)
+      return
+    }
+    // You are on the event already, as its organiser.
+    if (sameEmail(email, organiser)) {
+      setInviteeError('You are the organiser — you are already on it')
       return
     }
     const next = [...people, { email }]
@@ -942,17 +997,21 @@ export function NewEventPanel({
           <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Tap ? to make someone optional</span>
         </div>
 
-        {/* The organiser is you, and is not a guest you can remove. */}
+        {/* The organiser is you, and is not a guest you can remove. Written the
+            same way as every other row — a name, the address beneath it — not
+            the raw header value, which is whatever case the directory happened
+            to store and read as a different person from the same address
+            written properly one row below. */}
         <PersonRow
           initials={initialsOf(organiser ?? 'me')}
           avatarBg={C.ink}
           avatarInk={ink(C.ink)}
-          name={organiser ?? 'You'}
-          sub="Organiser"
+          name={organiser ? nameFromEmail(organiser) : 'You'}
+          sub={organiser ? normaliseEmail(organiser) : 'Organiser'}
           rsvp={{ label: 'Organiser', bg: C.inset, ink: C.third }}
         />
 
-        {people.map((p, i) => (
+        {attendeeRows.map((p, i) => (
           <PersonRow
             key={p.email}
             initials={initialsOf(p.email)}
@@ -961,8 +1020,8 @@ export function NewEventPanel({
             // terracotta in Warm Minimal and a deep green in Evergreen, and a
             // near-black on either is 3.66 and 2.30 against a needed 4.5.
             avatarInk={ink(peopleBg(i))}
-            name={p.email.split('@')[0].replace(/[._-]+/g, ' ')}
-            sub={p.email}
+            name={nameFromEmail(p.email)}
+            sub={normaliseEmail(p.email)}
             optional={p.optional}
             rsvp={rsvpOf(p.responseStatus)}
             onToggleOptional={() => {

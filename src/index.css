@@ -653,6 +653,11 @@ img { max-width: 100%; }
 
 /* The view on the left, the day rail on the right. Under 1180px the rail goes
    below the grid at full width rather than squeezing to nothing. */
+/* The calendar column. `min-height: 0` is what lets the grid inside it scroll
+   rather than push the page; it is a class and not an inline style so the
+   stacked layout below can raise it. */
+.cal-col { min-height: 0; }
+
 .cal-body {
   flex: 1;
   min-height: 0;
@@ -663,6 +668,14 @@ img { max-width: 100%; }
 }
 @media (max-width: 1180px) {
   .cal-body { grid-template-columns: minmax(0, 1fr); overflow-y: auto; align-content: start; }
+  /* `align-content: start` sizes the row to its content, which is right for
+     stacking the rail underneath — and fatal for the thing above it. The time
+     grid is a `flex: 1` / `min-height: 0` chain, and such a chain's *content*
+     height is zero, so the whole calendar column collapsed to the 22px of its
+     own header: 1296px of grid with a 0px window onto it, and no way to scroll
+     to the afternoon. The grid needs a definite height of its own down here,
+     and the body's scroll is what reveals the rail below it. */
+  .cal-col { min-height: clamp(360px, calc(100vh - 262px), 680px); }
 }
 /* The rail is 324px, but the event panel and the composer are the app's own
    docked panel — clamp(289px, 30.6vw, 400px), and wider again when expanded.
