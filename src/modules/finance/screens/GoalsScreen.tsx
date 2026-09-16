@@ -608,7 +608,15 @@ export function GoalsScreen(_props?: any) {
   // Built from `capacity.detail`, which the same pass that produced the totals
   // emitted, so a breakdown can never disagree with the figure it explains.
   const d = capacity.detail
+  // A magnitude, for rows whose direction is already carried by their kind:
+  // a `less` row prints its own minus and is drawn in the negative ink.
   const fig = (n: number) => group(Math.round(n))
+  // A *signed* figure, for rows where the sign is the information — a debt, a
+  // balance nothing could convert, a month that costs more than it earns.
+  // `group()` is `Math.abs` by construction, so `fig` could not render one:
+  // 63,299 owed and 63,299 held printed identically. `acct()` is the house
+  // convention every other screen writes money in — bracketed, minus dropped.
+  const sfig = (n: number) => acct(Math.round(n), { decimals: 0 })
 
   const readyTerms: Term[] = [
     ...d.accounts.filter(a => a.counts === 'cash')
@@ -629,18 +637,20 @@ export function GoalsScreen(_props?: any) {
     ...(capacity.committed > 0
       ? [{ label: 'bills dated ahead, unpaid', amount: fig(capacity.committed), kind: 'less' as const }]
       : []),
-    { label: 'you could put in today', amount: fig(capacity.free), kind: 'total' as const },
+    { label: 'you could put in today', amount: sfig(capacity.free), kind: 'total' as const },
     // Balances shows the rung above this one. Two screens with two figures for
     // "what can I spend" is fine as long as each says so.
-    { label: `Balances says ${fig(capacity.spendable)} — that is today\u2019s money, before the cushion and the goals`, kind: 'note' as const },
+    { label: `Balances says ${sfig(capacity.spendable)} — that is today\u2019s money, before the cushion and the goals`, kind: 'note' as const },
     ...(!d.assetsCounted
       ? d.accounts.filter(a => a.counts === 'asset')
           .map(a => ({ label: `${a.name} — an asset, the plan never sells it`, amount: fig(a.amount), kind: 'note' as const }))
       : []),
+    // `a.amount` is the magnitude owed, so it is negated back into the debt it
+    // describes before being written.
     ...d.accounts.filter(a => a.counts === 'owed')
-      .map(a => ({ label: `${a.name} — owed, and a debt to clear below`, amount: fig(a.amount), kind: 'note' as const })),
+      .map(a => ({ label: `${a.name} — owed, and a debt to clear below`, amount: sfig(-a.amount), kind: 'note' as const })),
     ...d.accounts.filter(a => a.counts === 'no-rate')
-      .map(a => ({ label: `${a.name} — no ${a.currency} rate set, so it is in nothing`, amount: fig(a.amount), kind: 'note' as const })),
+      .map(a => ({ label: `${a.name} — no ${a.currency} rate set, so it is in nothing`, amount: sfig(a.amount), kind: 'note' as const })),
   ]
 
   const monthTerms: Term[] = d.months.length === 0 ? [] : [
@@ -651,7 +661,7 @@ export function GoalsScreen(_props?: any) {
       muted: !m.used,
     })),
     { label: `a usual month, read category by category`, amount: `${fig(capacity.monthlyIn)} − ${fig(capacity.monthlyOut)}`, kind: 'add' as const },
-    { label: 'a month leaves over', amount: fig(capacity.surplus), kind: 'total' as const },
+    { label: 'a month leaves over', amount: sfig(capacity.surplus), kind: 'total' as const },
     // Each category is read on its own and the middles are added. The middle
     // of each month's *total* was unstable: on one ledger the same twelve
     // months reported anywhere between 10,500 and 78,000 a month depending
