@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useFinanceStore } from './financeStore'
 import { TodayScreen } from './screens/TodayScreen'
 import { BalanceScreen } from './screens/BalanceScreen'
+import { OPEN_ACCOUNT } from './openAccount'
 import { BudgetScreen } from './screens/BudgetScreen'
 import { ReportsScreen } from './screens/ReportsScreen'
 import { ReflectionScreen } from './screens/ReflectionScreen'
@@ -148,6 +149,15 @@ export function FinanceModule() {
     }
     return NAV_ITEMS
   })
+  // A debt goal on Goals can send you to the account it is derived from.
+  // Balances is not mounted at that moment, so the switch happens here and the
+  // id is claimed by the screen once it is up (`takePendingAccount`).
+  useEffect(() => {
+    const go = () => setScreen('balance')
+    window.addEventListener(OPEN_ACCOUNT, go)
+    return () => window.removeEventListener(OPEN_ACCOUNT, go)
+  }, [])
+
   const [draggedTab, setDraggedTab] = useState<FinanceScreen | null>(null)
   const [dropTab, setDropTab] = useState<FinanceScreen | null>(null)
 

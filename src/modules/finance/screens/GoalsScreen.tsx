@@ -1,13 +1,14 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { GripVertical, Plus, Trash2, Check, X } from 'lucide-react'
+import { GripVertical, Plus, Trash2, Check, X, ArrowRight } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import type { Goal } from '../types'
 import { MoneyInput } from '../components/MoneyInput'
 import { acct, group } from '../format'
 import { todayISO } from '../dates'
 import { ICON, STROKE } from '@/lib/type'
+import { openAccount } from '../openAccount'
 import {
-  capacityFrom, planGoals, scheduleGoals, byRank, monthsUntil, debtGoals, isDebtGoal,
+  capacityFrom, planGoals, scheduleGoals, byRank, monthsUntil, debtGoals, isDebtGoal, debtAccountId,
   DEFAULT_BUFFER_MONTHS, WINDOW_MONTHS, commitOf,
   type Policy, type GoalPlan, type Schedule,
 } from '../goalPlan'
@@ -327,6 +328,16 @@ function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onG
             ? `${acct(-g.targetAmount, { currency: g.currency ?? currency })} owed`
             : `${group(g.currentAmount)} of ${group(g.targetAmount)} ${g.currency ?? currency}`}
         </span>
+        {/* Which account this is derived from. The name alone is not an
+            answer — two accounts can be called nearly the same thing, and one
+            since renamed reads as a different account entirely — so the bank
+            and last four go on the row beside the figure, where the question
+            is actually being asked. */}
+        {debt && g.sub && (
+          <span style={{ color: C.ink3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            · {g.sub.replace(/^owed on /, '')}
+          </span>
+        )}
         <span style={{ flex: 1 }} />
         {plan.monthly > 0 ? (
           <span style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -1272,6 +1283,20 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
             to decide what it waits behind — by default a card comes first, because its interest
             outruns anything a goal below it would earn.
           </div>
+          {/* Naming the account and leaving you to find it is most of the way
+              to an answer and none of the use. This is the rest of it. */}
+          <button
+            onClick={() => openAccount(debtAccountId(g))}
+            style={{
+              marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6,
+              height: 'var(--sb-h-pill)', padding: '0 13px', borderRadius: 'var(--sb-r-pill)',
+              border: `var(--sb-border-width) solid ${C.border}`, background: C.surface,
+              color: C.ink2, cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 'var(--sb-t-meta)', fontWeight: 600,
+            }}>
+            Open {g.name.replace(/^Clear /, '')} in Balances
+            <ArrowRight size={ICON.sm} strokeWidth={STROKE.rest} />
+          </button>
         </div>
       ) : (
       <div style={card}>

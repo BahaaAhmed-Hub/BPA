@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Button, Segmented } from '@/components/ui'
 import { GripVertical, Pencil, X } from 'lucide-react'
 import {
@@ -23,6 +23,7 @@ import { BudgetMark } from '../components/BudgetMark'
 import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, UNPAID_TITLE } from '../unpaid'
 import { liveBalances } from '../balances'
+import { OPEN_ACCOUNT, takePendingAccount, accountIdOf } from '../openAccount'
 import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
 import { ICON } from '@/lib/type'
 import { TxRow, txDate as fmtTxDate } from '../components/TxRow'
@@ -334,7 +335,21 @@ export function BalanceScreen() {
 
   // Picking an account narrows the feed to it. A transfer touches two accounts,
   // so it belongs to both ends rather than only the one it was filed against.
-  const [focusId, setFocusId] = useState<string | null>(null)
+  // Arriving from a debt goal on Goals: that click parked the account id, and
+  // this screen was not mounted to hear the event. Claimed on the way up, and
+  // listened for as well so a second click while already here still lands.
+  const [focusId, setFocusId] = useState<string | null>(() => takePendingAccount())
+  useEffect(() => {
+    const pick = (e: Event) => {
+      const id = accountIdOf(e)
+      if (!id) return
+      takePendingAccount()          // this screen is handling it; nobody else should
+      setFocusId(id)
+      setFilter('Accounts')         // a narrowed tab could hide the row we just picked
+    }
+    window.addEventListener(OPEN_ACCOUNT, pick)
+    return () => window.removeEventListener(OPEN_ACCOUNT, pick)
+  }, [])
   const focused = focusId ? accounts.find(a => a.id === focusId) ?? null : null
   const touches = (tx: Transaction) =>
     !focusId || tx.accountId === focusId || tx.toAccountId === focusId
