@@ -7,7 +7,27 @@ import { rememberLimit, withLocalLimits } from './creditLimits'
 import { rememberTarget, forgetTarget, withLocalTargets } from './transferTargets'
 import { rememberGoalPlanning, forgetGoalPlanning, withLocalPlanning } from './goalPlanning'
 import { setPaidAtSupported } from './unpaid'
+import { isDebtGoal } from './goalPlan'
 import { todayISO } from './dates'
+
+// ─── A stored debt goal is always wrong ──────────────────────────────────────
+//
+//  `debtGoals()` derives one per account in the red on every render. Anything
+//  with a `debt:` id coming back from the server was written by an older build
+//  and is frozen at whatever the account was called and owed that day — which
+//  is how a goal came to read "Clear USD Cash — 11" beside an account since
+//  renamed "CIB USD Debit" and since settled to zero. Two figures, one of them
+//  a fossil, and no screen able to say which.
+//
+//  Dropped from the list and deleted on the server, so it does not come back
+//  on the next device. The delete is best-effort: the list is already right
+//  without it, and a failed delete only means this runs again next load.
+function dropStoredDebtGoals(rows: GoalRow[] | null): GoalRow[] | null {
+  if (!rows) return rows
+  const stale = rows.filter(r => isDebtGoal({ id: r.id }))
+  for (const r of stale) dbDeleteGoal(r.id).catch(() => { /* next load tries again */ })
+  return stale.length ? rows.filter(r => !isDebtGoal({ id: r.id })) : rows
+}
 import {
   loadAccounts, saveAccount, deleteAccount as dbDeleteAccount,
   loadCategories, saveCategory, deleteCategory as dbDeleteCategory,
@@ -324,7 +344,21 @@ export const useFinanceStore = create<FinanceState>()(
             plans,
             overrides,
             comments,
-            goals:   withLocalPlanning(adopt(goals, goalFromRow, prev.goals,
+            // ── A debt goal is derived, never stored ──────────────────────
+            //
+            //  `debtGoals()` builds one per account in the red, every render,
+            //  out of the live balance. A *stored* `debt:` row is therefore a
+            //  second answer to a question that already has one — and a frozen
+            //  one: it keeps the account's name and balance as they were the
+            //  day it was written. Pay the card off, rename the account, or
+            //  delete it, and the row sits there for ever saying a thing that
+            //  stopped being true, in a name nothing on the screen still uses.
+            //
+            //  Nothing writes one now (`upsertGoal` refuses the id), but an
+            //  earlier build could, so the rows have to be cleared rather than
+            //  merely stopped: dropped from the list here and deleted on the
+            //  server, once, so the next device does not read them back.
+            goals:   withLocalPlanning(adopt(dropStoredDebtGoals(goals), goalFromRow, prev.goals,
                            g => saveGoal(goalToRow(g, userId!)))),
             // finance_budgets only exists from 20260005. Until the migration
             // runs, loadBudgets returns empty for a reason that is not "you
@@ -528,6 +562,12 @@ export const useFinanceStore = create<FinanceState>()(
       // ─── Goals CRUD ─────────────────────────────────────────────────────────
 
       upsertGoal: async (g) => {
+        // A debt goal belongs to the account it is derived from. Writing one
+        // here would freeze its name and target and then outlive both — which
+        // is exactly the row `dropStoredDebtGoals` exists to clear up. Its
+        // rank is the one thing about it that is the user's, and that lives in
+        // `finance-debt-goal-ranks` because it has no row of its own.
+        if (isDebtGoal(g)) return
         // Held here too, so a rank and a deadline are not lost on the next
         // load where 20260010 has not run.
         rememberGoalPlanning(g)
