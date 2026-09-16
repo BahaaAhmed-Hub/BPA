@@ -2,6 +2,7 @@ import type { Account, AccountType, Goal, Transaction } from './types'
 import { liveBalances } from './balances'
 import { toBase, baseCurrency } from './fx'
 import { settled, whenPaid } from './unpaid'
+import { isBudgetEntry } from './budgetEntries'
 import { todayISO } from './dates'
 
 // ─── Can this goal actually happen? ──────────────────────────────────────────
@@ -121,6 +122,35 @@ export interface CapacityDetail {
   /** True when a forecast rule has folded the assets into what is held, so the
    *  breakdown can say they are counted rather than named and set aside. */
   assetsCounted?: boolean
+  /** ── What is owed, taken apart ──────────────────────────────────────────
+   *
+   *  `committed` is one number: everything dated ahead and unpaid, summed, and
+   *  taken off the cash in a single lump. That is the right answer to "what
+   *  could I spend today", because all of it is spoken for whatever month it
+   *  falls in.
+   *
+   *  It is the wrong answer to "which month runs out", because those entries
+   *  do not all fall due at once — the whole question is *when* each leaves.
+   *  So the same pass that sums them also emits them, filed by the month they
+   *  are due and converted once, and a month-by-month run reads these instead
+   *  of the total. Nothing here is new work: it is the loop that was already
+   *  running, keeping what it saw. */
+  pending: PendingCharge[]
+}
+
+/** One entry dated ahead with no payment date, as a month-by-month run needs
+ *  it. `amount` is signed in the base currency: negative leaves. */
+export interface PendingCharge {
+  id: string
+  /** 'YYYY-MM' — the month it is due, not the month it was written. */
+  month: string
+  amount: number
+  payee: string
+  categoryId?: string
+  /** Written by a budget rule with a due day rather than typed by hand. Such an
+   *  entry's rule is already inside the typical month, so charging the entry as
+   *  well would spend the same money twice. */
+  fromBudget: boolean
 }
 
 const monthKey = (iso: string) => iso.slice(0, 7)
@@ -292,8 +322,11 @@ export function capacityFrom(
   const norm = typicalMonth(transactions, base, today)
   const { monthlyIn, monthlyOut, inBy, outBy, live } = norm
 
-  // Dated ahead and not paid: owed, whatever the account balance says.
+  // Dated ahead and not paid: owed, whatever the account balance says. The
+  // same pass keeps each one, filed by its due month, for anything that needs
+  // to know when rather than only how much.
   let committed = 0
+  const pending: PendingCharge[] = []
   for (const tx of transactions) {
     if (tx.paidAt) continue
     if (tx.date <= today) continue
@@ -301,6 +334,15 @@ export function capacityFrom(
     if (v === null) continue
     if (tx.type === 'expense') committed += v
     if (tx.type === 'income')  committed -= v
+    if (tx.type !== 'expense' && tx.type !== 'income') continue   // a transfer moves, it does not leave
+    pending.push({
+      id: tx.id,
+      month: monthKey(tx.date),
+      amount: tx.type === 'income' ? v : -v,
+      payee: tx.payee,
+      categoryId: tx.categoryId,
+      fromBudget: isBudgetEntry(tx),
+    })
   }
 
   const buffer = Math.max(0, monthlyOut * bufferMonths)
@@ -328,6 +370,7 @@ export function capacityFrom(
       months: [...inBy.keys()].map(k => ({ key: k, inc: inBy.get(k)!, out: outBy.get(k)!, used: live.includes(k) })),
       bufferMonths,
       lumpy: norm.lumpy,
+      pending,
     },
   }
 }

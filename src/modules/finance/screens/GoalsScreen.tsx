@@ -15,6 +15,8 @@ import { Segmented } from '@/components/ui'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { GoalTimeline } from './GoalTimeline'
 import { ForecastRulesCard, OwnRulesCard } from './ForecastRules'
+import { MonthsAheadCard } from './MonthsAheadCard'
+import { monthsAhead } from '../monthsAhead'
 import {
   buildForecast, loadForecast, saveForecast, FORECAST_EVENT,
   type ForecastState,
@@ -328,7 +330,7 @@ function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onG
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function GoalsScreen(_props?: any) {
-  const { goals, accounts, transactions, categories, upsertGoal, removeGoal } = useFinanceStore()
+  const { goals, accounts, transactions, categories, currentYear, upsertGoal, removeGoal } = useFinanceStore()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [bufferMonths, setBufferMonths] = useState(() => {
@@ -403,6 +405,12 @@ export function GoalsScreen(_props?: any) {
   // Everything below plans on the forecast's capacity, not the flat one — the
   // buffer, the cash rule and any figure you corrected are all in it.
   const capacity = forecast.capacity
+
+  // The same forecast, read for a different question. The rules below say what
+  // the plan assumes; this says which months it leaves you short in.
+  const ahead = useMemo(
+    () => monthsAhead({ capacity, forecast, transactions, knownThrough: `${currentYear}-12` }),
+    [capacity, forecast, transactions, currentYear])
 
   const allGoals = useMemo(
     () => [...goals, ...debtGoals(accounts, transactions, debtRanks)],
@@ -939,6 +947,9 @@ export function GoalsScreen(_props?: any) {
         <div style={{
           flex: '1 1 300px', minWidth: 280, display: 'flex', flexDirection: 'column', gap: 12,
         }}>
+          {/* The finding first, the assumptions behind it underneath: switch a
+              rule off and watch a month change colour. */}
+          <MonthsAheadCard ahead={ahead} currency={cur} />
           <div id="sb-forecast-rules">
             <ForecastRulesCard rules={forecast.rules} state={forecastState}
               onChange={putForecast} currency={cur} />
