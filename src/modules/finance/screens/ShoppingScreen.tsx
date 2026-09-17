@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useShoppingStore } from '../shopping/shoppingStore'
+import { useFinanceStore } from '../financeStore'
 import type { ShoppingGroup, ShoppingItem, ShoppingStore, ShoppingViewMode } from '../shopping/types'
 import { ITEM_CATEGORIES } from '../shopping/types'
 import { loadRules } from '../modals/BudgetRuleModal'
@@ -101,18 +102,21 @@ function BestPriceBadge({ item }: { item: ShoppingItem }) {
 
 // ─── Item row ─────────────────────────────────────────────────────────────────
 
+type EnvelopeRow = { id: string; name: string; remaining: number; currency: string; dueAccountName?: string }
+
 interface ItemRowProps {
   item:      ShoppingItem
   stores:    ShoppingStore[]
-  envelopes: { id: string; name: string; remaining: number; currency: string }[]
+  envelopes: EnvelopeRow[]
   onUpdate:  (patch: Partial<ShoppingItem>) => void
   onDelete:  () => void
   onPurchase:(finalPrice?: number, storeId?: string) => void
   onRefreshPrice: () => void
   priceLoading: boolean
+  suggestedPaymentAccount?: string
 }
 
-function ItemRow({ item, envelopes, onUpdate, onDelete, onPurchase, onRefreshPrice, priceLoading }: ItemRowProps) {
+function ItemRow({ item, envelopes, onUpdate, onDelete, onPurchase, onRefreshPrice, priceLoading, suggestedPaymentAccount }: ItemRowProps) {
   const [expanded, setExpanded] = useState(false)
   const [confirmPurchase, setConfirmPurchase] = useState(false)
   const [finalPrice, setFinalPrice] = useState(item.finalPrice?.toString() ?? item.bestPrice?.price?.toString() ?? '')
@@ -259,7 +263,7 @@ function ItemRow({ item, envelopes, onUpdate, onDelete, onPurchase, onRefreshPri
       {confirmPurchase && (
         <div style={{ borderTop: `1px solid ${C.border}`, padding: '12px 12px', background: `${C.pos}10` }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.ink1, marginBottom: 8 }}>Mark as purchased?</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
             <label style={{ fontSize: 11, color: C.ink3 }}>
               Final price
               <input
@@ -270,6 +274,11 @@ function ItemRow({ item, envelopes, onUpdate, onDelete, onPurchase, onRefreshPri
                 style={{ marginLeft: 6, fontSize: 12, padding: '3px 6px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.field, width: 100 }}
               />
             </label>
+            {suggestedPaymentAccount && (
+              <span style={{ fontSize: 11, color: C.ink3, padding: '2px 8px', borderRadius: 6, background: C.field, border: `1px solid ${C.border}` }}>
+                Pay with <strong style={{ color: C.ink1 }}>{suggestedPaymentAccount}</strong>
+              </span>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
@@ -297,7 +306,7 @@ interface GroupCardProps {
   group:    ShoppingGroup
   items:    ShoppingItem[]
   stores:   ShoppingStore[]
-  envelopes: { id: string; name: string; remaining: number; currency: string }[]
+  envelopes: EnvelopeRow[]
   onUpdateGroup:  (patch: Partial<ShoppingGroup>) => void
   onDeleteGroup:  () => void
   onAddItem:      () => void
@@ -308,6 +317,8 @@ interface GroupCardProps {
   priceWatchLoading: boolean
   refreshingItemId: string | null
   onRefreshItemPrice: (itemId: string) => void
+  repeatSuggestions: string[]
+  suggestedPayments: Map<string, string>
 }
 
 const RECURRENCE_LABELS: Record<string, string> = {
@@ -315,13 +326,32 @@ const RECURRENCE_LABELS: Record<string, string> = {
   biweekly: 'Every 2 weeks', monthly: 'Monthly', custom: 'Custom',
 }
 
-function GroupCard({ group, items, stores, envelopes, onUpdateGroup, onDeleteGroup, onAddItem, onUpdateItem, onDeleteItem, onPurchaseItem, onRefreshGroupPrices, priceWatchLoading, refreshingItemId, onRefreshItemPrice }: GroupCardProps) {
+function GroupCard({ group, items, stores, envelopes, onUpdateGroup, onDeleteGroup, onAddItem, onUpdateItem, onDeleteItem, onPurchaseItem, onRefreshGroupPrices, priceWatchLoading, refreshingItemId, onRefreshItemPrice, repeatSuggestions, suggestedPayments }: GroupCardProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [editName, setEditName] = useState(false)
   const [nameVal, setNameVal] = useState(group.name)
 
   const activeItems    = items.filter(i => i.status !== 'purchased')
   const purchasedItems = items.filter(i => i.status === 'purchased')
+
+  // Optimize trip: re-sort active items so same-store items are grouped together
+  function handleOptimizeTrip() {
+    const storeGroups = new Map<string, string[]>()
+    const noStore: string[] = []
+    for (const item of activeItems) {
+      const sid = item.suggestedStores?.[0]
+      if (sid) {
+        if (!storeGroups.has(sid)) storeGroups.set(sid, [])
+        storeGroups.get(sid)!.push(item.id)
+      } else {
+        noStore.push(item.id)
+      }
+    }
+    let order = 0
+    for (const ids of storeGroups.values()) for (const id of ids) onUpdateItem(id, { sortOrder: order++ })
+    for (const id of noStore) onUpdateItem(id, { sortOrder: order++ })
+    notify(`Trip optimized — ${storeGroups.size} store${storeGroups.size !== 1 ? 's' : ''} in order`)
+  }
 
   // Group affordability summary
   const groupTotal = activeItems.reduce((sum, item) => sum + (item.targetPriceMax ?? item.bestPrice?.price ?? 0), 0)
@@ -402,6 +432,31 @@ function GroupCard({ group, items, stores, envelopes, onUpdateGroup, onDeleteGro
       {/* Items list */}
       {!collapsed && (
         <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+          {/* Repeat purchase suggestions */}
+          {repeatSuggestions.length > 0 && (
+            <div style={{ marginBottom: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: C.ink4, textTransform: 'uppercase', marginBottom: 5 }}>
+                Often bought
+              </div>
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                {repeatSuggestions.map(name => (
+                  <button
+                    key={name}
+                    onClick={() => { onAddItem() }}
+                    title={`Quick-add ${name}`}
+                    style={{
+                      fontSize: 11, padding: '3px 9px', borderRadius: 10, cursor: 'pointer',
+                      background: `${C.accent}20`, border: `1px solid ${C.accent}60`, color: C.ink1,
+                    }}
+                  >
+                    + {name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {activeItems.map(item => (
             <ItemRow
               key={item.id}
@@ -413,6 +468,7 @@ function GroupCard({ group, items, stores, envelopes, onUpdateGroup, onDeleteGro
               onPurchase={(price, sid) => onPurchaseItem(item.id, price, sid)}
               onRefreshPrice={() => onRefreshItemPrice(item.id)}
               priceLoading={refreshingItemId === item.id}
+              suggestedPaymentAccount={suggestedPayments.get(item.id)}
             />
           ))}
 
@@ -456,6 +512,7 @@ function GroupCard({ group, items, stores, envelopes, onUpdateGroup, onDeleteGro
           <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
             <GroupActionButton label="Schedule" onClick={() => { /* date picker */ }} />
             <GroupActionButton label="Recurrence" onClick={() => { /* recurrence picker */ }} />
+            <GroupActionButton label="Optimize trip" onClick={handleOptimizeTrip} />
             <GroupActionButton label="Archive" onClick={() => onUpdateGroup({ status: 'archived' })} />
             <GroupActionButton label="Delete" onClick={onDeleteGroup} danger />
           </div>
@@ -666,7 +723,7 @@ function AddGroupModal({ onAdd, onClose }: AddGroupModalProps) {
 function UnscheduledSection({ items, stores, envelopes, onUpdate, onDelete, onPurchase, onRefreshPrice }: {
   items: ShoppingItem[]
   stores: ShoppingStore[]
-  envelopes: { id: string; name: string; remaining: number; currency: string }[]
+  envelopes: EnvelopeRow[]
   onUpdate: (id: string, patch: Partial<ShoppingItem>) => void
   onDelete: (id: string) => void
   onPurchase: (id: string, price?: number, storeId?: string) => void
@@ -733,8 +790,10 @@ export function ShoppingScreen() {
   } = useShoppingStore()
 
   const enrichedItems = useShoppingStore(s => s.enrichedItems())
+  const { accounts } = useFinanceStore()
 
   const [viewMode, setViewMode] = useState<ShoppingViewMode>(settings.viewMode)
+  const [activeTab, setActiveTab] = useState<'list' | 'history'>('list')
   const [showAddGroup, setShowAddGroup] = useState(false)
   const [addingItemGroupId, setAddingItemGroupId] = useState<string | null>(null)
   const [refreshingItemId, setRefreshingItemId] = useState<string | null>(null)
@@ -748,16 +807,62 @@ export function ShoppingScreen() {
     })
   }, [loadAll])
 
-  // Budget envelopes: key is category id, value is BudgetRule
+  // Budget envelopes with payment account suggestion
+  const accountNameById = useMemo(() =>
+    new Map(accounts.map(a => [a.id, a.name])), [accounts])
+
   const envelopes = useMemo(() => {
     const rules = loadRules()
     return Object.entries(rules).map(([catId, rule]) => ({
       id: catId,
-      name: catId,   // category name not available here without finance store
+      name: catId,
       remaining: rule.amount ?? 0,
       currency: rule.currency ?? 'EGP',
+      dueAccountName: rule.dueAccountId ? accountNameById.get(rule.dueAccountId) : undefined,
     }))
-  }, [])
+  }, [accountNameById])
+
+  // Map item id → suggested payment account name
+  const suggestedPayments = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const item of enrichedItems) {
+      if (!item.budgetEnvelopeId) continue
+      const env = envelopes.find(e => e.id === item.budgetEnvelopeId)
+      if (env?.dueAccountName) map.set(item.id, env.dueAccountName)
+    }
+    return map
+  }, [enrichedItems, envelopes])
+
+  // Repeat purchase suggestions: item names bought 2+ times (for quick-add)
+  const repeatSuggestions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const item of rawItems) {
+      if (item.status !== 'purchased') continue
+      const key = item.name.trim().toLowerCase()
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .filter(([, n]) => n >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name]) => name.charAt(0).toUpperCase() + name.slice(1))
+  }, [rawItems])
+
+  // History: purchased items grouped by purchasedAt week/month
+  const historyByPeriod = useMemo(() => {
+    const purchased = enrichedItems
+      .filter(i => i.status === 'purchased' && (i.purchasedAt ?? i.updatedAt))
+      .sort((a, b) => (b.purchasedAt ?? b.updatedAt).localeCompare(a.purchasedAt ?? a.updatedAt))
+    const map = new Map<string, { label: string; items: typeof purchased }>()
+    for (const item of purchased) {
+      const dateStr = (item.purchasedAt ?? item.updatedAt).slice(0, 10)
+      const key   = groupKey(dateStr, viewMode)
+      const label = viewMode === 'byWeek' ? weekLabel(dateStr) : monthLabel(dateStr)
+      if (!map.has(key)) map.set(key, { label, items: [] })
+      map.get(key)!.items.push(item)
+    }
+    return [...map.entries()].sort(([a], [b]) => b.localeCompare(a))
+  }, [enrichedItems, viewMode])
 
   // Handle purchase with cross-module completion chain
   const handlePurchase = useCallback(async (itemId: string, finalPrice?: number, storeId?: string) => {
@@ -846,11 +951,23 @@ export function ShoppingScreen() {
           <div style={{ fontSize: 20, fontWeight: 700, color: C.ink1, fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em' }}>
             Shopping List
           </div>
-          {totalEstimated > 0 && (
+          {activeTab === 'list' && totalEstimated > 0 && (
             <div style={{ fontSize: 12, color: C.ink3, marginTop: 2 }}>
               {currency} {totalEstimated.toLocaleString()} estimated across {enrichedItems.filter(i => i.status !== 'purchased').length} items
             </div>
           )}
+        </div>
+
+        {/* List / History tabs */}
+        <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+          {(['list', 'history'] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              style={{ fontSize: 11, fontWeight: 600, padding: '5px 10px', border: 'none', cursor: 'pointer',
+                background: activeTab === tab ? C.ink1 : C.card,
+                color: activeTab === tab ? '#fff' : C.ink3 }}>
+              {tab === 'list' ? 'List' : 'History'}
+            </button>
+          ))}
         </div>
 
         {/* View mode toggle */}
@@ -870,26 +987,77 @@ export function ShoppingScreen() {
           ))}
         </div>
 
-        {/* Refresh all */}
-        <button
-          onClick={() => void refreshPrices()}
-          disabled={priceWatchLoading}
-          title="Refresh all prices"
-          style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.ink3, cursor: 'pointer' }}
-        >
-          <IconRefresh size={13} /> {priceWatchLoading ? 'Checking…' : 'Refresh prices'}
-        </button>
+        {activeTab === 'list' && (
+          <>
+            {/* Refresh all */}
+            <button
+              onClick={() => void refreshPrices()}
+              disabled={priceWatchLoading}
+              title="Refresh all prices"
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.ink3, cursor: 'pointer' }}
+            >
+              <IconRefresh size={13} /> {priceWatchLoading ? 'Checking…' : 'Refresh prices'}
+            </button>
 
-        {/* New list */}
-        <button
-          onClick={() => setShowAddGroup(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, background: C.ink1, color: '#fff', border: 'none', cursor: 'pointer' }}
-        >
-          <IconPlus size={13} /> New list
-        </button>
+            {/* New list */}
+            <button
+              onClick={() => setShowAddGroup(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, background: C.ink1, color: '#fff', border: 'none', cursor: 'pointer' }}
+            >
+              <IconPlus size={13} /> New list
+            </button>
+          </>
+        )}
       </div>
 
-      {/* Content */}
+      {/* ── History tab ─────────────────────────────────────────────────────── */}
+      {activeTab === 'history' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {historyByPeriod.length === 0 && (
+            <div style={{ textAlign: 'center', paddingTop: 60, color: C.ink4 }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>📋</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.ink3 }}>No purchase history yet</div>
+              <div style={{ fontSize: 12, color: C.ink4, marginTop: 4 }}>Items you mark as purchased will appear here.</div>
+            </div>
+          )}
+          {historyByPeriod.map(([key, period]) => (
+            <div key={key}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: C.ink4, textTransform: 'uppercase', marginBottom: 10 }}>
+                {period.label}
+              </div>
+              <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+                {period.items.map((item, idx) => {
+                  const store = item.storeUsedId ? stores.find(s => s.id === item.storeUsedId) : undefined
+                  return (
+                    <div key={item.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                      borderBottom: idx < period.items.length - 1 ? `1px solid ${C.border}` : 'none',
+                    }}>
+                      <span style={{ fontSize: 13, color: C.pos }}>✓</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: C.ink1 }}>{item.name}</div>
+                        <div style={{ fontSize: 11, color: C.ink4, marginTop: 1 }}>
+                          {item.category}
+                          {store && ` · ${store.name}`}
+                          {item.purchasedAt && ` · ${new Date(item.purchasedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
+                        </div>
+                      </div>
+                      {item.finalPrice && (
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.ink1 }}>
+                          {item.currency} {item.finalPrice.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── List tab ─────────────────────────────────────────────────────────── */}
+      {activeTab === 'list' && (
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* Unscheduled groups */}
@@ -914,6 +1082,8 @@ export function ShoppingScreen() {
                   priceWatchLoading={priceWatchLoading}
                   refreshingItemId={refreshingItemId}
                   onRefreshItemPrice={handleRefreshItemPrice}
+                  repeatSuggestions={repeatSuggestions}
+                  suggestedPayments={suggestedPayments}
                 />
               )
             })}
@@ -946,6 +1116,8 @@ export function ShoppingScreen() {
                     priceWatchLoading={priceWatchLoading}
                     refreshingItemId={refreshingItemId}
                     onRefreshItemPrice={handleRefreshItemPrice}
+                    repeatSuggestions={repeatSuggestions}
+                    suggestedPayments={suggestedPayments}
                   />
                 )
               })}
@@ -981,6 +1153,7 @@ export function ShoppingScreen() {
           </div>
         )}
       </div>
+      )}
 
       {/* Modals */}
       {showAddGroup && (

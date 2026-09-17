@@ -29,6 +29,8 @@
 
 import type Anthropic from '@anthropic-ai/sdk'
 import { useFinanceStore } from '@/modules/finance/financeStore'
+import { useShoppingStore } from '@/modules/finance/shopping/shoppingStore'
+import { supabase } from '@/lib/supabase'
 import { isLocked } from '@/modules/finance/lock'
 import { liveBalances } from '@/modules/finance/balances'
 import { toBase, baseCurrency, loadRates, setRate, rateFor } from '@/modules/finance/fx'
@@ -383,6 +385,73 @@ export const FINANCE_TOOLS: Anthropic.Tool[] = [
         confirm:  { type: 'boolean', description: 'Must be true. Ask first.' },
       },
       required: ['category', 'confirm'],
+    },
+  },
+
+  // ── Shopping tools ───────────────────────────────────────────────────────────
+
+  {
+    name: 'list_shopping_items',
+    description:
+      'All active shopping items — their name, category, group, status, best price found, and max price. '
+      + 'Use this to answer "what is on the shopping list?" or "how much will the groceries run?".',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        group:  { type: 'string', description: 'Filter to one shopping list by name' },
+        status: { type: 'string', enum: ['wanted', 'planned', 'purchased'], description: 'Filter by status (default: wanted + planned)' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'list_shopping_groups',
+    description: 'All active shopping lists with their schedule, recurrence, and item counts.',
+    input_schema: { type: 'object' as const, properties: {}, required: [] },
+  },
+  {
+    name: 'add_shopping_item',
+    description:
+      'Add one item to a shopping list. The list must already exist — use list_shopping_groups to pick one. '
+      + 'The category decides which stores get checked for a price.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        name:      { type: 'string', description: 'What to buy' },
+        group:     { type: 'string', description: 'Which shopping list to put it in, by name' },
+        category:  { type: 'string', description: 'E.g. Groceries, Electronics, Pharmacy — determines which stores check prices' },
+        quantity:  { type: 'number', description: 'How many (default 1)' },
+        unit:      { type: 'string', description: 'e.g. kg, L, pack' },
+        max_price: { type: 'number', description: 'The most you want to pay' },
+        notes:     { type: 'string', description: 'Anything worth noting' },
+      },
+      required: ['name', 'group'],
+    },
+  },
+  {
+    name: 'mark_purchased',
+    description:
+      'Mark a shopping item as purchased. Optionally record what was actually paid. '
+      + 'Use the item name; say which list if the same item appears in more than one.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        item:        { type: 'string', description: 'The item name' },
+        group:       { type: 'string', description: 'Which list it is in, to disambiguate' },
+        final_price: { type: 'number', description: 'What was actually paid' },
+      },
+      required: ['item'],
+    },
+  },
+  {
+    name: 'get_price_history',
+    description: 'The price readings collected for an item across all stores — what each is charging and when last checked.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        item: { type: 'string', description: 'The item name' },
+      },
+      required: ['item'],
     },
   },
 ]
@@ -942,6 +1011,131 @@ export async function executeFinanceTool(
         removed: { amount: had.amount, frequency: had.frequency, currency: had.currency ?? base, due_day: had.dueDay ?? null },
         note: 'The category and everything filed under it are untouched — only the limit is gone'
             + (had.dueDay ? ', with the unpaid entries it had written ahead.' : '.'),
+      }
+    }
+
+    // ── Shopping ─────────────────────────────────────────────────────────────
+
+    case 'list_shopping_items': {
+      const ss = useShoppingStore.getState()
+      const enriched = ss.enrichedItems()
+      const groupFilter = str('group')
+      const statusFilter = str('status')
+      let items = enriched
+      if (groupFilter) {
+        const g = ss.groups.find(x => norm(x.name) === norm(groupFilter))
+               ?? ss.groups.find(x => norm(x.name).includes(norm(groupFilter)))
+        if (!g) return { error: `No shopping list called "${groupFilter}". Lists: ${ss.groups.map(x => x.name).join(', ')}` }
+        items = items.filter(i => i.groupId === g.id)
+      }
+      items = statusFilter
+        ? items.filter(i => i.status === statusFilter)
+        : items.filter(i => i.status !== 'purchased')
+      const groupById = new Map(ss.groups.map(g => [g.id, g.name]))
+      return {
+        count: items.length,
+        items: items.map(i => ({
+          name: i.name, category: i.category, status: i.status,
+          group: i.groupId ? (groupById.get(i.groupId) ?? 'unknown') : 'unassigned',
+          quantity: i.quantity, unit: i.unit ?? null,
+          max_price: i.targetPriceMax ?? null,
+          best_price: i.bestPrice ? { price: i.bestPrice.price, currency: i.bestPrice.currency, store: i.bestPrice.storeName } : null,
+          notes: i.notes ?? null,
+        })),
+      }
+    }
+
+    case 'list_shopping_groups': {
+      const ss = useShoppingStore.getState()
+      const active = ss.groups.filter(g => g.status === 'active')
+      return {
+        groups: active.map(g => {
+          const its = ss.items.filter(i => i.groupId === g.id)
+          return {
+            name: g.name, icon: g.icon,
+            scheduled: g.scheduledDate ?? null,
+            recurrence: g.recurrence,
+            items_total:     its.length,
+            items_remaining: its.filter(i => i.status !== 'purchased').length,
+            items_purchased: its.filter(i => i.status === 'purchased').length,
+          }
+        }),
+      }
+    }
+
+    case 'add_shopping_item': {
+      const itemName = str('name')
+      if (!itemName) return { error: 'Give the item a name.' }
+      const groupName = str('group')
+      if (!groupName) return { error: 'Which shopping list? Use list_shopping_groups to see them.' }
+      const ss = useShoppingStore.getState()
+      const activeGroups = ss.groups.filter(g => g.status === 'active')
+      const g = activeGroups.find(x => norm(x.name) === norm(groupName))
+             ?? activeGroups.find(x => norm(x.name).includes(norm(groupName)))
+      if (!g) return { error: `No active shopping list called "${groupName}". Lists: ${activeGroups.map(x => x.name).join(', ')}` }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return { error: 'Not signed in.' }
+      const item = ss.addItem({
+        userId: user.id, groupId: g.id,
+        name: itemName,
+        category: str('category') ?? 'General',
+        quantity: num('quantity') ?? 1,
+        unit: str('unit'),
+        targetPriceMax: num('max_price'),
+        notes: str('notes'),
+        currency: 'EGP',
+        priority: 0,
+        status: 'wanted',
+        sortOrder: ss.items.filter(i => i.groupId === g.id).length,
+      })
+      notify(`Added "${item.name}" to ${g.name}`)
+      return { ok: true, item: item.name, group: g.name }
+    }
+
+    case 'mark_purchased': {
+      const itemName = str('item')
+      if (!itemName) return { error: 'Which item?' }
+      const ss = useShoppingStore.getState()
+      const candidates = ss.items.filter(i => i.status !== 'purchased' && norm(i.name).includes(norm(itemName)))
+      if (candidates.length === 0) return { error: `No unpurchased item matching "${itemName}". Use list_shopping_items to see them.` }
+      const groupFilter = str('group')
+      let item = candidates[0]
+      if (groupFilter) {
+        const g = ss.groups.find(x => norm(x.name).includes(norm(groupFilter)))
+        if (g) { const inGroup = candidates.filter(i => i.groupId === g.id); if (inGroup.length) item = inGroup[0] }
+      }
+      if (candidates.length > 1 && !groupFilter) {
+        const groupById = new Map(ss.groups.map(x => [x.id, x.name]))
+        return { error: `"${itemName}" appears in more than one list: ${candidates.map(i => `${i.name} (in ${groupById.get(i.groupId ?? '') ?? 'unassigned'})`).join(', ')}. Use group to say which.` }
+      }
+      ss.purchaseItem(item.id, num('final_price'))
+      notify(`${item.name} purchased`)
+      return { ok: true, item: item.name, final_price: num('final_price') ?? null, note: 'Undo is available.' }
+    }
+
+    case 'get_price_history': {
+      const itemName = str('item')
+      if (!itemName) return { error: 'Which item?' }
+      const ss = useShoppingStore.getState()
+      const candidates = ss.items.filter(i => norm(i.name).includes(norm(itemName)))
+      if (candidates.length === 0) return { error: `No item matching "${itemName}".` }
+      const item = candidates[0]
+      const storeById = new Map(ss.stores.map(s => [s.id, s]))
+      const snaps = ss.snapshots
+        .filter(s => s.itemId === item.id)
+        .sort((a, b) => new Date(b.scrapedAt).getTime() - new Date(a.scrapedAt).getTime())
+      const available = [...snaps].filter(s => s.available).sort((a, b) => a.price - b.price)
+      const best = available[0]
+      return {
+        item: item.name,
+        readings: snaps.map(s => ({
+          store: storeById.get(s.storeId)?.name ?? s.storeId,
+          price: s.price, currency: s.currency,
+          available: s.available,
+          checked: s.scrapedAt.slice(0, 10),
+          ...(s.productUrl ? { url: s.productUrl } : {}),
+        })),
+        best: best ? { store: storeById.get(best.storeId)?.name ?? best.storeId, price: best.price, currency: best.currency } : null,
       }
     }
 
