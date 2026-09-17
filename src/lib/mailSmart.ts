@@ -149,7 +149,15 @@ export function readThread(
   const fromEmail = normaliseEmail(newestInbound.from)
   const domain = fromEmail.split('@')[1] ?? ''
   const subject = last.subject || '(no subject)'
-  const kind = kindOf({ newest: newestInbound, subject, fromEmail })
+  const kind = kindOf({
+    newest: newestInbound, subject, fromEmail,
+    // What tells a conversation from an announcement. Without these a first
+    // message from `events@` reads the same as the fourth message of a thread
+    // you are in the middle of.
+    youWrote: mine.length > 0,
+    namedInBody,
+    messageCount: msgs.length,
+  })
   // A sign-in alert, a status page and a meeting called off are never waiting
   // on you, however long they sit. Saying "waiting on you" over one is how the
   // flag stops meaning anything on the rows where it is true.
@@ -215,15 +223,19 @@ export function isBusinessThread(
     // something to discard. The header is the same test the nightly run makes.
     isInvitation: /text\/calendar/i.test(headerOf(h, 'Content-Type')),
   })
-  // A campaign is a campaign whatever its subject line says, so it goes.
+  // **A campaign goes, and nothing else does.**
+  //
+  //  There used to be a second clause here: automated mail was discarded
+  //  wherever the row had nothing but a Draft button to put under it. That was
+  //  written when `kindOf` called everything it did not recognise a `reply`,
+  //  so the clause was doing the work of telling an announcement from a
+  //  conversation — badly. It threw away a support thread because the address
+  //  said `support@`. `kindOf` decides that now, from the shape of the thread
+  //  rather than from the spelling of one address, and anything it still calls
+  //  a `reply` is a conversation or a message that names you. Keeping the
+  //  clause as well meant two rules answering one question and disagreeing.
+  void kind
   if (cls === 'newsletter') return false
-  // Automated mail is kept only where the row has something to offer for it.
-  // An invitation gets Yes / Maybe / No; a sign-in alert, a status page and a
-  // meeting called off each get Acknowledge — those are worth seeing and are
-  // exactly what was being thrown away. A notification with nothing to answer
-  // and nothing to acknowledge is still noise, and the row would show it with
-  // a Draft button, which is how a list teaches you to stop reading it.
-  if (cls === 'notification' && canNeedAction(kind)) return false
   if (accountIsBusiness) return true
   // A personal mailbox still carries work: a named person on an organisation's
   // own domain counts, a free-mail address does not.
@@ -237,14 +249,24 @@ export function isBusinessThread(
  *  model configured the deterministic signals still sort the list, they just
  *  sort it more bluntly. */
 export function sectionFor(f: ThreadFacts, direct = false, kind: MailKind = 'reply'): SmartSection {
-  // Answered, and nothing has come back. Rule: omit from the action list.
+  // Answered, and nothing has come back. Rule: omit from the action list. That
+  // includes a thread of nothing but your own messages — something you sent is
+  // not something waiting on you, and it had been arriving in the action list
+  // because a forward to yourself has no inbound message to read.
   if (f.replyState === 'replied') return 'fyi'
 
   const forYou = f.addressedTo || f.namedInBody || direct
 
-  // A sign-in alert, a status page, a meeting somebody called off: you want to
-  // see it and there is nothing to answer. Addressed to you it is worth
-  // knowing; otherwise it is information.
+  // Information is information whoever it was addressed to. A status page, a
+  // device notice, somebody accepting an invitation: there is nothing to do
+  // with any of them and nothing to acknowledge either, so putting them in
+  // "worth knowing" beside the sign-in alerts made that group the place
+  // everything automated ended up.
+  if (kind === 'update') return 'fyi'
+
+  // A sign-in alert or a meeting somebody called off: you want to see it and
+  // there is nothing to answer. Addressed to you it is worth knowing;
+  // otherwise it is information.
   if (!canNeedAction(kind)) return forYou ? 'attention' : 'fyi'
 
   // An invitation is an action wherever it was addressed — answering it is the

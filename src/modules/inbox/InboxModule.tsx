@@ -34,8 +34,9 @@ import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { Segmented, SectionCard, useOpenSections, Pill, Card } from '@/components/ui'
-import { companyOfMail, NO_COMPANY, type MailCompany } from '@/lib/mailCompany'
-import { KIND_NEED } from '@/lib/mailKinds'
+import { tagOfMail, NO_COMPANY, type MailTag } from '@/lib/mailCompany'
+import { isBusinessAccount } from '@/lib/businessAccounts'
+import { KIND_NEED, canNeedAction } from '@/lib/mailKinds'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -352,21 +353,27 @@ function MailGroups({ emails, isOpen, onToggle, renderRow, companyOf }: {
   isOpen: (id: string) => boolean
   onToggle: (id: string) => void
   renderRow: (e: Email, i: number, total: number) => React.ReactNode
-  companyOf: (e: Email) => MailCompany | null
+  companyOf: (e: Email) => MailTag | null
 }) {
   const groups = useMemo(() => {
     const by = new Map<string, { id: string; name: string; color: string; rows: Email[] }>()
     for (const e of emails) {
       const co = companyOf(e)
-      const id = co?.id ?? '_none'
+      // Personal mail is a group of its own rather than a remainder: it is a
+      // real answer to "whose is this", which is why the row carries a chip
+      // for it. Only mail on a *work* mailbox from a domain that is none of
+      // yours falls through to the remainder.
+      const id = co ? (co.isCompany ? `co:${co.label}` : 'personal') : '_none'
       if (!by.has(id)) by.set(id, {
-        id, name: co?.name ?? NO_COMPANY, color: co?.color ?? 'var(--sb-ink-4)', rows: [],
+        id, name: co?.label ?? NO_COMPANY, color: co?.color ?? 'var(--sb-ink-4)', rows: [],
       })
       by.get(id)!.rows.push(e)
     }
     const out = [...by.values()]
     out.sort((a, b) => {
-      if ((a.id === '_none') !== (b.id === '_none')) return a.id === '_none' ? 1 : -1
+      // Personal, then the unlabelled remainder, both after the companies.
+      const rank = (id: string) => id === '_none' ? 2 : id === 'personal' ? 1 : 0
+      if (rank(a.id) !== rank(b.id)) return rank(a.id) - rank(b.id)
       const an = a.rows[0]?.receivedAt ?? '', bn = b.rows[0]?.receivedAt ?? ''
       return bn.localeCompare(an)
     })
@@ -546,12 +553,12 @@ export function InboxModule() {
   // The company each message belongs to, worked out once per list rather than
   // once per render of each row — a merged inbox is a hundred of them.
   const companyByMail = useMemo(() => {
-    const m = new Map<string, ReturnType<typeof companyOfMail>>()
+    const m = new Map<string, MailTag | null>()
     for (const e of visibleEmails) {
-      m.set(e.id, companyOfMail({
+      m.set(e.id, tagOfMail({
         fromEmail: e.fromEmail, to: e.to, cc: e.cc,
         accountEmail: e.account.email, isPrimary: e.account.isPrimary,
-      }))
+      }, isBusinessAccount(e.account.email)))
     }
     return m
   }, [visibleEmails])
@@ -564,7 +571,7 @@ export function InboxModule() {
       // comparison is both correct and the one every other list here uses.
       date:    e => e.receivedAt,
       sender:  e => (e.fromName || e.fromEmail).toLowerCase(),
-      company: e => (companyOf(e)?.name ?? '').toLowerCase(),
+      company: e => (companyOf(e)?.label ?? '').toLowerCase(),
       subject: e => e.subject.toLowerCase(),
     }
     const read = by[sortKey] ?? by.date
@@ -685,6 +692,11 @@ export function InboxModule() {
     const raw = Number(localStorage.getItem('mail-reader-width'))
     return Number.isFinite(raw) && raw >= 380 ? Math.min(raw, 820) : 560
   })
+
+  /** The stored row behind the open panel, where there is one. */
+  const readingThread = useMemo(
+    () => (reading ? smart?.threads.find(t => t.threadId === reading.threadId) ?? null : null),
+    [reading, smart])
 
   function openSmartThread(t: SmartThread) {
     const account = accounts.find(a => a.email === t.accountEmail) ?? accounts[0]
@@ -888,6 +900,15 @@ export function InboxModule() {
     notify(back.length
       ? `${ts.length - back.length} archived · ${back.length} put back — the mail server refused`
       : `${ts.length} archived in Gmail`)
+  }
+
+  /** Not this *message*. The thread stays listening: somebody writing again
+   *  brings it back, which is the whole difference from muting it. It is the
+   *  same mark as Done — dealt with for now — under the name that says what
+   *  it promises, because "ignore" was one word covering two decisions of very
+   *  different size and only the larger one had a button. */
+  function handleSmartDismiss(ts: SmartThread[]) {
+    void handleSmartDone(ts, true)
   }
 
   /** Not this thread, ever. Different from done: a new message does not bring
@@ -1577,19 +1598,21 @@ export function InboxModule() {
                           the two differ whenever a colleague writes to your
                           personal address or a client writes to a company one. */}
                       {companyOf(email) && (
-                        <span title={`${companyOf(email)!.name} — group by company to see them together`}
+                        <span title={`${companyOf(email)!.label} — group by company to see them together`}
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
                             fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 7px',
                             borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-2)',
-                            background: `color-mix(in srgb, ${companyOf(email)!.color} 16%, transparent)`,
+                            background: companyOf(email)!.isCompany
+                              ? `color-mix(in srgb, ${companyOf(email)!.color} 16%, transparent)`
+                              : 'var(--sb-field)',
                             maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           }}>
                           <span aria-hidden style={{
                             width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
                             background: companyOf(email)!.color,
                           }} />
-                          {companyOf(email)!.name}
+                          {companyOf(email)!.label}
                         </span>
                       )}
                       {classMeta && (
@@ -2369,6 +2392,7 @@ export function InboxModule() {
                 onHandled={(ts, h) => void handleSmartDone(ts, h)}
                 onArchive={ts => void handleSmartArchive(ts)}
                 onIgnore={handleSmartIgnore}
+                onDismiss={handleSmartDismiss}
                 onAcknowledge={handleSmartAcknowledge}
                 onRsvp={(t, a) => void handleSmartRsvp(t, a)}
               />
@@ -2389,6 +2413,19 @@ export function InboxModule() {
                   onArchive: () => { void archiveReading() },
                   onDelete: () => { void trashReading() },
                   onUnread: () => { void unreadReading() },
+                  // The row's own decisions, on the thread in front of you.
+                  // `readingThread` is the stored row behind the panel; where
+                  // there is none (a thread opened from elsewhere) the smart
+                  // actions have nothing to act on and are simply absent.
+                  onTask: () => { if (readingThread) handleSmartTasks([readingThread]) },
+                  onDone: () => { if (readingThread) { void handleSmartDone([readingThread], true); setReading(null) } },
+                  onIgnoreThread: () => { if (readingThread) { handleSmartIgnore([readingThread]); setReading(null) } },
+                  onRsvp: readingThread?.kind === 'invitation'
+                    ? a => { void handleSmartRsvp(readingThread, a) }
+                    : undefined,
+                  onAcknowledge: readingThread && !canNeedAction(readingThread.kind) && !readingThread.acknowledged
+                    ? () => handleSmartAcknowledge([readingThread])
+                    : undefined,
                 }}
               />
             )}

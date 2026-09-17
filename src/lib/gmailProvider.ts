@@ -45,7 +45,12 @@ export const gmailProvider: MailProvider = {
     // a message landing in the same second as the watermark must not fall
     // between two runs.
     const after = Math.floor(Math.max(0, sinceMs - 1000) / 1000)
-    const q = `after:${after} -in:chats -in:spam -in:trash`
+    // **`in:inbox`.** Without it this reads All Mail, which is everything you
+    // have ever sent and everything you have ever archived — so a forward you
+    // wrote to yourself arrived in a list of things waiting on your answer,
+    // and archiving something did not take it out. The smart view is about
+    // what is in front of you, and that is the inbox.
+    const q = `in:inbox after:${after} -in:chats -in:spam -in:trash`
     const { ids } = await listThreadIds(limit, undefined, asAccount(box), q)
     return ids
   },

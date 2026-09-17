@@ -94,12 +94,13 @@ export function looksAutomated(m: NeutralMessage): boolean {
 }
 
 /** The one filter, stated once. A campaign goes; other automated mail goes only
- *  where the row would have nothing but a Draft button to put under it. This is
- *  the same sentence `isBusinessThread` makes in the browser, and
- *  `scripts/mail-rules-agree.mjs` fails if the two stop agreeing. */
-export function keepThread(m: NeutralMessage, kind: MailKind): boolean {
-  if (looksCampaign(m)) return false
-  return !(looksAutomated(m) && canNeedAction(kind))
+ *  nothing else does — `kindOf` tells an announcement from a conversation from
+ *  the shape of the thread, so a second rule here guessing from the sender's
+ *  address was two rules answering one question. This is the same sentence
+ *  `isBusinessThread` makes in the browser, and `scripts/mail-rules-agree.mjs`
+ *  fails if the two stop agreeing. */
+export function keepThread(m: NeutralMessage, _kind: MailKind): boolean {
+  return !looksCampaign(m)
 }
 
 export interface Facts {
@@ -132,7 +133,10 @@ export function readThread(t: NeutralThread, me: Set<string>, firstName: string,
 
   const fromEmail = newest.from.toLowerCase()
   const domain = fromEmail.split('@')[1] ?? ''
-  const kind = kindOf({ newest, subject: last.subject || '', fromEmail })
+  const kind = kindOf({
+    newest, subject: last.subject || '', fromEmail,
+    youWrote: mine.length > 0, namedInBody, messageCount: msgs.length,
+  })
   // A machine is never waiting on you, however long its notice sits.
   const bottleneck = canNeedAction(kind) &&
     replyState !== 'replied' && now - newest.sentAt >= DAY && (addressedTo || namedInBody)
@@ -142,12 +146,15 @@ export function readThread(t: NeutralThread, me: Set<string>, firstName: string,
   const forYou = addressedTo || namedInBody
 
   const section: Facts['section'] =
+    // Something you sent, or answered and heard nothing back about, is not
+    // waiting on you.
     replyState === 'replied' ? 'fyi'
     // An invitation is an action wherever it was addressed — answering it is
     // the whole of what it wants, and it cannot be answered by being read.
     : kind === 'invitation' ? 'action'
-    // A sign-in, a status notice, a meeting called off: worth seeing, never a
-    // task. Addressed to you it is worth knowing; otherwise information.
+    // Information is information whoever it was addressed to.
+    : kind === 'update' ? 'fyi'
+    // A sign-in, or a meeting called off: worth seeing, never a task.
     : !canNeedAction(kind) ? (forYou ? 'attention' : 'fyi')
     : forYou ? 'action'
     : 'radar'

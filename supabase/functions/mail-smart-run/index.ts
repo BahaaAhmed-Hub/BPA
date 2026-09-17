@@ -187,7 +187,7 @@ async function runForUser(admin: any, userId: string, now: number): Promise<{ re
     const after = Math.floor(Math.max(0, since - 1000) / 1000)
 
     const list = await gmail<{ threads?: { id: string }[] }>(token,
-      `/users/me/threads?maxResults=${MAX_PER_BOX}&q=${encodeURIComponent(`after:${after} -in:chats -in:spam -in:trash`)}`)
+      `/users/me/threads?maxResults=${MAX_PER_BOX}&q=${encodeURIComponent(`in:inbox after:${after} -in:chats -in:spam -in:trash`)}`)
     if (!list) continue
 
     const { data: known } = await admin.from('mail_smart_threads')

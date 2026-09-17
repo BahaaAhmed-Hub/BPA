@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, X as XIcon, HelpCircle, Send, Trash2 } from 'lucide-react'
+import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, EyeOff, X as XIcon, HelpCircle, Send, Trash2 } from 'lucide-react'
 import { Button, Pill, SectionCard, useOpenSections } from '@/components/ui'
 import { ICON, STROKE } from '@/lib/type'
 import type { MailAccount } from '@/lib/gmail'
@@ -7,7 +7,8 @@ import { accountLabel } from './mailAccounts'
 import type { SmartThread, PassResult } from '@/lib/mailSmartSync'
 import type { SmartSection } from '@/lib/mailSmart'
 import { canNeedAction, type MailKind } from '@/lib/mailKinds'
-import { companyOfMail } from '@/lib/mailCompany'
+import { tagOfMail } from '@/lib/mailCompany'
+import { isBusinessAccount } from '@/lib/businessAccounts'
 
 // ─── The smart view ──────────────────────────────────────────────────────────
 //
@@ -104,7 +105,7 @@ function KindChip({ kind }: { kind: MailKind }) {
 
 export function SmartView({
   result, loading, accounts, openThreadId, onRefresh, onOpen, onDraft, onSendDraft,
-  onDiscardDraft, onTask, onHandled, onArchive, onIgnore, onAcknowledge, onRsvp,
+  onDiscardDraft, onTask, onHandled, onArchive, onIgnore, onDismiss, onAcknowledge, onRsvp,
 }: {
   result: PassResult | null
   loading: boolean
@@ -125,6 +126,7 @@ export function SmartView({
   onArchive: (ts: SmartThread[]) => void
   /** Not this thread, ever — a new message on it does not bring it back. */
   onIgnore: (ts: SmartThread[]) => void
+  onDismiss: (ts: SmartThread[]) => void
   /** Seen. For the kinds that are never actions. */
   onAcknowledge: (ts: SmartThread[]) => void
   /** Yes / Maybe / No, through the app's own RSVP. */
@@ -261,9 +263,13 @@ export function SmartView({
                   title="Out of the inbox in Gmail, and out of this list">
                   <Archive size={ICON.sm} strokeWidth={STROKE.rest} /> Archive
                 </Button>
+                <Button size="sm" variant="ghost" onClick={() => { onDismiss(sel); setPicked(new Set()) }}
+                  title="Take these out of the list — a new message on any of them brings it back">
+                  <EyeOff size={ICON.sm} strokeWidth={STROKE.rest} /> Dismiss
+                </Button>
                 <Button size="sm" variant="ghost" onClick={() => { onIgnore(sel); setPicked(new Set()) }}
-                  title="Never show these again, even when somebody writes back">
-                  <BellOff size={ICON.sm} strokeWidth={STROKE.rest} /> Ignore
+                  title="Mute these threads — new messages on them never come back either">
+                  <BellOff size={ICON.sm} strokeWidth={STROKE.rest} /> Mute
                 </Button>
               </div>
             )}
@@ -311,6 +317,7 @@ export function SmartView({
                     onDiscardDraft={() => onDiscardDraft(t)}
                     onTask={() => onTask([t])} onDone={() => onHandled([t], true)}
                     onArchive={() => onArchive([t])} onIgnore={() => onIgnore([t])}
+                    onDismiss={() => onDismiss([t])}
                     onAcknowledge={() => onAcknowledge([t])}
                     onRsvp={a => onRsvp(t, a)} />
                 ))}
@@ -326,7 +333,7 @@ export function SmartView({
 function Row({
   t, picked, onToggle, manyAccounts, section, open,
   onOpen, onDraft, onSendDraft, onDiscardDraft, onTask, onDone, onArchive, onIgnore,
-  onAcknowledge, onRsvp,
+  onDismiss, onAcknowledge, onRsvp,
 }: {
   t: SmartThread
   picked: boolean
@@ -343,7 +350,10 @@ function Row({
   onTask: () => void
   onDone: () => void
   onArchive: () => void
+  /** Mute the thread for good. */
   onIgnore: () => void
+  /** This message only — the thread comes back when somebody writes again. */
+  onDismiss: () => void
   onAcknowledge: () => void
   onRsvp: (a: 'accepted' | 'tentative' | 'declined') => void
 }) {
@@ -353,7 +363,8 @@ function Row({
   // A stored row carries the sender and the mailbox, which is enough: the
   // company is resolved from those the same way the flat list resolves it.
   const company = useMemo(
-    () => companyOfMail({ fromEmail: t.fromEmail, accountEmail: t.accountEmail }),
+    () => tagOfMail({ fromEmail: t.fromEmail, accountEmail: t.accountEmail },
+                    isBusinessAccount(t.accountEmail)),
     [t.fromEmail, t.accountEmail])
   // The mailbox, but only where it is not the same word as the chip. With the
   // company resolved from the mailbox itself the two are usually identical, and
@@ -365,8 +376,8 @@ function Row({
   const boxLabel = useMemo(() => {
     if (!manyAccounts) return ''
     const label = accountLabel(t.accountEmail)
-    return label === company?.name ? '' : label
-  }, [manyAccounts, t.accountEmail, company?.name])
+    return label === company?.label ? '' : label
+  }, [manyAccounts, t.accountEmail, company?.label])
   return (
     <div style={{
       // `flex-start`, not the default stretch: a stretched checkbox centres its
@@ -405,17 +416,19 @@ function Row({
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{t.subject}</button>
           {company && (
-            <span title={`${company.name}${boxLabel ? ` · ${boxLabel}` : ''}`} style={{
+            <span title={`${company.label}${boxLabel ? ` · ${boxLabel}` : ''}`} style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
               fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 8px',
               borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-2)',
-              background: `color-mix(in srgb, ${company.color} 16%, transparent)`,
+              background: company.isCompany
+                ? `color-mix(in srgb, ${company.color} 16%, transparent)`
+                : 'var(--sb-field)',
               maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               <span aria-hidden style={{
                 width: 6, height: 6, borderRadius: '50%', background: company.color, flexShrink: 0,
               }} />
-              {company.name}
+              {company.label}
             </span>
           )}
         </div>
@@ -568,8 +581,21 @@ function Row({
           <Button size="sm" variant="ghost" iconOnly onClick={onArchive} title="Archive it">
             <Archive size={ICON.sm} strokeWidth={STROKE.rest} />
           </Button>
+          {/* ── Two different promises, so two controls ──────────────────
+              One bell said "ignore", and what it meant was *never show this
+              thread again, whatever anybody writes in it* — much the larger of
+              the two decisions, and the only one on offer, so the smaller one
+              (this message is dealt with, but keep listening) had to be made
+              with the tick and hoped for.
+
+              **Dismiss** takes this message out of the list; a new one on the
+              same thread brings it back. **Mute** is the thread, for good. */}
+          <Button size="sm" variant="ghost" iconOnly onClick={onDismiss}
+            title="Not this message — it leaves the list, and a new message on the thread brings it back">
+            <EyeOff size={ICON.sm} strokeWidth={STROKE.rest} />
+          </Button>
           <Button size="sm" variant="ghost" iconOnly onClick={onIgnore}
-            title="Ignore this thread — it does not come back">
+            title="Mute the whole thread — new messages on it never come back either">
             <BellOff size={ICON.sm} strokeWidth={STROKE.rest} />
           </Button>
           <Button size="sm" variant="ghost" iconOnly onClick={onDone}

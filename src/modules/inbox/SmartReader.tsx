@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Archive, Trash2, X as XIcon, Reply, ReplyAll, Forward, MailOpen, ExternalLink,
-  RefreshCw, ChevronDown, ChevronRight, Paperclip,
+  RefreshCw, ChevronDown, ChevronRight, Paperclip, ListPlus, Check, BellOff,
+  Eye, HelpCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { ICON, STROKE } from '@/lib/type'
@@ -41,6 +42,16 @@ export interface ReaderTarget {
  *  that archived on its own would leave the row behind it. */
 export interface ReaderActions {
   onClose: () => void
+  /** The smart list's own actions, on the thread you are reading. Reading a
+   *  message is when you decide what to do about it, so the decisions have to
+   *  be here and not only on the row you have scrolled past. */
+  onTask: () => void
+  onDone: () => void
+  onIgnoreThread: () => void
+  /** Present only for an invitation. */
+  onRsvp?: (a: 'accepted' | 'tentative' | 'declined') => void
+  /** Present only for a kind that is never an action. */
+  onAcknowledge?: () => void
   onReply: (to: string, subject: string, threadId: string, quoted: string, messageId?: string) => void
   onReplyAll: (to: string, cc: string, subject: string, threadId: string, quoted: string, messageId?: string) => void
   onForward: (subject: string, quoted: string) => void
@@ -144,7 +155,13 @@ export function SmartReader({
     <aside className={className} style={{
       width, flexShrink: 0, alignSelf: 'start',
       position: 'sticky', top: 0,
-      maxHeight: 'calc(100vh - 150px)',
+      // **The height it can actually have.** `calc(100vh - 150px)` guessed at
+      // the chrome above it and came out several hundred pixels short, so a
+      // real message — a signature, three inline images, a quoted thread —
+      // was read through a letterbox. `100dvh` because a phone's toolbar
+      // changes what a viewport unit means as you scroll.
+      height: 'calc(100dvh - 118px)',
+      minHeight: 420,
       display: 'flex', flexDirection: 'column',
       background: 'var(--sb-card)',
       border: 'var(--sb-border-width) solid var(--sb-border)',
@@ -211,6 +228,50 @@ export function SmartReader({
           }}>
           <ExternalLink size={ICON.sm} strokeWidth={STROKE.rest} />
         </a>
+      </div>
+
+      {/* ── What to do about it ──────────────────────────────────────────────
+          The row's own decisions, on the thread you are actually reading.
+          Which are offered is the kind's business, exactly as on the row: an
+          invitation is answered, a notice is acknowledged, everything else
+          becomes a task or is marked done. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+        padding: '9px 14px',
+        borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
+      }}>
+        {actions.onRsvp && (
+          <>
+            <Button size="sm" onClick={() => actions.onRsvp!('accepted')}>
+              <Check size={ICON.sm} strokeWidth={STROKE.active} /> Yes
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => actions.onRsvp!('tentative')}>
+              <HelpCircle size={ICON.sm} strokeWidth={STROKE.rest} /> Maybe
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => actions.onRsvp!('declined')}>
+              <XIcon size={ICON.sm} strokeWidth={STROKE.rest} /> No
+            </Button>
+          </>
+        )}
+        {actions.onAcknowledge && (
+          <Button size="sm" variant="ghost" onClick={actions.onAcknowledge}
+            title="Mark it seen. It stays in the list, marked.">
+            <Eye size={ICON.sm} strokeWidth={STROKE.rest} /> Acknowledge
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" onClick={actions.onTask}
+          title="Make a task out of what this wants">
+          <ListPlus size={ICON.sm} strokeWidth={STROKE.rest} /> Make a task
+        </Button>
+        <span style={{ flex: 1 }} />
+        <Button size="sm" variant="ghost" iconOnly onClick={actions.onDone}
+          title="Done — marks it read in Gmail and takes it out of the list">
+          <Check size={ICON.sm} strokeWidth={STROKE.active} />
+        </Button>
+        <Button size="sm" variant="ghost" iconOnly onClick={actions.onIgnoreThread}
+          title="Ignore this thread from now on — new messages on it never come back">
+          <BellOff size={ICON.sm} strokeWidth={STROKE.rest} />
+        </Button>
       </div>
 
       {/* ── The messages ─────────────────────────────────────────────────── */}
@@ -318,8 +379,15 @@ function Body({ html, text }: { html: string | null; text: string }) {
     const frame = ref.current
     if (!frame) return
     const measure = () => {
-      const h = frame.contentDocument?.body?.scrollHeight
-      if (h && h > 0) setHeight(Math.min(h + 16, 2400))
+      const doc = frame.contentDocument
+      // `scrollHeight` on the body alone under-reports a document whose own
+      // root is what scrolls; the taller of the two is the message.
+      const h = Math.max(doc?.body?.scrollHeight ?? 0, doc?.documentElement?.scrollHeight ?? 0)
+      // No ceiling worth speaking of: the frame is as tall as the message and
+      // the **panel** scrolls. Capping it gave the body its own scrollbar
+      // inside a box inside a scrolling panel — two bars, and the inner one
+      // swallowed the wheel whenever the pointer was over the text.
+      if (h > 0) setHeight(h + 16)
     }
     frame.addEventListener('load', measure)
     // Pictures land after the document does and change its height with them.
@@ -335,7 +403,19 @@ function Body({ html, text }: { html: string | null; text: string }) {
     <iframe
       ref={ref}
       srcDoc={doc}
-      sandbox="allow-popups allow-popups-to-escape-sandbox"
+      // ── Why `allow-same-origin` is here, and why it is safe ────────────
+      //  Without it the frame has an opaque origin and `contentDocument` is
+      //  null, so the parent cannot ask how tall the message is — the frame
+      //  stayed at its initial 180px and every real message was read through a
+      //  letterbox with its own inner scrollbar, which is exactly what it
+      //  looked like.
+      //
+      //  The danger of `allow-same-origin` is **`allow-scripts` beside it**:
+      //  together they let the document reach out of its own sandbox. There is
+      //  no `allow-scripts` here and there never will be. Nothing in a message
+      //  can run, so same-origin access grants it nothing — it only lets *us*
+      //  read a height out of a document that cannot act.
+      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
       title="Message"
       style={{ width: '100%', height, border: 'none', display: 'block', background: 'transparent' }}
     />

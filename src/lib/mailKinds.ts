@@ -60,6 +60,24 @@ const SECURITY_SENDER =
 const UPDATE_SUBJECT =
   /\b(status update|incident|maintenance|scheduled maintenance|deploy(ed|ment)?|build (passed|failed|succeeded)|backup|usage report|weekly (summary|report|digest)|invoice|receipt|payment (received|confirmation)|your .* is ready|has been (updated|completed))\b/i
 
+/** An address that **cannot receive a reply**. The local part says so in so
+ *  many words, and a kind of `reply` for one of these is a contradiction: the
+ *  row would offer to write an answer to a mailbox that discards it. */
+const NO_REPLY_SENDER =
+  /^(no-?reply|do-?not-?reply|noreply|donotreply|[a-z0-9.-]*-no-?reply|mailer-daemon|postmaster|bounces?)@/i
+
+/** A role rather than a person. These *can* be replied to and often should be
+ *  — a support thread you are in the middle of is a conversation — so this one
+ *  never decides on its own. It only demotes a **first** message that has not
+ *  addressed you by name and that you have never written in: a machine's
+ *  announcement, which is what it always is in that shape. */
+const ROLE_SENDER =
+  /^(notifications?|alerts?|updates?|news|newsletters?|info|hello|hi|team|marketing|promo|promotions|offers|events?|webinars?|billing|invoices?|receipts?|system|automated|notify|digest|community|members?|store|shop|feedback|survey)[@+._-]/i
+
+/** A conversation, whoever started it. A `Re:` or a forward has been carried
+ *  by a person, so no amount of role-sounding sender demotes it. */
+const CONVERSATION_SUBJECT = /^\s*(re|fw|fwd|aw|sv|antw)\s*[:\]]/i
+
 export interface KindInput {
   /** The newest message that is not yours. */
   newest: NeutralMessage
@@ -71,6 +89,13 @@ export interface KindInput {
   /** The event's own title says it is off, which plenty of organisers do
    *  instead of cancelling. */
   titleCancelled?: boolean
+  /** You have written in this thread. Then it is a conversation, whatever the
+   *  sender's address looks like. */
+  youWrote?: boolean
+  /** The message says your name. A machine's announcement does not. */
+  namedInBody?: boolean
+  /** How many messages are in it. One is an announcement; several is a thread. */
+  messageCount?: number
 }
 
 export function kindOf(input: KindInput): MailKind {
@@ -87,12 +112,29 @@ export function kindOf(input: KindInput): MailKind {
   if (method === 'REQUEST' || (cal && !method) || INVITE_SUBJECT.test(subject)) return 'invitation'
 
   // ── The rest ─────────────────────────────────────────────────────────────
-  const automated = SECURITY_SENDER.test(fromEmail)
-  if (SECURITY_SUBJECT.test(subject) && (automated || /@(google|microsoft|apple|github|slack|atlassian|okta)\./i.test(fromEmail))) {
+  //
+  //  The order here used to be the other way round: a thread was a `reply`
+  //  unless its *subject* proved otherwise, so "Anghami installed on Hania's
+  //  device" from no-reply@google.com arrived as a person writing to you, in
+  //  the list of things you owe an answer to, with a Draft button under it.
+  //  Nobody at that address is waiting.
+  if (NO_REPLY_SENDER.test(fromEmail)) {
+    return SECURITY_SUBJECT.test(subject) ? 'security' : 'update'
+  }
+
+  const alerty = SECURITY_SENDER.test(fromEmail)
+  if (SECURITY_SUBJECT.test(subject) && (alerty || /@(google|microsoft|apple|github|slack|atlassian|okta)\./i.test(fromEmail))) {
     return 'security'
   }
-  if (automated && (UPDATE_SUBJECT.test(subject) || SECURITY_SUBJECT.test(subject))) return 'update'
-  if (UPDATE_SUBJECT.test(subject) && automated) return 'update'
+  if (alerty && UPDATE_SUBJECT.test(subject)) return 'update'
+
+  // A first message, from a role address, that never says your name and that
+  // you have never written in. Every one of those is an announcement.
+  const conversation = input.youWrote
+    || CONVERSATION_SUBJECT.test(subject)
+    || (input.messageCount ?? 1) > 1
+    || input.namedInBody
+  if (!conversation && (alerty || ROLE_SENDER.test(fromEmail))) return 'update'
 
   return 'reply'
 }

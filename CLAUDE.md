@@ -1606,6 +1606,55 @@ you cannot tell which times.
   differently. `useOpenSections(key)` is the memory, and a section id nobody has
   touched is **open**, so one added later is not silently shut for everybody.
 
+## Mail — an announcement is not a person writing to you
+`kindOf` used to call a thread a `reply` unless its **subject** proved
+otherwise, so "Anghami installed on Hania's device" from `no-reply@google.com`
+arrived in the list of things you owe an answer to, with a Draft button under
+it. Nobody at that address is waiting. The order is the other way round now:
+- **A no-reply address can never want a reply.** `NO_REPLY_SENDER` — the local
+  part says so in so many words — is `security` if the subject is about a
+  sign-in and `update` otherwise. Never `reply`: offering to write to a mailbox
+  that discards it is a contradiction.
+- **A role address is an announcement unless the thread is a conversation.**
+  `ROLE_SENDER` (`events@`, `marketing@`, `support@`, `team@`…) demotes only a
+  **first** message that does not name you and that you have never written in.
+  A `Re:`, a thread of three, a message that says your first name, or one you
+  have answered stays a conversation whatever the address — which is why a
+  support ticket you are in the middle of is not filed as noise.
+- **Information is information whoever it was addressed to.** `update` always
+  lands in FYI. It used to go to *worth knowing* when addressed to you, which
+  made that group the place everything automated ended up, beside the sign-in
+  alerts that genuinely wanted acknowledging.
+- **A campaign goes, and nothing else does.** The old second clause — discard
+  automated mail where the row has nothing but a Draft button — was doing
+  `kindOf`'s job from the spelling of one address, and threw away a support
+  thread for it. Both implementations now say only `!looksCampaign`.
+- **`in:inbox`.** The pass read All Mail, which is everything you have ever sent
+  and everything you have ever archived — so a forward you wrote to yourself was
+  a thing waiting on your answer, and archiving did not take a row out. Fixed in
+  the browser adapter and in the nightly function together.
+- **Personal is a tag, not an absence.** `tagOfMail` gives mail on a mailbox you
+  have *not* marked as work the word **Personal**, in the muted ink. It is not a
+  guess — you say which mailboxes are work in Settings. Mail on a *work* mailbox
+  from a domain that is none of your companies still gets nothing: that is a
+  client, and calling it personal would be wrong rather than merely unhelpful.
+- **Hiding a company hides its mail here too.** `visibleThreads` filters through
+  `isMailHiddenByCompany`, including rows the nightly run stored before it was
+  hidden.
+- **Dismiss and Mute are two controls**, because they were two promises under
+  one bell: dismiss takes *this message* out and a new one on the thread brings
+  it back; mute is the thread, for good.
+- **The reader is `calc(100dvh - 118px)`, and the message frame has no ceiling.**
+  `calc(100vh - 150px)` guessed at the chrome above it and came out short, and
+  the frame was capped so the body scrolled inside a box inside a scrolling
+  panel. The frame is now as tall as the message and the panel is what scrolls.
+  It needs `allow-same-origin` to be measurable at all — safe **only** because
+  `allow-scripts` is absent and always will be: nothing in a message can run, so
+  same-origin grants it nothing and grants us a height.
+- The reader carries the row's own decisions too — Make a task, Done, Mute, and
+  RSVP or Acknowledge where the kind calls for them. Reading a message is when
+  you decide what to do about it.
+
 ## Mail — the smart row, and the thread beside it
 - **The title line is subject on the left, company on the right.** It used to
   be one wrapping row of subject, sender, date, company and the waiting flag, so

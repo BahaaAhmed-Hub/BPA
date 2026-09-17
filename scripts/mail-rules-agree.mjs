@@ -23,7 +23,6 @@ writeFileSync(entry, `
 export * as app  from '${process.cwd()}/src/lib/mailSmart'
 export * as edge from '${process.cwd()}/supabase/functions/_shared/mailRules.ts'
 export * as prov  from '${process.cwd()}/src/lib/mailProvider'
-export * as kinds from '${process.cwd()}/src/lib/mailKinds'
 `)
 
 // esbuild is not a dependency of this project, so it is run rather than
@@ -43,7 +42,7 @@ globalThis.localStorage = {
 }
 globalThis.window = { dispatchEvent() {}, addEventListener() {}, removeEventListener() {} }
 
-const { app, edge, prov, kinds } = await import(out)
+const { app, edge, prov } = await import(out)
 
 const DAY = 864e5
 const NOW = new Date('2026-06-15T12:00:00Z').getTime()
@@ -86,6 +85,14 @@ const CASES = [
   ['a cloud status notice',           [msg({ from: 'alerts@statuspage.io', subject: 'Scheduled maintenance on Sunday', at: NOW - DAY })]],
   ['somebody accepting your invite',  [msg({ from: 'O <o@client.com>', subject: 'Accepted: Kickoff', at: NOW - DAY, headers: [{ name: 'Content-Type', value: 'text/calendar; method=REPLY' }] })]],
   ['free-mail sender',                [msg({ from: 'Mum <mum@gmail.com>', at: NOW - 2 * DAY, body: 'dinner?' })]],
+  // ── The ones that were arriving as "somebody is waiting on your answer" ──
+  ['a device notice from Google',     [msg({ from: 'Google <no-reply@google.com>', subject: 'Anghami installed on Hania\u2019s device', at: NOW - DAY, body: 'A new app was installed.' })]],
+  ['a webinar thank-you',             [msg({ from: 'Fixed Solutions <marketing@fixedsolutions.example>', subject: 'Thank you for attending', at: NOW - DAY, body: 'Thanks for joining us.' })]],
+  ['a role address, first message',   [msg({ from: 'Events <events@somewhere.example>', subject: 'Our next session', at: NOW - DAY, body: 'Join us again.' })]],
+  // …and the ones that must stay conversations despite the address
+  ['a support thread you are in',     [msg({ from: 'Support <support@vendor.example>', subject: 'Re: ticket 1204', at: NOW - 3 * DAY, body: 'Any update?' })]],
+  ['a role address that names you',   [msg({ from: 'Team <team@vendor.example>', subject: 'Your account', at: NOW - 2 * DAY, body: 'Bahaa, we need your confirmation.' })]],
+  ['a forward you sent yourself',     [msg({ from: ME, to: ME, subject: 'FW: Integration', at: NOW - 3600e3, body: 'fyi' })]],
 ]
 
 const FIELDS = ['replyState', 'addressedTo', 'namedInBody', 'bottleneck', 'awaitingCustomer', 'section', 'kind']
@@ -101,8 +108,11 @@ for (const [name, messages] of CASES) {
 
   if (!a || !e) { console.log(`${name.padEnd(36)} — one side returned nothing`); bad++; continue }
 
-  const appKind = kinds.kindOf({ newest: messages.filter(m => m.from !== ME).pop() ?? messages[messages.length - 1],
-                                 subject: a.subject, fromEmail: a.fromEmail })
+  // The app's own reading, not a second call with fewer arguments — `readThread`
+  // passes kindOf the thread's shape (who wrote, how many, whether you are
+  // named), and re-deriving it here without those was the script disagreeing
+  // with itself rather than with the server.
+  const appKind = a.kind
   const appSection = app.sectionFor(a, false, appKind)
   const newest = messages.filter(m => m.from !== ME).pop() ?? messages[messages.length - 1]
   // Kept/discarded, both sides, for a mailbox marked as work.

@@ -28,6 +28,7 @@ import {
   windowStart, meSet, firstNameOf, type ThreadFacts, type SmartSection, type ReplyState,
 } from '@/lib/mailSmart'
 import { isBusinessAccount } from '@/lib/businessAccounts'
+import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import {
   loadSmartThreads, saveSmartThreads, loadSyncMarks, saveSyncMark,
   pruneSmartThreads, type SmartRow,
@@ -121,6 +122,11 @@ function visibleThreads(all: SmartThread[], from: number): SmartThread[] {
     // Ignored means ignored: a new message on a muted thread does not undo the
     // decision, which is the difference between "ignore" and "done".
     .filter(t => !t.muted)
+    // Hiding a company is one decision and it has to mean the same thing
+    // everywhere — its tasks, its calendars and its mail all go quiet
+    // together. This view was the one place still showing it, including the
+    // rows the nightly run had stored before the company was hidden.
+    .filter(t => !isMailHiddenByCompany({ from: t.fromEmail, accountEmail: t.accountEmail }))
     .sort((a, b) => orderThreads(
       { bottleneck: a.bottleneck, lastAt: a.lastAt } as ThreadFacts,
       { bottleneck: b.bottleneck, lastAt: b.lastAt } as ThreadFacts))

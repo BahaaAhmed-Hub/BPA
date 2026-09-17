@@ -157,3 +157,31 @@ export function companyOfMail(m: MailLike): MailCompany | null {
 /** What a group of company-less mail is called. One string, in one place, so
  *  the header and the empty state cannot disagree. */
 export const NO_COMPANY = 'No company'
+
+/** The label that stands in for a company where there is none.
+ *
+ *  A row with a chip beside one without reads as the second having failed to
+ *  resolve, and every business row had one. **Personal** is not a guess: a
+ *  mailbox is work or it is not, and you say which in Settings → Accounts. So
+ *  mail on a mailbox you have *not* marked as work wears that word, in the
+ *  muted ink rather than a company colour, because it is the absence of a
+ *  company rather than one more of them.
+ *
+ *  Mail on a mailbox you *have* marked as work, from a domain that is none of
+ *  your companies, still gets nothing: that is a client, and calling it
+ *  "Personal" would be wrong rather than merely unhelpful. */
+export const PERSONAL = 'Personal'
+
+export interface MailTag {
+  label: string
+  color: string
+  /** A real company of yours, rather than the personal stand-in. */
+  isCompany: boolean
+}
+
+export function tagOfMail(m: MailLike, mailboxIsBusiness: boolean): MailTag | null {
+  const co = companyOfMail(m)
+  if (co) return { label: co.name, color: co.color, isCompany: true }
+  if (mailboxIsBusiness) return null
+  return { label: PERSONAL, color: 'var(--sb-ink-4)', isCompany: false }
+}
