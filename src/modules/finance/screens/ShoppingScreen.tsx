@@ -117,7 +117,7 @@ interface ItemRowProps {
   suggestedPaymentAccount?: string
 }
 
-function ItemRow({ item, envelopes, onUpdate, onDelete, onPurchase, onRefreshPrice, priceLoading, suggestedPaymentAccount }: ItemRowProps) {
+function ItemRow({ item, stores, envelopes, onUpdate, onDelete, onPurchase, onRefreshPrice, priceLoading, suggestedPaymentAccount }: ItemRowProps) {
   const [expanded, setExpanded] = useState(false)
   const [confirmPurchase, setConfirmPurchase] = useState(false)
   const [finalPrice, setFinalPrice] = useState(item.finalPrice?.toString() ?? item.bestPrice?.price?.toString() ?? '')
@@ -222,16 +222,32 @@ function ItemRow({ item, envelopes, onUpdate, onDelete, onPurchase, onRefreshPri
             />
           </label>
 
-          {/* Suggested stores */}
-          {(item.suggestedStores?.length ?? 0) > 0 && (
+          {/* Store picker */}
+          {stores.length > 0 && (
             <div style={{ fontSize: 11, color: C.ink3 }}>
-              CHECKING PRICES AT
-              <div style={{ marginTop: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {(item.suggestedStores ?? []).map(sid => (
-                  <span key={sid} style={{ fontSize: 11, padding: '2px 7px', borderRadius: 10, background: C.field, color: C.ink3, border: `1px solid ${C.border}` }}>
-                    {sid}
-                  </span>
-                ))}
+              CHECK PRICES AT
+              <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {stores.map(s => {
+                  const selected = (item.suggestedStores ?? []).includes(s.id)
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => {
+                        const current = item.suggestedStores ?? []
+                        onUpdate({ suggestedStores: selected ? current.filter(id => id !== s.id) : [...current, s.id] })
+                      }}
+                      style={{
+                        fontSize: 11, padding: '3px 9px', borderRadius: 10, cursor: 'pointer',
+                        background: selected ? C.accent : C.field,
+                        color: selected ? '#191712' : C.ink3,
+                        border: `1px solid ${selected ? C.accent : C.border}`,
+                        fontWeight: selected ? 600 : 400,
+                      }}
+                    >
+                      {s.name}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
