@@ -33,7 +33,7 @@ import type { DbUser } from '@/types/database'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
-import { Segmented, SectionCard, useOpenSections, Pill } from '@/components/ui'
+import { Segmented, SectionCard, useOpenSections, Pill, Card } from '@/components/ui'
 import { companyOfMail, NO_COMPANY, type MailCompany } from '@/lib/mailCompany'
 import { KIND_NEED } from '@/lib/mailKinds'
 
@@ -76,15 +76,17 @@ interface Email {
  *  buttons wider than most of the messages under it. */
 /** A classification tab. Lit is ink, because it is a filter and you have to be
  *  able to see at a glance that something is being hidden. */
-function classTab(on: boolean): React.CSSProperties {
-  return {
-    display: 'inline-flex', alignItems: 'center', gap: 5, height: 26, padding: '0 10px',
-    borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
-    fontSize: 'var(--sb-t-meta)', fontWeight: 600, whiteSpace: 'nowrap',
-    background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
-    border: `var(--sb-border-width) solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-    color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-  }
+/** The number beside a filter's name. Tabular figures so a row of pills does
+ *  not jiggle as counts change, and dimmed against whichever ground it is on —
+ *  it is a detail of the label, not a second label. */
+function Count({ n, on }: { n: number; on: boolean }) {
+  return (
+    <span style={{
+      fontVariantNumeric: 'tabular-nums',
+      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+      opacity: on ? 0.7 : 1,
+    }}>{n}</span>
+  )
 }
 
 const ICON_ACTION: React.CSSProperties = {
@@ -582,6 +584,31 @@ export function InboxModule() {
   }, [filteredEmails, sortKey, sortAsc, companyByMail])
 
   const { isOpen: isGroupOpen, toggle: toggleGroup } = useOpenSections('mail-groups-open')
+
+  // ── Does the filter rail have more to the right? ──────────────────────────
+  //  The fade at its edge is the only thing that says so — the scrollbar is
+  //  hidden, being 15px of furniture under a 27px row that appears and
+  //  disappears as counts change. But a fade that is always there is just a
+  //  dimmed last pill, so it is drawn only while there is something behind it,
+  //  and only until you have scrolled to it.
+  const railRef = useRef<HTMLDivElement | null>(null)
+  const measureRail = useCallback(() => {
+    const el = railRef.current
+    if (!el) return
+    const more = el.scrollWidth > el.clientWidth + 2
+    el.toggleAttribute('data-overflow', more)
+    el.toggleAttribute('data-at-end', el.scrollLeft + el.clientWidth >= el.scrollWidth - 2)
+  }, [])
+  useEffect(() => {
+    const el = railRef.current
+    if (!el) return
+    measureRail()
+    // The counts change as mail arrives and the column changes width when the
+    // reader opens, so one measurement at mount is the wrong number by lunch.
+    const ro = new ResizeObserver(measureRail)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [measureRail, mailClass, classCounts, visibleEmails.length])
 
   /** The messages a bulk action would act on: what the chosen tab holds. */
   const inClass = useMemo(
@@ -1626,43 +1653,100 @@ export function InboxModule() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {/* Search */}
-        <div style={{ position: 'relative' }}>
-          <Search size={ICON.sm} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--sb-ink-3)', pointerEvents: 'none' }} />
-          <input
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search emails…"
-            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 32px 8px 30px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', outline: 'none' }}
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
-              <XIcon size={ICON.sm} />
-            </button>
-          )}
-        </div>
+        {/* ── One toolbar ──────────────────────────────────────────────────
+            Search, what kind of mail, and how it is ordered used to be three
+            boxes stacked down the page — two of which wrapped onto a second
+            line of their own — so a third of the column was spent on controls
+            before a single message appeared. They are one card now, and every
+            control in it is the app's own: `Pill` for the filters, because a
+            filter is on or off, and `Segmented` for sort and for grouping,
+            because each is one of a small fixed set. Nothing here is a
+            hand-built pill any more. */}
+        <Card className="mail-toolbar" style={{ padding: 9, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={ICON.sm} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--sb-ink-3)', pointerEvents: 'none' }} />
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search emails…"
+              style={{ width: '100%', boxSizing: 'border-box', padding: '8px 32px 8px 30px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-hairline)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', outline: 'none' }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
+                <XIcon size={ICON.sm} />
+              </button>
+            )}
+          </div>
 
-        {/* ── What kind of mail this week held ─────────────────────────────
-            Every class implies a different action — that is what makes it a
-            class rather than a label. The tabs themselves do nothing but
-            narrow the list; the actions are the row under them. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setMailClass(null)}
-            style={classTab(mailClass === null)}>
-            All <span style={{ opacity: 0.65, fontVariantNumeric: 'tabular-nums' }}>{visibleEmails.length}</span>
-          </button>
-          {CLASSES.map(c => (
-            <button
-              key={c}
-              onClick={() => setMailClass(mailClass === c ? null : c)}
-              title={classCounts[c] === 0 ? CLASS_INFO[c].empty : undefined}
-              style={{ ...classTab(mailClass === c), opacity: classCounts[c] === 0 ? 0.45 : 1 }}>
-              {CLASS_INFO[c].label}{' '}
-              <span style={{ opacity: 0.65, fontVariantNumeric: 'tabular-nums' }}>{classCounts[c]}</span>
-            </button>
-          ))}
-        </div>
+          {/* ── What kind of mail ──────────────────────────────────────────
+              Every class implies a different action — that is what makes it a
+              class rather than a label. Seven of them wrapped to two lines and
+              pushed everything below them down; they are one line that scrolls
+              sideways instead, which is what a row of filters does everywhere
+              else. A class with nothing in it stays drawn and goes quiet, so
+              the row does not reshuffle as mail arrives. */}
+          {/* The fade is the affordance: a row cut flush at the card's edge
+              reads as a row that failed to draw, and there is no scrollbar to
+              say otherwise. */}
+          <div className="mail-filter-rail" ref={railRef} onScroll={measureRail}>
+            <Pill on={mailClass === null} onClick={() => setMailClass(null)}
+              title="Everything in this folder">
+              All <Count n={visibleEmails.length} on={mailClass === null} />
+            </Pill>
+            {CLASSES.map(c => (
+              <Pill key={c} on={mailClass === c}
+                onClick={() => setMailClass(mailClass === c ? null : c)}
+                title={classCounts[c] === 0 ? CLASS_INFO[c].empty : `${classCounts[c]} ${CLASS_INFO[c].label.toLowerCase()}`}
+                style={classCounts[c] === 0 ? { opacity: 0.45 } : undefined}>
+                {CLASS_INFO[c].label} <Count n={classCounts[c]} on={mailClass === c} />
+              </Pill>
+            ))}
+          </div>
+
+          {/* ── How it is ordered ──────────────────────────────────────────
+              Sort on the left, grouping hard right, on one line. Pressing the
+              key you are already on turns it round — the arrow on the active
+              option is what says which way — so four keys and two directions
+              cost one control rather than five. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {/* The eyebrow goes when the toolbar is too narrow to hold
+                everything on one line. It is 52px naming a control whose
+                active option already carries an arrow; losing it to keep sort
+                and grouping side by side is the better trade. */}
+            <span className="mail-sort-label" style={{
+              fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
+              textTransform: 'uppercase', color: 'var(--sb-ink-4)', flexShrink: 0,
+            }}>Sort</span>
+            <Segmented
+              size="sm"
+              value={sortKey}
+              onChange={v => setSort(v as MailSortKey)}
+              aria-label="Sort the list"
+              options={SORTS.map(o => ({
+                value: o.id,
+                label: <>{o.label}{sortKey === o.id ? (sortAsc ? ' ↑' : ' ↓') : ''}</>,
+                title: sortKey === o.id
+                  ? `${o.label}, ${sortAsc ? o.asc : o.desc} — press again to turn it round`
+                  : `Sort by ${o.label.toLowerCase()}`,
+              }))}
+            />
+            {/* `margin-left: auto` rather than a flex spacer: on one line the
+                two are identical, but when the row wraps a spacer eats the
+                rest of the first line and drops this to the *left* of the
+                second, which is the one place it must never be. */}
+            <Segmented
+              size="sm"
+              style={{ marginLeft: 'auto' }}
+              value={groupBy}
+              onChange={v => setGroup(v as MailGroupBy)}
+              aria-label="Group the list"
+              options={[
+                { value: 'none',    label: 'Flat',       title: 'One list, in the order above' },
+                { value: 'company', label: 'By company', title: 'One folding card per company' },
+              ]}
+            />
+          </div>
+        </Card>
 
         {/* ── What to do with the class in front of you ────────────────────── */}
         {mailClass && (
@@ -1779,44 +1863,6 @@ export function InboxModule() {
             </div>
           )
         })()}
-
-        {/* ── How it is ordered, and whether it is grouped ─────────────────
-            A sort control that is four buttons rather than a menu: four
-            options is not a menu, and a menu you have to open to see what is
-            possible hides the fact that you can sort at all. The one you are
-            on turns round when you press it again, which is what a sortable
-            column has always done and what a second control for it would be.
-            Grouped, the list becomes one folding card per company — the same
-            component the smart view folds its sections with. */}
-        {filteredEmails.length > 0 && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-            padding: '7px 10px', borderRadius: 'var(--sb-r-nav)',
-            background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-hairline)',
-          }}>
-            <span style={{
-              fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
-              textTransform: 'uppercase', color: 'var(--sb-ink-3)',
-            }}>Sort</span>
-            {SORTS.map(o => (
-              <Pill key={o.id} on={sortKey === o.id} onClick={() => setSort(o.id)}
-                title={sortKey === o.id
-                  ? `${o.label}, ${sortAsc ? o.asc : o.desc} — press again to turn it round`
-                  : `Sort by ${o.label.toLowerCase()}`}>
-                {o.label}{sortKey === o.id ? (sortAsc ? ' ↑' : ' ↓') : ''}
-              </Pill>
-            ))}
-            <span style={{ flex: 1 }} />
-            <Segmented
-              value={groupBy}
-              onChange={v => setGroup(v as MailGroupBy)}
-              options={[
-                { value: 'none',    label: 'Flat' },
-                { value: 'company', label: 'By company' },
-              ]}
-            />
-          </div>
-        )}
 
         {filteredEmails.length === 0 ? (
           <div style={{

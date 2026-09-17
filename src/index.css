@@ -794,3 +794,60 @@ img { max-width: 100%; }
     max-height: none !important;
   }
 }
+
+/* ─── The mail toolbar's filter rail ───────────────────────────────────────── */
+/*
+   Seven class filters wrapped onto a second line and pushed the whole list down
+   with them. A row of filters is one line that scrolls, everywhere else in the
+   world, so it is one here: no wrap, and the overflow slides.
+
+   The scrollbar itself is hidden. It is 15px of furniture under a 28px row, it
+   appears and disappears as counts change, and the pills are plainly a row you
+   can push. Nothing opens *out* of this rail, so the clipping an overflow
+   container imposes on its descendants costs nothing here — the lesson the
+   Financials "to check" panel taught still stands for anything that does. */
+.mail-filter-rail {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* The pills' focus ring would be clipped flush against the edge otherwise. */
+  padding: 2px 1px;
+  margin: -2px -1px;
+}
+.mail-filter-rail::-webkit-scrollbar { display: none; }
+/* The last pill fades out rather than being cut flush at the card's edge. With
+   the scrollbar hidden this is the only thing that says there is more; a hard
+   cut reads as a row that failed to draw. `mask-image` rather than a gradient
+   overlay, so it works on any theme's card colour without being told it. */
+.mail-filter-rail[data-overflow] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+          mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+}
+/* …and it goes once you have scrolled to the end, because by then there is
+   nothing more that way and a permanent fade is just a dimmed last pill. */
+.mail-filter-rail[data-overflow][data-at-end] {
+  -webkit-mask-image: none;
+          mask-image: none;
+}
+/* Inside the rail a filter is a compact pill: the row is a control bar, not a
+   set of buttons, and 32px each over seven of them is a bar you notice before
+   the mail. */
+.mail-filter-rail .sb-pill {
+  height: 27px;
+  padding: 0 11px;
+  font-size: var(--sb-t-meta);
+  font-weight: 600;
+  gap: 5px;
+}
+
+/* The toolbar measures itself, not the window: what decides whether sort and
+   grouping fit on one line is the width of the column they are in, and that
+   column is half the screen when a message is open and all of it when not. */
+.mail-toolbar { container-type: inline-size; }
+@container (max-width: 500px) {
+  .mail-sort-label { display: none; }
+}

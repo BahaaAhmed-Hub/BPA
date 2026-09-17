@@ -1548,6 +1548,34 @@ git push -u origin claude/professor-web-app-dev-tnj0uk
 - Pre-existing unused vars scattered in `finance/screens/` — fix by prefixing or deleting if truly dead code.
 - `npm run build` = `tsc -b && vite build` — both must pass.
 
+## Mail — one toolbar, built out of the app's own controls
+Search, what kind of mail, and how it is ordered were three boxes stacked down
+the column — two of which wrapped onto a second line of their own — so a third
+of the list's width-worth of height went on controls before a message appeared.
+They are one `Card` now, and **every control in it is a platform component**:
+`Pill` for the class filters (a filter is on or off), `Segmented` for sort and
+for grouping (each is one of a small fixed set). The hand-built `classTab()`
+pill is gone.
+- **The filter rail is one line that scrolls.** Seven classes wrapped and pushed
+  everything below them down; `.mail-filter-rail` is `flex-wrap: nowrap` with
+  `overflow-x: auto`. The scrollbar is hidden — 15px of furniture under a 27px
+  row that appears and disappears as counts change — so a **`mask-image` fade**
+  on the right edge is the only thing that says there is more. It is drawn
+  **only while there is** (`data-overflow`, measured by a `ResizeObserver`) and
+  **not once you have reached the end** (`data-at-end`): a permanent fade is
+  just a dimmed last pill. A class with nothing in it stays drawn and goes
+  quiet, so the row does not reshuffle as mail arrives.
+- **Sort is one `Segmented`, not four pills.** Date / Sender / Company /
+  Subject, with ↑ or ↓ on the active one; pressing the key you are on turns it
+  round, so four keys and two directions cost one control rather than five.
+- **The group control right-aligns with `margin-left: auto`, never a spacer.**
+  On one line the two are identical; when the row wraps a flex spacer eats the
+  rest of the first line and drops the control to the *left* of the second.
+- **The toolbar measures itself, not the window.** `container-type: inline-size`
+  and a `@container (max-width: 500px)` rule drops the SORT eyebrow — what
+  decides whether the two controls fit is the width of the column they are in,
+  which is 360px with a message open and the whole page without one.
+
 ## Mail — whose business is this
 `lib/mailCompany.ts` answers it for one message, and the answer is the
 **counterparty first**: the sender's domain matched against your companies, then
