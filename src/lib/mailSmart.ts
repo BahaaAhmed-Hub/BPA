@@ -7,19 +7,19 @@
 //  figure a model produced twice is two answers to one question.
 //
 //  Two things this deliberately does NOT do:
-//  - **It never searches the sent folder.** A Gmail thread already contains
-//    your own replies; `getThread` returns all of them. Searching Sent for the
-//    same thread would be a second request per thread to learn what the first
-//    one already said.
+//  - **It never searches the sent folder.** A thread already contains your own
+//    replies — every provider worth adapting returns them with it. Searching
+//    Sent for the same thread would be a second request per thread to learn
+//    what the first one already said.
 //  - **It never decides what a message *means*.** Whether a deliverable is
 //    owed, and what to say back, is the one part a model is actually needed
 //    for, and it is asked separately, only about threads whose newest message
 //    has not been read before.
 
-import { header, extractBody, type GmailMessage, type GmailThread } from '@/lib/gmail'
 import { classifyMail } from '@/lib/mailClasses'
 import { isFreeMailDomain } from '@/lib/businessAccounts'
 import { normaliseEmail } from '@/modules/calendar/NewEventPanel'
+import { headerOf, type NeutralMessage, type NeutralThread } from '@/lib/mailProvider'
 
 /** Where a thread lands. The three the brief asks for, in priority order. */
 export type SmartSection = 'action' | 'radar' | 'fyi'
@@ -77,30 +77,9 @@ export function meSet(addresses: (string | undefined)[]): Set<string> {
   return new Set(addresses.map(a => normaliseEmail(a)).filter(Boolean))
 }
 
-function addressesIn(value: string): string[] {
-  // "A B <a@b.c>, d@e.f" → both addresses. A display name may itself contain a
-  // comma ("Ahmed, Bahaa <b@x.y>"), so the split is on the angle-bracket form
-  // first and only falls back to commas for a bare list.
-  const out: string[] = []
-  const re = /<([^>]+)>|([^\s,;<>]+@[^\s,;<>]+)/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(value))) out.push(normaliseEmail(m[1] ?? m[2]))
-  return out.filter(Boolean)
-}
-
-export function fromAddress(msg: GmailMessage): string {
-  return addressesIn(header(msg.payload.headers, 'From'))[0] ?? ''
-}
-
-export function fromDisplayName(msg: GmailMessage): string {
-  const raw = header(msg.payload.headers, 'From')
-  const name = raw.replace(/<[^>]*>/, '').replace(/["']/g, '').trim()
-  return name || fromAddress(msg).split('@')[0] || 'Unknown'
-}
-
 /** Sent by one of your own addresses. */
-function isMine(msg: GmailMessage, me: Set<string>): boolean {
-  return me.has(fromAddress(msg))
+function isMine(msg: NeutralMessage, me: Set<string>): boolean {
+  return me.has(normaliseEmail(msg.from))
 }
 
 /** Your first name as it would be written to you. Used only for the
@@ -121,14 +100,16 @@ export function firstNameOf(displayName: string | undefined, email: string): str
  * message to the other.
  */
 export function readThread(
-  thread: GmailThread,
+  thread: NeutralThread,
   accountEmail: string,
   me: Set<string>,
   myFirstName: string,
   now = Date.now(),
 ): ThreadFacts | null {
-  const msgs = [...(thread.messages ?? [])].sort(
-    (a, b) => Number(a.internalDate) - Number(b.internalDate))
+  // The provider hands them over oldest first; this does not re-sort, so an
+  // adapter that gets it wrong is a bug in the adapter rather than a cost paid
+  // on every thread.
+  const msgs = thread.messages ?? []
   if (msgs.length === 0) return null
 
   const last = msgs[msgs.length - 1]
@@ -138,9 +119,9 @@ export function readThread(
   // something waiting on you.
   const newestInbound = inbound[inbound.length - 1] ?? last
 
-  const lastRepliedAt = mine.length ? Number(mine[mine.length - 1].internalDate) : null
-  const lastAt = Number(last.internalDate)
-  const lastInboundAt = Number(newestInbound.internalDate)
+  const lastRepliedAt = mine.length ? mine[mine.length - 1].sentAt : null
+  const lastAt = last.sentAt
+  const lastInboundAt = newestInbound.sentAt
 
   const replyState: ReplyState =
     lastRepliedAt === null ? 'none'
@@ -149,21 +130,20 @@ export function readThread(
 
   // To vs Cc, on the newest message that is not yours: being copied on a thread
   // you are also on the To line of does not demote it.
-  const to = addressesIn(header(newestInbound.payload.headers, 'To'))
-  const addressedTo = to.some(a => me.has(a))
+  const addressedTo = newestInbound.to.some(a => me.has(normaliseEmail(a)))
 
-  const body = extractBody(newestInbound)
+  const body = newestInbound.body
   const namedInBody = myFirstName.length > 1 &&
     new RegExp(`\\b${myFirstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(body)
 
-  const fromEmail = fromAddress(newestInbound)
+  const fromEmail = normaliseEmail(newestInbound.from)
   const domain = fromEmail.split('@')[1] ?? ''
 
   return {
     threadId: thread.id,
     accountEmail,
-    subject: header(last.payload.headers, 'Subject') || '(no subject)',
-    fromName: fromDisplayName(newestInbound),
+    subject: last.subject || '(no subject)',
+    fromName: newestInbound.fromName || fromEmail.split('@')[0] || 'Unknown',
     fromEmail,
     lastMessageId: last.id,
     lastAt,
@@ -183,7 +163,7 @@ export function readThread(
     bottleneck: replyState !== 'replied' && now - lastInboundAt >= DAY
       && (addressedTo || namedInBody),
     messageCount: msgs.length,
-    snippet: newestInbound.snippet ?? '',
+    snippet: newestInbound.snippet,
   }
 }
 
@@ -198,19 +178,24 @@ export function readThread(
  * from headers, with no model call and no second opinion.
  */
 export function isBusinessThread(
-  facts: ThreadFacts, newest: GmailMessage, accountIsBusiness: boolean,
+  facts: ThreadFacts, newest: NeutralMessage, accountIsBusiness: boolean,
 ): boolean {
-  const h = newest.payload.headers
+  const h = newest.headers
   const kind = classifyMail({
     headers: h,
     fromEmail: facts.fromEmail,
-    to: header(h, 'To').toLowerCase(),
-    cc: header(h, 'Cc').toLowerCase(),
+    to: newest.to.join(', '),
+    cc: newest.cc.join(', '),
     subject: facts.subject,
     // The snippet, not the whole body: `looksLikeBulk` reads it for an
-    // unsubscribe line, and that lives in the part Gmail already handed over.
-    body: newest.snippet ?? '',
+    // unsubscribe line, and that lives in the part already handed over.
+    body: newest.snippet,
     mailbox: facts.accountEmail,
+    // `classifyMail` only calls something an invitation when it is told, and
+    // nothing here was telling it — so calendar invitations were surviving
+    // into the smart view, which is the one thing the brief names twice as
+    // something to discard. The header is the same test the nightly run makes.
+    isInvitation: /text\/calendar/i.test(headerOf(h, 'Content-Type')),
   })
   if (kind === 'newsletter' || kind === 'notification' || kind === 'invitation') return false
   if (accountIsBusiness) return true
@@ -239,17 +224,6 @@ export function sectionFor(f: ThreadFacts, direct = false): SmartSection {
 export function orderThreads(a: ThreadFacts, b: ThreadFacts): number {
   if (a.bottleneck !== b.bottleneck) return a.bottleneck ? -1 : 1
   return b.lastAt - a.lastAt
-}
-
-/** The Gmail search for one pass. `since` is the watermark — the first run
- *  reaches back 30 days, every run after it only asks for what has arrived
- *  since the last one, which is the whole reason reopening the tab is cheap. */
-export function searchQuery(sinceMs: number): string {
-  // Gmail's `after:` takes whole seconds and is exclusive of nothing, so a
-  // second of overlap is deliberate: a message landing in the same second as
-  // the watermark must not fall between two runs.
-  const after = Math.floor(Math.max(0, sinceMs - 1000) / 1000)
-  return `after:${after} -in:chats -in:spam -in:trash`
 }
 
 export const WINDOW_DAYS = 30

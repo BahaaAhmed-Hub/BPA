@@ -19,12 +19,11 @@
 //
 //  A pass that finds nothing new does no fetching, no analysis and no writing.
 
+import type { MailAccount } from '@/lib/gmail'
+import { gmailProvider } from '@/lib/gmailProvider'
+import type { MailProvider, NeutralMessage } from '@/lib/mailProvider'
 import {
-  getThread, listThreadIds, extractBody,
-  type MailAccount, type GmailMessage,
-} from '@/lib/gmail'
-import {
-  readThread, isBusinessThread, sectionFor, orderThreads, searchQuery,
+  readThread, isBusinessThread, sectionFor, orderThreads,
   windowStart, meSet, firstNameOf, type ThreadFacts, type SmartSection, type ReplyState,
 } from '@/lib/mailSmart'
 import { isBusinessAccount } from '@/lib/businessAccounts'
@@ -131,8 +130,12 @@ export async function runSmartPass(opts: {
   full?: boolean
   now?: number
   store?: SmartStore
+  /** Which mail system these mailboxes are on. Gmail unless told otherwise —
+   *  the engine itself has no opinion. */
+  provider?: MailProvider
 }): Promise<PassResult> {
   const store = opts.store ?? serverStore
+  const provider = opts.provider ?? gmailProvider
   const now = opts.now ?? Date.now()
   const from = windowStart(now)
   const emails = opts.accounts.map(a => a.email)
@@ -154,13 +157,14 @@ export async function runSmartPass(opts: {
   const perAccount = await Promise.all(opts.accounts.map(async account => {
     const since = Math.max(marks[account.email] ?? 0, from)
     try {
-      const { ids } = await listThreadIds(MAX_PER_PASS, undefined, account, searchQuery(since))
+      const box = { email: account.email, isPrimary: account.isPrimary }
+      const ids = await provider.listThreadsSince(box, since, MAX_PER_PASS)
       const business = isBusinessAccount(account.email)
-      const out: { facts: ThreadFacts; newest: GmailMessage }[] = []
+      const out: { facts: ThreadFacts; newest: NeutralMessage }[] = []
       for (const id of ids) {
         const key = `${account.email}|${id}`
         const known = cached.get(key)
-        const full = await getThread(id, account)
+        const full = await provider.getThread(box, id)
         fetched++
         const facts = readThread(full, account.email, me, myFirstName, now)
         if (!facts) continue
@@ -191,7 +195,7 @@ export async function runSmartPass(opts: {
       receivedAt: new Date(facts.lastAt).toISOString(),
       addressedToMe: facts.addressedTo,
       replyState: facts.replyState,
-      body: extractBody(newest),
+      body: newest.body,
     }))
     for (let i = 0; i < inputs.length; i += BATCH) {
       const slice = inputs.slice(i, i + BATCH)
