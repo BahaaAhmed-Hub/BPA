@@ -164,12 +164,9 @@ function DumpCard({ task, onOpen, onDelete }: {
 
 // ─── Rail ────────────────────────────────────────────────────────────────────
 
-export function BrainDumpRail({ tasks, onOpen, flexible }: {
+export function BrainDumpRail({ tasks, onOpen }: {
   tasks: Task[]
   onOpen: (id: string) => void
-  /** Share the row's width with what sits beside it instead of holding 360px.
-   *  Used when the detail panel is open and the space has to go round. */
-  flexible?: boolean
 }) {
   const { addTask, updateTask, deleteTask } = useTaskStore()
   const [capturing, setCapturing] = useState(false)
@@ -252,9 +249,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
   return (
     <>
     <div style={{
-      ...(flexible
-        ? { flex: 1, minWidth: 0 }
-        : { width: 'clamp(240px, 26vw, 360px)', flexShrink: 0 }),
+      width: 'clamp(240px, 26vw, 360px)', flexShrink: 0,
       alignSelf: 'start',
       background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       display: 'flex', flexDirection: 'column',
