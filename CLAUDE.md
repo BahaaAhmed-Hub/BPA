@@ -1703,6 +1703,31 @@ it. Nobody at that address is waiting. The order is the other way round now:
   RSVP or Acknowledge where the kind calls for them. Reading a message is when
   you decide what to do about it.
 
+## Mail — the four are views, not sections
+Four collapsible sections stacked down the page meant scrolling past the three
+you were not working on to reach the one you were; folding them away traded that
+for four headers and a memory of which you had shut. They are **views** — one at
+a time, picked from the same `Pill` rail (`.mail-filter-rail`) the ordinary list
+filters by class with — plus **All**.
+- **All is a real answer, not a fallback.** The whole window in one list, in the
+  order the pass gave it (what you are holding up first, then newest), so a row
+  keeps its place whichever view you came from. Each row carries a
+  **`SectionDot`** naming its group, which is what the section header used to
+  say; the dot is drawn *only* in All, since anywhere else you have just asked
+  that question by picking the view.
+- **Each view says what it is.** "Worth knowing" and "On your radar" are not
+  self-explanatory and nothing on screen said which was which. The blurb is on
+  the pill's tooltip and again above the list you are reading.
+- **A count prints even when it is 0.** Blank reads as *not known* where a nought
+  reads as *none*, and telling those apart is the whole point of a count.
+- **The header stopped repeating the rail.** It said the same four numbers a
+  second time; it now says the one thing none of them does — how many people are
+  actually waiting on you (`bottleneck && !handled`).
+- A row's *shape* belongs to the row: an FYI thread is one compact line whether
+  you are looking at FYI or at everything. `mail-smart-view` remembers the view;
+  changing it clears the selection, which was aimed at rows the next view does
+  not show.
+
 ## Mail — the smart row, and the thread beside it
 - **The title line is subject on the left, company on the right.** It used to
   be one wrapping row of subject, sender, date, company and the waiting flag, so

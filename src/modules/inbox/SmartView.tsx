@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, EyeOff, X as XIcon, HelpCircle, Send, Trash2, LogIn } from 'lucide-react'
-import { Button, Pill, SectionCard, useOpenSections } from '@/components/ui'
+import { Button, Card, Pill } from '@/components/ui'
 import { ICON, STROKE } from '@/lib/type'
 import type { MailAccount } from '@/lib/gmail'
 import { accountLabel } from './mailAccounts'
@@ -22,22 +22,61 @@ import { isBusinessAccount } from '@/lib/businessAccounts'
 //  work!" and no "You're all caught up 🎉" — an empty section says it is empty
 //  and stops.
 
-const SECTIONS: { id: SmartSection; title: string; dot: string; empty: string }[] = [
+/** The four, and **what each one actually means** — because "Worth knowing"
+ *  and "On your radar" are not self-explanatory names and there was nowhere on
+ *  the screen that said which was which. The blurb is on the pill's tooltip and
+ *  again above the list you are reading, so the answer is where the question
+ *  is. */
+const SECTIONS: { id: SmartSection; title: string; dot: string; blurb: string; empty: string }[] = [
   { id: 'action', title: 'Requires your action', dot: 'var(--sb-negative)',
+    blurb: 'Addressed to you, unanswered — plus every invitation.',
     empty: 'Nothing is waiting on you.' },
   // The half of "needs your attention" that wants nothing from you: a sign-in,
-  // a status notice, a meeting called off. Worth seeing, never a task.
+  // a meeting called off. Worth seeing, never a task.
   { id: 'attention', title: 'Worth knowing', dot: 'var(--sb-accent-deep)',
+    blurb: 'Sign-ins and cancellations addressed to you. Nothing to answer.',
     empty: 'Nothing to catch up on.' },
   { id: 'radar', title: 'On your radar', dot: 'var(--sb-warning)',
+    blurb: 'A person writing, unanswered — but you were only copied in.',
     empty: 'Nothing to watch.' },
   { id: 'fyi', title: 'Internal FYI', dot: 'var(--sb-info)',
+    blurb: 'Answered, automated, or dealt with. Nothing wants anything.',
     empty: 'Nothing here.' },
 ]
 
-/** Which sections are folded away. Remembered, because the one you keep shut is
- *  shut for a reason and reopening it every visit is the app forgetting. */
-const OPEN_KEY = 'mail-smart-open-sections'
+const META: Record<SmartSection, typeof SECTIONS[number]> =
+  Object.fromEntries(SECTIONS.map(s => [s.id, s])) as Record<SmartSection, typeof SECTIONS[number]>
+
+/** Which view you had open, remembered — the one you work in is the one you
+ *  want to land in. */
+type SmartViewId = SmartSection | 'all'
+const VIEW_KEY = 'mail-smart-view'
+
+/** The number beside a view's name. Tabular figures so the rail does not
+ *  jiggle as counts change, and **printed even when it is 0** — a blank reads
+ *  as "not known" where a nought reads as "none", and the whole point of a
+ *  count on a shut group is telling those apart. */
+function Count({ n, on }: { n: number; on: boolean }) {
+  return (
+    <span style={{
+      fontVariantNumeric: 'tabular-nums',
+      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+      opacity: on ? 0.7 : 1,
+    }}>{n}</span>
+  )
+}
+
+/** The group a row is in, on the row, for the All view. Colour is never the
+ *  only signal — the name is in the tooltip, and the pill above says the same
+ *  thing in the same colour. */
+function SectionDot({ id }: { id: SmartSection }) {
+  return (
+    <span title={META[id].title} aria-label={META[id].title} style={{
+      width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+      background: META[id].dot, alignSelf: 'center',
+    }} />
+  )
+}
 
 const EYEBROW: React.CSSProperties = {
   fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
@@ -143,7 +182,15 @@ export function SmartView({
   onRsvp: (t: SmartThread, answer: 'accepted' | 'tentative' | 'declined') => void
 }) {
   const [picked, setPicked] = useState<Set<string>>(new Set())
-  const { isOpen, toggle: toggleOpen } = useOpenSections(OPEN_KEY)
+  const [view, setView] = useState<SmartViewId>(() => {
+    try { return (localStorage.getItem(VIEW_KEY) as SmartViewId) || 'action' } catch { return 'action' }
+  })
+  const choose = (v: SmartViewId) => {
+    setView(v)
+    // A selection made in one view is aimed at rows the next one does not show.
+    setPicked(new Set())
+    try { localStorage.setItem(VIEW_KEY, v) } catch { /* quota */ }
+  }
   const key = (t: SmartThread) => `${t.accountEmail}|${t.threadId}`
 
   const threads = useMemo(() => result?.threads ?? [], [result])
@@ -178,6 +225,15 @@ export function SmartView({
     return n
   })
 
+  // What this view is showing. `all` keeps the order the pass gave it — what
+  // you are holding up first, then newest — so a row does not move because you
+  // changed which view you were reading it in.
+  // Unanswered, over a day old, and actually addressed to you.
+  const holdingUp = useMemo(() => threads.filter(t => t.bottleneck && !t.handled).length, [threads])
+  const here = view === 'all' ? META.action : META[view]
+  const shown = view === 'all' ? threads : grouped[view]
+  const sel = pickedIn(shown)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* ── What the last pass did. A line, not a spinner: the interesting
@@ -189,13 +245,16 @@ export function SmartView({
       }}>
         <span style={EYEBROW}>Last 30 days</span>
         <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
+          {/* The rail below counts each group, so repeating those here was the
+              same four numbers twice. This says the thing none of them does:
+              **how many people are actually waiting on you**, which is the
+              question the whole screen exists to answer. */}
           {loading ? 'Reading…'
-            : result
-              // All four, or the line counts three sections on a screen that
-              // draws four and the missing one reads as rows that went astray.
-              ? `${grouped.action.length} requiring you · ${grouped.attention.length} worth knowing`
-                + ` · ${grouped.radar.length} on your radar · ${grouped.fyi.length} for information`
-              : 'Not read yet.'}
+            : !result ? 'Not read yet.'
+            : holdingUp > 0
+              ? `${holdingUp} ${holdingUp === 1 ? 'person is' : 'people are'} waiting on you`
+              : threads.length > 0 ? 'Nobody is waiting on you.'
+              : 'Nothing in the last thirty days.'}
         </span>
         {result && !loading && (
           <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
@@ -256,111 +315,144 @@ export function SmartView({
         </div>
       )}
 
-      {SECTIONS.map(s => {
-        const list = grouped[s.id]
-        const sel = pickedIn(list)
-        const compact = s.id === 'fyi'
-        const shown = isOpen(s.id)
-        return (
-          <SectionCard key={s.id} title={s.title} count={list.length} dot={s.dot}
-            open={shown} onToggle={() => toggleOpen(s.id)}
-            right={!compact && list.length > 0 && (
-              <Pill on={sel.length === list.length && list.length > 0}
-                onClick={() => setAll(list, sel.length !== list.length)}>
-                {sel.length === list.length ? 'Clear' : 'Select all'}
-              </Pill>
-            )}
-            banner={sel.length > 0 && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                padding: '9px 16px', background: 'var(--sb-accent-tint)',
-                borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
-              }}>
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', fontWeight: 600 }}>
-                  {sel.length} selected
-                </span>
-                <span style={{ flex: 1 }} />
-                <Button size="sm" onClick={() => { onTask(sel); setPicked(new Set()) }}>
-                  <ListPlus size={ICON.sm} strokeWidth={STROKE.rest} />
-                  {s.id === 'action' ? `Make ${sel.length} task${sel.length === 1 ? '' : 's'}`
-                    : `Follow up on ${sel.length}`}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => { onHandled(sel, true); setPicked(new Set()) }}>
-                  <Check size={ICON.sm} strokeWidth={STROKE.active} /> Mark done
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => { onArchive(sel); setPicked(new Set()) }}
-                  title="Out of the inbox in Gmail, and out of this list">
-                  <Archive size={ICON.sm} strokeWidth={STROKE.rest} /> Archive
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => { onDismiss(sel); setPicked(new Set()) }}
-                  title="Take these out of the list — a new message on any of them brings it back">
-                  <EyeOff size={ICON.sm} strokeWidth={STROKE.rest} /> Dismiss
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => { onIgnore(sel); setPicked(new Set()) }}
-                  title="Mute these threads — new messages on them never come back either">
-                  <BellOff size={ICON.sm} strokeWidth={STROKE.rest} /> Mute
-                </Button>
-              </div>
-            )}
+      {/* ── The views ────────────────────────────────────────────────────
+          Four sections stacked down the page meant scrolling past the three
+          you were not working on to reach the one you were, and folding them
+          away only traded that for four headers and a memory of which you had
+          shut. They are **views** now — one at a time, chosen from a rail, in
+          the app's own filter component, the same one the ordinary mail list
+          filters by class with.
 
-            >
-            {list.length === 0 ? (
-              <div style={{ padding: '14px 16px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
-                {loading ? 'Reading…' : s.empty}
-              </div>
-            ) : compact ? (
-              // FYI is a list, not a set of cards: subject and one line, nothing
-              // to act on, so nothing that looks actionable.
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {list.map(t => (
-                  <button key={key(t)} onClick={() => onOpen(t)}
-                    style={{
-                      display: 'flex', alignItems: 'baseline', gap: 10, textAlign: 'left',
-                      padding: '8px 16px', background: 'transparent', border: 'none',
-                      borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
-                      cursor: 'pointer', fontFamily: 'inherit', width: '100%',
-                    }}>
-                    <span style={{
-                      fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', fontWeight: 500,
-                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '42%',
-                    }}>{t.subject}</span>
-                    <span style={{
-                      flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
-                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                    }}>{t.awaitingCustomer ? 'Awaiting customer — no follow-up needed' : (t.need || t.fromName)}</span>
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
-                      {when(t.lastAt)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {list.map(t => (
-                  <Row key={key(t)} t={t} picked={picked.has(key(t))} onToggle={() => toggle(t)}
-                    manyAccounts={accounts.length > 1}
-                    open={t.threadId === openThreadId}
-                    section={s.id}
-                    onOpen={() => onOpen(t)} onDraft={() => onDraft(t)}
-                    onSendDraft={() => onSendDraft(t)}
-                    onDiscardDraft={() => onDiscardDraft(t)}
-                    onTask={() => onTask([t])} onDone={() => onHandled([t], true)}
-                    onArchive={() => onArchive([t])} onIgnore={() => onIgnore([t])}
-                    onDismiss={() => onDismiss([t])}
-                    onAcknowledge={() => onAcknowledge([t])}
-                    onRsvp={a => onRsvp(t, a)} />
-                ))}
-              </div>
-            )}
-          </SectionCard>
-        )
-      })}
+          **All** is a real answer rather than a fallback: it is the whole of
+          the last thirty days in one list, in the order the sections would
+          have put it — what you are holding up first, then newest — so a row
+          keeps its place whichever view you came from. */}
+      <div className="mail-filter-rail">
+        <Pill on={view === 'all'} onClick={() => choose('all')}
+          title="Everything, in the order it matters">
+          All <Count n={threads.length} on={view === 'all'} />
+        </Pill>
+        {SECTIONS.map(s => (
+          <Pill key={s.id} on={view === s.id} onClick={() => choose(s.id)}
+            title={grouped[s.id].length === 0 ? s.empty : s.blurb}>
+            <span aria-hidden style={{
+              width: 6, height: 6, borderRadius: '50%', background: s.dot, flexShrink: 0,
+            }} />
+            {s.title} <Count n={grouped[s.id].length} on={view === s.id} />
+          </Pill>
+        ))}
+      </div>
+
+      <Card style={{ padding: 0, overflow: 'hidden' }}>
+        {/* The bulk bar appears only when there is a selection to act on. */}
+        {sel.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+            padding: '9px 16px', background: 'var(--sb-accent-tint)',
+            borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
+          }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', fontWeight: 600 }}>
+              {sel.length} selected
+            </span>
+            <span style={{ flex: 1 }} />
+            <Button size="sm" onClick={() => { onTask(sel); setPicked(new Set()) }}>
+              <ListPlus size={ICON.sm} strokeWidth={STROKE.rest} />
+              {view === 'action' ? `Make ${sel.length} task${sel.length === 1 ? '' : 's'}`
+                : `Follow up on ${sel.length}`}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { onHandled(sel, true); setPicked(new Set()) }}>
+              <Check size={ICON.sm} strokeWidth={STROKE.active} /> Mark done
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { onArchive(sel); setPicked(new Set()) }}
+              title="Out of the inbox in Gmail, and out of this list">
+              <Archive size={ICON.sm} strokeWidth={STROKE.rest} /> Archive
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { onDismiss(sel); setPicked(new Set()) }}
+              title="Take these out of the list — a new message on any of them brings it back">
+              <EyeOff size={ICON.sm} strokeWidth={STROKE.rest} /> Dismiss
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { onIgnore(sel); setPicked(new Set()) }}
+              title="Mute these threads — new messages on them never come back either">
+              <BellOff size={ICON.sm} strokeWidth={STROKE.rest} /> Mute
+            </Button>
+          </div>
+        )}
+
+        {shown.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '9px 16px',
+            borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
+          }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flex: 1, minWidth: 0 }}>
+              {view === 'all' ? 'Everything, what you are holding up first' : here.blurb}
+            </span>
+            <Pill on={sel.length === shown.length}
+              onClick={() => setAll(shown, sel.length !== shown.length)}>
+              {sel.length === shown.length ? 'Clear' : 'Select all'}
+            </Pill>
+          </div>
+        )}
+
+        {shown.length === 0 ? (
+          <div style={{ padding: '22px 16px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+            {loading ? 'Reading…' : view === 'all' ? 'No mail in the last thirty days.' : here.empty}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {shown.map(t => {
+              // A row's shape belongs to the row, not to the view it is being
+              // read in: something with nothing to act on is one line whether
+              // you are looking at FYI or at everything at once.
+              const where = t.handled ? 'fyi' : t.section
+              return where === 'fyi' ? (
+                <button key={key(t)} onClick={() => onOpen(t)}
+                  style={{
+                    display: 'flex', alignItems: 'baseline', gap: 10, textAlign: 'left',
+                    padding: '8px 16px', background: 'transparent', border: 'none',
+                    borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
+                    cursor: 'pointer', fontFamily: 'inherit', width: '100%',
+                  }}>
+                  {view === 'all' && <SectionDot id={where} />}
+                  <span style={{
+                    fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', fontWeight: 500,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '42%',
+                  }}>{t.subject}</span>
+                  <span style={{
+                    flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>{t.awaitingCustomer ? 'Awaiting customer — no follow-up needed' : (t.need || t.fromName)}</span>
+                  <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
+                    {when(t.lastAt)}
+                  </span>
+                </button>
+              ) : (
+                <Row key={key(t)} t={t} picked={picked.has(key(t))} onToggle={() => toggle(t)}
+                  manyAccounts={accounts.length > 1}
+                  open={t.threadId === openThreadId}
+                  section={where}
+                  // Which group it is in, but only where that is not already
+                  // the answer to the question you asked by picking a view.
+                  showSection={view === 'all'}
+                  onOpen={() => onOpen(t)} onDraft={() => onDraft(t)}
+                  onSendDraft={() => onSendDraft(t)}
+                  onDiscardDraft={() => onDiscardDraft(t)}
+                  onTask={() => onTask([t])} onDone={() => onHandled([t], true)}
+                  onArchive={() => onArchive([t])} onIgnore={() => onIgnore([t])}
+                  onDismiss={() => onDismiss([t])}
+                  onAcknowledge={() => onAcknowledge([t])}
+                  onRsvp={a => onRsvp(t, a)} />
+              )
+            })}
+          </div>
+        )}
+      </Card>
     </div>
   )
 }
 
 function Row({
-  t, picked, onToggle, manyAccounts, section, open,
+  t, picked, onToggle, manyAccounts, section, open, showSection,
   onOpen, onDraft, onSendDraft, onDiscardDraft, onTask, onDone, onArchive, onIgnore,
   onDismiss, onAcknowledge, onRsvp,
 }: {
@@ -371,6 +463,9 @@ function Row({
   section: SmartSection
   /** Being read in the panel beside the list. */
   open: boolean
+  /** Draw which group it is in. Only in the All view — anywhere else you have
+   *  just asked the question by picking the view. */
+  showSection: boolean
   onOpen: () => void
   onDraft: () => void
   /** Send what is written, as it is written. The only thing here that sends. */
@@ -436,6 +531,7 @@ function Row({
             down has to be in the same place on each line, which means it is
             pinned to an edge rather than pushed along by whatever precedes it. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {showSection && <SectionDot id={section} />}
           <button onClick={onOpen} title="Open the thread"
             style={{
               flex: 1, minWidth: 0,
