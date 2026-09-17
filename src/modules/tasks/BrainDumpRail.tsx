@@ -3,7 +3,7 @@
 // and an auto-distribute footer that reads each task's own fields.
 
 import { useState } from 'react'
-import { Plus, Sparkles, GripVertical, Check, AlertTriangle, RotateCcw, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Sparkles, GripVertical, Check, AlertTriangle, RotateCcw, Trash2, ChevronLeft, ChevronRight, ScanLine } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
 import type { Task, Quadrant } from '@/types'
 import { loadVisibleCompanies } from '@/types'
@@ -11,6 +11,7 @@ import { useTaskStore } from '@/store/taskStore'
 import { suppressUndo } from '@/lib/undo'
 import { CountBadge } from './controls'
 import { ICON, STROKE } from '@/lib/type'
+import { ImageDumpDialog } from './ImageDumpDialog'
 
 // ─── Collapsed or not ────────────────────────────────────────────────────────
 // The rail costs 360px of the board, so whether it is open is worth remembering
@@ -174,6 +175,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
   const [capturing, setCapturing] = useState(false)
   const [draft, setDraft] = useState('')
   const [lastRun, setLastRun] = useState<{ id: string; quadrant: Quadrant | null; boardStatus?: string }[] | null>(null)
+  const [scanOpen, setScanOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(loadCollapsed)
 
   function toggleCollapsed() {
@@ -248,6 +250,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
   }
 
   return (
+    <>
     <div style={{
       ...(flexible
         ? { flex: 1, minWidth: 0 }
@@ -271,15 +274,30 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
         <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>
           Uncategorised — drag into a quadrant
         </p>
-        <button onClick={() => setCapturing(c => !c)} style={{
-          width: '100%', marginTop: 11,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          height: 32, borderRadius: 'var(--sb-r-sm)',
-          background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
-          fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-        }}>
-          <Plus size={ICON.sm} strokeWidth={STROKE.rest} /> Capture
-        </button>
+        <div style={{ display: 'flex', gap: 6, marginTop: 11 }}>
+          <button onClick={() => setCapturing(c => !c)} style={{
+            flex: 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            height: 32, borderRadius: 'var(--sb-r-sm)',
+            background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
+            fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            <Plus size={ICON.sm} strokeWidth={STROKE.rest} /> Capture
+          </button>
+          <button
+            onClick={() => setScanOpen(true)}
+            title="Scan a photo or PDF — AI extracts tasks"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              height: 32, padding: '0 12px', borderRadius: 'var(--sb-r-sm)',
+              background: 'rgba(245,209,78,0.12)', border: '1px solid rgba(245,209,78,0.4)',
+              color: '#D4A827', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
+              cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+            }}
+          >
+            <ScanLine size={ICON.sm} strokeWidth={STROKE.rest} /> Scan
+          </button>
+        </div>
         {capturing && (
           <textarea
             autoFocus value={draft} rows={3}
@@ -376,5 +394,8 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
         </button>
       </div>
     </div>
+
+    {scanOpen && <ImageDumpDialog onClose={() => setScanOpen(false)} />}
+    </>
   )
 }
