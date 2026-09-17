@@ -231,14 +231,29 @@ export function buildTaskGroups(tasks: Task[], groupBy: Exclude<TaskGroupBy, 'no
   }
 
   const companies = loadDynamicCompanies()
+  // Build a case-insensitive name → id lookup so legacy `company` strings resolve
+  // to the same UUID as tasks that already have a `companyId`, preventing
+  // duplicate groups for "Teradix" vs "teradix" vs the UUID.
+  const nameToId = new Map<string, string>()
+  for (const c of companies) nameToId.set(c.name.toLowerCase(), c.id)
+
   const map = new Map<string, Task[]>()
   for (const t of tasks) {
-    const k = t.companyId ?? t.company
+    let k: string
+    if (t.companyId) {
+      k = t.companyId
+    } else if (t.company) {
+      k = nameToId.get(t.company.toLowerCase()) ?? t.company.toLowerCase()
+    } else {
+      k = '__none'
+    }
     if (!map.has(k)) map.set(k, [])
     map.get(k)!.push(t)
   }
-  return [...map.entries()].map(([k, ts]) => {
-    const co = companies.find(c => c.id === k)
-    return { key: k, label: co?.name ?? k, emoji: '🏢', color: co?.color ?? 'var(--sb-ink-4)', tasks: sortUrgentFirst(ts) }
-  })
+  return [...map.entries()]
+    .filter(([k]) => k !== '__none')
+    .map(([k, ts]) => {
+      const co = companies.find(c => c.id === k)
+      return { key: k, label: co?.name ?? k, emoji: '🏢', color: co?.color ?? 'var(--sb-ink-4)', tasks: sortUrgentFirst(ts) }
+    })
 }
