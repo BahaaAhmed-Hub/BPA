@@ -507,7 +507,7 @@ function Row({
       // `flex-start`, not the default stretch: a stretched checkbox centres its
       // own glyph against the whole row and drifts away from the title it
       // selects.
-      display: 'flex', alignItems: 'flex-start', gap: 11, padding: '12px 16px',
+      display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 14px',
       borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
       // Being the one holding a thread up is the single most useful thing this
       // screen can tell you, so it is marked on the row rather than sorted for
@@ -522,7 +522,10 @@ function Row({
         aria-label={`Select "${t.subject}"`}
         style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--sb-ink-1)', cursor: 'pointer' }} />
 
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+      {/* 3px between the four lines of a row, not 5: a row is one thing said
+          on four lines, and spacing them like paragraphs made a list of eight
+          threads a page of scrolling. */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
         {/* ── The title line ───────────────────────────────────────────────
             Subject alone on the left, company alone on the right. It used to
             be one wrapping row of subject, sender, date, company and the
@@ -563,9 +566,16 @@ function Row({
             company resolved from that same mailbox the two were the identical
             word twice on one line, which is how a row starts looking like a
             mistake. */}
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{t.fromName}</span>
           <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>{when(t.lastAt)}</span>
+          {/* ── Whether you have answered ─────────────────────────────────
+              This used to sit at the left of the *actions* row, where it had a
+              whole line to itself whenever the buttons wrapped away from it —
+              a four-line row for three lines of content. It is a fact about
+              the thread, like the date and the sender, so it lives with them. */}
+          {t.kind === 'invitation' ? <InviteChip />
+            : answerable ? <ReplyChip t={t} /> : <KindChip kind={t.kind} />}
           {boxLabel && (
             <span title={t.accountEmail} style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
               {boxLabel}
@@ -580,7 +590,7 @@ function Row({
           )}
         </div>
 
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
+        <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
           {t.awaitingCustomer
             ? 'Awaiting customer — no follow-up needed.'
             : t.need || 'No summary — the model was not asked or did not answer.'}
@@ -595,8 +605,8 @@ function Row({
             thing that ever sends. */}
         {draftShown && (
           <div style={{
-            display: 'flex', flexDirection: 'column', gap: 6,
-            padding: '9px 11px', borderRadius: 'var(--sb-r-nav)',
+            display: 'flex', flexDirection: 'column', gap: 5,
+            padding: '7px 10px', borderRadius: 'var(--sb-r-nav)', marginTop: 2,
             background: 'var(--sb-field)',
             border: 'var(--sb-border-width) solid var(--sb-hairline)',
           }}>
@@ -645,13 +655,7 @@ function Row({
             </Button>
           </div>
         ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 1 }}>
-          {/* An invitation has no reply state worth showing — it has an answer,
-              and the answer is the three buttons. Nor has a machine's notice:
-              "No reply" under a sign-in alert is true, and reads as a reproach
-              about a message nobody is waiting on. */}
-          {t.kind === 'invitation' ? <InviteChip />
-            : answerable ? <ReplyChip t={t} /> : <KindChip kind={t.kind} />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span style={{ flex: 1 }} />
 
           {/* ── What this kind actually wants ───────────────────────────────

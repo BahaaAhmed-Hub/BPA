@@ -1723,6 +1723,18 @@ filters by class with — plus **All**.
 - **The header stopped repeating the rail.** It said the same four numbers a
   second time; it now says the one thing none of them does — how many people are
   actually waiting on you (`bottleneck && !handled`).
+- **The reply state sits with the sender and the date**, not at the left of the
+  actions row. There it had a whole line to itself whenever the buttons wrapped
+  away from it — a four-line row for three lines of content — and it is a fact
+  about the thread, like the date, rather than a thing you do.
+- **3px between a row's lines, not 5**, and `9px 14px` of padding. A row is one
+  thing said on four lines; spacing them like paragraphs made eight threads a
+  page of scrolling.
+- **The reader's envelope is labelled fields, not a notation.** `from@x → to@y ·
+  cc z` is something you decode rather than scan: it gives Cc no more weight
+  than an arrow and has nowhere to put Bcc at all. FROM / TO / CC / BCC down the
+  left, each absent when empty — Bcc therefore appears only on your own sent
+  copy, which is exactly where it is worth seeing.
 - A row's *shape* belongs to the row: an FYI thread is one compact line whether
   you are looking at FYI or at everything. `mail-smart-view` remembers the view;
   changing it clears the selection, which was aimed at rows the next view does

@@ -66,6 +66,7 @@ interface Shown {
   fromName: string
   to: string
   cc: string
+  bcc: string
   date: string
   html: string | null
   text: string
@@ -79,6 +80,24 @@ function addressOf(v: string): string {
 function nameOf(v: string): string {
   const n = v.replace(/<[^>]*>/, '').replace(/["']/g, '').trim()
   return n || addressOf(v).split('@')[0] || 'Unknown'
+}
+
+/** One row of the envelope, or nothing at all where the header is empty. A
+ *  label with no value beside it is a field you spend a moment reading before
+ *  realising it says nothing. */
+function Field({ label, value }: { label: string; value: string }) {
+  if (!value.trim()) return null
+  return (
+    <>
+      <span style={{
+        color: 'var(--sb-ink-4)', fontWeight: 600, letterSpacing: '0.04em',
+        textTransform: 'uppercase', fontSize: 'var(--sb-t-micro)', whiteSpace: 'nowrap',
+      }}>{label}</span>
+      <span style={{ color: 'var(--sb-ink-3)', wordBreak: 'break-word', minWidth: 0 }}>
+        {value}
+      </span>
+    </>
+  )
 }
 
 function attachmentsOf(msg: GmailMessage): string[] {
@@ -127,6 +146,7 @@ export function SmartReader({
           fromName: nameOf(header(m.payload?.headers ?? [], 'From')),
           to: header(m.payload?.headers ?? [], 'To'),
           cc: header(m.payload?.headers ?? [], 'Cc'),
+          bcc: header(m.payload?.headers ?? [], 'Bcc'),
           date: header(m.payload?.headers ?? [], 'Date'),
           html: extractHtmlBody(m),
           text: extractBody(m),
@@ -326,12 +346,25 @@ export function SmartReader({
 
               {shown && (
                 <div style={{ padding: '0 14px 14px' }}>
-                  <p style={{
-                    margin: '0 0 8px', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)',
-                    lineHeight: 1.5, wordBreak: 'break-word',
+                  {/* ── The envelope, as every mail client writes it ────────
+                      It used to be one muted line — `from@x → to@y · cc z` —
+                      which is a notation rather than a header: you cannot scan
+                      it for who was copied, it gives Cc no more weight than an
+                      arrow, and it has nowhere to put Bcc at all. Labels down
+                      the left, addresses beside them, each field on its own
+                      row and absent when it is empty. */}
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 10, rowGap: 2,
+                    margin: '0 0 9px', fontSize: 'var(--sb-t-micro)', lineHeight: 1.5,
                   }}>
-                    {addressOf(m.from)}{m.to && <> → {m.to}</>}{m.cc && <> · cc {m.cc}</>}
-                  </p>
+                    <Field label="From" value={m.from} />
+                    <Field label="To" value={m.to} />
+                    <Field label="Cc" value={m.cc} />
+                    {/* A message you *received* never carries one — that is
+                        what blind means — so this shows only on your own sent
+                        copy, which is exactly where it is worth seeing. */}
+                    <Field label="Bcc" value={m.bcc} />
+                  </div>
                   {m.attachments.length > 0 && (
                     <p style={{
                       margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
