@@ -186,11 +186,52 @@ function getWeekEnd(start: Date): Date {
 function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
-function fmtWeekRange(start: Date): string {
-  const end  = getWeekEnd(start)
-  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
-  return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)}`
+// ─── How many days a week can honestly show ──────────────────────────────────
+//
+//  The week view drew seven columns whatever the room, so the columns simply
+//  got narrower: 126px at 1024, 93px at 768, and **39px on a phone** — the
+//  width of one letter of an event title. The grid was there, it scrolled, it
+//  was drawn correctly, and it told you nothing.
+//
+//  Seven days is a layout, not a fact about a week. Where seven will not fit,
+//  fewer are shown and the arrows step by however many are on screen, so you
+//  move through the week at the rate you can read it.
+const WEEK_SPANS: [number, number][] = [[1024, 7], [860, 5], [620, 3]]
+const NARROW_SPAN = 2
+
+function weekSpanFor(width: number): number {
+  for (const [min, days] of WEEK_SPANS) if (width >= min) return days
+  return NARROW_SPAN
 }
+
+function useWeekSpan(): number {
+  const [span, setSpan] = useState(() =>
+    typeof window === 'undefined' ? 7 : weekSpanFor(window.innerWidth))
+  useEffect(() => {
+    const read = () => setSpan(weekSpanFor(window.innerWidth))
+    window.addEventListener('resize', read)
+    // A rotation changes the width without always firing `resize` first.
+    window.addEventListener('orientationchange', read)
+    read()
+    return () => {
+      window.removeEventListener('resize', read)
+      window.removeEventListener('orientationchange', read)
+    }
+  }, [])
+  return span
+}
+
+/** The span actually on screen, first day to last. `fmtWeekRange` assumed a
+ *  seven-day week and would have kept naming Sunday–Saturday while three days
+ *  were drawn. */
+function fmtDayRange(days: Date[]): string {
+  if (days.length === 0) return ''
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+  const a = days[0], b = days[days.length - 1]
+  if (days.length === 1) return a.toLocaleDateString('en-US', opts)
+  return `${a.toLocaleDateString('en-US', opts)} – ${b.toLocaleDateString('en-US', opts)}`
+}
+
 function fmtShort(iso: string): string {
   const d = new Date(iso)
   const h = d.getHours(), m = d.getMinutes()
@@ -1127,6 +1168,9 @@ export function CalendarIntelligence() {
   })
   const firstDow  = useWeekStart()
   const weekStart = useMemo(() => getWeekStart(anchorDate, firstDow), [anchorDate, firstDow])
+  // Seven columns need seven columns' worth of room; below that the week is
+  // drawn a few days at a time rather than squeezed into slivers.
+  const weekSpan = useWeekSpan()
   const [events,          setEvents]          = useState<GCalEvent[]>(() => loadEventsCache(getWeekStart(new Date())))
   const [allCalendars,    setAllCalendars]    = useState<CalWithAccount[]>(() => {
     // Use the last known primary email (saved to localStorage after each successful auth)
@@ -1945,9 +1989,16 @@ export function CalendarIntelligence() {
 
   // ── Week navigation ──────────────────────────────────────────────────────────
   // Week draws all seven; day draws only the focused one, through the same grid.
+  // A full week starts on the week's own first day. A shortened one starts on
+  // the day you are *on* — anchoring it to Sunday would show you Sun–Tue while
+  // you were looking at Friday, and the arrows would never reach the weekend.
   const weekDays = calView === 'day'
     ? [new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate())]
-    : Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d })
+    : Array.from({ length: weekSpan }, (_, i) => {
+        const d = new Date(weekSpan >= 7 ? weekStart : anchorDate)
+        d.setDate(d.getDate() + i)
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+      })
 
   // Month view lays out whole weeks, Sunday-first, so the grid stays rectangular
   const monthCells = useMemo(() => {
@@ -2216,7 +2267,7 @@ export function CalendarIntelligence() {
             }}>
               {calView === 'month' ? anchorDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
                 : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
-                : fmtWeekRange(weekStart)}
+                : fmtDayRange(weekDays)}
             </span>
             {/* One live sentence, not a row of labels. Anything it cannot
                 honestly say, it leaves out rather than printing a zero. */}
@@ -2335,7 +2386,9 @@ export function CalendarIntelligence() {
                 const n = new Date(d)
                 if (calView === 'day') n.setDate(n.getDate() - 1)
                 else if (calView === 'month') n.setMonth(n.getMonth() - 1)
-                else n.setDate(n.getDate() - 7)
+                // Step by what is drawn, or three-day weeks would jump a full
+                // seven and skip the days in between entirely.
+                else n.setDate(n.getDate() - weekSpan)
                 return n
               })}
               style={CAL_DISC}><ChevronLeft size={ICON.md} strokeWidth={STROKE.rest} /></button>
@@ -2356,7 +2409,7 @@ export function CalendarIntelligence() {
                 const n = new Date(d)
                 if (calView === 'day') n.setDate(n.getDate() + 1)
                 else if (calView === 'month') n.setMonth(n.getMonth() + 1)
-                else n.setDate(n.getDate() + 7)
+                else n.setDate(n.getDate() + weekSpan)
                 return n
               })}
               style={CAL_DISC}><ChevronRight size={ICON.md} strokeWidth={STROKE.rest} /></button>

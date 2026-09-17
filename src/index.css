@@ -691,6 +691,14 @@ img { max-width: 100%; }
      to the afternoon. The grid needs a definite height of its own down here,
      and the body's scroll is what reveals the rail below it. */
   .cal-col { min-height: clamp(360px, calc(100vh - 262px), 680px); }
+  /* The 100% row cap above is right for the wide layout, where the grid and
+     the rail share ONE row and neither may stretch it. Stacked they are two
+     rows, and capping each at the body's height while the column asks for more
+     made the column overflow its row and draw on top of the rail below it —
+     rail rows appearing through the grid at a phone width. Down here each row
+     is its own height and the body scrolls past them both. */
+  .cal-body { grid-auto-rows: auto; }
+  .cal-rail { max-height: none; overflow-y: visible; }
 }
 /* The rail is 324px, but the event panel and the composer are the app's own
    docked panel — clamp(289px, 30.6vw, 400px), and wider again when expanded.

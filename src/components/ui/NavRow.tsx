@@ -33,6 +33,11 @@ export function NavRow({
       data-active={active ? '' : undefined}
       data-collapsed={collapsed ? '' : undefined}
       title={collapsed ? label : rest.title}
+      // Collapsed, the label is not drawn, so the button's only name is the
+      // tooltip — and `title` is a fallback a browser may or may not announce.
+      // Below 1024px this is the entire app nav, so the one way to reach any
+      // module would have been seven unnamed squares.
+      aria-label={collapsed && typeof label === 'string' ? label : rest['aria-label']}
       className={['sb-nav-row', className].filter(Boolean).join(' ')}
       {...rest}
     >
