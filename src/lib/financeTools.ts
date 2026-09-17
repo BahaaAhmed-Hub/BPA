@@ -1110,7 +1110,7 @@ export async function executeFinanceTool(
       }
       ss.purchaseItem(item.id, num('final_price'))
       notify(`${item.name} purchased`)
-      return { ok: true, item: item.name, final_price: num('final_price') ?? null, note: 'Undo is available.' }
+      return { ok: true, item: item.name, final_price: num('final_price') ?? null }
     }
 
     case 'get_price_history': {

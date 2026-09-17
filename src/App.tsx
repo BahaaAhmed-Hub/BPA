@@ -31,6 +31,7 @@ import type { CompanyRow } from './lib/dbSync'
 import { startPrefSync } from './lib/prefSync'
 import { startLiveSync } from './lib/liveSync'
 import { useFinanceStore } from './modules/finance/financeStore'
+import { useShoppingStore } from './modules/finance/shopping/shoppingStore'
 import { runReminders } from './modules/finance/reminders'
 import { startAutomation } from './lib/automation'
 import { runBudgetEntries } from './modules/finance/budgetEntries'
@@ -835,6 +836,8 @@ function App() {
       tasks:   loadTasksFromDB,
       finance: () => useFinanceStore.getState().loadFromDB(),
     })
+    // Shopping has its own Realtime channel — start it alongside liveSync.
+    useShoppingStore.getState().startRealtime(userId)
   }
 
   // themeId kept in store for backward compat — Sunlit Bento uses CSS tokens only
@@ -1060,6 +1063,7 @@ function App() {
       } else if (!session) {
         stopLiveSync.current?.()
         stopLiveSync.current = null
+        useShoppingStore.getState().stopRealtime()
         localStorage.removeItem('google_provider_token')
         localStorage.removeItem('google_provider_token_saved_at')
         localStorage.removeItem(LAST_USER_KEY)
