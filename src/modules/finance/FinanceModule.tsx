@@ -7,6 +7,7 @@ import { BudgetScreen } from './screens/BudgetScreen'
 import { ReportsScreen } from './screens/ReportsScreen'
 import { ReflectionScreen } from './screens/ReflectionScreen'
 import { GoalsScreen } from './screens/GoalsScreen'
+import { ShoppingScreen } from './screens/ShoppingScreen'
 import { TransactionModal } from './modals/TransactionModal'
 import { BulkEntryModal } from './modals/BulkEntryModal'
 import { LockGate } from './FinanceLockScreen'
@@ -86,6 +87,16 @@ function IconLock({ color = 'currentColor' }: RailIconProps) {
   )
 }
 
+function IconShopping({ color = 'currentColor' }: RailIconProps) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <path d="M16 10a4 4 0 0 1-8 0"/>
+    </svg>
+  )
+}
+
 function IconPlus({ color = 'currentColor' }: RailIconProps) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round">
@@ -103,16 +114,32 @@ function IconPlus({ color = 'currentColor' }: RailIconProps) {
 // Plan was a debt payoff drawn on sample data beside a Goals screen that planned
 // from the ledger. A card with a balance is a goal with a target of zero, so
 // the cards are in Goals now and there is one screen for what money has to do.
-type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect' | 'goals'
+type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect' | 'goals' | 'shopping'
 
-const NAV_ITEMS: { id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }[] = [
-  { id: 'today',   label: 'Today',      Icon: IconToday },
-  { id: 'balance', label: 'Balance',    Icon: IconBalance },
-  { id: 'budget',  label: 'Budget',     Icon: IconBudget },
-  { id: 'reports', label: 'Reports',    Icon: IconReports },
-  { id: 'reflect', label: 'Financials', Icon: IconFinancials },
-  { id: 'goals',   label: 'Goals',      Icon: IconGoals },
-]
+// Shopping is only shown when the user has enabled it in Settings.
+function shoppingEnabled(): boolean {
+  try {
+    const raw = localStorage.getItem('shopping-settings')
+    if (!raw) return false
+    const s = JSON.parse(raw) as { enabled?: boolean }
+    return s.enabled === true
+  } catch { return false }
+}
+
+function buildNavItems(): { id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }[] {
+  const base: { id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }[] = [
+    { id: 'today',    label: 'Today',      Icon: IconToday },
+    { id: 'balance',  label: 'Balance',    Icon: IconBalance },
+    { id: 'budget',   label: 'Budget',     Icon: IconBudget },
+    { id: 'reports',  label: 'Reports',    Icon: IconReports },
+    { id: 'reflect',  label: 'Financials', Icon: IconFinancials },
+    { id: 'goals',    label: 'Goals',      Icon: IconGoals },
+  ]
+  if (shoppingEnabled()) base.push({ id: 'shopping', label: 'Shopping', Icon: IconShopping })
+  return base
+}
+
+const NAV_ITEMS = buildNavItems()
 
 // ─── Finance Module ───────────────────────────────────────────────────────────
 
@@ -137,18 +164,37 @@ export function FinanceModule() {
   const [bulkOpen, setBulkOpen] = useState(false)
 
   const [navItems, setNavItems] = useState<{ id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }[]>(() => {
+    const base = buildNavItems()
     const saved = localStorage.getItem('finance-tab-order')
     if (saved) {
       try {
         const order: string[] = JSON.parse(saved)
-        return [...NAV_ITEMS].sort((a, b) => {
+        return [...base].sort((a, b) => {
           const ai = order.indexOf(a.id); const bi = order.indexOf(b.id)
           return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
         })
       } catch {}
     }
-    return NAV_ITEMS
+    return base
   })
+
+  // Re-build nav when Shopping toggle changes in Settings
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === 'shopping-settings') {
+        setNavItems(prev => {
+          const fresh = buildNavItems()
+          const order = prev.map(i => i.id)
+          return [...fresh].sort((a, b) => {
+            const ai = order.indexOf(a.id); const bi = order.indexOf(b.id)
+            return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
+          })
+        })
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
   // A debt goal on Goals can send you to the account it is derived from.
   // Balances is not mounted at that moment, so the switch happens here and the
   // id is claimed by the screen once it is up (`takePendingAccount`).
@@ -180,7 +226,8 @@ export function FinanceModule() {
       case 'budget':  return <BudgetScreen />
       case 'reports': return <ReportsScreen {...props} />
       case 'reflect': return <ReflectionScreen {...props} />
-      case 'goals':   return <GoalsScreen />
+      case 'goals':    return <GoalsScreen />
+      case 'shopping': return <ShoppingScreen />
     }
   }
 
