@@ -1500,6 +1500,43 @@ git push -u origin claude/professor-web-app-dev-tnj0uk
 - Pre-existing unused vars scattered in `finance/screens/` — fix by prefixing or deleting if truly dead code.
 - `npm run build` = `tsc -b && vite build` — both must pass.
 
+## Mail — the smart view, and what a thread actually wants
+`lib/mailKinds.ts` answers *what kind of thing is this*, from headers and the
+subject alone — no model call, so a row knows the instant it is drawn.
+`invitation` / `cancelled` / `security` / `update` / `reply`, and the kind is
+what the row offers:
+- **A sign-in alert with a Draft button is how a list teaches you to stop
+  reading it.** "Needs your attention" was carrying a renewal waiting on an
+  answer, a meeting invitation, a login notice and a cloud status page, all
+  with the same three buttons — and only one of the four wants words back. So
+  the first group is split in two: `action` is what you owe somebody,
+  `attention` is what you should know. Four sections, each collapsible, the
+  open set kept in `mail-smart-open-sections`.
+- **An invitation gets Yes / Maybe / No**, through the app's own RSVP
+  (`respondToInvite`), because answering in prose tells the organiser's calendar
+  nothing — a mistake this app made once already.
+- **A machine's notice gets Acknowledge, and stays.** "Keep it while allowing me
+  to acknowledge" is the whole request: the row is marked *Seen* and remains in
+  the list. Archive or Ignore is how one leaves. Taking it out for having been
+  read would mean the only record that you looked is that it is no longer there.
+- **A machine is never a bottleneck.** `bottleneck` is gated on
+  `canNeedAction(kind)` in both implementations — "waiting on you" over a status
+  page is how the flag stops meaning anything on the rows where it is true. The
+  same row drops the "No reply" chip and the Follow up button, which are true
+  and useless about a status page.
+- **What is discarded is stated once, the same way on both sides.** A campaign
+  goes whatever its subject says (`looksCampaign` / `classifyMail`'s
+  `newsletter`); other automated mail goes only where the row would have nothing
+  but a Draft button to put under it — `canNeedAction(kind)`. That is what was
+  throwing away every sign-in alert and every status notice.
+- **Only a plain `reply` costs a model call.** The other four kinds say the same
+  thing every time they arrive, so `KIND_NEED[kind]` writes the sentence and the
+  tokens are not spent — in the browser and in the nightly edge function alike.
+- The rules exist twice (Deno cannot import the app's bundle).
+  `scripts/mail-rules-agree.mjs` runs 17 fixtures through both and fails on any
+  disagreement, kept/discarded included. `20260017_mail_smart_kinds.sql` adds
+  `kind`, `muted`, `archived_at`, `acknowledged_at` and widens the section check.
+
 ## Mail — the week's mail, sorted by what it wants
 `lib/mailClasses.ts` decides the kind from the message itself — the list headers
 (`List-Unsubscribe`/`-Id`/`-Post`), `Precedence`, `Auto-Submitted`, the campaign

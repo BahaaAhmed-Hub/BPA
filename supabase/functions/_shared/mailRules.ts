@@ -18,6 +18,11 @@
 
 /** The two clocks the rules use. Here rather than in the function, because a
  *  rule and the number it compares against are one thing. */
+import { kindOf, canNeedAction, KIND_NEED, type MailKind } from './mailKinds.ts'
+// Re-exported so the function imports the rules from one place.
+export { canNeedAction, KIND_NEED }
+export type { MailKind }
+
 export const DAY = 86_400_000
 export const AWAITING_DAYS = 5
 
@@ -58,27 +63,53 @@ export const FREE_MAIL = new Set([
   'yandex.com','zoho.com',
 ])
 
-/** A campaign, a receipt or an automated alert — anything that is not a person
- *  writing to you. Header-led, the same tests the browser makes. */
-export function looksAutomated(m: NeutralMessage): boolean {
+/** A campaign: something sent to a list, whatever its subject line says. It is
+ *  discarded outright — there is no version of a marketing send that the smart
+ *  view has an answer for. */
+export function looksCampaign(m: NeutralMessage): boolean {
   const hs = m.headers
   const has = (n: string) => !!headerOf(hs, n)
   if (has('List-Unsubscribe') || has('List-Id') || has('List-Post')) return true
   if (/bulk|list|junk/i.test(headerOf(hs, 'Precedence'))) return true
-  if (has('Auto-Submitted') && !/^no$/i.test(headerOf(hs, 'Auto-Submitted'))) return true
   if (has('X-Campaign-Id') || has('X-Mailer-Campaign') || has('X-Feedback-Id')) return true
-  if (/^(no-?reply|do-?not-?reply|notifications?|mailer|bounce|postmaster)@/i.test(m.from)) return true
-  if (/text\/calendar/i.test(headerOf(hs, 'Content-Type'))) return true
   return false
 }
 
+/** Machine-sent rather than written by a person. Not the same question as
+ *  "throw it away": a sign-in alert, a status page and a meeting called off are
+ *  all automated and all worth seeing. What decides is whether the row has
+ *  something to offer for it — `canNeedAction(kind)` — so this answers only
+ *  what it is, and `keepThread` below answers whether it stays. */
+export function looksAutomated(m: NeutralMessage): boolean {
+  const hs = m.headers
+  const has = (n: string) => !!headerOf(hs, n)
+  if (looksCampaign(m)) return true
+  if (has('Auto-Submitted') && !/^no$/i.test(headerOf(hs, 'Auto-Submitted'))) return true
+  if (/^(no-?reply|do-?not-?reply|notifications?|mailer|bounce|postmaster)@/i.test(m.from)) return true
+  // Not calendar mail: an invitation is the one automated message that wants
+  // something back, and a cancellation is one you want to see. `kindOf` tells
+  // those apart and the row answers each properly, so discarding them here
+  // would throw away the only automated mail worth keeping.
+  return false
+}
+
+/** The one filter, stated once. A campaign goes; other automated mail goes only
+ *  where the row would have nothing but a Draft button to put under it. This is
+ *  the same sentence `isBusinessThread` makes in the browser, and
+ *  `scripts/mail-rules-agree.mjs` fails if the two stop agreeing. */
+export function keepThread(m: NeutralMessage, kind: MailKind): boolean {
+  if (looksCampaign(m)) return false
+  return !(looksAutomated(m) && canNeedAction(kind))
+}
+
 export interface Facts {
+  kind: MailKind
   threadId: string; lastMessageId: string; lastAt: number
   subject: string; fromName: string; fromEmail: string
   replyState: 'replied' | 'pending' | 'none'
   addressedTo: boolean; namedInBody: boolean
   bottleneck: boolean; awaitingCustomer: boolean
-  section: 'action' | 'radar' | 'fyi'
+  section: 'action' | 'attention' | 'radar' | 'fyi'
   internal: boolean
 }
 
@@ -101,16 +132,28 @@ export function readThread(t: NeutralThread, me: Set<string>, firstName: string,
 
   const fromEmail = newest.from.toLowerCase()
   const domain = fromEmail.split('@')[1] ?? ''
-  const bottleneck = replyState !== 'replied' && now - newest.sentAt >= DAY && (addressedTo || namedInBody)
+  const kind = kindOf({ newest, subject: last.subject || '', fromEmail })
+  // A machine is never waiting on you, however long its notice sits.
+  const bottleneck = canNeedAction(kind) &&
+    replyState !== 'replied' && now - newest.sentAt >= DAY && (addressedTo || namedInBody)
   const awaitingCustomer = replyState === 'replied' && lastReplied !== null &&
     now - lastReplied >= AWAITING_DAYS * DAY
 
+  const forYou = addressedTo || namedInBody
+
   const section: Facts['section'] =
     replyState === 'replied' ? 'fyi'
-    : (addressedTo || namedInBody) ? 'action'
+    // An invitation is an action wherever it was addressed — answering it is
+    // the whole of what it wants, and it cannot be answered by being read.
+    : kind === 'invitation' ? 'action'
+    // A sign-in, a status notice, a meeting called off: worth seeing, never a
+    // task. Addressed to you it is worth knowing; otherwise information.
+    : !canNeedAction(kind) ? (forYou ? 'attention' : 'fyi')
+    : forYou ? 'action'
     : 'radar'
 
   return {
+    kind,
     threadId: t.id, lastMessageId: last.id, lastAt: last.sentAt,
     subject: last.subject || '(no subject)',
     fromName: newest.fromName || fromEmail.split('@')[0] || 'Unknown',

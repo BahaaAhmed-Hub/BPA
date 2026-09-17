@@ -276,6 +276,25 @@ export async function untrashMessage(messageId: string, account?: MailAccount): 
 // Gmail has no folders. A "move" is a label added and the inbox taken away —
 // which is also why it is undoable by exactly reversing those two.
 
+/** Archive, read or star a whole thread in one request.
+ *
+ *  Gmail's thread endpoint takes the same label changes the message one does,
+ *  which matters for archiving: a thread's messages each carry INBOX, and
+ *  removing it from the newest only leaves the conversation in the inbox. */
+export async function modifyThread(
+  threadId: string,
+  changes: { add?: string[]; remove?: string[] },
+  account?: MailAccount,
+): Promise<void> {
+  await gFetch(`/users/me/threads/${threadId}/modify`, {
+    method: 'POST',
+    body: JSON.stringify({
+      addLabelIds: changes.add ?? [],
+      removeLabelIds: changes.remove ?? [],
+    }),
+  }, account)
+}
+
 export interface GmailLabel {
   id: string
   name: string

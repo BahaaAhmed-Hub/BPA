@@ -13,14 +13,16 @@ import { notify, pushUndo } from '@/lib/undo'
 import { inkOn } from '@/lib/ink'
 import type { EmailTriage, EmailData } from '@/lib/professor'
 import { classifyMail, unsubscribeLink, CLASSES, CLASS_INFO, countByClass, type MailClass } from '@/lib/mailClasses'
-import { looksLikeInvitation } from '@/lib/invitations'
-import { listUnreadThreadIds, getThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, markAsUnread, archiveMessage, unarchiveMessage, trashMessage, untrashMessage, listLabels, batchModify, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder, type GmailHeader, type GmailLabel } from '@/lib/gmail'
+import { listUnreadThreadIds, getThread, modifyThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, markAsUnread, archiveMessage, unarchiveMessage, trashMessage, untrashMessage, listLabels, batchModify, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder, type GmailHeader, type GmailLabel } from '@/lib/gmail'
 import { cachedDraft } from '@/lib/mailBriefs'
 import { forgetWaiting } from '@/lib/mailWaiting'
 import { mailAccounts, loadMailView, saveMailView, accountsFor, accountLabel, type MailView } from './mailAccounts'
 import { SmartView } from './SmartView'
 import { runSmartPass, type PassResult, type SmartThread } from '@/lib/mailSmartSync'
-import { markHandled } from '@/lib/mailSmartDb'
+import { markHandled, markThread } from '@/lib/mailSmartDb'
+import {
+  looksLikeInvitation, readInvite, respondToInvite, rememberAnswer, RSVP_LABEL, type Rsvp,
+} from '@/lib/invitations'
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { SwipeRow } from './SwipeRow'
 import { signInWithGoogle } from '@/lib/google'
@@ -486,18 +488,24 @@ export function InboxModule() {
     return () => clearInterval(t)
   }, [mode, runSmart])
 
-  /** Take a thread out of the list it is in, here and on the server. */
-  function handleSmartDone(ts: SmartThread[], handled: boolean) {
+  /** Patch the copy on screen. The server write is separate and may fail; the
+   *  row moving is what the click promised, so it happens either way. */
+  function markSmart(ts: SmartThread[], patch: Partial<SmartThread>) {
+    const hit = new Set(ts.map(t => `${t.accountEmail}|${t.threadId}`))
     setSmart(prev => prev && {
       ...prev,
-      threads: prev.threads.map(t =>
-        ts.some(x => x.threadId === t.threadId && x.accountEmail === t.accountEmail)
-          ? { ...t, handled } : t),
+      threads: prev.threads
+        .map(t => hit.has(`${t.accountEmail}|${t.threadId}`) ? { ...t, ...patch } : t)
+        // Ignored and archived leave now rather than at the next pass.
+        .filter(t => !t.muted && !(patch.muted && hit.has(`${t.accountEmail}|${t.threadId}`))),
     })
+  }
+
+  /** Take a thread out of the list it is in, here and on the server. */
+  function handleSmartDone(ts: SmartThread[], handled: boolean) {
+    markSmart(ts, { handled })
     for (const t of ts) void markHandled(t.accountEmail, t.threadId, handled)
-    notify(handled
-      ? `${ts.length} marked done`
-      : `${ts.length} put back`)
+    notify(handled ? `${ts.length} marked done` : `${ts.length} put back`)
   }
 
   /** One task per thread, in one undo entry however many there are. */
@@ -514,6 +522,69 @@ export function InboxModule() {
       completed: false,
     })))
     notify(`${ts.length} task${ts.length === 1 ? '' : 's'} added`)
+  }
+
+  /** Out of the inbox in Gmail, and out of this list. A thread at a time, so
+   *  one that will not archive does not take the batch with it. */
+  async function handleSmartArchive(ts: SmartThread[]) {
+    // Archiving takes it out of the list the same way ignoring does; the
+    // difference is in the mail, not on screen.
+    markSmart(ts, { muted: true })
+    let failed = 0
+    for (const t of ts) {
+      const account = accounts.find(a => a.email === t.accountEmail)
+      if (!account) { failed++; continue }
+      try {
+        await modifyThread(t.threadId, { remove: ['INBOX'] }, account)
+        void markThread(t.accountEmail, t.threadId, { archived_at: new Date().toISOString() })
+      } catch { failed++ }
+    }
+    notify(failed
+      ? `${ts.length - failed} archived · ${failed} could not be`
+      : `${ts.length} archived`)
+  }
+
+  /** Not this thread, ever. Different from done: a new message does not bring
+   *  it back, which is the whole difference between ignoring and dealing. */
+  function handleSmartIgnore(ts: SmartThread[]) {
+    markSmart(ts, { muted: true })
+    for (const t of ts) void markThread(t.accountEmail, t.threadId, { muted: true })
+    notify(`${ts.length} ignored — they will not come back`)
+  }
+
+  /** Seen. For the kinds that are never actions: a sign-in, a cancellation, a
+   *  status notice. It stays in the mail; it leaves this list. */
+  function handleSmartAcknowledge(ts: SmartThread[]) {
+    markSmart(ts, { acknowledged: true })
+    const at = new Date().toISOString()
+    for (const t of ts) void markThread(t.accountEmail, t.threadId, { acknowledged_at: at })
+    notify(`${ts.length} acknowledged`)
+  }
+
+  /** Yes / Maybe / No, through the app's own RSVP rather than a second one.
+   *  Answering an invitation in prose tells the organiser's calendar nothing —
+   *  a mistake this app has already made once. */
+  async function handleSmartRsvp(t: SmartThread, answer: Rsvp) {
+    const account = accounts.find(a => a.email === t.accountEmail) ?? accounts[0]
+    if (!account) return
+    try {
+      const thread = await getThread(t.threadId, account)
+      const read = await readInvite(thread.messages, t.subject, account)
+      if (read.kind !== 'invite') {
+        notify(read.kind === 'unreadable'
+          ? `Could not read the invitation — ${read.why}`
+          : 'No invitation found in this thread')
+        return
+      }
+      const res = await respondToInvite(read.invite, account, answer)
+      if (!res.ok) { notify(res.why ?? 'Google would not take the answer'); return }
+      rememberAnswer(read.invite.uid, answer)
+      markSmart([t], { handled: true })
+      void markThread(t.accountEmail, t.threadId, { handled_at: new Date().toISOString() })
+      notify(`${RSVP_LABEL[answer]} — ${read.invite.summary}`)
+    } catch (e) {
+      notify(e instanceof Error ? e.message : 'The invitation could not be answered')
+    }
   }
 
   /** The drafted reply, in the ordinary composer. Nothing here sends. */
@@ -1852,6 +1923,10 @@ export function InboxModule() {
             onDraft={handleSmartDraft}
             onTask={handleSmartTasks}
             onHandled={handleSmartDone}
+            onArchive={ts => void handleSmartArchive(ts)}
+            onIgnore={handleSmartIgnore}
+            onAcknowledge={handleSmartAcknowledge}
+            onRsvp={(t, a) => void handleSmartRsvp(t, a)}
           />
         ) : (<>
 

@@ -9,6 +9,7 @@
 
 import { supabase } from '@/lib/supabase'
 import type { SmartSection, ReplyState } from '@/lib/mailSmart'
+import type { MailKind } from '@/lib/mailKinds'
 
 export interface SmartRow {
   account_email: string
@@ -28,6 +29,11 @@ export interface SmartRow {
   bottleneck: boolean
   awaiting_customer: boolean
   handled_at: string | null
+  kind: MailKind
+  /** You have said you do not want this thread. New messages do not undo it. */
+  muted: boolean
+  archived_at: string | null
+  acknowledged_at: string | null
   analyzed_at: string
 }
 
@@ -78,19 +84,31 @@ export async function saveSmartThreads(rows: Omit<SmartRow, 'analyzed_at'>[]): P
   if (error) { noteMissing(error); console.warn('mail smart: could not store', error.message) }
 }
 
-/** Mark one thread dealt with, so it leaves the action list now rather than
- *  when Gmail catches up. */
-export async function markHandled(
-  accountEmail: string, threadId: string, handled: boolean,
+/** Set one of the "stop showing me this" marks on a thread.
+ *
+ *  They are separate because they promise different things: handled is "dealt
+ *  with for now", muted is "not this thread, ever", acknowledged is "seen" for
+ *  the kinds that are never actions, and archived records what was done to the
+ *  mail itself. A single flag would have made undoing one undo the others. */
+export async function markThread(
+  accountEmail: string, threadId: string,
+  marks: Partial<Pick<SmartRow, 'handled_at' | 'muted' | 'archived_at' | 'acknowledged_at'>>,
 ): Promise<void> {
   if (tableMissing) return
   const userId = await uid()
   if (!userId) return
   const { error } = await supabase
     .from('mail_smart_threads')
-    .update({ handled_at: handled ? new Date().toISOString() : null })
+    .update(marks)
     .match({ user_id: userId, account_email: accountEmail, thread_id: threadId })
   if (error) noteMissing(error)
+}
+
+/** Dealt with for now. */
+export async function markHandled(
+  accountEmail: string, threadId: string, handled: boolean,
+): Promise<void> {
+  await markThread(accountEmail, threadId, { handled_at: handled ? new Date().toISOString() : null })
 }
 
 /** Delete what has fallen out of the thirty-day window. Without this the table

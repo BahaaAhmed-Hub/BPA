@@ -22,7 +22,8 @@ const entry = join(dir, 'entry.ts')
 writeFileSync(entry, `
 export * as app  from '${process.cwd()}/src/lib/mailSmart'
 export * as edge from '${process.cwd()}/supabase/functions/_shared/mailRules.ts'
-export * as prov from '${process.cwd()}/src/lib/mailProvider'
+export * as prov  from '${process.cwd()}/src/lib/mailProvider'
+export * as kinds from '${process.cwd()}/src/lib/mailKinds'
 `)
 
 // esbuild is not a dependency of this project, so it is run rather than
@@ -42,7 +43,7 @@ globalThis.localStorage = {
 }
 globalThis.window = { dispatchEvent() {}, addEventListener() {}, removeEventListener() {} }
 
-const { app, edge, prov } = await import(out)
+const { app, edge, prov, kinds } = await import(out)
 
 const DAY = 864e5
 const NOW = new Date('2026-06-15T12:00:00Z').getTime()
@@ -79,10 +80,15 @@ const CASES = [
   ['a newsletter',                    [msg({ from: 'Deals <news@shop.com>', at: NOW - DAY, body: 'unsubscribe', headers: [{ name: 'List-Unsubscribe', value: '<https://shop.com/u>' }] })]],
   ['an automated notification',       [msg({ from: 'no-reply@build.io', at: NOW - DAY, body: 'Your build failed' })]],
   ['a calendar invitation',           [msg({ from: 'N <n@client.com>', at: NOW - DAY, headers: [{ name: 'Content-Type', value: 'text/calendar; method=REQUEST' }] })]],
+  ['a meeting invitation',            [msg({ from: 'N <n@client.com>', subject: 'Invitation: Kickoff', at: NOW - DAY, headers: [{ name: 'Content-Type', value: 'text/calendar; method=REQUEST' }] })]],
+  ['a cancelled event',               [msg({ from: 'N <n@client.com>', subject: 'Cancelled: Kickoff', at: NOW - DAY, headers: [{ name: 'Content-Type', value: 'text/calendar; method=CANCEL' }] })]],
+  ['a sign-in notification',          [msg({ from: 'Google <no-reply@accounts.google.com>', subject: 'Security alert: new sign-in', at: NOW - DAY })]],
+  ['a cloud status notice',           [msg({ from: 'alerts@statuspage.io', subject: 'Scheduled maintenance on Sunday', at: NOW - DAY })]],
+  ['somebody accepting your invite',  [msg({ from: 'O <o@client.com>', subject: 'Accepted: Kickoff', at: NOW - DAY, headers: [{ name: 'Content-Type', value: 'text/calendar; method=REPLY' }] })]],
   ['free-mail sender',                [msg({ from: 'Mum <mum@gmail.com>', at: NOW - 2 * DAY, body: 'dinner?' })]],
 ]
 
-const FIELDS = ['replyState', 'addressedTo', 'namedInBody', 'bottleneck', 'awaitingCustomer', 'section']
+const FIELDS = ['replyState', 'addressedTo', 'namedInBody', 'bottleneck', 'awaitingCustomer', 'section', 'kind']
 let bad = 0
 
 console.log('fixture                              field              app          nightly')
@@ -95,14 +101,16 @@ for (const [name, messages] of CASES) {
 
   if (!a || !e) { console.log(`${name.padEnd(36)} — one side returned nothing`); bad++; continue }
 
-  const appSection = app.sectionFor(a, false)
+  const appKind = kinds.kindOf({ newest: messages.filter(m => m.from !== ME).pop() ?? messages[messages.length - 1],
+                                 subject: a.subject, fromEmail: a.fromEmail })
+  const appSection = app.sectionFor(a, false, appKind)
   const newest = messages.filter(m => m.from !== ME).pop() ?? messages[messages.length - 1]
   // Kept/discarded, both sides, for a mailbox marked as work.
-  const appKeep  = app.isBusinessThread(a, newest, true)
-  const edgeKeep = !edge.looksAutomated(newest)
+  const appKeep  = app.isBusinessThread(a, newest, true, appKind)
+  const edgeKeep = edge.keepThread(newest, e.kind)
 
   for (const f of FIELDS) {
-    const av = f === 'section' ? appSection : a[f]
+    const av = f === 'section' ? appSection : f === 'kind' ? appKind : a[f]
     const ev = e[f]
     const same = String(av) === String(ev)
     if (!same) { bad++; console.log(`${name.padEnd(36)} ${f.padEnd(18)} ${String(av).padEnd(12)} ${String(ev)}   ✗`) }
@@ -111,8 +119,10 @@ for (const [name, messages] of CASES) {
     bad++
     console.log(`${name.padEnd(36)} ${'kept'.padEnd(18)} ${String(appKeep).padEnd(12)} ${String(edgeKeep)}   ✗`)
   }
-  if (!bad) { /* quiet on agreement */ }
-  console.log(`${name.padEnd(36)} ${'(all fields)'.padEnd(18)} ${appSection.padEnd(12)} ${e.section}   ${appSection === e.section && appKeep === edgeKeep ? 'ok' : ''}`)
+  // The section of a thread nobody keeps is not a fact about anything, so the
+  // line says which it is rather than printing a section for a discarded row.
+  const where = appKeep ? appSection : 'discarded'
+  console.log(`${name.padEnd(36)} ${'(all fields)'.padEnd(18)} ${where.padEnd(12)} ${edgeKeep ? e.section : 'discarded'}   ${appSection === e.section && appKeep === edgeKeep ? 'ok' : ''}`)
 }
 
 console.log('─'.repeat(78))

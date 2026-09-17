@@ -22,6 +22,7 @@
 import type { MailAccount } from '@/lib/gmail'
 import { gmailProvider } from '@/lib/gmailProvider'
 import type { MailProvider, NeutralMessage } from '@/lib/mailProvider'
+import { KIND_NEED, type MailKind } from '@/lib/mailKinds'
 import {
   readThread, isBusinessThread, sectionFor, orderThreads,
   windowStart, meSet, firstNameOf, type ThreadFacts, type SmartSection, type ReplyState,
@@ -73,6 +74,9 @@ export interface SmartThread {
   bottleneck: boolean
   awaitingCustomer: boolean
   handled: boolean
+  kind: MailKind
+  muted: boolean
+  acknowledged: boolean
 }
 
 export interface PassResult {
@@ -109,15 +113,19 @@ function rowToThread(r: SmartRow): SmartThread {
     need: r.need ?? '', draft: r.draft ?? '', direct: r.direct,
     addressedTo: r.addressed_to, bottleneck: r.bottleneck,
     awaitingCustomer: r.awaiting_customer, handled: !!r.handled_at,
+    kind: r.kind ?? 'reply', muted: !!r.muted, acknowledged: !!r.acknowledged_at,
   }
 }
 
-function factsToRow(f: ThreadFacts, t: { direct: boolean; need: string; draft: string }): Omit<SmartRow, 'analyzed_at'> {
+function factsToRow(
+  f: ThreadFacts, t: { direct: boolean; need: string; draft: string }, kind: MailKind,
+): Omit<SmartRow, 'analyzed_at'> {
   return {
+    kind, muted: false, archived_at: null, acknowledged_at: null,
     account_email: f.accountEmail, thread_id: f.threadId, last_message_id: f.lastMessageId,
     last_at: new Date(f.lastAt).toISOString(),
     subject: f.subject, from_name: f.fromName, from_email: f.fromEmail,
-    section: sectionFor(f, t.direct), reply_state: f.replyState,
+    section: sectionFor(f, t.direct, kind), reply_state: f.replyState,
     // `''`, not null, once the model has answered: null means **never asked**,
     // and that is what the backfill below looks for. Collapsing the two would
     // either re-ask about every thread for ever or never ask about the ones
@@ -170,7 +178,7 @@ export async function runSmartPass(opts: {
       const box = { email: account.email, isPrimary: account.isPrimary }
       const ids = await provider.listThreadsSince(box, since, MAX_PER_PASS)
       const business = isBusinessAccount(account.email)
-      const out: { facts: ThreadFacts; newest: NeutralMessage }[] = []
+      const out: { facts: ThreadFacts; newest: NeutralMessage; kind: MailKind }[] = []
       for (const id of ids) {
         const key = `${account.email}|${id}`
         const known = cached.get(key)
@@ -182,8 +190,12 @@ export async function runSmartPass(opts: {
         // reading, including whatever the model said about it.
         if (known && known.last_message_id === facts.lastMessageId) continue
         const newest = full.messages[full.messages.length - 1]
-        if (!isBusinessThread(facts, newest, business)) continue
-        out.push({ facts, newest })
+        // The kind decides the filter: automated mail stays only where the row
+        // has something to put under it. Acknowledge for a sign-in or a status
+        // notice, Yes/Maybe/No for an invitation — and nothing for the rest,
+        // which is why they go.
+        if (!isBusinessThread(facts, newest, business, facts.kind)) continue
+        out.push({ facts, newest, kind: facts.kind })
       }
       return { account, out, reachedEnd: ids.length < MAX_PER_PASS }
     } catch (e) {
@@ -210,7 +222,7 @@ export async function runSmartPass(opts: {
     .sort((a, b) => new Date(b.last_at).getTime() - new Date(a.last_at).getTime())
     .slice(0, MAX_BACKFILL)
 
-  const backfilled: { facts: ThreadFacts; newest: NeutralMessage }[] = []
+  const backfilled: { facts: ThreadFacts; newest: NeutralMessage; kind: MailKind }[] = []
   for (const r of blank) {
     const account = opts.accounts.find(a => a.email === r.account_email)
     if (!account) continue
@@ -221,7 +233,7 @@ export async function runSmartPass(opts: {
       if (!facts) continue
       const newest = full.messages.filter(m => !me.has(m.from.toLowerCase())).pop()
         ?? full.messages[full.messages.length - 1]
-      backfilled.push({ facts, newest })
+      backfilled.push({ facts, newest, kind: facts.kind })
     } catch { /* one unreadable thread is not the pass's problem */ }
   }
 
@@ -231,8 +243,20 @@ export async function runSmartPass(opts: {
   const readings = new Map<string, { direct: boolean; need: string; draft: string }>()
   for (const { facts } of changed) readings.set(facts.threadId, { direct: false, need: '', draft: '' })
 
-  if (changed.length > 0) {
-    const inputs: TriageInput[] = changed.map(({ facts, newest }) => ({
+  // Only a person writing to you is worth a model call. A sign-in alert, a
+  // status page, a meeting called off and an invitation all say the same thing
+  // every time they arrive, and the row answers each with a button rather than
+  // words — so the kind writes the sentence and the tokens are not spent. The
+  // rest is what somebody actually wrote, which is the one part nothing but a
+  // model can read.
+  for (const { facts } of changed) {
+    if (facts.kind === 'reply') continue
+    readings.set(facts.threadId, { direct: false, need: KIND_NEED[facts.kind], draft: '' })
+  }
+  const toRead = changed.filter(c => c.kind === 'reply')
+
+  if (toRead.length > 0) {
+    const inputs: TriageInput[] = toRead.map(({ facts, newest }) => ({
       id: facts.threadId,
       subject: facts.subject, fromName: facts.fromName, fromEmail: facts.fromEmail,
       receivedAt: new Date(facts.lastAt).toISOString(),
@@ -261,8 +285,8 @@ export async function runSmartPass(opts: {
   // ── Store, and move each watermark to the newest thing that mailbox actually
   //    returned. A mailbox that failed keeps its old mark and is simply read
   //    again next time.
-  const rows = changed.map(({ facts }) =>
-    factsToRow(facts, readings.get(facts.threadId) ?? { direct: false, need: '', draft: '' }))
+  const rows = changed.map(({ facts, kind }) =>
+    factsToRow(facts, readings.get(facts.threadId) ?? { direct: false, need: '', draft: '' }, kind))
   await store.save(rows)
   await Promise.all(perAccount.map(p => {
     if (!p.reachedEnd && p.out.length === 0 && failed.some(f => f.email === p.account.email)) return
@@ -279,6 +303,9 @@ export async function runSmartPass(opts: {
 
   const threads = [...merged.values()]
     .filter(t => t.lastAt >= from)
+    // Ignored means ignored: a new message on a muted thread does not undo the
+    // decision, which is the difference between "ignore" and "done".
+    .filter(t => !t.muted)
     .sort((a, b) => orderThreads(
       { bottleneck: a.bottleneck, lastAt: a.lastAt } as ThreadFacts,
       { bottleneck: b.bottleneck, lastAt: b.lastAt } as ThreadFacts))

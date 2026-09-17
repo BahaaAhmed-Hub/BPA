@@ -48,7 +48,7 @@ const json = (d: unknown, status = 200) =>
   new Response(JSON.stringify(d), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 import {
-  looksAutomated, readThread, parseAddressList, displayName, headerOf, DAY,
+  keepThread, readThread, parseAddressList, displayName, headerOf, DAY, KIND_NEED,
   type MailHeader, type NeutralMessage, type NeutralThread,
 } from '../_shared/mailRules.ts'
 
@@ -212,16 +212,24 @@ async function runForUser(admin: any, userId: string, now: number): Promise<{ re
 
       const newestMsg = msgs.filter(m => !me.has(m.from.toLowerCase())).pop() ?? msgs[msgs.length - 1]
       const accountIsBusiness = business.includes(box)
-      if (looksAutomated(newestMsg)) continue
+      // A campaign goes; other automated mail stays where the row can answer
+      // it — an invitation, a sign-in alert, a status notice, a meeting called
+      // off. `f.kind` is the same reading the browser makes.
+      if (!keepThread(newestMsg, f.kind)) continue
       if (!accountIsBusiness && !f.internal) continue
 
       out.push({
         user_id: userId, account_email: box, thread_id: f.threadId,
         last_message_id: f.lastMessageId, last_at: new Date(f.lastAt).toISOString(),
         subject: f.subject, from_name: f.fromName, from_email: f.fromEmail,
-        section: f.section, reply_state: f.replyState,
-        // Left for the browser, which is where the model key is.
-        need: null, draft: null, direct: false,
+        section: f.section, reply_state: f.replyState, kind: f.kind,
+        // Left for the browser, which is where the model key is — except
+        // where there is nothing for a model to work out. An invitation, a
+        // sign-in alert and a status notice say the same thing every time they
+        // arrive, so the kind says it and the browser has one fewer row to ask
+        // about.
+        need: f.kind === 'reply' ? null : KIND_NEED[f.kind],
+        draft: null, direct: false,
         addressed_to: f.addressedTo, named_in_body: f.namedInBody,
         bottleneck: f.bottleneck, awaiting_customer: f.awaitingCustomer,
         handled_at: null, analyzed_at: new Date().toISOString(),

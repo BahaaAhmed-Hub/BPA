@@ -17,12 +17,19 @@
 //    has not been read before.
 
 import { classifyMail } from '@/lib/mailClasses'
+import { canNeedAction, kindOf, type MailKind } from '@/lib/mailKinds'
 import { isFreeMailDomain } from '@/lib/businessAccounts'
 import { normaliseEmail } from '@/modules/calendar/NewEventPanel'
 import { headerOf, type NeutralMessage, type NeutralThread } from '@/lib/mailProvider'
 
-/** Where a thread lands. The three the brief asks for, in priority order. */
-export type SmartSection = 'action' | 'radar' | 'fyi'
+/** Where a thread lands, in the order you deal with them.
+ *
+ *  `action` used to carry two different things: a renewal waiting on your
+ *  answer, and a sign-in alert you merely want to see. Both were "needs your
+ *  attention", both got a Draft button, and offering to write a reply to a
+ *  login notification is how a list teaches you to stop reading it. So the
+ *  first group is split: what you owe somebody, and what you should know. */
+export type SmartSection = 'action' | 'attention' | 'radar' | 'fyi'
 
 /** Whether you have answered. */
 export type ReplyState =
@@ -34,6 +41,9 @@ export type ReplyState =
   | 'none'
 
 export interface ThreadFacts {
+  /** What the thread *is* — read here rather than by each caller, because it
+   *  decides a fact on this object: a machine is never waiting on you. */
+  kind: MailKind
   threadId: string
   accountEmail: string
   subject: string
@@ -138,11 +148,18 @@ export function readThread(
 
   const fromEmail = normaliseEmail(newestInbound.from)
   const domain = fromEmail.split('@')[1] ?? ''
+  const subject = last.subject || '(no subject)'
+  const kind = kindOf({ newest: newestInbound, subject, fromEmail })
+  // A sign-in alert, a status page and a meeting called off are never waiting
+  // on you, however long they sit. Saying "waiting on you" over one is how the
+  // flag stops meaning anything on the rows where it is true.
+  const actionable = canNeedAction(kind)
 
   return {
+    kind,
     threadId: thread.id,
     accountEmail,
-    subject: last.subject || '(no subject)',
+    subject,
     fromName: newestInbound.fromName || fromEmail.split('@')[0] || 'Unknown',
     fromEmail,
     lastMessageId: last.id,
@@ -160,7 +177,7 @@ export function readThread(
     // …and actually yours. A thread you were copied on and nobody has answered
     // is not one you are holding up, and saying so on every such row is how a
     // flag stops meaning anything.
-    bottleneck: replyState !== 'replied' && now - lastInboundAt >= DAY
+    bottleneck: actionable && replyState !== 'replied' && now - lastInboundAt >= DAY
       && (addressedTo || namedInBody),
     messageCount: msgs.length,
     snippet: newestInbound.snippet,
@@ -179,9 +196,10 @@ export function readThread(
  */
 export function isBusinessThread(
   facts: ThreadFacts, newest: NeutralMessage, accountIsBusiness: boolean,
+  kind: MailKind = 'reply',
 ): boolean {
   const h = newest.headers
-  const kind = classifyMail({
+  const cls = classifyMail({
     headers: h,
     fromEmail: facts.fromEmail,
     to: newest.to.join(', '),
@@ -197,7 +215,15 @@ export function isBusinessThread(
     // something to discard. The header is the same test the nightly run makes.
     isInvitation: /text\/calendar/i.test(headerOf(h, 'Content-Type')),
   })
-  if (kind === 'newsletter' || kind === 'notification' || kind === 'invitation') return false
+  // A campaign is a campaign whatever its subject line says, so it goes.
+  if (cls === 'newsletter') return false
+  // Automated mail is kept only where the row has something to offer for it.
+  // An invitation gets Yes / Maybe / No; a sign-in alert, a status page and a
+  // meeting called off each get Acknowledge — those are worth seeing and are
+  // exactly what was being thrown away. A notification with nothing to answer
+  // and nothing to acknowledge is still noise, and the row would show it with
+  // a Draft button, which is how a list teaches you to stop reading it.
+  if (cls === 'notification' && canNeedAction(kind)) return false
   if (accountIsBusiness) return true
   // A personal mailbox still carries work: a named person on an organisation's
   // own domain counts, a free-mail address does not.
@@ -210,14 +236,25 @@ export function isBusinessThread(
  *  attributed to you, a teammate explicitly waiting. It is optional: with no
  *  model configured the deterministic signals still sort the list, they just
  *  sort it more bluntly. */
-export function sectionFor(f: ThreadFacts, direct = false): SmartSection {
+export function sectionFor(f: ThreadFacts, direct = false, kind: MailKind = 'reply'): SmartSection {
   // Answered, and nothing has come back. Rule: omit from the action list.
-  if (f.replyState === 'replied') return f.awaitingCustomer ? 'fyi' : 'fyi'
-  const wantsYou = f.addressedTo || f.namedInBody || direct
-  if (wantsYou) return 'action'
+  if (f.replyState === 'replied') return 'fyi'
+
+  const forYou = f.addressedTo || f.namedInBody || direct
+
+  // A sign-in alert, a status page, a meeting somebody called off: you want to
+  // see it and there is nothing to answer. Addressed to you it is worth
+  // knowing; otherwise it is information.
+  if (!canNeedAction(kind)) return forYou ? 'attention' : 'fyi'
+
+  // An invitation is an action wherever it was addressed — answering it is the
+  // whole of what it wants, and it cannot be answered by being read.
+  if (kind === 'invitation') return 'action'
+
+  if (forYou) return 'action'
   // On the copy line with the ball in your court is something to watch, not
   // something to do.
-  return f.replyState === 'none' || f.replyState === 'pending' ? 'radar' : 'fyi'
+  return 'radar'
 }
 
 /** Newest first inside a section, with the ones you are holding up first. */
