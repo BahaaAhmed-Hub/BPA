@@ -166,14 +166,21 @@ export function extractBody(msg: GmailMessage): string {
 
 // ─── Gmail API calls ──────────────────────────────────────────────────────────
 
-/** Return unread thread IDs and an optional nextPageToken for pagination. */
-export async function listUnreadThreadIds(
+/** Thread ids matching a Gmail query, with a page token for the rest.
+ *
+ *  It was called `listUnreadThreadIds`, which named its default rather than
+ *  what it does: the query has always been a parameter, and the smart view
+ *  passes a date watermark rather than `is:unread`. */
+export async function listThreadIds(
   max = 20, pageToken?: string, account?: MailAccount, query = 'is:unread in:inbox',
 ): Promise<{ ids: string[]; nextPageToken?: string }> {
   const qs = `/users/me/threads?q=${encodeURIComponent(query)}&maxResults=${max}${pageToken ? `&pageToken=${pageToken}` : ''}`
   const data = await gFetch<{ threads?: { id: string }[]; nextPageToken?: string }>(qs, undefined, account)
   return { ids: (data.threads ?? []).map(t => t.id), nextPageToken: data.nextPageToken }
 }
+
+/** The old name, kept so the four existing callers read unchanged. */
+export const listUnreadThreadIds = listThreadIds
 
 // ─── The folders ─────────────────────────────────────────────────────────────
 //

@@ -155,7 +155,10 @@ export interface MeetingPrep {
 // ─── System prompt builder ───────────────────────────────────────────────────
 
 function baseSystem(user: DbUser, companies: DbCompany[]): string {
-  const rules = user.schedule_rules as Record<string, string | number | boolean | string[]>
+  // `?? {}`: the column is nullable, and `Object.entries(null)` throws — which
+  // would take down every AI feature in the app for a user whose row has no
+  // rules, not just the one being asked for.
+  const rules = (user.schedule_rules ?? {}) as Record<string, string | number | boolean | string[]>
 
   const companyList = companies
     .filter(c => c.is_active)
@@ -762,5 +765,103 @@ the message.`
       summary: typeof b.summary === 'string' ? b.summary.trim() : '',
       action: MAIL_ACTIONS.includes(b.action) ? b.action : 'read',
       draft: typeof b.draft === 'string' ? b.draft.trim() : '',
+    }))
+}
+
+// ─── Triage for the smart mail view ──────────────────────────────────────────
+//
+//  The deterministic half of the smart view — who a thread is addressed to,
+//  whether you have replied, how long it has been sitting — is worked out from
+//  the thread itself in `mailSmart.ts` and never asked here. What is left is
+//  the part only reading the words can answer, and it is exactly three things:
+//
+//    direct  — is a deliverable, a decision or an answer actually attributed to
+//              the reader in this thread? Being on the To line is already known;
+//              this is the softer case the headers cannot see, including a
+//              meeting recap that assigns them an action.
+//    need    — one line saying what is wanted from them. Not a summary of the
+//              message: the thing they have to do.
+//    draft   — the reply, where a reply is what is needed.
+//
+//  It is asked **only about threads whose newest message has not been read
+//  before**, so a tab reopened with no new mail costs nothing at all.
+
+export interface TriageInput {
+  id: string
+  subject: string
+  fromName: string
+  fromEmail: string
+  receivedAt: string
+  /** Already known from the headers; given so the model does not contradict it. */
+  addressedToMe: boolean
+  replyState: 'replied' | 'pending' | 'none'
+  body: string
+}
+
+export interface TriageResult {
+  id: string
+  direct: boolean
+  need: string
+  draft: string
+}
+
+export async function triageMail(
+  input: UserContext & { me: string; threads: TriageInput[] },
+): Promise<TriageResult[]> {
+  if (input.threads.length === 0) return []
+  const name = input.user.full_name ?? input.me
+
+  const system = baseSystem(input.user, input.companies) + `
+
+TASK: These are business email threads. For each one decide whether ${name} personally
+owes something, say in one line what is wanted from them, and where that is a reply,
+write it.
+
+Return ONLY a valid JSON array, one object per thread, in the order given:
+[{"id":"<the id given>","direct":true|false,"need":"...","draft":"..."}]
+
+direct — true only when a specific deliverable, decision, answer or action is
+  attributed to ${name} in this thread: asked of them by name, assigned to them in
+  a meeting recap, or someone stating they are waiting on them. Being merely
+  copied, informed, thanked or included in a group update is false. When in doubt,
+  false — a list that flags everything is a list nobody reads.
+need — ONE line, under 110 characters, naming the thing to be done and by when if a
+  date is given: "Confirm the October figure", "Approve the revised scope by Friday".
+  Not a description of the email. Where nothing is owed, say what the thread is
+  waiting on instead: "Awaiting their confirmation".
+draft — the reply body when a written answer is what is needed, otherwise an empty
+  string. Plain text, under 90 words, signed off as ${name}. No placeholders like
+  [name] or [date]: where a fact is missing, ask for it in the reply rather than
+  inventing it.
+
+Write plainly. No enthusiasm, no filler, no "I hope this finds you well". Never
+invent a figure, an attachment, a commitment or a date that is not in the thread.`
+
+  const userMsg = input.threads.map((t, i) => [
+    `--- THREAD ${i + 1} (id: ${t.id}) ---`,
+    `From: ${t.fromName} <${t.fromEmail}>`,
+    `Subject: ${t.subject}`,
+    `Latest message: ${t.receivedAt}`,
+    t.addressedToMe ? 'The reader is on the To line.' : 'The reader is copied, not addressed.',
+    t.replyState === 'none' ? 'The reader has never written in this thread.'
+      : t.replyState === 'pending' ? 'The reader replied, and the other side has written since.'
+      : 'The reader wrote the most recent message.',
+    '',
+    t.body.replace(/\s+\n/g, '\n').trim().slice(0, BODY_CHARS),
+  ].join('\n')).join('\n\n')
+
+  const raw = await call(system, `The reader is ${name} <${input.me}>.\n\n${userMsg}`)
+  const parsed = parseJson<TriageResult[]>(raw)
+  if (!Array.isArray(parsed)) {
+    throw new ProfessorError('The mail triage came back in a shape we could not read', 'parse_error')
+  }
+  const known = new Set(input.threads.map(t => t.id))
+  return parsed
+    .filter(r => r && typeof r.id === 'string' && known.has(r.id))
+    .map(r => ({
+      id: r.id,
+      direct: r.direct === true,
+      need: typeof r.need === 'string' ? r.need.trim() : '',
+      draft: typeof r.draft === 'string' ? r.draft.trim() : '',
     }))
 }

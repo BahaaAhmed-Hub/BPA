@@ -28,6 +28,7 @@ const SHARED_KEYS = [
   'professor-notif-events',
   'professor-review-hours',
   'professor-ai-config',
+  'mail-business-accounts',      // which mailboxes are work, not personal
   'professor-display-name',
   'professor-week-start',        // which day your week starts on
   'professor-accent',            // the colour every highlight is drawn in
