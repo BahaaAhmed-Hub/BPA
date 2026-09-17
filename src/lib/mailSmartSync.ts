@@ -89,6 +89,12 @@ export interface PassResult {
 
 /** One call is one prompt; more than this and it stops fitting. */
 const BATCH = 6
+/** How many rows the nightly run left without a sentence may be caught up in
+ *  one pass. The server half deliberately writes no summaries — the model key
+ *  is the browser's — so on a first open there can be thirty of them, and
+ *  asking about all thirty at once is a bill nobody agreed to. The rest are
+ *  picked up the next time the tab is opened. */
+const MAX_BACKFILL = 12
 /** A ceiling on a single pass, so a first run over a busy year cannot turn into
  *  hundreds of thread fetches in one go. What is left is picked up next time,
  *  because the watermark only advances over what was actually read. */
@@ -112,7 +118,11 @@ function factsToRow(f: ThreadFacts, t: { direct: boolean; need: string; draft: s
     last_at: new Date(f.lastAt).toISOString(),
     subject: f.subject, from_name: f.fromName, from_email: f.fromEmail,
     section: sectionFor(f, t.direct), reply_state: f.replyState,
-    need: t.need || null, draft: t.draft || null, direct: t.direct,
+    // `''`, not null, once the model has answered: null means **never asked**,
+    // and that is what the backfill below looks for. Collapsing the two would
+    // either re-ask about every thread for ever or never ask about the ones
+    // the nightly run stored.
+    need: t.need ?? '', draft: t.draft || null, direct: t.direct,
     addressed_to: f.addressedTo, named_in_body: f.namedInBody,
     // The model can promote a thread the headers read as a copy — a deliverable
     // assigned to you in a recap is yours, whatever the To line says.
@@ -182,8 +192,41 @@ export async function runSmartPass(opts: {
     }
   }))
 
+  // ── The nightly run's rows have no sentence on them ───────────────────────
+  //
+  //  The server half fetches, filters and sections but never asks a model —
+  //  the key is the browser's and is not sent anywhere. So it stores rows with
+  //  `need` null, and this is where they are caught up: a thread that has never
+  //  been through the model is worth asking about even though its newest
+  //  message has not changed, which is the one case the id check above cannot
+  //  see. Without this the two halves never meet and those rows stay blank for
+  //  ever.
+  //
+  //  Bounded, and oldest-first so the backlog drains in a sensible order.
+  const alreadyChanged = new Set(perAccount.flatMap(p => p.out).map(x => `${x.facts.accountEmail}|${x.facts.threadId}`))
+  const blank = (cachedRows ?? [])
+    .filter(r => r.need === null && !r.handled_at)
+    .filter(r => !alreadyChanged.has(`${r.account_email}|${r.thread_id}`))
+    .sort((a, b) => new Date(b.last_at).getTime() - new Date(a.last_at).getTime())
+    .slice(0, MAX_BACKFILL)
+
+  const backfilled: { facts: ThreadFacts; newest: NeutralMessage }[] = []
+  for (const r of blank) {
+    const account = opts.accounts.find(a => a.email === r.account_email)
+    if (!account) continue
+    try {
+      const full = await provider.getThread({ email: account.email, isPrimary: account.isPrimary }, r.thread_id)
+      fetched++
+      const facts = readThread(full, account.email, me, myFirstName, now)
+      if (!facts) continue
+      const newest = full.messages.filter(m => !me.has(m.from.toLowerCase())).pop()
+        ?? full.messages[full.messages.length - 1]
+      backfilled.push({ facts, newest })
+    } catch { /* one unreadable thread is not the pass's problem */ }
+  }
+
   // ── Level 3: the model, for what is left and nothing else.
-  const changed = perAccount.flatMap(p => p.out)
+  const changed = [...perAccount.flatMap(p => p.out), ...backfilled]
   let aiError: string | undefined
   const readings = new Map<string, { direct: boolean; need: string; draft: string }>()
   for (const { facts } of changed) readings.set(facts.threadId, { direct: false, need: '', draft: '' })
