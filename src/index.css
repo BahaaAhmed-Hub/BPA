@@ -848,6 +848,28 @@ img { max-width: 100%; }
    grouping fit on one line is the width of the column they are in, and that
    column is half the screen when a message is open and all of it when not. */
 .mail-toolbar { container-type: inline-size; }
-@container (max-width: 500px) {
-  .mail-sort-label { display: none; }
+@container (max-width: 640px) { .mail-sort-label { display: none; } }
+
+/* ─── Filters and sort, on one line where there is one ─────────────────────── */
+/*
+   Alongside is the point: a list's controls belong together rather than stacked
+   down the page. But the sort control is a fixed ~250px, and with a message
+   open the column is 360 — so pinning them side by side at every width left the
+   filter rail showing "All" and half of a second pill, which is a filter row you
+   cannot filter with.
+
+   So: one line while both fit, and under 560px of *the toolbar's own width*
+   (not the window's — see .mail-toolbar) the row wraps and the sort drops
+   underneath, hard right. The eyebrow goes at the same point, which buys the
+   rail 52px on the line above. */
+.mail-controls {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: nowrap;
+}
+@container (max-width: 470px) {
+  .mail-controls { flex-wrap: wrap; }
+  .mail-controls > .sb-segmented { margin-left: auto; }
+  .mail-filter-rail { flex: 1 1 100% !important; }
 }

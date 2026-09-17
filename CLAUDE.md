@@ -1590,21 +1590,27 @@ you cannot tell which times.
   its name, beside the sender, in the flat list and in the smart view.
 - **The mailbox chip answers a different question** and stays: *where did it
   land* is not *what is it about*, and the two differ often.
-- **Sort is four pills, not a menu.** Date / Sender / Company / Subject; the one
-  you are on turns round when pressed again, which is what a sortable column has
+- **Sort sits beside the filters, on their line.** It had a row of its own under
+  them; a list's controls belong together rather than stacked. Under 470px of
+  *the toolbar's own width* it drops underneath instead, because the sort
+  control is a fixed ~250px and pinning them side by side at every width left
+  the filter rail showing "All" and half of a second pill.
+- **The list column grows with the window** — `clamp(340px, 36vw, 640px)`. It
+  was pinned at exactly 360px, so on a 2200px screen the mail was a strip beside
+  1700px of reading pane, and its toolbar could never fit both controls on one
+  line whatever the screen.
+- **Sort is Date / Sender / Company / Subject**; the one you are on turns round
+  when pressed again, which is what a sortable column has
   always done and what a second control for it would be. Each says what its two
   directions mean in its tooltip, since "Date ↑" does not say which end is which.
   Mail belonging to no company of yours sits at the bottom **whichever way round
   the sort is** — it is a remainder, not a name.
-- **`Flat / By company`** groups the same rows under one folding card each,
-  ordered by which company has the newest mail. Kept per browser in `mail-sort`,
-  `mail-sort-asc`, `mail-group` and `mail-groups-open`.
-- **`components/ui/SectionCard.tsx`** is that folding card, and the smart view's
-  four sections now use it too. It grew in one view and was wanted in the next
-  the following day, which is the moment a shape copied twice becomes a
-  component — two copies drift, and then two lists that look identical fold
-  differently. `useOpenSections(key)` is the memory, and a section id nobody has
-  touched is **open**, so one added later is not silently shut for everybody.
+- **There is no grouping control.** There was a `Flat / By company` switch, and
+  it went: sorting **by** company already puts a company's mail together, so two
+  controls were answering one question. (`components/ui/SectionCard.tsx` went
+  with it — the smart view had already stopped using it for its own views, and a
+  UI primitive nothing renders is worse in a shared index than absent.) Kept per
+  browser in `mail-sort` and `mail-sort-asc`.
 
 ## Mail — why a thread you archived kept coming back
 Two bugs, and the second undid the first:

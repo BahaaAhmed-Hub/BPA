@@ -33,8 +33,8 @@ import type { DbUser } from '@/types/database'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
-import { Segmented, SectionCard, useOpenSections, Pill, Card } from '@/components/ui'
-import { tagOfMail, NO_COMPANY, type MailTag } from '@/lib/mailCompany'
+import { Segmented, Pill, Card } from '@/components/ui'
+import { tagOfMail, type MailTag } from '@/lib/mailCompany'
 import { isBusinessAccount } from '@/lib/businessAccounts'
 import { KIND_NEED, canNeedAction } from '@/lib/mailKinds'
 
@@ -325,18 +325,6 @@ const barBtn: React.CSSProperties = {
 }
 
 
-// ─── Grouped by company ──────────────────────────────────────────────────────
-//
-//  The same rows, under the business each belongs to. It is the one view that
-//  answers "what is outstanding with Teradix" without reading the whole list,
-//  and it is the same `SectionCard` the smart view folds its four sections
-//  with — a list that looks the same should fold the same.
-//
-//  Ordered by what is in each group rather than alphabetically: the company
-//  with the newest mail is the one you came here for. Mail belonging to no
-//  company of yours goes last, always, because it is a remainder rather than a
-//  group.
-
 export type MailSortKey = 'date' | 'sender' | 'company' | 'subject'
 /** Each says what its two directions mean, because "Date ↑" alone does not say
  *  whether that is oldest or newest and the answer differs per key. */
@@ -346,53 +334,6 @@ const SORTS: { id: MailSortKey; label: string; asc: string; desc: string }[] = [
   { id: 'company', label: 'Company', asc: 'A to Z',       desc: 'Z to A' },
   { id: 'subject', label: 'Subject', asc: 'A to Z',       desc: 'Z to A' },
 ]
-export type MailGroupBy = 'none' | 'company'
-
-function MailGroups({ emails, isOpen, onToggle, renderRow, companyOf }: {
-  emails: Email[]
-  isOpen: (id: string) => boolean
-  onToggle: (id: string) => void
-  renderRow: (e: Email, i: number, total: number) => React.ReactNode
-  companyOf: (e: Email) => MailTag | null
-}) {
-  const groups = useMemo(() => {
-    const by = new Map<string, { id: string; name: string; color: string; rows: Email[] }>()
-    for (const e of emails) {
-      const co = companyOf(e)
-      // Personal mail is a group of its own rather than a remainder: it is a
-      // real answer to "whose is this", which is why the row carries a chip
-      // for it. Only mail on a *work* mailbox from a domain that is none of
-      // yours falls through to the remainder.
-      const id = co ? (co.isCompany ? `co:${co.label}` : 'personal') : '_none'
-      if (!by.has(id)) by.set(id, {
-        id, name: co?.label ?? NO_COMPANY, color: co?.color ?? 'var(--sb-ink-4)', rows: [],
-      })
-      by.get(id)!.rows.push(e)
-    }
-    const out = [...by.values()]
-    out.sort((a, b) => {
-      // Personal, then the unlabelled remainder, both after the companies.
-      const rank = (id: string) => id === '_none' ? 2 : id === 'personal' ? 1 : 0
-      if (rank(a.id) !== rank(b.id)) return rank(a.id) - rank(b.id)
-      const an = a.rows[0]?.receivedAt ?? '', bn = b.rows[0]?.receivedAt ?? ''
-      return bn.localeCompare(an)
-    })
-    return out
-  }, [emails, companyOf])
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {groups.map(g => (
-        <SectionCard key={g.id} title={g.name} count={g.rows.length} dot={g.color}
-          open={isOpen(g.id)} onToggle={() => onToggle(g.id)}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {g.rows.map((e, i) => renderRow(e, i, g.rows.length))}
-          </div>
-        </SectionCard>
-      ))}
-    </div>
-  )
-}
 
 export function InboxModule() {
   const user         = useAuthStore(s => s.user)
@@ -535,19 +476,12 @@ export function InboxModule() {
   const [sortAsc, setSortAsc] = useState<boolean>(() => {
     try { return localStorage.getItem('mail-sort-asc') === '1' } catch { return false }
   })
-  const [groupBy, setGroupBy] = useState<MailGroupBy>(() => {
-    try { return (localStorage.getItem('mail-group') as MailGroupBy) || 'none' } catch { return 'none' }
-  })
   const setSort = (k: MailSortKey) => {
     // Clicking the key you are already on turns it round, which is what every
     // sortable list on earth does and what a second control for it would be.
     const asc = k === sortKey ? !sortAsc : k !== 'date'
     setSortKey(k); setSortAsc(asc)
     try { localStorage.setItem('mail-sort', k); localStorage.setItem('mail-sort-asc', asc ? '1' : '0') } catch { /* quota */ }
-  }
-  const setGroup = (g: MailGroupBy) => {
-    setGroupBy(g)
-    try { localStorage.setItem('mail-group', g) } catch { /* quota */ }
   }
 
   // The company each message belongs to, worked out once per list rather than
@@ -590,7 +524,6 @@ export function InboxModule() {
     return rows
   }, [filteredEmails, sortKey, sortAsc, companyByMail])
 
-  const { isOpen: isGroupOpen, toggle: toggleGroup } = useOpenSections('mail-groups-open')
 
   // ── Does the filter rail have more to the right? ──────────────────────────
   //  The fade at its edge is the only thing that says so — the scrollbar is
@@ -1719,7 +1652,16 @@ export function InboxModule() {
           {/* The fade is the affordance: a row cut flush at the card's edge
               reads as a row that failed to draw, and there is no scrollbar to
               say otherwise. */}
-          <div className="mail-filter-rail" ref={railRef} onScroll={measureRail}>
+          {/* ── What kind of mail, and how it is ordered — one line ────────
+              The sort control had a row of its own under the filters, and a
+              Flat / By company switch beside it. Grouping went: sorting **by**
+              company already puts a company's mail together, and two controls
+              that answer one question is one control too many. What is left
+              sits at the right of the filters, where a list's controls belong
+              together rather than stacked. */}
+          <div className="mail-controls">
+          <div className="mail-filter-rail" ref={railRef} onScroll={measureRail}
+            style={{ flex: 1, minWidth: 0 }}>
             <Pill on={mailClass === null} onClick={() => setMailClass(null)}
               title="Everything in this folder">
               All <Count n={visibleEmails.length} on={mailClass === null} />
@@ -1734,49 +1676,31 @@ export function InboxModule() {
             ))}
           </div>
 
-          {/* ── How it is ordered ──────────────────────────────────────────
-              Sort on the left, grouping hard right, on one line. Pressing the
-              key you are already on turns it round — the arrow on the active
-              option is what says which way — so four keys and two directions
-              cost one control rather than five. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {/* The eyebrow goes when the toolbar is too narrow to hold
-                everything on one line. It is 52px naming a control whose
-                active option already carries an arrow; losing it to keep sort
-                and grouping side by side is the better trade. */}
-            <span className="mail-sort-label" style={{
-              fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
-              textTransform: 'uppercase', color: 'var(--sb-ink-4)', flexShrink: 0,
-            }}>Sort</span>
-            <Segmented
-              size="sm"
-              value={sortKey}
-              onChange={v => setSort(v as MailSortKey)}
-              aria-label="Sort the list"
-              options={SORTS.map(o => ({
-                value: o.id,
-                label: <>{o.label}{sortKey === o.id ? (sortAsc ? ' ↑' : ' ↓') : ''}</>,
-                title: sortKey === o.id
-                  ? `${o.label}, ${sortAsc ? o.asc : o.desc} — press again to turn it round`
-                  : `Sort by ${o.label.toLowerCase()}`,
-              }))}
-            />
-            {/* `margin-left: auto` rather than a flex spacer: on one line the
-                two are identical, but when the row wraps a spacer eats the
-                rest of the first line and drops this to the *left* of the
-                second, which is the one place it must never be. */}
-            <Segmented
-              size="sm"
-              style={{ marginLeft: 'auto' }}
-              value={groupBy}
-              onChange={v => setGroup(v as MailGroupBy)}
-              aria-label="Group the list"
-              options={[
-                { value: 'none',    label: 'Flat',       title: 'One list, in the order above' },
-                { value: 'company', label: 'By company', title: 'One folding card per company' },
-              ]}
-            />
+          {/* Pressing the key you are already on turns it round — the arrow on
+              the active option is what says which way — so four keys and two
+              directions cost one control rather than five. The eyebrow goes
+              when the toolbar is too narrow to hold both: it is 52px naming a
+              control whose active option already carries an arrow. */}
+          <span className="mail-sort-label" style={{
+            fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
+            textTransform: 'uppercase', color: 'var(--sb-ink-4)', flexShrink: 0,
+          }}>Sort</span>
+          <Segmented
+            size="sm"
+            style={{ flexShrink: 0 }}
+            value={sortKey}
+            onChange={v => setSort(v as MailSortKey)}
+            aria-label="Sort the list"
+            options={SORTS.map(o => ({
+              value: o.id,
+              label: <>{o.label}{sortKey === o.id ? (sortAsc ? ' ↑' : ' ↓') : ''}</>,
+              title: sortKey === o.id
+                ? `${o.label}, ${sortAsc ? o.asc : o.desc} — press again to turn it round`
+                : `Sort by ${o.label.toLowerCase()}`,
+            }))}
+          />
           </div>
+
         </Card>
 
         {/* ── What to do with the class in front of you ────────────────────── */}
@@ -1909,14 +1833,6 @@ export function InboxModule() {
               : folder === 'unread' ? 'Nothing unread. That is the whole inbox dealt with.'
               : `Nothing in ${FOLDER_LABEL[folder ?? 'inbox'].toLowerCase()}.`}
           </div>
-        ) : groupBy === 'company' ? (
-          <MailGroups
-            emails={sortedEmails}
-            isOpen={isGroupOpen}
-            onToggle={toggleGroup}
-            renderRow={renderRow}
-            companyOf={companyOf}
-          />
         ) : (
           <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', overflow: 'hidden' }}>
             {sortedEmails.map((email, i) => renderRow(email, i, sortedEmails.length))}
@@ -2577,9 +2493,17 @@ export function InboxModule() {
         {noAuth || fetchError ? (
           <div style={{ maxWidth: 520, margin: '40px auto' }}>{renderRight()}</div>
         ) : (
+          /* ── The list column grows with the window ──────────────────────
+             It was pinned at exactly 360px at every width, so on a 2200px
+             screen the mail list was a 360px strip beside 1700px of reading
+             pane — and its own toolbar could never fit the filters and the
+             sort control on one line, whatever the screen. `clamp` gives it a
+             floor of 340 (below which a subject is unreadable), a share of the
+             room, and a ceiling of 560 so the message being read still gets
+             the larger half. */
           <div style={{
             display: 'grid', gap: 16,
-            gridTemplateColumns: `${railOpen ? 156 : 46}px ${visibleEmails.length > 0 ? '360px ' : ''}1fr`,
+            gridTemplateColumns: `${railOpen ? 156 : 46}px ${visibleEmails.length > 0 ? 'clamp(340px, 36vw, 640px) ' : ''}1fr`,
           }}>
             {renderFolders()}
             {renderLeft()}
