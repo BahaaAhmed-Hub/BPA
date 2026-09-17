@@ -1606,6 +1606,54 @@ you cannot tell which times.
   differently. `useOpenSections(key)` is the memory, and a section id nobody has
   touched is **open**, so one added later is not silently shut for everybody.
 
+## Mail — why a thread you archived kept coming back
+Two bugs, and the second undid the first:
+- **`archived_at` was written on every archive and read by nothing.** The row
+  left the screen, and the next pass loaded it straight back out of the store
+  and put it where it was. `visibleThreads` now drops a thread whose
+  `archivedAt` is at or after its newest message — the comparison is against
+  `lastAt` rather than a flag, so a **reply** to something you archived brings
+  it back, which is what Gmail does with the thread and the only behaviour that
+  does not quietly swallow an answer you were waiting for.
+- **`factsToRow` hard-coded `muted: false, archived_at: null,
+  acknowledged_at: null`.** Every pass that re-stored a thread wiped all three,
+  and the backfill re-stored *any* row with no summary — so muting something
+  the nightly run had left blank destroyed the mute on the next open. It takes
+  the cached row now and carries the marks forward. `handled_at` is the one
+  deliberate exception: it means "dealt with for now", and the function is only
+  called about a thread that has changed.
+- `handled` is likewise read as a *moment*, not a flag: a message arriving after
+  you marked it done un-marks it.
+- Archive writes `archivedAt`, **not** `muted` — muting would hide the reply
+  too, which is not what archiving promises. The Bin does set `muted`: that one
+  is gone.
+
+## Mail — the primary account's token, and the hour it stopped working
+`eng.bahaa.a@gmail.com could not be read — Request had invalid authentication
+credentials…` Three faults stacked:
+- **`App.tsx` stamped an unverified token as fresh.** When Supabase had no new
+  `provider_token` on a session restore it wrote `Date.now()` against the
+  *existing* one — its own comment said "the token itself may still be valid;
+  we just reset the staleness timestamp". A token Google issued three hours ago
+  was therefore brand new to `isTokenStale()`, and the refresh ladder under it
+  was never climbed once. **A stale stamp costs one refresh call; a false fresh
+  one costs every request until the clock runs out.** The branch is gone.
+- **`gmail.ts` never refreshed at all.** `accessToken` read `provider_token` off
+  the session — only there in the minutes after an OAuth sign-in — and
+  otherwise whatever was cached. It calls `refreshPrimaryToken()` now, the
+  ladder the calendar has used all along, and `gFetch` retries **once** on a
+  401 with a force-refreshed token. A token that comes back identical to the one
+  Google just rejected throws immediately: forty threads would otherwise make
+  forty identical requests.
+- **`refreshPrimaryViaEdgeFn` posted to a relative URL** whenever
+  `VITE_SUPABASE_URL` was unset — `as string ?? ''` catches undefined and yields
+  the empty string — so the refresh hit whatever host served the page, got the
+  app's own HTML, and looked like a refusal. It uses the client's own
+  `supabaseUrl` now.
+- **The banner says what to do.** Google's prose is addressed to whoever wrote
+  the app; `isAuthReason` recognises it (and `MailAuthError`) and the row becomes
+  "<address> needs signing in to Google again" with the button that fixes it.
+
 ## Mail — an announcement is not a person writing to you
 `kindOf` used to call a thread a `reply` unless its **subject** proved
 otherwise, so "Anghami installed on Hania's device" from `no-reply@google.com`

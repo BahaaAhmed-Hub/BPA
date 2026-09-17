@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, EyeOff, X as XIcon, HelpCircle, Send, Trash2 } from 'lucide-react'
+import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, EyeOff, X as XIcon, HelpCircle, Send, Trash2, LogIn } from 'lucide-react'
 import { Button, Pill, SectionCard, useOpenSections } from '@/components/ui'
 import { ICON, STROKE } from '@/lib/type'
 import type { MailAccount } from '@/lib/gmail'
@@ -85,6 +85,14 @@ function InviteChip() {
   )
 }
 
+/** Whether a mailbox failed because its permission is gone, which is the one
+ *  failure a person can actually do something about. Matched on Google's own
+ *  words as well as on our error's name, because a failure raised deeper than
+ *  `accessToken` — inside a batch, inside the edge function — arrives as prose. */
+function isAuthReason(reason: string): boolean {
+  return /needs signing in|invalid authentication|invalid credentials|access token|unauthenticated|401/i.test(reason)
+}
+
 /** What a machine's notice is, in place of a reply state it has no use for.
  *  The row still says something on that line — an empty slot where every other
  *  row carries a word reads as a row that failed to load. */
@@ -104,7 +112,7 @@ function KindChip({ kind }: { kind: MailKind }) {
 }
 
 export function SmartView({
-  result, loading, accounts, openThreadId, onRefresh, onOpen, onDraft, onSendDraft,
+  result, loading, accounts, openThreadId, onRefresh, onReconnect, onOpen, onDraft, onSendDraft,
   onDiscardDraft, onTask, onHandled, onArchive, onIgnore, onDismiss, onAcknowledge, onRsvp,
 }: {
   result: PassResult | null
@@ -113,6 +121,8 @@ export function SmartView({
   /** The thread open in the reader beside this list, so its row can say so. */
   openThreadId: string | null
   onRefresh: (full: boolean) => void
+  /** Start the Google sign-in again, for a mailbox whose permission ran out. */
+  onReconnect: () => void
   /** Show the thread in the normal view. */
   onOpen: (t: SmartThread) => void
   /** Open the real composer, seeded with the drafted reply. */
@@ -211,8 +221,27 @@ export function SmartView({
           borderRadius: 'var(--sb-r-nav)', fontSize: 'var(--sb-t-meta)',
           color: 'var(--sb-negative)', background: 'var(--sb-negative-tint)',
         }}>
-          <AlertTriangle size={ICON.sm} strokeWidth={STROKE.active} />
-          {f.email} could not be read — {f.reason}
+          <AlertTriangle size={ICON.sm} strokeWidth={STROKE.active} style={{ flexShrink: 0 }} />
+          {/* ── Say what to do, not what Google said ────────────────────────
+              "Request had invalid authentication credentials. Expected OAuth 2
+              access token, login cookie or other valid authentication
+              credential. See developers.google.com/…/devconsole-project" is
+              addressed to whoever wrote the app, and it appeared over the
+              reader with no way forward. There is exactly one thing that fixes
+              it, so the banner is that thing. */}
+          {isAuthReason(f.reason) ? (
+            <>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <b style={{ fontWeight: 600 }}>{f.email}</b> needs signing in to Google again —
+                its permission has run out.
+              </span>
+              <Button size="sm" onClick={onReconnect} title={f.reason}>
+                <LogIn size={ICON.sm} strokeWidth={STROKE.rest} /> Sign in again
+              </Button>
+            </>
+          ) : (
+            <span>{f.email} could not be read — {f.reason}</span>
+          )}
         </div>
       ))}
 

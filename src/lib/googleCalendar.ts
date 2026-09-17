@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, supabaseUrl } from './supabase'
 import { getGoogleTokenViaSupabaseRefresh } from './tokenManager'
 import { loadAccounts, loadAccountsFromServer } from './multiAccount'
 
@@ -87,8 +87,13 @@ function isTokenStale(): boolean {
 /** Refresh the primary Google access token via the google-oauth Edge Function. */
 async function refreshPrimaryViaEdgeFn(accessToken: string, email: string): Promise<string | null> {
   try {
-    const SUPABASE_URL     = import.meta.env.VITE_SUPABASE_URL     as string ?? ''
-    const SUPABASE_ANON    = import.meta.env.VITE_SUPABASE_ANON_KEY as string ?? ''
+    // The client's own URL, not a second reading of the environment. `?? ''`
+    // only catches null and undefined, so an *unset* variable came through as
+    // the empty string and this posted to `/functions/v1/google-oauth` on
+    // whatever host was serving the page — which answers with the app's own
+    // HTML, is not ok, and makes the refresh look like a refusal.
+    const SUPABASE_URL     = supabaseUrl
+    const SUPABASE_ANON    = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || ''
     const res = await fetch(`${SUPABASE_URL}/functions/v1/google-oauth`, {
       method:  'POST',
       headers: {

@@ -942,16 +942,22 @@ function App() {
               localStorage.setItem('google_provider_token', data.session.provider_token)
               localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
               console.log('[AddAccount] ✓ Primary Google token refreshed after session restore')
-            } else {
-              // Supabase didn't return a fresh Google token — mark existing one as fresh
-              // so it is used directly without triggering unnecessary refresh loops.
-              // (The token itself may still be valid; we just reset the staleness timestamp.)
-              const existing = localStorage.getItem('google_provider_token')
-              if (existing) {
-                localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
-                console.log('[AddAccount] Primary Google token TTL reset (no new token from refresh)')
-              }
             }
+            // **The timestamp beside the token says when Google issued it.**
+            //
+            //  There used to be an `else` here that wrote `Date.now()` against
+            //  the *existing* token whenever Supabase had no new one — its own
+            //  comment said "the token itself may still be valid; we just reset
+            //  the staleness timestamp". It is a guess, and it is the guess
+            //  that broke the mail: a token Google issued three hours ago was
+            //  stamped brand new on every session restore, `isTokenStale()`
+            //  therefore said no for another 55 minutes, and the refresh ladder
+            //  below it was never climbed once. What you saw was an hour of
+            //  "Request had invalid authentication credentials" from an app
+            //  that had a perfectly good way to fix it and never ran it.
+            //
+            //  A stale stamp costs one refresh call. A false fresh one costs
+            //  every request until the clock runs out.
           } catch (e) {
             console.warn('[AddAccount] Could not refresh primary token:', e)
           }

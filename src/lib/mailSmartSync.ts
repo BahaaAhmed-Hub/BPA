@@ -77,6 +77,10 @@ export interface SmartThread {
   handled: boolean
   kind: MailKind
   muted: boolean
+  /** When you archived it, or null. Compared against `lastAt` rather than read
+   *  as a flag: archived-and-quiet is hidden, archived-and-then-answered is
+   *  not. */
+  archivedAt: number | null
   acknowledged: boolean
   /** What was just done about it, in a sentence — "Task made: Confirm the
    *  October figure". Local to the session and deliberately not stored: it is
@@ -122,6 +126,17 @@ function visibleThreads(all: SmartThread[], from: number): SmartThread[] {
     // Ignored means ignored: a new message on a muted thread does not undo the
     // decision, which is the difference between "ignore" and "done".
     .filter(t => !t.muted)
+    // **Archived, and nothing has happened since.** This filter did not exist:
+    // `archived_at` was written on every archive and read by nothing, so the
+    // row was gone until the next pass loaded it back out of the store and put
+    // it straight back where it was. Archiving something over and over and
+    // watching it return is what that looks like from the outside.
+    //
+    // The comparison is against the thread's own newest message rather than a
+    // flag, so a *reply* to something you archived brings it back — which is
+    // what Gmail does with the thread itself, and the only behaviour that does
+    // not quietly swallow an answer you were waiting for.
+    .filter(t => !(t.archivedAt !== null && t.archivedAt >= t.lastAt))
     // Hiding a company is one decision and it has to mean the same thing
     // everywhere — its tasks, its calendars and its mail all go quiet
     // together. This view was the one place still showing it, including the
@@ -140,16 +155,40 @@ function rowToThread(r: SmartRow): SmartThread {
     section: r.section, replyState: r.reply_state,
     need: r.need ?? '', draft: r.draft ?? '', direct: r.direct,
     addressedTo: r.addressed_to, bottleneck: r.bottleneck,
-    awaitingCustomer: r.awaiting_customer, handled: !!r.handled_at,
+    awaitingCustomer: r.awaiting_customer,
+    // Dealt with *as of* that moment. A message arriving after it is not.
+    handled: !!r.handled_at && new Date(r.handled_at).getTime() >= new Date(r.last_at).getTime(),
+    archivedAt: r.archived_at ? new Date(r.archived_at).getTime() : null,
     kind: r.kind ?? 'reply', muted: !!r.muted, acknowledged: !!r.acknowledged_at,
   }
 }
 
+/**
+ * @param was the row already stored for this thread, where there is one.
+ *
+ *  **Its marks are carried forward.** They used to be hard-coded to nothing
+ *  here, so every pass that re-stored a thread — which is every pass in which
+ *  anything about it changed, and every backfilled row — wiped the mute, the
+ *  archive and the acknowledgement. Archive a thread, come back tomorrow, and
+ *  it was in the list again as though you had never touched it.
+ *
+ *  `handled_at` is the exception and is deliberately dropped: it means "dealt
+ *  with for now", and this function is only ever called about a thread that
+ *  has *changed*. Somebody has written again, so it is not dealt with any more.
+ */
 function factsToRow(
   f: ThreadFacts, t: { direct: boolean; need: string; draft: string }, kind: MailKind,
+  was?: SmartRow,
 ): Omit<SmartRow, 'analyzed_at'> {
   return {
-    kind, muted: false, archived_at: null, acknowledged_at: null,
+    kind,
+    muted: was?.muted ?? false,
+    // An archive is about the messages that were there when you archived it.
+    // Keeping the stamp lets `visibleThreads` tell "archived, and nothing has
+    // happened since" from "archived, and then they wrote again" — which is
+    // exactly what Gmail itself does with the thread.
+    archived_at: was?.archived_at ?? null,
+    acknowledged_at: was?.acknowledged_at ?? null,
     account_email: f.accountEmail, thread_id: f.threadId, last_message_id: f.lastMessageId,
     last_at: new Date(f.lastAt).toISOString(),
     subject: f.subject, from_name: f.fromName, from_email: f.fromEmail,
@@ -260,7 +299,11 @@ export async function runSmartPass(opts: {
   //  Bounded, and oldest-first so the backlog drains in a sensible order.
   const alreadyChanged = new Set(perAccount.flatMap(p => p.out).map(x => `${x.facts.accountEmail}|${x.facts.threadId}`))
   const blank = (cachedRows ?? [])
-    .filter(r => r.need === null && !r.handled_at)
+    // Muted and archived rows are skipped: the backfill exists to give a row a
+    // sentence, and these have no row. It was also the path by which a mute
+    // was destroyed — the thread was re-fetched, re-analysed and re-stored,
+    // and the store used to forget every mark on the way through.
+    .filter(r => r.need === null && !r.handled_at && !r.muted && !r.archived_at)
     .filter(r => !alreadyChanged.has(`${r.account_email}|${r.thread_id}`))
     .sort((a, b) => new Date(b.last_at).getTime() - new Date(a.last_at).getTime())
     .slice(0, MAX_BACKFILL)
@@ -329,7 +372,8 @@ export async function runSmartPass(opts: {
   //    returned. A mailbox that failed keeps its old mark and is simply read
   //    again next time.
   const rows = changed.map(({ facts, kind }) =>
-    factsToRow(facts, readings.get(facts.threadId) ?? { direct: false, need: '', draft: '' }, kind))
+    factsToRow(facts, readings.get(facts.threadId) ?? { direct: false, need: '', draft: '' }, kind,
+               cached.get(`${facts.accountEmail}|${facts.threadId}`)))
   await store.save(rows)
   await Promise.all(perAccount.map(p => {
     if (!p.reachedEnd && p.out.length === 0 && failed.some(f => f.email === p.account.email)) return

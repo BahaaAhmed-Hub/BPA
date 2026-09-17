@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+// The primary account's token ladder already exists; mail simply never used it.
+import { refreshPrimaryToken } from './googleCalendar'
 import { getGoogleToken } from './tokenManager'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -46,22 +48,81 @@ export interface MailAccount {
   isPrimary: boolean
 }
 
-async function accessToken(account?: MailAccount): Promise<string> {
+/** Thrown where the only fix is signing in again. The views catch it by name
+ *  rather than by matching on Google's prose, and offer the button. */
+export class MailAuthError extends Error {
+  readonly email: string
+  constructor(email: string) {
+    super(`${email} needs signing in to Google again before its mail can be read.`)
+    this.name = 'MailAuthError'
+    this.email = email
+  }
+}
+
+/**
+ * A token for this mailbox.
+ *
+ * **A Google access token lives about an hour.** This used to read
+ * `provider_token` off the Supabase session — which is only there in the
+ * minutes after an OAuth sign-in — and otherwise whatever was last cached in
+ * localStorage. So every call from the account you signed in with worked until
+ * lunch and then failed for ever with Google's own prose about invalid
+ * credentials and a link to the developer console. The calendar solved this
+ * long ago with `refreshPrimaryToken()`; mail never adopted it.
+ *
+ * `force` throws the cached copy away first: the caller has just been told by
+ * Google that it is no good, and the TTL clearly disagreed.
+ */
+async function accessToken(account?: MailAccount, force = false): Promise<string> {
   if (account && !account.isPrimary) {
     const token = await getGoogleToken(account.email)
-    if (!token) throw new Error(`${account.email} needs reconnecting before its mail can be read.`)
+    if (!token) throw new MailAuthError(account.email)
     return token
   }
-  const { data } = await supabase.auth.getSession()
-  const token = data.session?.provider_token ?? localStorage.getItem('google_provider_token')
-  if (!token) throw new Error('No Google access token — please sign in with Google.')
+  if (force) {
+    try { localStorage.removeItem('google_provider_token_saved_at') } catch { /* private mode */ }
+  }
+  const token = await refreshPrimaryToken()
+  if (!token) {
+    const { data } = await supabase.auth.getSession()
+    throw new MailAuthError(account?.email ?? data.session?.user?.email ?? 'Your Google account')
+  }
   return token
 }
 
 // ─── Core fetch ───────────────────────────────────────────────────────────────
 
+/** Google's answer when the token is the problem rather than the request. */
+function isAuthFailure(status: number, message: string): boolean {
+  if (status === 401) return true
+  return status === 403 && /invalid authentication|access token|credential/i.test(message)
+}
+
 async function gFetch<T>(path: string, init?: RequestInit, account?: MailAccount): Promise<T> {
-  const token = await accessToken(account)
+  return gFetchOnce<T>(path, init, account, false)
+}
+
+/** One attempt, and **exactly one retry** on an authentication failure with a
+ *  force-refreshed token.
+ *
+ *  A token can expire between being handed out and being used, and the TTL is a
+ *  guess at Google's clock rather than a reading of it — so the honest signal
+ *  that a token is dead is Google saying so. Retrying once turns that into an
+ *  invisible refresh; retrying twice would be a loop against an account that
+ *  genuinely needs signing in again. */
+async function gFetchOnce<T>(
+  path: string, init: RequestInit | undefined, account: MailAccount | undefined, retrying: boolean,
+  rejected?: string,
+): Promise<T> {
+  const token = await accessToken(account, retrying)
+  // The refresh handed back the very token Google has just rejected, which
+  // means it could not get a new one and fell back to the cached copy. Trying
+  // it again would be the same request with the same answer — and a pass over
+  // forty threads would make forty of them. One person, one sign-in.
+  if (retrying && rejected && token === rejected) {
+    const { data } = await supabase.auth.getSession()
+    throw new MailAuthError(account?.email ?? data.session?.user?.email ?? 'Your Google account')
+  }
   const res = await fetch(`https://gmail.googleapis.com/gmail/v1${path}`, {
     ...init,
     headers: {
@@ -71,6 +132,12 @@ async function gFetch<T>(path: string, init?: RequestInit, account?: MailAccount
     },
   })
   if (!res.ok) {
+    if (!retrying) {
+      const peek = await res.clone().json().catch(() => ({})) as { error?: { message?: string } }
+      if (isAuthFailure(res.status, peek.error?.message ?? '')) {
+        return gFetchOnce<T>(path, init, account, true, token)
+      }
+    }
     const body = await res.json().catch(() => ({})) as { error?: { message?: string } }
     throw new Error(body?.error?.message ?? `Gmail ${res.status}`)
   }

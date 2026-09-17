@@ -718,7 +718,8 @@ export function InboxModule() {
     } catch (e) {
       notify(e instanceof Error ? e.message : 'It could not be archived'); return
     }
-    if (t) { markSmart([t], { muted: true }); void markThread(t.accountEmail, t.threadId, { archived_at: new Date().toISOString() }) }
+    const at = Date.now()
+    if (t) { markSmart([t], { archivedAt: at }); void markThread(t.accountEmail, t.threadId, { archived_at: new Date(at).toISOString() }) }
     setReading(null)
     notify('Archived')
   }
@@ -733,7 +734,8 @@ export function InboxModule() {
     } catch (e) {
       notify(e instanceof Error ? e.message : 'It could not be binned'); return
     }
-    if (t) { markSmart([t], { muted: true }); void markThread(t.accountEmail, t.threadId, { archived_at: new Date().toISOString() }) }
+    // The Bin is not "come back when they write again": it is gone.
+    if (t) { markSmart([t], { muted: true }); void markThread(t.accountEmail, t.threadId, { muted: true }) }
     setReading(null)
     notify('Moved to the Bin')
   }
@@ -756,8 +758,10 @@ export function InboxModule() {
       ...prev,
       threads: prev.threads
         .map(t => hit.has(`${t.accountEmail}|${t.threadId}`) ? { ...t, ...patch } : t)
-        // Ignored and archived leave now rather than at the next pass.
-        .filter(t => !t.muted && !(patch.muted && hit.has(`${t.accountEmail}|${t.threadId}`))),
+        // Ignored and archived leave now rather than at the next pass — and by
+        // the same test the pass makes, so a row cannot go here and come back
+        // there.
+        .filter(t => !t.muted && !(t.archivedAt !== null && t.archivedAt >= t.lastAt)),
     })
   }
 
@@ -871,16 +875,20 @@ export function InboxModule() {
   /** Out of the inbox in Gmail, and out of this list. A thread at a time, so
    *  one that will not archive does not take the batch with it. */
   async function handleSmartArchive(ts: SmartThread[]) {
-    // Archiving takes it out of the list the same way ignoring does; the
-    // difference is in the mail, not on screen.
-    markSmart(ts, { muted: true })
+    // **Archived, not muted.** It leaves the list now, and it stays gone until
+    // somebody writes on the thread again — the stamp is what `visibleThreads`
+    // compares against the newest message. Setting `muted` here instead would
+    // have hidden the reply too, which is not what archiving promises and not
+    // what Gmail does with the thread.
+    const at = Date.now()
+    markSmart(ts, { archivedAt: at })
     const back: SmartThread[] = []
     for (const t of ts) {
       const account = accounts.find(a => a.email === t.accountEmail)
       if (!account) { back.push(t); continue }
       try {
         await modifyThread(t.threadId, { remove: ['INBOX'] }, account)
-        void markThread(t.accountEmail, t.threadId, { archived_at: new Date().toISOString() })
+        void markThread(t.accountEmail, t.threadId, { archived_at: new Date(at).toISOString() })
       } catch { back.push(t) }
     }
     // **A row that left here and did not leave Gmail is a lie.** The gesture is
@@ -890,7 +898,7 @@ export function InboxModule() {
     if (back.length) {
       setSmart(prev => prev && {
         ...prev,
-        threads: [...prev.threads, ...back.map(t => ({ ...t, muted: false }))]
+        threads: [...prev.threads, ...back.map(t => ({ ...t, archivedAt: null }))]
           .sort((a, b) => b.lastAt - a.lastAt),
       })
     }
@@ -2384,6 +2392,7 @@ export function InboxModule() {
                 accounts={accounts}
                 openThreadId={reading?.threadId ?? null}
                 onRefresh={full => void runSmart(full)}
+                onReconnect={() => void signInWithGoogle()}
                 onOpen={openSmartThread}
                 onDraft={handleSmartDraft}
                 onSendDraft={t => void handleSmartSend(t)}
