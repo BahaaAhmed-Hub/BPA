@@ -649,6 +649,11 @@ export function GoalsScreen(_props?: any) {
     // describes before being written.
     ...d.accounts.filter(a => a.counts === 'owed')
       .map(a => ({ label: `${a.name} — owed, and a debt to clear below`, amount: sfig(-a.amount), kind: 'note' as const })),
+    // Headroom on a card is not money. It is said rather than left out, because
+    // a card sitting at +4,000 and appearing nowhere reads as the plan having
+    // lost it.
+    ...d.accounts.filter(a => a.counts === 'card')
+      .map(a => ({ label: `${a.name} — a card in credit: it can be spent at a till or online, never held or saved`, amount: fig(a.amount), kind: 'note' as const })),
     ...d.accounts.filter(a => a.counts === 'no-rate')
       .map(a => ({ label: `${a.name} — no ${a.currency} rate set, so it is in nothing`, amount: sfig(a.amount), kind: 'note' as const })),
   ]

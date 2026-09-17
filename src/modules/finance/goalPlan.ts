@@ -104,8 +104,10 @@ export interface CapacityDetail {
     id: string; name: string; amount: number
     /** `cash` is in `held`; `asset` is named and never spent; `owed` is a card
      *  in the red, which becomes a goal to clear rather than a subtraction;
-     *  `no-rate` could not be converted and is in nothing at all. */
-    counts: 'cash' | 'asset' | 'owed' | 'no-rate'
+     *  `card` is a credit card *in credit* — headroom, not money, because it
+     *  can only ever leave through that card; `no-rate` could not be converted
+     *  and is in nothing at all. */
+    counts: 'cash' | 'asset' | 'owed' | 'card' | 'no-rate'
     currency: string
   }[]
   /** Each goal's saved amount — what comes off as already earmarked. */
@@ -304,6 +306,13 @@ export function capacityFrom(
     if (v === null) { acctRows.push({ id: a.id, name: a.name, amount: raw, counts: 'no-rate', currency: a.currency }); continue }
     if (v < 0) { owed += -v; acctRows.push({ id: a.id, name: a.name, amount: -v, counts: 'owed', currency: base }); continue }
     if (SPENDABLE.includes(a.accountType)) { held += v; acctRows.push({ id: a.id, name: a.name, amount: v, counts: 'cash', currency: base }) }
+    // A card in credit is not an asset and is certainly not cash. It is
+    // headroom: money that can only ever leave through that card, at a point
+    // of sale or online, and never as cash without becoming a loan at the
+    // card's own rate the same hour. Filed as an asset it would have been
+    // swept up by the forecast rule that counts assets as spendable, which is
+    // the one way a card could still have funded a savings plan.
+    else if (a.accountType === 'credit_card') { acctRows.push({ id: a.id, name: a.name, amount: v, counts: 'card', currency: base }) }
     else { assets += v; acctRows.push({ id: a.id, name: a.name, amount: v, counts: 'asset', currency: base }) }
   }
 

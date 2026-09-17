@@ -4,6 +4,9 @@ import {
   Image as ImageIcon, Hash, User, Repeat,
 } from 'lucide-react'
 import type { Transaction, Account, Category, Currency, TxType } from '../types'
+import {
+  schemeFor, isDormant, channelOf, setChannel, CHANNEL_LABEL, type SpendChannel,
+} from '../cardRewards'
 import { knownPayees, matchPayees, rememberPayee } from '../payees'
 import { MoneyInput } from '../components/MoneyInput'
 import { liveBalances } from '../balances'
@@ -137,6 +140,21 @@ export function TransactionModal({ transaction, accounts, categories, history = 
 
   // Rust and olive are the platform's negative and positive. An expense should
   // still read as money leaving without a second palette to learn.
+  // ── In person or online ──────────────────────────────────────────────────
+  // Only asked where it changes a figure: a card whose programme pays a
+  // different rate for each. A category cannot tell a card tapped in a shop
+  // from the same shop's website, and a rate applied to a guess about the
+  // channel is a figure nobody can check — so it is asked, in one tap, and
+  // only when the two rates actually differ.
+  const spendAccount = accounts.find(a => a.id === accountId)
+  const cardScheme = spendAccount?.accountType === 'credit_card' ? schemeFor(spendAccount.id) : null
+  const channelMatters = type === 'expense' && !!cardScheme && !isDormant(cardScheme)
+    && cardScheme.earn.pos !== cardScheme.earn.online
+  const [channel, setLocalChannel] = useState<SpendChannel>(
+    () => (transaction ? channelOf(transaction.id) : 'pos'))
+  // A transfer *out of* a card. The other direction is paying it off.
+  const cashAdvance = type === 'transfer' && spendAccount?.accountType === 'credit_card'
+
   const typeColor = type === 'expense' ? 'var(--sb-negative)' : type === 'income' ? 'var(--sb-positive)' : 'var(--sb-ink-1)'
   const amount = parseFloat(amountStr) || 0
 
@@ -144,8 +162,13 @@ export function TransactionModal({ transaction, accounts, categories, history = 
     // Remember who this went to, so it can be offered next time and typed the
     // same way rather than five slightly different ways.
     rememberPayee(payee)
+    const id = transaction?.id ?? crypto.randomUUID()
+    // Kept against the entry rather than on it: `finance_transactions` has no
+    // column for it, and a whole migration for a field only rewards cards read
+    // is not worth the deploy. `pos` writes nothing at all.
+    setChannel(id, type === 'expense' ? channel : null)
     onSave({
-      id:          transaction?.id ?? crypto.randomUUID(),
+      id,
       accountId,
       toAccountId: type === 'transfer' ? (toAccountId || undefined) : undefined,
       amount,
@@ -347,6 +370,54 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               placeholder="Uncategorised"
               options={categoryOptions(categories)} />
           </div>
+          )}
+
+          {/* Money out of a card is a cash advance, whatever it is called. The
+              entry is still written — the ledger records what happened, not
+              what should have — but the panel says what it costs, because
+              nothing else on any screen would: it earns no points, and it is
+              borrowed at the card's own rate from the hour it is taken. */}
+          {cashAdvance && (
+            <div style={{ ...ROW, alignItems: 'flex-start' }}>
+              <span style={LABEL} />
+              <span style={{
+                flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-start', gap: 8,
+                padding: '9px 12px', borderRadius: 'var(--sb-r-nav)',
+                background: 'var(--sb-negative-tint)',
+                fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.5,
+              }}>
+                <span aria-hidden style={{ flexShrink: 0 }}>⚠</span>
+                <span>
+                  Money <b style={{ fontWeight: 600 }}>out of</b> {spendAccount?.name} is a cash
+                  advance: borrowed at the card's own rate from today, with no grace period, and
+                  it earns no points. Paying the card off is the other direction — pick the card
+                  under <b style={{ fontWeight: 600 }}>To</b> instead.
+                </span>
+              </span>
+            </div>
+          )}
+
+          {channelMatters && (
+            <div style={ROW}>
+              <span style={LABEL}>Bought</span>
+              <span style={{ display: 'flex', gap: 6, flex: 1, minWidth: 0 }}>
+                {(['pos', 'online'] as const).map(c => (
+                  <button key={c} type="button" onClick={() => setLocalChannel(c)}
+                    title={`${cardScheme!.earn[c]} points per ${currency} on ${spendAccount!.name}`}
+                    style={{
+                      ...PILL, height: 30, paddingInline: 12, fontSize: 'var(--sb-t-body-s)',
+                      fontWeight: channel === c ? 600 : 500,
+                      background: channel === c ? 'var(--sb-ink-1)' : undefined,
+                      color: channel === c ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
+                    }}>
+                    {CHANNEL_LABEL[c]}
+                  </button>
+                ))}
+                <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', alignSelf: 'center' }}>
+                  {spendAccount!.name} pays {cardScheme!.earn.pos} in person, {cardScheme!.earn.online} online
+                </span>
+              </span>
+            </div>
           )}
 
           {suggestedCard && (

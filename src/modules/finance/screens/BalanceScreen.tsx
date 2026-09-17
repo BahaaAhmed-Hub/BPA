@@ -23,6 +23,9 @@ import { BudgetMark } from '../components/BudgetMark'
 import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, UNPAID_TITLE } from '../unpaid'
 import { liveBalances } from '../balances'
+import {
+  schemeFor, isDormant, pointsFor, loadRewardSettings, type CardPoints,
+} from '../cardRewards'
 import { OPEN_ACCOUNT, takePendingAccount, accountIdOf } from '../openAccount'
 import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
 import { ICON } from '@/lib/type'
@@ -61,7 +64,7 @@ function formatBalance(bal: number, currency = 'EGP'): string {
   return acct(bal, { currency })
 }
 
-function AccountRow({ account, balance, unconverted, pending, ahead, selected, hovered, onSelect, onHover, onEdit, onSettle, onIcon }: {
+function AccountRow({ account, balance, unconverted, pending, ahead, points, showPointsMoney, selected, hovered, onSelect, onHover, onEdit, onSettle, onIcon }: {
   account: Account
   balance: number
   /** Currencies filed against this account that nothing could convert. */
@@ -74,6 +77,10 @@ function AccountRow({ account, balance, unconverted, pending, ahead, selected, h
    *  this line the rest of the year rather than what is actually late. Named in
    *  the tooltip rather than on the row: it is not money you owe today. */
   ahead: number
+  /** Cards with a rewards programme only: what this one has earned. Drawn
+   *  under the balance and never into it. */
+  points: CardPoints | null
+  showPointsMoney: boolean
   selected: boolean
   onSelect: (a: Account) => void
   hovered: boolean
@@ -211,6 +218,24 @@ function AccountRow({ account, balance, unconverted, pending, ahead, selected, h
         ) : account.last4 ? (
           <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>cleared</span>
         ) : null}
+
+        {/* What the card has earned. Under the balance and in the muted ink,
+            never added to it: points are not money you hold, they are money
+            the bank owes you against spending you have already done. */}
+        {points && points.total > 0 && (
+          <span
+            title={[
+              `${Math.round(points.total).toLocaleString('en-US')} points`,
+              points.worth !== null ? `worth about ${acct(points.worth, { currency: account.currency })} if redeemed` : null,
+              points.cappedAway > 0 ? `${Math.round(points.cappedAway).toLocaleString('en-US')} above the monthly ceiling, not earned` : null,
+              points.cashUse > 0 ? `${acct(points.cashUse, { currency: account.currency })} taken as cash — cash earns nothing` : null,
+              'Never counted as cash, in any balance, goal or plan.',
+            ].filter(Boolean).join(' · ')}
+            style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' }}>
+            ★ {Math.round(points.total).toLocaleString('en-US')} pts
+            {showPointsMoney && points.worth !== null && <> · ≈{acct(points.worth, { currency: account.currency, decimals: 0 })}</>}
+          </span>
+        )}
       </div>
 
       {/* Settling a card belongs here, next to what it owes, rather than inside
@@ -245,6 +270,35 @@ export function BalanceScreen() {
   const [accountModal, setAccountModal] = useState<{ open: boolean; account: Account | null }>({ open: false, account: null })
   const [txModal, setTxModal] = useState<{ open: boolean; tx: Transaction | null }>({ open: false, tx: null })
   const [hoveredAccountId, setHoveredAccountId] = useState<string | null>(null)
+
+  // ── What each card has earned ─────────────────────────────────────────────
+  // Re-read on the event the account window and Settings both fire, so a rate
+  // changed in either place moves the row behind it — and on `storage`, so
+  // another device's change arrives too.
+  const [rewardTick, setRewardTick] = useState(0)
+  const [rewardCfg, setRewardCfg] = useState(loadRewardSettings)
+  useEffect(() => {
+    const reread = () => { setRewardCfg(loadRewardSettings()); setRewardTick(t => t + 1) }
+    window.addEventListener('finance:cardRewardsChanged', reread)
+    window.addEventListener('storage', reread)
+    return () => {
+      window.removeEventListener('finance:cardRewardsChanged', reread)
+      window.removeEventListener('storage', reread)
+    }
+  }, [])
+  const pointsByAccount = useMemo(() => {
+    const m = new Map<string, CardPoints>()
+    for (const a of accounts) {
+      if (a.accountType !== 'credit_card') continue
+      const scheme = schemeFor(a.id)
+      if (!scheme || isDormant(scheme)) continue
+      m.set(a.id, pointsFor(a, transactions, scheme, { window: rewardCfg.window }))
+    }
+    return m
+  // `rewardTick` is the dependency that matters: the schemes live in
+  // localStorage, which React cannot see changing.
+  }, [accounts, transactions, rewardCfg.window, rewardTick])
+  const pointsOn = (a: Account) => pointsByAccount.get(a.id) ?? null
 
 
   // Accounts shows the lot, which is what the screen did before this pill row
@@ -523,6 +577,8 @@ export function BalanceScreen() {
                         unconverted={unratedOn(acc)}
                         pending={pendingOn(acc)}
                         ahead={aheadOn(acc)}
+                        points={pointsOn(acc)}
+                        showPointsMoney={rewardCfg.showAsMoney}
                         selected={focusId === acc.id}
                         onSelect={a => setFocusId(id => (id === a.id ? null : a.id))}
                         hovered={hoveredAccountId === acc.id}

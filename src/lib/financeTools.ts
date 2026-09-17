@@ -33,6 +33,9 @@ import { isLocked } from '@/modules/finance/lock'
 import { liveBalances } from '@/modules/finance/balances'
 import { toBase, baseCurrency, loadRates, setRate, rateFor } from '@/modules/finance/fx'
 import { settled, whenPaid, isUnpaid } from '@/modules/finance/unpaid'
+import {
+  pointsFor, schemeFor, isDormant, loadRewardSettings, type CardPoints,
+} from '@/modules/finance/cardRewards'
 import { findDuplicates } from '@/modules/finance/duplicates'
 import { capacityFrom, planGoals, debtGoals, isDebtGoal, type Policy } from '@/modules/finance/goalPlan'
 import { adviseGoal } from '@/modules/finance/goalAdvice'
@@ -405,24 +408,43 @@ export async function executeFinanceTool(
   const num = (k: string) => (typeof input[k] === 'number' ? (input[k] as number) : undefined)
   const bool = (k: string) => (typeof input[k] === 'boolean' ? (input[k] as boolean) : undefined)
 
+  /** What a card has earned, or null where it has no programme. Points are
+   *  reported and are never money: nothing here adds them to a total. */
+  function cardPointsFor(a: Account, txs: Transaction[]): CardPoints | null {
+    const scheme = schemeFor(a.id)
+    if (!scheme || isDormant(scheme)) return null
+    return pointsFor(a, txs, scheme, { window: loadRewardSettings().window })
+  }
+
   switch (name) {
 
     // ── Reading ───────────────────────────────────────────────────────────────
 
     case 'finance_overview': {
       const { balances, pending, ahead, unconverted } = liveBalances(accounts, transactions)
-      let cash = 0, owed = 0, assets = 0
+      let cash = 0, owed = 0, assets = 0, cardHeadroom = 0
       const rows = accounts.map(a => {
         const bal = balances.get(a.id) ?? a.balance
         const v = toBase(bal, a.currency, base)
         if (v !== null) {
           if (v < 0) owed += -v
           else if (a.accountType === 'payment' || a.accountType === 'wallet') cash += v
+          // A card in credit is neither cash nor an asset: the money can only
+          // leave through that card, at a till or online. Counting it as
+          // either is how a model comes to tell somebody they can fund a goal
+          // out of a credit card.
+          else if (a.accountType === 'credit_card') cardHeadroom += v
           else assets += v
         }
+        const pts = a.accountType === 'credit_card' ? cardPointsFor(a, transactions) : null
         return {
           name: a.name, kind: a.accountType, currency: a.currency,
           balance: money(bal),
+          ...(pts && pts.total > 0 ? {
+            reward_points: Math.round(pts.total),
+            ...(pts.worth !== null ? { points_worth: money(pts.worth) } : {}),
+            points_are_not_cash: true,
+          } : {}),
           ...(pending.get(a.id) ? { overdue_unpaid: money(pending.get(a.id)!) } : {}),
           ...(ahead.get(a.id) ? { unpaid_dated_later: money(ahead.get(a.id)!) } : {}),
           ...(unconverted.get(a.id)?.size ? { not_counted: [...unconverted.get(a.id)!] } : {}),
@@ -466,7 +488,13 @@ export async function executeFinanceTool(
       return {
         base_currency: base,
         year_loaded: s.currentYear,
-        totals: { cash: money(cash), owed_on_cards: money(owed), assets: money(assets) },
+        totals: {
+          cash: money(cash), owed_on_cards: money(owed), assets: money(assets),
+          // Never add this to cash. A card in credit can only be spent through
+          // that card; taking it out as cash turns it into a loan at the
+          // card's own rate the same hour.
+          ...(cardHeadroom > 0 ? { credit_on_cards_not_cash: money(cardHeadroom) } : {}),
+        },
         accounts: rows,
         this_month: {
           month,

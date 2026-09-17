@@ -422,6 +422,54 @@ does the moving. Resizing needs no live transform either: it is worked out from
 - **Exchange rates are a setting.** Settings → Finance owns them; screens that find
   unconvertible money say so and link there.
 
+## Finance — what a card earns, and why it is never money
+`cardRewards.ts`. The ledger recorded 40,000 leaving on a card and no part of the
+app could say that 2,000 of it came back. Two figures make the whole of it, and
+they are two because banks state them separately and each moves on its own:
+**earn** (points per 1 unit spent, per channel) and **pointValue** (what one
+point is worth). Multiply for the return — `1 point per 10 EGP` at `0.50 a
+point` is 5%. One blended percentage would be tidier and would leave you no way
+to correct the half that moved.
+- **Nothing is invented.** A scheme with no figures is *dormant*: it names what
+  it is missing and contributes nothing, the same shape as a forecast rule.
+  There is no default earn rate, because a made-up one puts a made-up figure in
+  EGP on a screen full of real ones.
+- **A looked-up figure is a suggestion until you say otherwise.**
+  `rewardLookup.ts` asks the model what a bank's programme pays — it cannot
+  reach the bank's website and says so. What comes back is `suggested`, every
+  screen marks it, and touching any field makes it `yours`, after which nothing
+  overwrites it. A bank it does not know, or a card it cannot tell from three
+  others at the same bank, comes back `known: false` and the fields stay empty:
+  a scheme half-filled with confident nonsense is worse than an empty one.
+- **Cash never earns.** Not a low rate — zero, and not editable. A transfer
+  *out of* a card is a cash advance (`isCashUse`): borrowed at the card's own
+  rate from the hour it is taken, with no grace period. The entry panel says so
+  while you are writing it; a transfer *into* a card is paying it off and is
+  fine.
+- **A monthly ceiling belongs to its month.** Points are worked out per month
+  and capped there, or a cap of 5,000 a month silently becomes 5,000 a year and
+  understates a heavy December. What was lost to the ceiling is named.
+- **Only what has been paid counts**, filed by `whenPaid` — the same rule as
+  every other figure here. A bank does not award points for an entry dated ahead.
+- **The channel is stored, not inferred.** `finance-tx-channels` per entry
+  (absent = `pos`), and the entry panel asks in one tap **only** where the card's
+  two rates actually differ. A category cannot tell a card tapped in a shop from
+  the same shop's website, and a rate applied to a guess is a figure nobody can
+  check.
+- **A card is not money, anywhere.** `capacityFrom` files a card *in credit* as
+  `counts: 'card'` — headroom, neither cash nor asset — so the forecast rule
+  that counts assets as spendable cannot sweep it up, which was the one route
+  left by which a card could still fund a savings plan. A budget rule in the
+  savings or investments bucket paid from a card says so. The assistant's
+  `finance_overview` reports `credit_on_cards_not_cash` separately and its
+  system prompt forbids adding either that or points to a balance, goal or plan.
+- Per-card figures live on the card (Balances → the card → edit, the POINTS
+  block). What is true of all of them — show points as money, the window, a
+  point's value where a card does not say — is Settings → Finance → CARD POINTS.
+  `finance-card-rewards`, `finance-rewards-settings` and `finance-tx-channels`
+  are prefSync keys; there is no migration, the same choice `finance-credit-
+  limits` made.
+
 ## Finance — what an account holds
 `balances.ts` is the only thing that answers this. `account.balance` is the **opening**
 figure; the live one is that plus every entry filed against the account, so nothing

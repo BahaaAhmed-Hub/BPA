@@ -38,6 +38,9 @@ const SHARED_KEYS = [
   'finance-budget-rules',
   'finance-money-reminders',
   'finance-credit-limits',
+  'finance-card-rewards',        // what each card earns, and what a point is worth
+  'finance-rewards-settings',
+  'finance-tx-channels',         // in person or online — the rate differs
   'finance-transfer-targets',
   'finance-debt-goal-ranks',     // where each card-to-clear sits among the goals
   'finance-tx-flags',

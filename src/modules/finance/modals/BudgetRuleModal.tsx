@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui'
-import { X, ChevronDown, Check } from 'lucide-react'
-import type { Category, Transaction } from '../types'
+import { X, ChevronDown, Check, AlertTriangle } from 'lucide-react'
+import type { AccountType, Category, Transaction } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { MoneyInput } from '../components/MoneyInput'
@@ -530,7 +530,9 @@ interface Props {
   subRules?: Record<string, BudgetRule | undefined>
   currency: string
   /** Only so a budget with a day can say where its money comes from. */
-  accounts?: { id: string; name: string }[]
+  /** `accountType` so the panel can say that a card is the wrong place for
+   *  money being set aside — see the note by the Paid on row. */
+  accounts?: { id: string; name: string; accountType?: AccountType }[]
   onChange: (rule: BudgetRule) => void
   /** Clear the budget entirely, as opposed to setting it to nothing. */
   onDelete: () => void
@@ -567,6 +569,9 @@ export function BudgetRuleModal({
   }, [onClose])
 
   const payFrom = accounts.find(a => a.id === rule.dueAccountId)
+  // A card cannot be the source of money set aside: see the note by the row.
+  const cardSaving = payFrom?.accountType === 'credit_card'
+    && (bucketOf(rule) === 'savings' || bucketOf(rule) === 'investment')
   const cur = rule.currency ?? currency
   const wanted = category.txType === 'income' ? 'income' : 'expense'
   const ids = new Set([category.id, ...subs.map(s => s.id)])
@@ -970,6 +975,27 @@ export function BudgetRuleModal({
               An entry is written for that day, {freqPhrase(rule.frequency)}, marked
               unpaid until you tick it — so it is owed rather than spent, and in no
               balance or total until the money moves.
+            </div>
+          )}
+          {/* Saving or investing *through a credit card* is not saving. What
+              leaves a card is borrowed until the card is paid, so a monthly
+              amount filed here would show a growing pot built out of a growing
+              debt — two figures, both true, describing one pound. The budget is
+              still written; what it says is that the account is wrong. */}
+          {rule.dueDay != null && cardSaving && (
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: 7, margin: '-2px 0 8px',
+              padding: '9px 11px', borderRadius: 'var(--sb-r-nav)',
+              background: 'var(--sb-negative-tint)',
+              fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5,
+            }}>
+              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 2, color: 'var(--sb-negative)' }} />
+              <span>
+                <b style={{ fontWeight: 600 }}>{payFrom?.name}</b> is a credit card, and this is
+                a {bucketMeta(bucketOf(rule)).name.toLowerCase()} budget. Money that leaves a card
+                is borrowed until the card is paid, so nothing is put aside by this —
+                pick the account the money actually comes out of.
+              </span>
             </div>
           )}
           </>)}
