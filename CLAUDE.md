@@ -1728,8 +1728,15 @@ filters by class with — plus **All**.
   away from it — a four-line row for three lines of content — and it is a fact
   about the thread, like the date, rather than a thing you do.
 - **3px between a row's lines, not 5**, and `9px 14px` of padding. A row is one
-  thing said on four lines; spacing them like paragraphs made eight threads a
+  thing said on three lines; spacing them like paragraphs made eight threads a
   page of scrolling.
+- **The actions share the sentence's line**, at its right, which is where a mail
+  client has always put them. They had a line of their own under everything
+  else, so every card was four lines tall and a screen held six. The sentence
+  gives way first — one line, ellipsised, the whole of it on hover — because a
+  truncated summary beside a reachable button is a better row than a full
+  sentence above one. It wraps rather than crushing below about 600px. A card
+  is **93px** now against 112, and 164 against 183 with a draft on it.
 - **The reader's envelope is labelled fields, not a notation.** `from@x → to@y ·
   cc z` is something you decode rather than scan: it gives Cc no more weight
   than an arrow and has nowhere to put Bcc at all. FROM / TO / CC / BCC down the

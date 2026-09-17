@@ -495,6 +495,9 @@ function Row({
   // "DX Technologies  DX Technologies" on one line reads as a bug.
   // A drafted answer is only ever shown where one is actually wanted: a person
   // writing to you, in the section that means you owe them words.
+  const need = t.awaitingCustomer
+    ? 'Awaiting customer — no follow-up needed.'
+    : t.need || 'No summary — the model was not asked or did not answer.'
   const draftShown = answerable && t.kind === 'reply' && section === 'action'
     && !!t.draft?.trim() && !t.acted
   const boxLabel = useMemo(() => {
@@ -590,58 +593,19 @@ function Row({
           )}
         </div>
 
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
-          {t.awaitingCustomer
-            ? 'Awaiting customer — no follow-up needed.'
-            : t.need || 'No summary — the model was not asked or did not answer.'}
-        </p>
 
-        {/* ── The reply, written and not sent ──────────────────────────────
-            It used to be behind a button called "Review the reply", which
-            meant a drafted answer was invisible until you asked for it — so
-            the one thing the pass produced that saves any time was the one
-            thing you could not see. Two lines of it sit here, in the mail's
-            own area, with the whole of it a click away and **Send** the only
-            thing that ever sends. */}
-        {draftShown && (
-          <div style={{
-            display: 'flex', flexDirection: 'column', gap: 5,
-            padding: '7px 10px', borderRadius: 'var(--sb-r-nav)', marginTop: 2,
-            background: 'var(--sb-field)',
-            border: 'var(--sb-border-width) solid var(--sb-hairline)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{
-                fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em',
-                textTransform: 'uppercase', color: 'var(--sb-ink-3)',
-              }}>Draft reply · not sent</span>
-              <span style={{ flex: 1 }} />
-              <Button size="sm" onClick={onSendDraft} title={`Send this to ${t.fromName}`}>
-                <Send size={ICON.sm} strokeWidth={STROKE.rest} /> Send
-              </Button>
-              <Button size="sm" variant="ghost" onClick={onDraft} title="Open it in the composer">
-                <PenSquare size={ICON.sm} strokeWidth={STROKE.rest} /> Edit
-              </Button>
-              <Button size="sm" variant="ghost" iconOnly onClick={onDiscardDraft} title="Discard this draft">
-                <Trash2 size={ICON.sm} strokeWidth={STROKE.rest} />
-              </Button>
-            </div>
-            {/* Two lines, clamped. Enough to know whether it is worth sending,
-                never so much that the row stops being a row. */}
-            <button onClick={onDraft} title="Open it in the composer"
-              style={{
-                textAlign: 'left', padding: 0, border: 'none', background: 'transparent',
-                cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5,
-                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-              }}>{t.draft}</button>
-          </div>
-        )}
+        {/* ── What it wants, and what you can do about it, on one line ────
+            The actions had a line of their own under everything else, so every
+            card was four lines tall and a screen held six of them. They sit at
+            the right of the sentence now, which is where a mail client has
+            always put them — the sentence gives way first, with the whole of
+            it on hover, because a truncated summary beside a reachable button
+            is a better row than a full sentence above one. It wraps rather
+            than crushing at narrow widths.
 
-        {/* An action is over once it has been taken. Leaving Make a task lit
-            beside a task that now exists invites a second one, and says
-            nothing about the first. */}
+            An action is also over once it has been taken: leaving Make a task
+            lit beside a task that now exists invites a second one and says
+            nothing about the first, so the whole line becomes the receipt. */}
         {t.acted ? (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 7, marginTop: 1,
@@ -655,8 +619,12 @@ function Row({
             </Button>
           </div>
         ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <span style={{ flex: 1 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minHeight: 26 }}>
+          <span title={need} style={{
+            flex: '1 1 160px', minWidth: 0,
+            fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{need}</span>
 
           {/* ── What this kind actually wants ───────────────────────────────
               An invitation is answered by RSVPing; answering in prose sends the
@@ -736,6 +704,48 @@ function Row({
           </Button>
         </div>
         )}
+        {/* ── The reply, written and not sent ──────────────────────────────
+            It used to be behind a button called "Review the reply", which meant
+            a drafted answer was invisible until you asked for it — so the one
+            thing the pass produces that saves any time was the one thing you
+            could not see. Two lines of it sit at the foot of the card, with the
+            whole of it a click away and **Send** the only thing that sends. */}
+        {draftShown && (
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 5,
+            padding: '7px 10px', borderRadius: 'var(--sb-r-nav)', marginTop: 2,
+            background: 'var(--sb-field)',
+            border: 'var(--sb-border-width) solid var(--sb-hairline)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em',
+                textTransform: 'uppercase', color: 'var(--sb-ink-3)',
+              }}>Draft reply · not sent</span>
+              <span style={{ flex: 1 }} />
+              <Button size="sm" onClick={onSendDraft} title={`Send this to ${t.fromName}`}>
+                <Send size={ICON.sm} strokeWidth={STROKE.rest} /> Send
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onDraft} title="Open it in the composer">
+                <PenSquare size={ICON.sm} strokeWidth={STROKE.rest} /> Edit
+              </Button>
+              <Button size="sm" variant="ghost" iconOnly onClick={onDiscardDraft} title="Discard this draft">
+                <Trash2 size={ICON.sm} strokeWidth={STROKE.rest} />
+              </Button>
+            </div>
+            {/* Two lines, clamped. Enough to know whether it is worth sending,
+                never so much that the row stops being a row. */}
+            <button onClick={onDraft} title="Open it in the composer"
+              style={{
+                textAlign: 'left', padding: 0, border: 'none', background: 'transparent',
+                cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5,
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}>{t.draft}</button>
+          </div>
+        )}
+
       </div>
     </div>
   )
