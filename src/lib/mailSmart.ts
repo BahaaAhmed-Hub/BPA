@@ -55,8 +55,14 @@ export interface ThreadFacts {
   internal: boolean
   /** Nobody has written since your reply, and it has been a while. */
   awaitingCustomer: boolean
-  /** They are waiting on you, and have been since before today. */
+  /** They are waiting on **you** — unanswered, over a day old, and actually
+   *  addressed to you. Being copied on a thread nobody has answered does not
+   *  make you the one holding it up. */
   bottleneck: boolean
+  /** Unanswered and over a day old, whoever it is for. The model's `direct`
+   *  can turn this into a bottleneck for a thread the headers alone would have
+   *  called a copy. */
+  staleInbound: boolean
   messageCount: number
   /** A line of the newest inbound message, for a row that has no brief yet. */
   snippet: string
@@ -169,8 +175,13 @@ export function readThread(
     // Your reply is the newest thing in it, and it has been sitting a while.
     awaitingCustomer: replyState === 'replied' &&
       lastRepliedAt !== null && now - lastRepliedAt >= AWAITING_DAYS * DAY,
-    // They are waiting on you, and not since five minutes ago.
-    bottleneck: replyState !== 'replied' && now - lastInboundAt >= DAY,
+    // Unanswered, and not since five minutes ago.
+    staleInbound: replyState !== 'replied' && now - lastInboundAt >= DAY,
+    // …and actually yours. A thread you were copied on and nobody has answered
+    // is not one you are holding up, and saying so on every such row is how a
+    // flag stops meaning anything.
+    bottleneck: replyState !== 'replied' && now - lastInboundAt >= DAY
+      && (addressedTo || namedInBody),
     messageCount: msgs.length,
     snippet: newestInbound.snippet ?? '',
   }

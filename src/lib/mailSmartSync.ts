@@ -115,7 +115,10 @@ function factsToRow(f: ThreadFacts, t: { direct: boolean; need: string; draft: s
     section: sectionFor(f, t.direct), reply_state: f.replyState,
     need: t.need || null, draft: t.draft || null, direct: t.direct,
     addressed_to: f.addressedTo, named_in_body: f.namedInBody,
-    bottleneck: f.bottleneck, awaiting_customer: f.awaitingCustomer,
+    // The model can promote a thread the headers read as a copy — a deliverable
+    // assigned to you in a recap is yours, whatever the To line says.
+    bottleneck: f.bottleneck || (t.direct && f.staleInbound),
+    awaiting_customer: f.awaitingCustomer,
     handled_at: null,
   }
 }

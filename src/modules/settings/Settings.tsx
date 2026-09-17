@@ -1,9 +1,10 @@
 // ─── CHUNK 1: Types, constants, localStorage helpers ─────────────────────────
 // (remaining chunks appended below)
 
+import { isBusinessAccount, setBusinessAccount } from '@/lib/businessAccounts'
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { C_COLORS, STATUS_COLORS_PRESETS } from '@/lib/palettes'
-import { Button, Segmented } from '@/components/ui'
+import { Button, Segmented, Pill } from '@/components/ui'
 import { NAV_H } from '@/App'
 import {
   Plus, Trash2, LogIn, LogOut,
@@ -1944,6 +1945,7 @@ function AccountsSection({
               onGrant={() => { forgetScopes(primaryEmail); void signInWithGoogle() }} />
           </div>
         </div>
+        <BusinessToggle email={primaryEmail} />
         <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)', color: 'var(--sb-positive)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 20.0%, transparent)' }}>
           Active
         </span>
@@ -1988,7 +1990,10 @@ function AccountsSection({
               {acc.email ? acc.email[0].toUpperCase() : 'G'}
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{acc.email || acc.name}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{acc.email || acc.name}</p>
+                <BusinessToggle email={acc.email} />
+              </div>
               {(() => {
                 const linked = companies.filter(c => c.accountId === acc.id)
                 if (linked.length === 0) {
@@ -3966,6 +3971,32 @@ function DataPrivacySection() {
 
 /** Accounts and the companies that use them, in one place (previously two
  *  cards on two different pages, which hid the link between them). */
+/** Work or personal, per mailbox.
+ *
+ *  The smart mail view's first filter is "is this business mail", and no header
+ *  answers that — a personal Gmail and a company address look identical to a
+ *  parser. So it is asked here, once, and kept against the address rather than
+ *  the account id: the mailbox you signed in with has no id in
+ *  `professor-connected-accounts`, and it is usually the one that matters most.
+ */
+function BusinessToggle({ email }: { email: string }) {
+  const [on, setOn] = useState(() => isBusinessAccount(email))
+  useEffect(() => { setOn(isBusinessAccount(email)) }, [email])
+  if (!email) return null
+  return (
+    <Pill
+      on={on}
+      title={on
+        ? 'Work: the smart view reads this mailbox for business threads'
+        : 'Personal: only mail from a real organisation is read here'}
+      onClick={() => { const v = !on; setOn(v); setBusinessAccount(email, v) }}
+      style={{ flexShrink: 0 }}
+    >
+      {on ? 'Work' : 'Personal'}
+    </Pill>
+  )
+}
+
 function AccountsAndCompaniesSection({
   companies, setCompanies, accounts, setAccounts, primaryEmail,
 }: {

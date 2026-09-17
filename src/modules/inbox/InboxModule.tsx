@@ -18,6 +18,9 @@ import { listUnreadThreadIds, getThread, getMessage, loadInlineImages, applyInli
 import { cachedDraft } from '@/lib/mailBriefs'
 import { forgetWaiting } from '@/lib/mailWaiting'
 import { mailAccounts, loadMailView, saveMailView, accountsFor, accountLabel, type MailView } from './mailAccounts'
+import { SmartView } from './SmartView'
+import { runSmartPass, type PassResult, type SmartThread } from '@/lib/mailSmartSync'
+import { markHandled } from '@/lib/mailSmartDb'
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { SwipeRow } from './SwipeRow'
 import { signInWithGoogle } from '@/lib/google'
@@ -355,6 +358,17 @@ export function InboxModule() {
   // ── Bulk task state ──────────────────────────────────────────────────────────
   // Which mailbox, or all of them at once.
   const [view, setView] = useState<MailView>(loadMailView)
+
+  // ── Two views of one mailbox ──────────────────────────────────────────────
+  //
+  //  The normal view answers "what is in my mail". The smart one answers "what
+  //  is waiting on me". Neither replaces the other, so the choice is kept:
+  //  whichever you were last in is the one that opens.
+  const [mode, setMode] = useState<'normal' | 'smart'>(() => {
+    try { return localStorage.getItem('mail-mode') === 'smart' ? 'smart' : 'normal' } catch { return 'normal' }
+  })
+  const [smart, setSmart] = useState<PassResult | null>(null)
+  const [smartLoading, setSmartLoading] = useState(false)
   // Which folder. Unread-in-inbox is what this module was, and stays the
   // default — it is the question the page exists to answer — but the rest of
   // the mailbox was simply unreachable.
@@ -442,6 +456,80 @@ export function InboxModule() {
 
   const accounts = useMemo(() => mailAccounts(user?.email), [user?.email])
   const viewed   = useMemo(() => accountsFor(view, accounts), [view, accounts])
+
+  // ─── The smart pass ────────────────────────────────────────────────────────
+  //
+  //  Run when the tab is opened in this mode, and once a day after that. It is
+  //  safe to call often: the pass itself decides what is worth doing, and one
+  //  with nothing new to read makes no model call and fetches almost nothing.
+  //  `smartRun` stops two mounts — StrictMode's double effect, a re-render —
+  //  from asking twice at once.
+  const smartRun = useRef<Promise<unknown> | null>(null)
+
+  const runSmart = useCallback(async (full = false) => {
+    if (!user || accounts.length === 0) return
+    if (smartRun.current && !full) return
+    setSmartLoading(true)
+    const p = runSmartPass({ accounts, user: buildMockUser(user), companies: [], full })
+      .then(r => { setSmart(r); return r })
+      .catch(e => { notify(e instanceof Error ? e.message : 'The mail could not be read'); return null })
+      .finally(() => { setSmartLoading(false); smartRun.current = null })
+    smartRun.current = p
+    await p
+  }, [user, accounts])
+
+  useEffect(() => {
+    if (mode !== 'smart') return
+    void runSmart(false)
+    // Once a day, for a tab left open. The pass is cheap when nothing changed.
+    const t = setInterval(() => void runSmart(false), 12 * 60 * 60 * 1000)
+    return () => clearInterval(t)
+  }, [mode, runSmart])
+
+  /** Take a thread out of the list it is in, here and on the server. */
+  function handleSmartDone(ts: SmartThread[], handled: boolean) {
+    setSmart(prev => prev && {
+      ...prev,
+      threads: prev.threads.map(t =>
+        ts.some(x => x.threadId === t.threadId && x.accountEmail === t.accountEmail)
+          ? { ...t, handled } : t),
+    })
+    for (const t of ts) void markHandled(t.accountEmail, t.threadId, handled)
+    notify(handled
+      ? `${ts.length} marked done`
+      : `${ts.length} put back`)
+  }
+
+  /** One task per thread, in one undo entry however many there are. */
+  function handleSmartTasks(ts: SmartThread[]) {
+    if (ts.length === 0) return
+    addTasksBatch(ts.map(t => ({
+      // The line the triage wrote is the thing to do; the subject is only what
+      // it is about, which belongs underneath.
+      title: t.need || t.subject,
+      description: `${t.subject} — ${t.fromName} <${t.fromEmail}>`,
+      quadrant: null,
+      company: 'personal' as const,
+      status: 'open' as const,
+      completed: false,
+    })))
+    notify(`${ts.length} task${ts.length === 1 ? '' : 's'} added`)
+  }
+
+  /** The drafted reply, in the ordinary composer. Nothing here sends. */
+  function handleSmartDraft(t: SmartThread) {
+    const account = accounts.find(a => a.email === t.accountEmail) ?? accounts[0]
+    if (!account) return
+    setCompose({
+      mode: 'reply',
+      account,
+      to: t.fromEmail,
+      subject: /^re:/i.test(t.subject) ? t.subject : `Re: ${t.subject}`,
+      threadId: t.threadId,
+      draft: t.draft ? t.draft.split('\n\n').map(p => `<p style="margin:0 0 1em">${escapeHtml(p)}</p>`).join('') : undefined,
+    })
+  }
+
 
   // Where mail can be filed. Only the labels a person made themselves — the
   // system ones are the folders in the rail, and offering INBOX as somewhere to
@@ -1727,6 +1815,46 @@ export function InboxModule() {
 
       <div style={{ padding: '24px 28px' }}>
 
+        {/* ── Which view ──────────────────────────────────────────────────────
+            Two readings of the same mailbox, so the switch sits above
+            everything either of them draws rather than inside one of them. */}
+        {!noAuth && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <Segmented
+              size="md"
+              aria-label="How to read the mail"
+              value={mode}
+              onChange={m => {
+                setMode(m); setSelectedId(null)
+                try { localStorage.setItem('mail-mode', m) } catch { /* quota */ }
+              }}
+              options={[
+                { value: 'normal', label: 'Mail',  title: 'Every message, newest first' },
+                { value: 'smart',  label: 'Smart', title: 'What is waiting on you, in three groups' },
+              ]}
+            />
+          </div>
+        )}
+
+        {mode === 'smart' && !noAuth ? (
+          <SmartView
+            result={smart}
+            loading={smartLoading}
+            accounts={accounts}
+            onRefresh={full => void runSmart(full)}
+            onOpen={t => {
+              // The thread itself is the normal view's business — this hands
+              // over rather than building a second reader.
+              setMode('normal')
+              try { localStorage.setItem('mail-mode', 'normal') } catch { /* quota */ }
+              setSelectedId(t.threadId)
+            }}
+            onDraft={handleSmartDraft}
+            onTask={handleSmartTasks}
+            onHandled={handleSmartDone}
+          />
+        ) : (<>
+
         {/* Stats bar */}
         {!noAuth && (
           <div style={{ display: 'flex', gap: 20, marginBottom: bulkOpen ? 10 : 20, padding: '13px 20px', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', alignItems: 'center' }}>
@@ -1872,6 +2000,7 @@ export function InboxModule() {
             {renderRight()}
           </div>
         )}
+        </>)}
       </div>
     </div>
   )
