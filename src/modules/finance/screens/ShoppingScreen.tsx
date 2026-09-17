@@ -8,6 +8,7 @@ import { useFinanceStore } from '../financeStore'
 import type { ShoppingGroup, ShoppingItem, ShoppingStore, ShoppingViewMode } from '../shopping/types'
 import { ITEM_CATEGORIES } from '../shopping/types'
 import { loadRules } from '../modals/BudgetRuleModal'
+import { suggestStoresForCountry } from '../shopping/storeSuggestions'
 import { supabase } from '@/lib/supabase'
 import { notify } from '@/lib/undo'
 
@@ -309,8 +310,9 @@ interface GroupCardProps {
   envelopes: EnvelopeRow[]
   onUpdateGroup:  (patch: Partial<ShoppingGroup>) => void
   onDeleteGroup:  () => void
-  onAddItem:      () => void
-  onUpdateItem:   (id: string, patch: Partial<ShoppingItem>) => void
+  onAddItem:            () => void
+  onAddItemWithPrefill: (name: string) => void
+  onUpdateItem:         (id: string, patch: Partial<ShoppingItem>) => void
   onDeleteItem:   (id: string) => void
   onPurchaseItem: (id: string, finalPrice?: number, storeId?: string) => void
   onRefreshGroupPrices: () => void
@@ -326,10 +328,12 @@ const RECURRENCE_LABELS: Record<string, string> = {
   biweekly: 'Every 2 weeks', monthly: 'Monthly', custom: 'Custom',
 }
 
-function GroupCard({ group, items, stores, envelopes, onUpdateGroup, onDeleteGroup, onAddItem, onUpdateItem, onDeleteItem, onPurchaseItem, onRefreshGroupPrices, priceWatchLoading, refreshingItemId, onRefreshItemPrice, repeatSuggestions, suggestedPayments }: GroupCardProps) {
+function GroupCard({ group, items, stores, envelopes, onUpdateGroup, onDeleteGroup, onAddItem, onAddItemWithPrefill, onUpdateItem, onDeleteItem, onPurchaseItem, onRefreshGroupPrices, priceWatchLoading, refreshingItemId, onRefreshItemPrice, repeatSuggestions, suggestedPayments }: GroupCardProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [editName, setEditName] = useState(false)
   const [nameVal, setNameVal] = useState(group.name)
+  const [showSchedulePicker, setShowSchedulePicker] = useState(false)
+  const [showRecurrencePicker, setShowRecurrencePicker] = useState(false)
 
   const activeItems    = items.filter(i => i.status !== 'purchased')
   const purchasedItems = items.filter(i => i.status === 'purchased')
@@ -443,7 +447,7 @@ function GroupCard({ group, items, stores, envelopes, onUpdateGroup, onDeleteGro
                 {repeatSuggestions.map(name => (
                   <button
                     key={name}
-                    onClick={() => { onAddItem() }}
+                    onClick={() => { onAddItemWithPrefill(name) }}
                     title={`Quick-add ${name}`}
                     style={{
                       fontSize: 11, padding: '3px 9px', borderRadius: 10, cursor: 'pointer',
@@ -509,9 +513,43 @@ function GroupCard({ group, items, stores, envelopes, onUpdateGroup, onDeleteGro
           </button>
 
           {/* Group actions */}
-          <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-            <GroupActionButton label="Schedule" onClick={() => { /* date picker */ }} />
-            <GroupActionButton label="Recurrence" onClick={() => { /* recurrence picker */ }} />
+          <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+            {showSchedulePicker ? (
+              <input
+                type="date"
+                autoFocus
+                defaultValue={group.scheduledDate ?? ''}
+                onChange={e => onUpdateGroup({ scheduledDate: e.target.value || undefined })}
+                onBlur={() => setShowSchedulePicker(false)}
+                style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: `1px solid ${C.accent}`, background: C.field, color: C.ink1 }}
+              />
+            ) : (
+              <GroupActionButton
+                label={group.scheduledDate ? `📅 ${new Date(group.scheduledDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'Schedule'}
+                onClick={() => setShowSchedulePicker(true)}
+              />
+            )}
+            {showRecurrencePicker ? (
+              <select
+                autoFocus
+                value={group.recurrence}
+                onChange={e => { onUpdateGroup({ recurrence: e.target.value as ShoppingGroup['recurrence'] }); setShowRecurrencePicker(false) }}
+                onBlur={() => setShowRecurrencePicker(false)}
+                style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: `1px solid ${C.accent}`, background: C.field, color: C.ink1 }}
+              >
+                <option value="none">One-time</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Every 2 weeks</option>
+                <option value="monthly">Monthly</option>
+                <option value="custom">Custom</option>
+              </select>
+            ) : (
+              <GroupActionButton
+                label={group.recurrence !== 'none' ? RECURRENCE_LABELS[group.recurrence] : 'Recurrence'}
+                onClick={() => setShowRecurrencePicker(true)}
+              />
+            )}
             <GroupActionButton label="Optimize trip" onClick={handleOptimizeTrip} />
             <GroupActionButton label="Archive" onClick={() => onUpdateGroup({ status: 'archived' })} />
             <GroupActionButton label="Delete" onClick={onDeleteGroup} danger />
@@ -542,12 +580,13 @@ function GroupActionButton({ label, onClick, danger }: { label: string; onClick:
 interface AddItemModalProps {
   groupId: string
   currency: string
+  prefillName?: string
   onAdd: (item: Omit<ShoppingItem, 'id' | 'createdAt' | 'updatedAt'>) => void
   onClose: () => void
 }
 
-function AddItemModal({ groupId, currency, onAdd, onClose }: AddItemModalProps) {
-  const [name, setName]         = useState('')
+function AddItemModal({ groupId, currency, prefillName, onAdd, onClose }: AddItemModalProps) {
+  const [name, setName]         = useState(prefillName ?? '')
   const [category, setCategory] = useState('Groceries')
   const [quantity, setQuantity] = useState('1')
   const [unit, setUnit]         = useState('')
@@ -754,6 +793,167 @@ function UnscheduledSection({ items, stores, envelopes, onUpdate, onDelete, onPu
   )
 }
 
+// ─── Stores tab ──────────────────────────────────────────────────────────────
+
+const COUNTRY_OPTIONS = [
+  { code: 'EG', label: 'Egypt' },
+  { code: 'AE', label: 'UAE' },
+  { code: 'SA', label: 'Saudi Arabia' },
+  { code: 'US', label: 'United States' },
+  { code: 'GB', label: 'United Kingdom' },
+  { code: 'DE', label: 'Germany' },
+]
+
+interface StoresTabProps {
+  stores:       ShoppingStore[]
+  userId:       string
+  onAddStore:   (s: Omit<ShoppingStore, 'id' | 'createdAt' | 'updatedAt'>) => void
+  onDeleteStore:(id: string) => void
+}
+
+function StoresTab({ stores, userId, onAddStore, onDeleteStore }: StoresTabProps) {
+  const [showForm, setShowForm]     = useState(false)
+  const [name, setName]             = useState('')
+  const [url, setUrl]               = useState('')
+  const [country, setCountry]       = useState('EG')
+  const [selCats, setSelCats]       = useState<string[]>([])
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
+  const suggestions = suggestStoresForCountry(country)
+
+  function applyTemplate(s: { name: string; url: string; categories: string[]; country: string }) {
+    setName(s.name); setUrl(s.url); setSelCats(s.categories)
+  }
+
+  function toggleCat(c: string) {
+    setSelCats(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+  }
+
+  function handleAdd() {
+    if (!name.trim() || !url.trim()) return
+    onAddStore({ userId, name: name.trim(), url: url.trim(), country: country || undefined, categories: selCats, sortOrder: stores.length })
+    setName(''); setUrl(''); setSelCats([]); setShowForm(false)
+    notify(`Store "${name.trim()}" added`)
+  }
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Existing stores list */}
+      {stores.length > 0 && (
+        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+          {stores.map((store, idx) => (
+            <div key={store.id} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px',
+              borderBottom: idx < stores.length - 1 ? `1px solid ${C.border}` : 'none',
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.ink1 }}>{store.name}</div>
+                <div style={{ fontSize: 11, color: C.ink4, marginTop: 1, wordBreak: 'break-all' }}>{store.url}</div>
+                {store.categories.length > 0 && (
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
+                    {store.categories.map(c => (
+                      <span key={c} style={{ fontSize: 10, padding: '1px 6px', borderRadius: 8, background: C.field, color: C.ink3, border: `1px solid ${C.border}` }}>{c}</span>
+                    ))}
+                  </div>
+                )}
+                {store.lastScrapedAt && (
+                  <div style={{ fontSize: 10, color: C.ink4, marginTop: 3 }}>
+                    Last checked {new Date(store.lastScrapedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    {store.lastScrapeOk === false && <span style={{ color: C.neg, marginLeft: 4 }}>· failed</span>}
+                  </div>
+                )}
+              </div>
+              {deleteConfirm === store.id ? (
+                <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: C.ink3 }}>Remove?</span>
+                  <button onClick={() => { onDeleteStore(store.id); setDeleteConfirm(null) }}
+                    style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 5, background: C.neg, color: '#fff', border: 'none', cursor: 'pointer' }}>Yes</button>
+                  <button onClick={() => setDeleteConfirm(null)}
+                    style={{ fontSize: 11, padding: '2px 8px', borderRadius: 5, background: C.field, color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}>No</button>
+                </div>
+              ) : (
+                <button onClick={() => setDeleteConfirm(store.id)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.ink4, padding: 4, flexShrink: 0, marginTop: 2 }}>
+                  <IconTrash size={13} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add store form */}
+      {showForm ? (
+        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink1, marginBottom: 2 }}>Add store</div>
+
+          {/* Country + quick picks */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <select value={country} onChange={e => setCountry(e.target.value)}
+              style={{ fontSize: 12, padding: '5px 8px', borderRadius: 7, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}>
+              {COUNTRY_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
+            </select>
+            <span style={{ fontSize: 11, color: C.ink4 }}>Quick-pick:</span>
+          </div>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            {suggestions.map(s => (
+              <button key={s.url} onClick={() => applyTemplate(s)}
+                style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9, border: `1px solid ${C.border}`, background: C.field, color: C.ink1, cursor: 'pointer' }}>
+                {s.name}
+              </button>
+            ))}
+          </div>
+
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Store name"
+            style={{ fontSize: 13, padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }} />
+          <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…"
+            style={{ fontSize: 12, padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }} />
+
+          {/* Category multi-select */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: C.ink4, textTransform: 'uppercase', marginBottom: 5 }}>CATEGORIES</div>
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+              {ITEM_CATEGORIES.map(c => (
+                <button key={c} onClick={() => toggleCat(c)}
+                  style={{ fontSize: 11, padding: '3px 8px', borderRadius: 8, cursor: 'pointer',
+                    border: `1px solid ${selCats.includes(c) ? C.accent : C.border}`,
+                    background: selCats.includes(c) ? `${C.accent}22` : C.field,
+                    color: selCats.includes(c) ? C.ink1 : C.ink3 }}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={handleAdd} disabled={!name.trim() || !url.trim()}
+              style={{ flex: 1, fontSize: 13, fontWeight: 600, padding: '8px', borderRadius: 9, background: C.ink1, color: '#fff', border: 'none', cursor: name.trim() && url.trim() ? 'pointer' : 'not-allowed' }}>
+              Add store
+            </button>
+            <button onClick={() => { setShowForm(false); setName(''); setUrl(''); setSelCats([]) }}
+              style={{ fontSize: 13, padding: '8px 14px', borderRadius: 9, background: C.field, color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setShowForm(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.ink4, background: 'none', border: `1px dashed ${C.border}`, borderRadius: 10, padding: '10px 14px', cursor: 'pointer', alignSelf: 'flex-start' }}>
+          <IconPlus size={13} /> Add a store
+        </button>
+      )}
+
+      {stores.length === 0 && !showForm && (
+        <div style={{ textAlign: 'center', paddingTop: 40, color: C.ink4 }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🏪</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.ink3 }}>No stores yet</div>
+          <div style={{ fontSize: 12, color: C.ink4, marginTop: 4 }}>Add stores to enable price tracking and trip optimization.</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Weekly / monthly view helpers ───────────────────────────────────────────
 
 function weekLabel(date: string): string {
@@ -786,6 +986,7 @@ export function ShoppingScreen() {
     groups, items: rawItems, stores, priceWatchLoading,
     addGroup, updateGroup, deleteGroup,
     addItem, updateItem, deleteItem, purchaseItem,
+    addStore, deleteStore,
     refreshPrices, loadAll, settings,
   } = useShoppingStore()
 
@@ -793,9 +994,10 @@ export function ShoppingScreen() {
   const { accounts } = useFinanceStore()
 
   const [viewMode, setViewMode] = useState<ShoppingViewMode>(settings.viewMode)
-  const [activeTab, setActiveTab] = useState<'list' | 'history'>('list')
+  const [activeTab, setActiveTab] = useState<'list' | 'stores' | 'history'>('list')
   const [showAddGroup, setShowAddGroup] = useState(false)
   const [addingItemGroupId, setAddingItemGroupId] = useState<string | null>(null)
+  const [addingItemPrefill, setAddingItemPrefill] = useState<string>('')
   const [refreshingItemId, setRefreshingItemId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string>('local')
 
@@ -914,6 +1116,17 @@ export function ShoppingScreen() {
     addItem({ ...item, groupId, userId })
   }, [addItem, userId])
 
+  // Open add-item modal pre-filled with a name (from repeat suggestion chips)
+  const handleAddItemWithPrefill = useCallback((groupId: string, name: string) => {
+    setAddingItemPrefill(name)
+    setAddingItemGroupId(groupId)
+  }, [])
+
+  // Add store with user id
+  const handleAddStore = useCallback((s: Omit<ShoppingStore, 'id' | 'createdAt' | 'updatedAt'>) => {
+    addStore({ ...s, userId })
+  }, [addStore, userId])
+
   // Build grouped view
   const activeGroups  = groups.filter(g => g.status === 'active').sort((a, b) => a.sortOrder - b.sortOrder)
   const unscheduled   = enrichedItems.filter(i => !i.groupId && i.status !== 'purchased')
@@ -958,14 +1171,14 @@ export function ShoppingScreen() {
           )}
         </div>
 
-        {/* List / History tabs */}
+        {/* List / Stores / History tabs */}
         <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}` }}>
-          {(['list', 'history'] as const).map(tab => (
+          {(['list', 'stores', 'history'] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               style={{ fontSize: 11, fontWeight: 600, padding: '5px 10px', border: 'none', cursor: 'pointer',
                 background: activeTab === tab ? C.ink1 : C.card,
                 color: activeTab === tab ? '#fff' : C.ink3 }}>
-              {tab === 'list' ? 'List' : 'History'}
+              {tab === 'list' ? 'List' : tab === 'stores' ? 'Stores' : 'History'}
             </button>
           ))}
         </div>
@@ -998,7 +1211,6 @@ export function ShoppingScreen() {
             >
               <IconRefresh size={13} /> {priceWatchLoading ? 'Checking…' : 'Refresh prices'}
             </button>
-
             {/* New list */}
             <button
               onClick={() => setShowAddGroup(true)}
@@ -1056,6 +1268,16 @@ export function ShoppingScreen() {
         </div>
       )}
 
+      {/* ── Stores tab ───────────────────────────────────────────────────────── */}
+      {activeTab === 'stores' && (
+        <StoresTab
+          stores={stores}
+          userId={userId}
+          onAddStore={handleAddStore}
+          onDeleteStore={deleteStore}
+        />
+      )}
+
       {/* ── List tab ─────────────────────────────────────────────────────────── */}
       {activeTab === 'list' && (
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -1074,7 +1296,8 @@ export function ShoppingScreen() {
                   envelopes={envelopes}
                   onUpdateGroup={patch => updateGroup(group.id, patch)}
                   onDeleteGroup={() => deleteGroup(group.id)}
-                  onAddItem={() => setAddingItemGroupId(group.id)}
+                  onAddItem={() => { setAddingItemPrefill(''); setAddingItemGroupId(group.id) }}
+                  onAddItemWithPrefill={name => handleAddItemWithPrefill(group.id, name)}
                   onUpdateItem={updateItem}
                   onDeleteItem={deleteItem}
                   onPurchaseItem={handlePurchase}
@@ -1108,7 +1331,8 @@ export function ShoppingScreen() {
                     envelopes={envelopes}
                     onUpdateGroup={patch => updateGroup(group.id, patch)}
                     onDeleteGroup={() => deleteGroup(group.id)}
-                    onAddItem={() => setAddingItemGroupId(group.id)}
+                    onAddItem={() => { setAddingItemPrefill(''); setAddingItemGroupId(group.id) }}
+                    onAddItemWithPrefill={name => handleAddItemWithPrefill(group.id, name)}
                     onUpdateItem={updateItem}
                     onDeleteItem={deleteItem}
                     onPurchaseItem={handlePurchase}
@@ -1167,8 +1391,9 @@ export function ShoppingScreen() {
         <AddItemModal
           groupId={addingItemGroupId}
           currency={currency}
+          prefillName={addingItemPrefill}
           onAdd={item => handleAddItem(addingItemGroupId, item)}
-          onClose={() => setAddingItemGroupId(null)}
+          onClose={() => { setAddingItemGroupId(null); setAddingItemPrefill('') }}
         />
       )}
     </div>
