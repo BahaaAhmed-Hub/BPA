@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, ChevronDown, ChevronRight, Archive, BellOff, Eye, X as XIcon, HelpCircle } from 'lucide-react'
-import { Button, Card, Pill } from '@/components/ui'
+import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, X as XIcon, HelpCircle } from 'lucide-react'
+import { Button, Pill, SectionCard, useOpenSections } from '@/components/ui'
 import { ICON, STROKE } from '@/lib/type'
 import type { MailAccount } from '@/lib/gmail'
 import { accountLabel } from './mailAccounts'
 import type { SmartThread, PassResult } from '@/lib/mailSmartSync'
 import type { SmartSection } from '@/lib/mailSmart'
 import { canNeedAction, type MailKind } from '@/lib/mailKinds'
+import { companyOfMail } from '@/lib/mailCompany'
 
 // ─── The smart view ──────────────────────────────────────────────────────────
 //
@@ -36,15 +37,6 @@ const SECTIONS: { id: SmartSection; title: string; dot: string; empty: string }[
 /** Which sections are folded away. Remembered, because the one you keep shut is
  *  shut for a reason and reopening it every visit is the app forgetting. */
 const OPEN_KEY = 'mail-smart-open-sections'
-function loadOpen(): Record<string, boolean> {
-  try {
-    const raw = localStorage.getItem(OPEN_KEY)
-    return raw ? JSON.parse(raw) as Record<string, boolean> : {}
-  } catch { return {} }
-}
-function saveOpen(v: Record<string, boolean>): void {
-  try { localStorage.setItem(OPEN_KEY, JSON.stringify(v)) } catch { /* quota */ }
-}
 
 const EYEBROW: React.CSSProperties = {
   fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
@@ -135,12 +127,7 @@ export function SmartView({
   onRsvp: (t: SmartThread, answer: 'accepted' | 'tentative' | 'declined') => void
 }) {
   const [picked, setPicked] = useState<Set<string>>(new Set())
-  const [open, setOpen] = useState<Record<string, boolean>>(loadOpen)
-  const isOpen = (id: string) => open[id] !== false        // open unless folded
-  const toggleOpen = (id: string) => setOpen(o => {
-    const next = { ...o, [id]: !isOpen(id) }
-    saveOpen(next); return next
-  })
+  const { isOpen, toggle: toggleOpen } = useOpenSections(OPEN_KEY)
   const key = (t: SmartThread) => `${t.accountEmail}|${t.threadId}`
 
   const threads = useMemo(() => result?.threads ?? [], [result])
@@ -240,47 +227,15 @@ export function SmartView({
         const compact = s.id === 'fyi'
         const shown = isOpen(s.id)
         return (
-          <Card key={s.id} style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-              padding: '13px 16px',
-              borderBottom: shown && list.length ? 'var(--sb-border-width) solid var(--sb-hairline)' : 'none',
-            }}>
-              {/* The whole header folds the section. A count on a shut section
-                  is the point of shutting it — you can see there are four
-                  without reading four rows. */}
-              <button
-                onClick={() => toggleOpen(s.id)}
-                aria-expanded={shown}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0,
-                  background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
-                  fontFamily: 'inherit', textAlign: 'left', color: 'inherit',
-                }}>
-                {shown
-                  ? <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
-                  : <ChevronRight size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />}
-                <span aria-hidden style={{
-                  width: 8, height: 8, borderRadius: '50%', background: s.dot, flexShrink: 0,
-                }} />
-                <span style={{
-                  fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-body)',
-                  fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)',
-                }}>{s.title}</span>
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
-                  {list.length || ''}
-                </span>
-              </button>
-              {shown && !compact && list.length > 0 && (
-                <Pill on={sel.length === list.length && list.length > 0}
-                  onClick={() => setAll(list, sel.length !== list.length)}>
-                  {sel.length === list.length ? 'Clear' : 'Select all'}
-                </Pill>
-              )}
-            </div>
-
-            {/* The bulk bar appears only when there is a selection to act on. */}
-            {shown && sel.length > 0 && (
+          <SectionCard key={s.id} title={s.title} count={list.length} dot={s.dot}
+            open={shown} onToggle={() => toggleOpen(s.id)}
+            right={!compact && list.length > 0 && (
+              <Pill on={sel.length === list.length && list.length > 0}
+                onClick={() => setAll(list, sel.length !== list.length)}>
+                {sel.length === list.length ? 'Clear' : 'Select all'}
+              </Pill>
+            )}
+            banner={sel.length > 0 && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
                 padding: '9px 16px', background: 'var(--sb-accent-tint)',
@@ -309,7 +264,8 @@ export function SmartView({
               </div>
             )}
 
-            {!shown ? null : list.length === 0 ? (
+            >
+            {list.length === 0 ? (
               <div style={{ padding: '14px 16px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                 {loading ? 'Reading…' : s.empty}
               </div>
@@ -353,7 +309,7 @@ export function SmartView({
                 ))}
               </div>
             )}
-          </Card>
+          </SectionCard>
         )
       })}
     </div>
@@ -381,6 +337,11 @@ function Row({
   // Whether words back are the thing this thread wants. Everything a row does
   // differently for a machine's notice hangs off this one question.
   const answerable = canNeedAction(t.kind)
+  // A stored row carries the sender and the mailbox, which is enough: the
+  // company is resolved from those the same way the flat list resolves it.
+  const company = useMemo(
+    () => companyOfMail({ fromEmail: t.fromEmail, accountEmail: t.accountEmail }),
+    [t.fromEmail, t.accountEmail])
   return (
     <div style={{
       // `flex-start`, not the default stretch: a stretched checkbox centres its
@@ -408,6 +369,22 @@ function Row({
             }}>{t.subject}</button>
           <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{t.fromName}</span>
           <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>{when(t.lastAt)}</span>
+          {/* Whose business this is, the same chip the flat list carries. A
+              thread's company and the mailbox it landed in are different
+              questions, and both are worth a glance here. */}
+          {company && (
+            <span title={company.name} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
+              fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 7px',
+              borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-2)',
+              background: `color-mix(in srgb, ${company.color} 16%, transparent)`,
+            }}>
+              <span aria-hidden style={{
+                width: 6, height: 6, borderRadius: '50%', background: company.color, flexShrink: 0,
+              }} />
+              {company.name}
+            </span>
+          )}
           {manyAccounts && (
             <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
               {accountLabel(t.accountEmail)}

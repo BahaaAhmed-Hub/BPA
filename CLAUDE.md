@@ -1500,6 +1500,36 @@ git push -u origin claude/professor-web-app-dev-tnj0uk
 - Pre-existing unused vars scattered in `finance/screens/` — fix by prefixing or deleting if truly dead code.
 - `npm run build` = `tsc -b && vite build` — both must pass.
 
+## Mail — whose business is this
+`lib/mailCompany.ts` answers it for one message, and the answer is the
+**counterparty first**: the sender's domain matched against your companies, then
+the other addresses on it, and only then the mailbox it landed in. A colleague at
+one of your companies writing to your personal address is that company's mail
+whatever inbox it reached; a client writing in from a domain you have never heard
+of is about the business whose inbox they wrote to. Past that nothing is guessed —
+a personal address into a personal mailbox has no company and the row says
+nothing, because a label that is wrong some of the time is worse than no label:
+you cannot tell which times.
+- **The chip is on both views.** A coloured dot in the company's own colour plus
+  its name, beside the sender, in the flat list and in the smart view.
+- **The mailbox chip answers a different question** and stays: *where did it
+  land* is not *what is it about*, and the two differ often.
+- **Sort is four pills, not a menu.** Date / Sender / Company / Subject; the one
+  you are on turns round when pressed again, which is what a sortable column has
+  always done and what a second control for it would be. Each says what its two
+  directions mean in its tooltip, since "Date ↑" does not say which end is which.
+  Mail belonging to no company of yours sits at the bottom **whichever way round
+  the sort is** — it is a remainder, not a name.
+- **`Flat / By company`** groups the same rows under one folding card each,
+  ordered by which company has the newest mail. Kept per browser in `mail-sort`,
+  `mail-sort-asc`, `mail-group` and `mail-groups-open`.
+- **`components/ui/SectionCard.tsx`** is that folding card, and the smart view's
+  four sections now use it too. It grew in one view and was wanted in the next
+  the following day, which is the moment a shape copied twice becomes a
+  component — two copies drift, and then two lists that look identical fold
+  differently. `useOpenSections(key)` is the memory, and a section id nobody has
+  touched is **open**, so one added later is not silently shut for everybody.
+
 ## Mail — the smart view, and what a thread actually wants
 `lib/mailKinds.ts` answers *what kind of thing is this*, from headers and the
 subject alone — no model call, so a row knows the instant it is drawn.

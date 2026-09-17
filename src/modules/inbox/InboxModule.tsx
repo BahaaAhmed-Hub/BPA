@@ -32,7 +32,8 @@ import type { DbUser } from '@/types/database'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
-import { Segmented } from '@/components/ui'
+import { Segmented, SectionCard, useOpenSections, Pill } from '@/components/ui'
+import { companyOfMail, NO_COMPANY, type MailCompany } from '@/lib/mailCompany'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -318,6 +319,70 @@ const barBtn: React.CSSProperties = {
   color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer',
 }
 
+
+// ─── Grouped by company ──────────────────────────────────────────────────────
+//
+//  The same rows, under the business each belongs to. It is the one view that
+//  answers "what is outstanding with Teradix" without reading the whole list,
+//  and it is the same `SectionCard` the smart view folds its four sections
+//  with — a list that looks the same should fold the same.
+//
+//  Ordered by what is in each group rather than alphabetically: the company
+//  with the newest mail is the one you came here for. Mail belonging to no
+//  company of yours goes last, always, because it is a remainder rather than a
+//  group.
+
+export type MailSortKey = 'date' | 'sender' | 'company' | 'subject'
+/** Each says what its two directions mean, because "Date ↑" alone does not say
+ *  whether that is oldest or newest and the answer differs per key. */
+const SORTS: { id: MailSortKey; label: string; asc: string; desc: string }[] = [
+  { id: 'date',    label: 'Date',    asc: 'oldest first', desc: 'newest first' },
+  { id: 'sender',  label: 'Sender',  asc: 'A to Z',       desc: 'Z to A' },
+  { id: 'company', label: 'Company', asc: 'A to Z',       desc: 'Z to A' },
+  { id: 'subject', label: 'Subject', asc: 'A to Z',       desc: 'Z to A' },
+]
+export type MailGroupBy = 'none' | 'company'
+
+function MailGroups({ emails, isOpen, onToggle, renderRow, companyOf }: {
+  emails: Email[]
+  isOpen: (id: string) => boolean
+  onToggle: (id: string) => void
+  renderRow: (e: Email, i: number, total: number) => React.ReactNode
+  companyOf: (e: Email) => MailCompany | null
+}) {
+  const groups = useMemo(() => {
+    const by = new Map<string, { id: string; name: string; color: string; rows: Email[] }>()
+    for (const e of emails) {
+      const co = companyOf(e)
+      const id = co?.id ?? '_none'
+      if (!by.has(id)) by.set(id, {
+        id, name: co?.name ?? NO_COMPANY, color: co?.color ?? 'var(--sb-ink-4)', rows: [],
+      })
+      by.get(id)!.rows.push(e)
+    }
+    const out = [...by.values()]
+    out.sort((a, b) => {
+      if ((a.id === '_none') !== (b.id === '_none')) return a.id === '_none' ? 1 : -1
+      const an = a.rows[0]?.receivedAt ?? '', bn = b.rows[0]?.receivedAt ?? ''
+      return bn.localeCompare(an)
+    })
+    return out
+  }, [emails, companyOf])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {groups.map(g => (
+        <SectionCard key={g.id} title={g.name} count={g.rows.length} dot={g.color}
+          open={isOpen(g.id)} onToggle={() => onToggle(g.id)}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {g.rows.map((e, i) => renderRow(e, i, g.rows.length))}
+          </div>
+        </SectionCard>
+      ))}
+    </div>
+  )
+}
+
 export function InboxModule() {
   const user         = useAuthStore(s => s.user)
   const addTasksBatch = useTaskStore(s => s.addTasksBatch)
@@ -446,6 +511,75 @@ export function InboxModule() {
   const filteredEmails = mailClass
     ? searchedEmails.filter(e => classOf.get(e.id) === mailClass)
     : searchedEmails
+
+  // ─── How the list is ordered, and whether it is grouped ───────────────────
+  //
+  //  Newest first is the right default and the wrong only option: looking for
+  //  the thread with one company, or everything from one person, means reading
+  //  the whole list for it. Both are kept per browser — which way you like a
+  //  list is a fact about you, not about the mail.
+  const [sortKey, setSortKey] = useState<MailSortKey>(() => {
+    try { return (localStorage.getItem('mail-sort') as MailSortKey) || 'date' } catch { return 'date' }
+  })
+  const [sortAsc, setSortAsc] = useState<boolean>(() => {
+    try { return localStorage.getItem('mail-sort-asc') === '1' } catch { return false }
+  })
+  const [groupBy, setGroupBy] = useState<MailGroupBy>(() => {
+    try { return (localStorage.getItem('mail-group') as MailGroupBy) || 'none' } catch { return 'none' }
+  })
+  const setSort = (k: MailSortKey) => {
+    // Clicking the key you are already on turns it round, which is what every
+    // sortable list on earth does and what a second control for it would be.
+    const asc = k === sortKey ? !sortAsc : k !== 'date'
+    setSortKey(k); setSortAsc(asc)
+    try { localStorage.setItem('mail-sort', k); localStorage.setItem('mail-sort-asc', asc ? '1' : '0') } catch { /* quota */ }
+  }
+  const setGroup = (g: MailGroupBy) => {
+    setGroupBy(g)
+    try { localStorage.setItem('mail-group', g) } catch { /* quota */ }
+  }
+
+  // The company each message belongs to, worked out once per list rather than
+  // once per render of each row — a merged inbox is a hundred of them.
+  const companyByMail = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof companyOfMail>>()
+    for (const e of visibleEmails) {
+      m.set(e.id, companyOfMail({
+        fromEmail: e.fromEmail, to: e.to, cc: e.cc,
+        accountEmail: e.account.email, isPrimary: e.account.isPrimary,
+      }))
+    }
+    return m
+  }, [visibleEmails])
+  const companyOf = (e: Email) => companyByMail.get(e.id) ?? null
+
+  const sortedEmails = useMemo(() => {
+    const rows = [...filteredEmails]
+    const by: Record<MailSortKey, (e: Email) => string> = {
+      // Not `localeCompare` on a date: these are ISO strings, so the plain
+      // comparison is both correct and the one every other list here uses.
+      date:    e => e.receivedAt,
+      sender:  e => (e.fromName || e.fromEmail).toLowerCase(),
+      company: e => (companyOf(e)?.name ?? '').toLowerCase(),
+      subject: e => e.subject.toLowerCase(),
+    }
+    const read = by[sortKey] ?? by.date
+    rows.sort((a, b) => {
+      const av = read(a), bv = read(b)
+      // Mail belonging to none of your companies is a remainder, not a name, so
+      // it sits at the bottom whichever way round the sort is. Turning the
+      // order round and finding the unlabelled rows at the top is the sort
+      // answering a question nobody asked.
+      if (sortKey === 'company' && !av !== !bv) return av ? -1 : 1
+      const c = av < bv ? -1 : av > bv ? 1 : 0
+      // Ties fall back to newest first, so a run of one sender or one company
+      // is itself in a sensible order rather than in whatever Gmail returned.
+      return (sortAsc ? c : -c) || b.receivedAt.localeCompare(a.receivedAt)
+    })
+    return rows
+  }, [filteredEmails, sortKey, sortAsc, companyByMail])
+
+  const { isOpen: isGroupOpen, toggle: toggleGroup } = useOpenSections('mail-groups-open')
 
   /** The messages a bulk action would act on: what the chosen tab holds. */
   const inClass = useMemo(
@@ -1142,6 +1276,153 @@ export function InboxModule() {
     )
   }
 
+  /** One line of mail. Lifted out of the list because the list is drawn two
+   *  ways now — flat, and grouped under the company each message belongs to —
+   *  and a row copied into both is a row that will differ in one of them. */
+  function renderRow(email: Email, i: number, total: number) {
+            // Several mailboxes on screen at once is the case the colour is for.
+            const multi = view === 'all' && accounts.length > 1
+            const isSelected = selectedId === email.id
+            const isRead     = readIds.has(email.id)
+            const triage     = triageMap[email.id]
+            const classMeta  = triage?.result ? CLASS_META[triage.result.classification] : null
+            return (
+              <SwipeRow
+                key={email.id}
+                id={email.id}
+                isRead={isRead}
+                openId={swipedId}
+                setOpenId={setSwipedId}
+                // Nothing in the Bin is worth binning again, and archiving from
+                // there means nothing either.
+                disabled={folder === 'trash'}
+                onRead={() => void toggleRead(email)}
+                onArchive={() => void archiveRows([email])}
+                onDelete={() => void trashRows([email])}
+              >
+              <button
+                onClick={() => {
+                  setSelectedId(email.id)
+                  lastPicked.current = email.id
+                  if (!readIds.has(email.id)) {
+                    setReadIds(prev => new Set([...prev, email.id]))
+                    void markAsRead(email.id, email.account).catch(() => { /* offline */ })
+                  }
+                }}
+                style={{
+                  width: '100%', padding: '7px 11px', textAlign: 'left',
+                  background: isSelected ? 'color-mix(in srgb, var(--sb-info) 6.0%, transparent)' : 'transparent',
+                  border: 'none',
+                  borderBottom: i < total - 1 ? 'var(--sb-border-width) solid var(--sb-hairline)' : 'none',
+                  // The bar is the mailbox when several are merged, and the
+                  // selection when only one is on screen.
+                  borderLeft: `3px solid ${
+                    isSelected ? 'var(--sb-info)'
+                    : multi ? accountColor(email.account.email)
+                    : 'transparent'}`,
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}
+                    title={selectedIds.has(email.id) ? 'Deselect — shift-click for a run' : 'Select — shift-click for a run'}
+                    onClick={ev => {
+                      ev.stopPropagation()
+                      // Shift takes everything between the last one picked and
+                      // this one. Picking fifty messages one at a time is not
+                      // selecting, it is clicking fifty times.
+                      const anchor = lastPicked.current
+                      const run = (() => {
+                        if (!ev.shiftKey || !anchor || anchor === email.id) return [email.id]
+                        const ids = sortedEmails.map(e => e.id)
+                        const a = ids.indexOf(anchor), b = ids.indexOf(email.id)
+                        if (a < 0 || b < 0) return [email.id]
+                        return ids.slice(Math.min(a, b), Math.max(a, b) + 1)
+                      })()
+                      setSelectedIds(prev => {
+                        const n = new Set(prev)
+                        // The row you clicked decides for the whole run, so a
+                        // shift-click can clear a stretch as well as take one.
+                        const adding = !n.has(email.id)
+                        for (const id of run) adding ? n.add(id) : n.delete(id)
+                        return n
+                      })
+                      lastPicked.current = email.id
+                    }}>
+                    {selectedIds.has(email.id)
+                      ? <div style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCheck size={ICON.sm} color="var(--sb-ink-on-fill)" /></div>
+                      : <SenderAvatar name={email.fromName} email={email.fromEmail} size={26} />
+                    }
+                    {!isRead && !selectedIds.has(email.id) && <div style={{ position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)', border: 'var(--sb-border-emphasis) solid var(--sb-card)' }} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}>
+                      <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: isRead ? 400 : 700, color: isRead ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '62%' }}>
+                        {email.fromName}
+                      </span>
+                      {/* Whose business this is. The mailbox chip on the right
+                          says where it landed; this says what it is about, and
+                          the two differ whenever a colleague writes to your
+                          personal address or a client writes to a company one. */}
+                      {companyOf(email) && (
+                        <span title={`${companyOf(email)!.name} — group by company to see them together`}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
+                            fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 7px',
+                            borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-2)',
+                            background: `color-mix(in srgb, ${companyOf(email)!.color} 16%, transparent)`,
+                            maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                          <span aria-hidden style={{
+                            width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                            background: companyOf(email)!.color,
+                          }} />
+                          {companyOf(email)!.name}
+                        </span>
+                      )}
+                      {classMeta && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: classMeta.bg, color: classMeta.color, fontWeight: 600 }}>
+                          <classMeta.Icon size={10} strokeWidth={STROKE.active} />
+                          {classMeta.label}
+                        </span>
+                      )}
+                      {/* A bulk draft writes into eight messages at once; without
+                          this the only way to know which got one is to open each. */}
+                      {replyText[email.id]?.trim() && !sentIds.has(email.id) && (
+                        <span title="A reply is drafted and waiting — nothing has been sent" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.16)', color: 'var(--sb-ink-2)', fontWeight: 600 }}>
+                          <FileEdit size={10} strokeWidth={STROKE.active} />
+                          Draft
+                        </span>
+                      )}
+                      {triage?.loading && (
+                        <RefreshCw size={ICON.sm} color="var(--sb-info)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                      )}
+                    </div>
+                    <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: isRead ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
+                      {email.subject}
+                      <span style={{ fontWeight: 400, color: 'var(--sb-ink-4)' }}> — {email.preview}</span>
+                    </p>
+                  </div>
+                  <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, flexShrink: 0 }}>
+                    {/* Which mailbox, when more than one is on screen — in that
+                        mailbox's own colour, so the bar down the edge and the
+                        address say the same thing. */}
+                    {multi && (
+                      <span title={email.account.email} style={{
+                        fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: accountColor(email.account.email),
+                        maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>{accountLabel(email.account.email, email.account.isPrimary)}</span>
+                    )}
+                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+                    {fmtRelTime(email.receivedAt)}
+                    </span>
+                  </span>
+                </div>
+              </button>
+              </SwipeRow>
+            )
+  }
+
   function renderLeft() {
     if (loading) {
       return (
@@ -1314,141 +1595,71 @@ export function InboxModule() {
           )
         })()}
 
-        <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', overflow: 'hidden' }}>
-        {/* An emptied list has to say so. Archiving or binning a whole
-            selection is one gesture away, and a card of nothing reads as the
-            mail having failed to load rather than as a finished inbox. */}
+        {/* ── How it is ordered, and whether it is grouped ─────────────────
+            A sort control that is four buttons rather than a menu: four
+            options is not a menu, and a menu you have to open to see what is
+            possible hides the fact that you can sort at all. The one you are
+            on turns round when you press it again, which is what a sortable
+            column has always done and what a second control for it would be.
+            Grouped, the list becomes one folding card per company — the same
+            component the smart view folds its sections with. */}
+        {filteredEmails.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+            padding: '7px 10px', borderRadius: 'var(--sb-r-nav)',
+            background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-hairline)',
+          }}>
+            <span style={{
+              fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
+              textTransform: 'uppercase', color: 'var(--sb-ink-3)',
+            }}>Sort</span>
+            {SORTS.map(o => (
+              <Pill key={o.id} on={sortKey === o.id} onClick={() => setSort(o.id)}
+                title={sortKey === o.id
+                  ? `${o.label}, ${sortAsc ? o.asc : o.desc} — press again to turn it round`
+                  : `Sort by ${o.label.toLowerCase()}`}>
+                {o.label}{sortKey === o.id ? (sortAsc ? ' ↑' : ' ↓') : ''}
+              </Pill>
+            ))}
+            <span style={{ flex: 1 }} />
+            <Segmented
+              value={groupBy}
+              onChange={v => setGroup(v as MailGroupBy)}
+              options={[
+                { value: 'none',    label: 'Flat' },
+                { value: 'company', label: 'By company' },
+              ]}
+            />
+          </div>
+        )}
+
         {filteredEmails.length === 0 ? (
-          <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)' }}>
+          <div style={{
+            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+            borderRadius: 'var(--sb-r-nav)',
+            padding: '30px 20px', textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)',
+          }}>
+            {/* An emptied list has to say so. Archiving or binning a whole
+                selection is one gesture away, and a card of nothing reads as
+                the mail having failed to load rather than as a finished inbox. */}
             {searchQuery ? `No emails match "${searchQuery}"`
               : mailClass ? CLASS_INFO[mailClass].empty
               : folder === 'unread' ? 'Nothing unread. That is the whole inbox dealt with.'
               : `Nothing in ${FOLDER_LABEL[folder ?? 'inbox'].toLowerCase()}.`}
           </div>
-        ) : filteredEmails.map((email, i) => {
-          // Several mailboxes on screen at once is the case the colour is for.
-          const multi = view === 'all' && accounts.length > 1
-          const isSelected = selectedId === email.id
-          const isRead     = readIds.has(email.id)
-          const triage     = triageMap[email.id]
-          const classMeta  = triage?.result ? CLASS_META[triage.result.classification] : null
-          return (
-            <SwipeRow
-              key={email.id}
-              id={email.id}
-              isRead={isRead}
-              openId={swipedId}
-              setOpenId={setSwipedId}
-              // Nothing in the Bin is worth binning again, and archiving from
-              // there means nothing either.
-              disabled={folder === 'trash'}
-              onRead={() => void toggleRead(email)}
-              onArchive={() => void archiveRows([email])}
-              onDelete={() => void trashRows([email])}
-            >
-            <button
-              onClick={() => {
-                setSelectedId(email.id)
-                lastPicked.current = email.id
-                if (!readIds.has(email.id)) {
-                  setReadIds(prev => new Set([...prev, email.id]))
-                  void markAsRead(email.id, email.account).catch(() => { /* offline */ })
-                }
-              }}
-              style={{
-                width: '100%', padding: '7px 11px', textAlign: 'left',
-                background: isSelected ? 'color-mix(in srgb, var(--sb-info) 6.0%, transparent)' : 'transparent',
-                border: 'none',
-                borderBottom: i < visibleEmails.length - 1 ? 'var(--sb-border-width) solid var(--sb-hairline)' : 'none',
-                // The bar is the mailbox when several are merged, and the
-                // selection when only one is on screen.
-                borderLeft: `3px solid ${
-                  isSelected ? 'var(--sb-info)'
-                  : multi ? accountColor(email.account.email)
-                  : 'transparent'}`,
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <div style={{ position: 'relative', flexShrink: 0 }}
-                  title={selectedIds.has(email.id) ? 'Deselect — shift-click for a run' : 'Select — shift-click for a run'}
-                  onClick={ev => {
-                    ev.stopPropagation()
-                    // Shift takes everything between the last one picked and
-                    // this one. Picking fifty messages one at a time is not
-                    // selecting, it is clicking fifty times.
-                    const anchor = lastPicked.current
-                    const run = (() => {
-                      if (!ev.shiftKey || !anchor || anchor === email.id) return [email.id]
-                      const ids = filteredEmails.map(e => e.id)
-                      const a = ids.indexOf(anchor), b = ids.indexOf(email.id)
-                      if (a < 0 || b < 0) return [email.id]
-                      return ids.slice(Math.min(a, b), Math.max(a, b) + 1)
-                    })()
-                    setSelectedIds(prev => {
-                      const n = new Set(prev)
-                      // The row you clicked decides for the whole run, so a
-                      // shift-click can clear a stretch as well as take one.
-                      const adding = !n.has(email.id)
-                      for (const id of run) adding ? n.add(id) : n.delete(id)
-                      return n
-                    })
-                    lastPicked.current = email.id
-                  }}>
-                  {selectedIds.has(email.id)
-                    ? <div style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCheck size={ICON.sm} color="var(--sb-ink-on-fill)" /></div>
-                    : <SenderAvatar name={email.fromName} email={email.fromEmail} size={26} />
-                  }
-                  {!isRead && !selectedIds.has(email.id) && <div style={{ position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)', border: 'var(--sb-border-emphasis) solid var(--sb-card)' }} />}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}>
-                    <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: isRead ? 400 : 700, color: isRead ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '62%' }}>
-                      {email.fromName}
-                    </span>
-                    {classMeta && (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: classMeta.bg, color: classMeta.color, fontWeight: 600 }}>
-                        <classMeta.Icon size={10} strokeWidth={STROKE.active} />
-                        {classMeta.label}
-                      </span>
-                    )}
-                    {/* A bulk draft writes into eight messages at once; without
-                        this the only way to know which got one is to open each. */}
-                    {replyText[email.id]?.trim() && !sentIds.has(email.id) && (
-                      <span title="A reply is drafted and waiting — nothing has been sent" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.16)', color: 'var(--sb-ink-2)', fontWeight: 600 }}>
-                        <FileEdit size={10} strokeWidth={STROKE.active} />
-                        Draft
-                      </span>
-                    )}
-                    {triage?.loading && (
-                      <RefreshCw size={ICON.sm} color="var(--sb-info)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-                    )}
-                  </div>
-                  <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: isRead ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
-                    {email.subject}
-                    <span style={{ fontWeight: 400, color: 'var(--sb-ink-4)' }}> — {email.preview}</span>
-                  </p>
-                </div>
-                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, flexShrink: 0 }}>
-                  {/* Which mailbox, when more than one is on screen — in that
-                      mailbox's own colour, so the bar down the edge and the
-                      address say the same thing. */}
-                  {multi && (
-                    <span title={email.account.email} style={{
-                      fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: accountColor(email.account.email),
-                      maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>{accountLabel(email.account.email, email.account.isPrimary)}</span>
-                  )}
-                  <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
-                  {fmtRelTime(email.receivedAt)}
-                  </span>
-                </span>
-              </div>
-            </button>
-            </SwipeRow>
-          )
-        })}
-        </div>
+        ) : groupBy === 'company' ? (
+          <MailGroups
+            emails={sortedEmails}
+            isOpen={isGroupOpen}
+            onToggle={toggleGroup}
+            renderRow={renderRow}
+            companyOf={companyOf}
+          />
+        ) : (
+          <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', overflow: 'hidden' }}>
+            {sortedEmails.map((email, i) => renderRow(email, i, sortedEmails.length))}
+          </div>
+        )}
 
         {nextPageToken && (
           <button
