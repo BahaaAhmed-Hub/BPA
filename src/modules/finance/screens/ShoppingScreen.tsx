@@ -983,14 +983,18 @@ function groupKey(date: string, mode: ShoppingViewMode): string {
 
 export function ShoppingScreen() {
   const {
-    groups, items: rawItems, stores, priceWatchLoading,
+    groups, items: rawItems, stores, snapshots, priceWatchLoading,
     addGroup, updateGroup, deleteGroup,
     addItem, updateItem, deleteItem, purchaseItem,
     addStore, deleteStore,
     refreshPrices, loadAll, settings,
   } = useShoppingStore()
 
-  const enrichedItems = useShoppingStore(s => s.enrichedItems())
+  const enrichedItems = useMemo(
+    () => useShoppingStore.getState().enrichedItems(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rawItems, snapshots, stores],
+  )
   const { accounts } = useFinanceStore()
 
   const [viewMode, setViewMode] = useState<ShoppingViewMode>(settings.viewMode)
