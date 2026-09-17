@@ -2,6 +2,7 @@
 -- Groups are schedulable, recurring shopping lists.
 -- Items belong to groups and link to budget envelopes, tasks, and calendar events.
 -- Stores are user-defined by URL; price snapshots are written by the Edge Function.
+-- Order: groups → stores → items → snapshots (items FK-references stores)
 
 -- ─── shopping_groups ─────────────────────────────────────────────────────────
 
@@ -32,6 +33,33 @@ create policy "shopping_groups_owner"
   with check (auth.uid() = user_id);
 
 alter table public.shopping_groups enable row level security;
+
+-- ─── shopping_stores ─────────────────────────────────────────────────────────
+-- Must be created before shopping_items (items.store_used_id FK references this)
+
+create table if not exists public.shopping_stores (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  name            text not null,
+  url             text not null,
+  country         text,
+  categories      text[] not null default '{}',
+  last_scraped_at timestamptz,
+  last_scrape_ok  boolean,
+  sort_order      int  not null default 0,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+
+create index if not exists shopping_stores_user_id_idx on public.shopping_stores(user_id);
+
+drop policy if exists "shopping_stores_owner" on public.shopping_stores;
+create policy "shopping_stores_owner"
+  on public.shopping_stores for all
+  using  (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+alter table public.shopping_stores enable row level security;
 
 -- ─── shopping_items ──────────────────────────────────────────────────────────
 
@@ -71,32 +99,6 @@ create policy "shopping_items_owner"
   with check (auth.uid() = user_id);
 
 alter table public.shopping_items enable row level security;
-
--- ─── shopping_stores ─────────────────────────────────────────────────────────
-
-create table if not exists public.shopping_stores (
-  id              uuid primary key default gen_random_uuid(),
-  user_id         uuid not null references auth.users(id) on delete cascade,
-  name            text not null,
-  url             text not null,
-  country         text,
-  categories      text[] not null default '{}',
-  last_scraped_at timestamptz,
-  last_scrape_ok  boolean,
-  sort_order      int  not null default 0,
-  created_at      timestamptz not null default now(),
-  updated_at      timestamptz not null default now()
-);
-
-create index if not exists shopping_stores_user_id_idx on public.shopping_stores(user_id);
-
-drop policy if exists "shopping_stores_owner" on public.shopping_stores;
-create policy "shopping_stores_owner"
-  on public.shopping_stores for all
-  using  (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-
-alter table public.shopping_stores enable row level security;
 
 -- ─── shopping_price_snapshots ─────────────────────────────────────────────────
 
