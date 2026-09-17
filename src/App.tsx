@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { AssistantPanel, AssistantToggle } from './modules/assistant/AssistantPanel'
 import { ExecutiveDashboard } from './modules/dashboard/ExecutiveDashboard'
 import { TaskCommand } from './modules/tasks/TaskCommand'
@@ -710,24 +710,39 @@ function TopNav() {
 }
 
 // ─── Active module router ──────────────────────────────────────────────────────
+// Each module is mounted exactly once on first visit and then hidden with
+// display:none rather than unmounted. This means the calendar (and every other
+// module) keeps its loaded state, timers and network cache across tab switches —
+// returning to the calendar is instant instead of triggering a full 30-second
+// reload waterfall every time.
 
 function ActiveModule() {
   const activeModule = useUIStore(s => s.activeModule)
-  switch (activeModule) {
-    case 'dashboard':    return <ExecutiveDashboard />
-    case 'tasks':        return <TaskCommand />
-    case 'calendar':     return <CalendarModule />
-    case 'inbox':        return <InboxModule />
-    case 'habits':       return <HabitsModule />
-    case 'review':       return <ReviewModule />
-    case 'morning':      return <MorningModule />
-    case 'settings':     return <SettingsModule />
-    case 'behavioral':   return <BehavioralOS />
-    case 'planning':     return <PlanningAssistant />
-    case 'finance':      return <FinanceModule />
-    default:             return <ExecutiveDashboard />
-  }
+  const everMounted  = useRef<Set<string>>(new Set([activeModule]))
+
+  // Track which modules have ever been active so we only mount them once.
+  everMounted.current.add(activeModule)
+
+  const show = (id: string): CSSProperties =>
+    activeModule === id ? {} : { display: 'none' }
+
+  return (
+    <>
+      {everMounted.current.has('dashboard')  && <div style={show('dashboard')}><ExecutiveDashboard /></div>}
+      {everMounted.current.has('tasks')      && <div style={show('tasks')}><TaskCommand /></div>}
+      {everMounted.current.has('calendar')   && <div style={show('calendar')}><CalendarModule /></div>}
+      {everMounted.current.has('inbox')      && <div style={show('inbox')}><InboxModule /></div>}
+      {everMounted.current.has('habits')     && <div style={show('habits')}><HabitsModule /></div>}
+      {everMounted.current.has('review')     && <div style={show('review')}><ReviewModule /></div>}
+      {everMounted.current.has('morning')    && <div style={show('morning')}><MorningModule /></div>}
+      {everMounted.current.has('settings')   && <div style={show('settings')}><SettingsModule /></div>}
+      {everMounted.current.has('behavioral') && <div style={show('behavioral')}><BehavioralOS /></div>}
+      {everMounted.current.has('planning')   && <div style={show('planning')}><PlanningAssistant /></div>}
+      {everMounted.current.has('finance')    && <div style={show('finance')}><FinanceModule /></div>}
+    </>
+  )
 }
+
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
@@ -969,6 +984,9 @@ function App() {
         // Preferences that are your work rather than this device's.
         stopPrefSync.current?.()
         stopPrefSync.current = startPrefSync()
+        // Warm the google-oauth Edge Function so it isn't cold when the
+        // user first opens the calendar tab (cold starts add 3-5s).
+        void supabase.functions.invoke('google-oauth', { body: { action: 'ping' } }).catch(() => {})
       }
       setLoading(false)
     })

@@ -299,7 +299,7 @@ function saveCalColors(s: Record<string, string>) { localStorage.setItem('cal-in
 // Each week gets its own localStorage key so navigating between weeks hits cache.
 // Old single-slot key is cleaned up on first write.
 const EVENTS_CACHE_PREFIX = 'cal-intel-events-cache:'
-const EVENTS_CACHE_TTL    = 10 * 60 * 1000  // 10 min
+const EVENTS_CACHE_TTL    = 30 * 60 * 1000  // 30 min — 2-min auto-refresh keeps data current
 const EVENTS_CACHE_MAX    = 8                // keep at most 8 weeks
 
 interface EventsCacheEntry { weekKey: string; events: GCalEvent[]; savedAt: number }
@@ -1404,11 +1404,11 @@ export function CalendarIntelligence() {
     if (!user?.email) return  // wait for user — prevents concurrent double-call race
     // Persist primary email for the initial-render cache cleanup on next page load
     localStorage.setItem('cal-intel-primary-email', user.email)
-    // Take the cache before clearing it: clearing is what keeps a calendar you
-    // unsubscribed from in Google out of the list, but loadAllCalendars needs
-    // the old contents to fall back on for an account it cannot reach.
+    // Keep the cache alive (don't clear it before the fetch). loadAllCalendars
+    // gets the current contents so it can fall back on them for unreachable accounts,
+    // and saveCalIntelCache() overwrites it on success — so stale entries are only
+    // visible for the brief window while the API responds.
     const cachedBefore = loadCalIntelCache()
-    localStorage.removeItem(CAL_INTEL_CACHE_KEY)
     const { calendars: fresh, needsReconnect } = await loadAllCalendars(user.email, cachedBefore)
     setReconnectNeeded(needsReconnect)
 
@@ -1450,7 +1450,29 @@ export function CalendarIntelligence() {
     setNoAuth(true); return []
   }, [user?.email])
 
-  useEffect(() => { void reloadCalendars() }, [user?.email]) // eslint-disable-line react-hooks/exhaustive-deps
+  // On mount (or user change): use cached calendars to start fetching events
+  // immediately, then reload the calendar list in the background. This eliminates
+  // the serial waterfall where events had to wait for the full list refresh.
+  useEffect(() => {
+    if (!user?.email) return
+    const cached = loadCalIntelCache()
+    if (cached.length) {
+      // Events start now using the cached list — no spinner needed.
+      const fromCache = rebuildFromCache(cached)
+      void loadEvents(weekStart, fromCache, hiddenCals)
+    }
+    // Refresh calendar list in parallel. If it returns a different set of
+    // calendars (e.g. a newly added calendar), reload events with the fresh list.
+    void reloadCalendars().then(fresh => {
+      if (!fresh?.length) return
+      const freshIds  = fresh.map(c => c.id).sort().join()
+      const cachedIds = cached.map(c => c.id).sort().join()
+      if (freshIds !== cachedIds) {
+        // Calendar list changed — reload events with updated list
+        void loadEvents(weekStart, fresh, hiddenCals)
+      }
+    })
+  }, [user?.email]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadEvents = useCallback(async (start: Date, cals: CalWithAccount[], hidden: Set<string>, hiddenAccts = hiddenAccounts, rangeEnd?: Date) => {
     setFetchError(null)
