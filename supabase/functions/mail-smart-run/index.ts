@@ -107,7 +107,7 @@ async function gmail<T>(token: string, path: string): Promise<T | null> {
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 
 interface TokenRow {
-  account_id: string; account_email?: string
+  account_id: string
   access_token: string; refresh_token: string; expires_at: string
 }
 
@@ -153,10 +153,20 @@ async function runForUser(admin: any, userId: string, now: number): Promise<{ re
   } catch { /* a malformed preference is no mailboxes, not a crash */ }
   if (business.length === 0) return { read: 0, stored: 0 }
 
+  // The address is on `google_accounts`; the token is on `google_account_tokens`,
+  // joined by account_id. There is no address on the token row — matching a
+  // mailbox on one was the reason the first live run read nothing at all and
+  // still reported success.
+  const { data: accts } = await admin.from('google_accounts')
+    .select('id, email').eq('user_id', userId)
   const { data: tokens } = await admin.from('google_account_tokens')
-    .select('account_id, account_email, access_token, refresh_token, expires_at')
-    .eq('user_id', userId)
+    .select('account_id, access_token, refresh_token, expires_at').eq('user_id', userId)
   const rows = (tokens ?? []) as TokenRow[]
+  const tokenFor = new Map<string, TokenRow>()
+  for (const a of (accts ?? []) as { id: string; email: string }[]) {
+    const t = rows.find(r => r.account_id === a.id)
+    if (t) tokenFor.set((a.email ?? '').toLowerCase(), t)
+  }
 
   const me = new Set<string>([String(u.email ?? '').toLowerCase(), ...business])
   const firstName = String(u.full_name ?? '').trim().split(/\s+/)[0] ?? ''
@@ -166,7 +176,7 @@ async function runForUser(admin: any, userId: string, now: number): Promise<{ re
   const out: Record<string, unknown>[] = []
 
   for (const box of business) {
-    const row = rows.find(r => (r.account_email ?? '').toLowerCase() === box)
+    const row = tokenFor.get(box)
     if (!row) continue                       // no server-side token for it yet
     const token = await freshToken(admin, row)
     if (!token) continue
