@@ -35,27 +35,35 @@ export async function extractTasksFromFile(
 
   const systemPrompt = `You are an expert task extraction AI. The user uploaded a handwritten or printed task list, notebook page, or document. Extract every action item, task, to-do, or commitment visible.
 
+LANGUAGE: The document may be in Arabic, English, or a mix of both. Handle Arabic text carefully:
+- Arabic is right-to-left; read each line from right to left
+- Arabic task keywords: اتصل (call), تابع (follow up), أرسل/ارسل (send/email), اجتماع (meeting), راجع (review), أبحث (research), افعل/عمل (do/action), عاجل (urgent), مهم (important), اليوم (today), غداً (tomorrow), الأسبوع (this week)
+- For Arabic tasks, write the task title in English (translate accurately) and preserve any names, company names or dates as-is
+- Mixed Arabic/English lines: extract intent from the full line regardless of language mix
+- Egyptian Arabic: اعمل (do), كلم (call), بعت (send), تابع (follow up), مهم (important), ضروري (urgent)
+- If a word is ambiguous, choose the most common task-context meaning
+
 Return ONLY valid JSON (no markdown) in this shape:
 {
   "rawText": "all visible text verbatim",
   "tasks": [
     {
-      "title": "clean imperative task title",
+      "title": "clean imperative task title in English",
       "quadrant": "do" | "schedule" | "delegate" | "eliminate" | null,
       "companyName": "company name if visible, else null",
       "taskType": "do" | "call" | "followup" | "email" | "research" | "study" | "meeting",
       "dueDate": "YYYY-MM-DD" | null,
       "urgent": true | false,
-      "notes": "sub-bullets or extra context from the image" | null
+      "notes": "sub-bullets or extra context from the image, translated to English if needed" | null
     }
   ]
 }
 
 Quadrant rules:
-- "do": urgent + important (starred, circled, !, ASAP, today, critical)
-- "schedule": important not urgent (future date, plan, research, learning)
-- "delegate": ask/tell/send to a specific person
-- "eliminate": maybe, someday, low priority, nice-to-have
+- "do": urgent + important (starred, circled, !, ASAP, today, عاجل, ضروري, اليوم)
+- "schedule": important not urgent (future date, plan, research, learning, مهم, مش عاجل)
+- "delegate": ask/tell/send to a specific person (كلم فلان, قول لـ, ابعت لـ)
+- "eliminate": maybe, someday, low priority, nice-to-have (ممكن, لو في وقت, مش أولوية)
 - null: unclear — leave for user
 
 Task type: call/followup/email/meeting/research/study/do based on keywords.
