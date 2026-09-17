@@ -89,10 +89,13 @@ export async function saveSmartThreads(rows: Omit<SmartRow, 'analyzed_at'>[]): P
  *  They are separate because they promise different things: handled is "dealt
  *  with for now", muted is "not this thread, ever", acknowledged is "seen" for
  *  the kinds that are never actions, and archived records what was done to the
- *  mail itself. A single flag would have made undoing one undo the others. */
+ *  mail itself. A single flag would have made undoing one undo the others.
+ *
+ *  `draft` is here too, cleared to null: a reply that has been sent or thrown
+ *  away must not come back on the next device to open the tab. */
 export async function markThread(
   accountEmail: string, threadId: string,
-  marks: Partial<Pick<SmartRow, 'handled_at' | 'muted' | 'archived_at' | 'acknowledged_at'>>,
+  marks: Partial<Pick<SmartRow, 'handled_at' | 'muted' | 'archived_at' | 'acknowledged_at' | 'draft'>>,
 ): Promise<void> {
   if (tableMissing) return
   const userId = await uid()

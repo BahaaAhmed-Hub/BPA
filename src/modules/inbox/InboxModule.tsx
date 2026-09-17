@@ -14,7 +14,7 @@ import { inkOn } from '@/lib/ink'
 import type { EmailTriage, EmailData } from '@/lib/professor'
 import { classifyMail, unsubscribeLink, CLASSES, CLASS_INFO, countByClass, type MailClass } from '@/lib/mailClasses'
 import { listUnreadThreadIds, getThread, modifyThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, markAsUnread, archiveMessage, unarchiveMessage, trashMessage, untrashMessage, listLabels, batchModify, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder, type GmailHeader, type GmailLabel } from '@/lib/gmail'
-import { cachedDraft } from '@/lib/mailBriefs'
+import { cachedDraft, forgetBrief } from '@/lib/mailBriefs'
 import { forgetWaiting } from '@/lib/mailWaiting'
 import { mailAccounts, loadMailView, saveMailView, accountsFor, accountLabel, type MailView } from './mailAccounts'
 import { SmartView } from './SmartView'
@@ -25,6 +25,7 @@ import {
 } from '@/lib/invitations'
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { SwipeRow } from './SwipeRow'
+import { SmartReader, type ReaderTarget } from './SmartReader'
 import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -34,6 +35,7 @@ import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { Segmented, SectionCard, useOpenSections, Pill } from '@/components/ui'
 import { companyOfMail, NO_COMPANY, type MailCompany } from '@/lib/mailCompany'
+import { KIND_NEED } from '@/lib/mailKinds'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -602,12 +604,29 @@ export function InboxModule() {
   //  from asking twice at once.
   const smartRun = useRef<Promise<unknown> | null>(null)
 
+  /** How long a reading stands before opening the tab asks again. Long enough
+   *  that flicking between tabs costs nothing, short enough that mail arriving
+   *  while you work shows up without a Refresh. */
+  const SMART_STALE_MS = 5 * 60_000
+  const lastSmartAt = useRef(0)
+
   const runSmart = useCallback(async (full = false) => {
     if (!user || accounts.length === 0) return
     if (smartRun.current && !full) return
     setSmartLoading(true)
-    const p = runSmartPass({ accounts, user: buildMockUser(user), companies: [], full })
-      .then(r => { setSmart(r); return r })
+    const p = runSmartPass({
+      accounts, user: buildMockUser(user), companies: [], full,
+      // ── Draw what is known before anything is fetched ───────────────────
+      //  The rows are stored in Postgres precisely so that opening the tab
+      //  does not mean re-reading the mail. Waiting for the whole pass meant a
+      //  spinner for several seconds and then exactly the rows that had been
+      //  sitting there all along. They go up first; the pass then adds to
+      //  them, and the header says what it is doing meanwhile.
+      onCached: threads => setSmart(prev => prev ?? {
+        threads, fetched: 0, analysed: 0, failed: [],
+      }),
+    })
+      .then(r => { setSmart(r); lastSmartAt.current = Date.now(); return r })
       .catch(e => { notify(e instanceof Error ? e.message : 'The mail could not be read'); return null })
       .finally(() => { setSmartLoading(false); smartRun.current = null })
     smartRun.current = p
@@ -616,11 +635,79 @@ export function InboxModule() {
 
   useEffect(() => {
     if (mode !== 'smart') return
+    // Already read this session: the rows are on screen and nothing about the
+    // mail changes because you left the tab and came back. Re-reading on every
+    // visit was a Gmail round trip per mailbox for an answer nobody's inbox had
+    // had time to invalidate.
+    if (smart && Date.now() - lastSmartAt.current < SMART_STALE_MS) return
     void runSmart(false)
     // Once a day, for a tab left open. The pass is cheap when nothing changed.
     const t = setInterval(() => void runSmart(false), 12 * 60 * 60 * 1000)
     return () => clearInterval(t)
-  }, [mode, runSmart])
+  }, [mode, runSmart, smart])
+
+  // ─── Reading a thread beside the list ─────────────────────────────────────
+  //
+  //  A docked column, not a modal: the list is the queue you are working down
+  //  and a sheet over the middle of it hides the thing you are working on. The
+  //  width is kept per browser — how wide you like a reading pane is a fact
+  //  about your screen, not about the mail — and clamped so it can neither
+  //  squeeze the list to nothing nor become a column of six-word lines.
+  const [reading, setReading] = useState<ReaderTarget | null>(null)
+  const [readerWidth] = useState(() => {
+    const raw = Number(localStorage.getItem('mail-reader-width'))
+    return Number.isFinite(raw) && raw >= 380 ? Math.min(raw, 820) : 560
+  })
+
+  function openSmartThread(t: SmartThread) {
+    const account = accounts.find(a => a.email === t.accountEmail) ?? accounts[0]
+    if (!account) return
+    setReading({ threadId: t.threadId, account, subject: t.subject })
+    // Opening a thread is reading it, which is true of every mail client and
+    // was not true here: the row stayed bold and Gmail stayed unaware.
+    void modifyThread(t.threadId, { remove: ['UNREAD'] }, account).catch(() => { /* offline */ })
+  }
+
+  /** The three the reader offers that change the mail itself. Each acts on the
+   *  server first and only then on this screen, so a refusal leaves the thread
+   *  where it is rather than removing it here and nowhere else. */
+  async function archiveReading() {
+    if (!reading) return
+    const t = smart?.threads.find(x => x.threadId === reading.threadId)
+    try {
+      await modifyThread(reading.threadId, { remove: ['INBOX'] }, reading.account)
+    } catch (e) {
+      notify(e instanceof Error ? e.message : 'It could not be archived'); return
+    }
+    if (t) { markSmart([t], { muted: true }); void markThread(t.accountEmail, t.threadId, { archived_at: new Date().toISOString() }) }
+    setReading(null)
+    notify('Archived')
+  }
+
+  async function trashReading() {
+    if (!reading) return
+    const t = smart?.threads.find(x => x.threadId === reading.threadId)
+    try {
+      // The Bin, and it says so. `gmail.modify` cannot erase a message — that
+      // needs the full scope — and reading a thread should not destroy it.
+      await modifyThread(reading.threadId, { add: ['TRASH'], remove: ['INBOX'] }, reading.account)
+    } catch (e) {
+      notify(e instanceof Error ? e.message : 'It could not be binned'); return
+    }
+    if (t) { markSmart([t], { muted: true }); void markThread(t.accountEmail, t.threadId, { archived_at: new Date().toISOString() }) }
+    setReading(null)
+    notify('Moved to the Bin')
+  }
+
+  async function unreadReading() {
+    if (!reading) return
+    try {
+      await modifyThread(reading.threadId, { add: ['UNREAD'] }, reading.account)
+      notify('Marked unread')
+    } catch (e) {
+      notify(e instanceof Error ? e.message : 'It could not be marked unread')
+    }
+  }
 
   /** Patch the copy on screen. The server write is separate and may fail; the
    *  row moving is what the click promised, so it happens either way. */
@@ -635,27 +722,111 @@ export function InboxModule() {
     })
   }
 
-  /** Take a thread out of the list it is in, here and on the server. */
-  function handleSmartDone(ts: SmartThread[], handled: boolean) {
+  /** Done: out of this list, **and read in Gmail**.
+   *
+   *  It used to write a flag in this app's own table and nothing else, which
+   *  made a tick that did nothing you could see anywhere a mail client looks.
+   *  A thread you have dealt with is a thread you have read, so that is what it
+   *  says to the server; the message stays in the inbox, because leaving is
+   *  what Archive is for. */
+  async function handleSmartDone(ts: SmartThread[], handled: boolean) {
     markSmart(ts, { handled })
     for (const t of ts) void markHandled(t.accountEmail, t.threadId, handled)
-    notify(handled ? `${ts.length} marked done` : `${ts.length} put back`)
+    if (!handled) { notify(`${ts.length} put back`); return }
+    let failed = 0
+    for (const t of ts) {
+      const account = accounts.find(a => a.email === t.accountEmail)
+      if (!account) { failed++; continue }
+      try { await modifyThread(t.threadId, { remove: ['UNREAD'] }, account) } catch { failed++ }
+    }
+    notify(failed
+      ? `${ts.length - failed} marked read in Gmail · ${failed} could not be`
+      : `${ts.length} marked done and read`)
   }
 
-  /** One task per thread, in one undo entry however many there are. */
+  /** Send the drafted reply as it stands. The only thing in this view that
+   *  sends anything — every other control writes, marks or files. */
+  async function handleSmartSend(t: SmartThread) {
+    const body = t.draft?.trim()
+    if (!body) return
+    const account = accounts.find(a => a.email === t.accountEmail) ?? accounts[0]
+    if (!account) return
+    try {
+      await sendReply({
+        to: t.fromEmail, subject: t.subject, body,
+        threadId: t.threadId, account,
+      })
+    } catch (e) {
+      // The draft is kept: a failed send that also loses what you wrote is two
+      // problems, and the second one is the expensive one.
+      notify(e instanceof Error ? e.message : 'The reply could not be sent')
+      return
+    }
+    markSmart([t], { acted: `Replied to ${t.fromName}`, draft: '' })
+    forgetBrief(t.threadId)
+    forgetWaiting(t.threadId)
+    void markHandled(t.accountEmail, t.threadId, true)
+    notify(`Sent to ${t.fromName}`)
+  }
+
+  /** Not this reply. The thread stays and keeps its summary; only the words go. */
+  function handleSmartDiscardDraft(t: SmartThread) {
+    markSmart([t], { draft: '' })
+    forgetBrief(t.threadId)
+    void markThread(t.accountEmail, t.threadId, { draft: null })
+    notify('Draft discarded')
+  }
+
+  /** What to call the task this thread becomes.
+   *
+   *  In order of what actually says something: the triage's own sentence,
+   *  which is already phrased as a thing to do; then the kind, which at least
+   *  names the gesture ("Answer the invitation: …"); then the subject, which
+   *  is the last resort rather than the default. Trimmed to something a board
+   *  column can hold, on a word boundary, because a card that ellipsises
+   *  mid-word reads as broken rather than as long.
+   */
+  function taskTitleFor(t: SmartThread): string {
+    const clip = (s: string, n = 72) => {
+      const one = s.replace(/\s+/g, ' ').trim()
+      if (one.length <= n) return one
+      const cut = one.slice(0, n)
+      return cut.slice(0, Math.max(cut.lastIndexOf(' '), n - 12)).trimEnd() + '…'
+    }
+    const need = t.need?.trim()
+    // A sentence the model wrote about the thread is the thing to do.
+    if (need && need !== KIND_NEED[t.kind]) return clip(need)
+    if (t.kind === 'invitation') return clip(`Answer the invitation: ${t.subject}`)
+    if (t.kind === 'cancelled') return clip(`${t.subject} was called off — check what replaces it`)
+    // Nothing was ever worked out about it, so say the one thing that is true:
+    // somebody is waiting on a reply.
+    return clip(`Reply to ${t.fromName} about ${t.subject}`)
+  }
+
+  /** One task per thread, in one undo entry however many there are.
+   *
+   *  **The title is the thing to do, not the thing it is about.** A task
+   *  called "Fw: Re: SAWA Cloud Hosting request — Vodafone Team" tells a board
+   *  nothing: every task made this way would read as a subject line, and a
+   *  week later none of them would say what was owed. `taskTitleFor` writes it
+   *  from the sentence the triage already produced — the one on the row — and
+   *  falls back to naming the kind when there is none. */
   function handleSmartTasks(ts: SmartThread[]) {
     if (ts.length === 0) return
-    addTasksBatch(ts.map(t => ({
-      // The line the triage wrote is the thing to do; the subject is only what
-      // it is about, which belongs underneath.
-      title: t.need || t.subject,
+    const titles = ts.map(taskTitleFor)
+    addTasksBatch(ts.map((t, i) => ({
+      title: titles[i],
       description: `${t.subject} — ${t.fromName} <${t.fromEmail}>`,
       quadrant: null,
       company: 'personal' as const,
       status: 'open' as const,
       completed: false,
     })))
-    notify(`${ts.length} task${ts.length === 1 ? '' : 's'} added`)
+    // The row says what was made, in place of the buttons that made it.
+    ts.forEach((t, i) => markSmart([t], { acted: `Task made — ${titles[i]}` }))
+    notify(ts.length === 1
+      ? `Task made — ${titles[0]}`
+      : `${ts.length} tasks added`)
   }
 
   /** Out of the inbox in Gmail, and out of this list. A thread at a time, so
@@ -664,18 +835,32 @@ export function InboxModule() {
     // Archiving takes it out of the list the same way ignoring does; the
     // difference is in the mail, not on screen.
     markSmart(ts, { muted: true })
-    let failed = 0
+    const back: SmartThread[] = []
     for (const t of ts) {
       const account = accounts.find(a => a.email === t.accountEmail)
-      if (!account) { failed++; continue }
+      if (!account) { back.push(t); continue }
       try {
         await modifyThread(t.threadId, { remove: ['INBOX'] }, account)
         void markThread(t.accountEmail, t.threadId, { archived_at: new Date().toISOString() })
-      } catch { failed++ }
+      } catch { back.push(t) }
     }
-    notify(failed
-      ? `${ts.length - failed} archived · ${failed} could not be`
-      : `${ts.length} archived`)
+    // **A row that left here and did not leave Gmail is a lie.** The gesture is
+    // optimistic because a batch of eight should not freeze the list, but a
+    // refusal has to undo itself: otherwise the thread is out of this view, in
+    // your inbox, and you will never look for it again.
+    if (back.length) {
+      setSmart(prev => prev && {
+        ...prev,
+        threads: [...prev.threads, ...back.map(t => ({ ...t, muted: false }))]
+          .sort((a, b) => b.lastAt - a.lastAt),
+      })
+    }
+    if (reading && ts.some(t => t.threadId === reading.threadId) && !back.some(t => t.threadId === reading.threadId)) {
+      setReading(null)
+    }
+    notify(back.length
+      ? `${ts.length - back.length} archived · ${back.length} put back — the mail server refused`
+      : `${ts.length} archived in Gmail`)
   }
 
   /** Not this thread, ever. Different from done: a new message does not bring
@@ -2119,26 +2304,49 @@ export function InboxModule() {
         )}
 
         {mode === 'smart' && !noAuth ? (
-          <SmartView
-            result={smart}
-            loading={smartLoading}
-            accounts={accounts}
-            onRefresh={full => void runSmart(full)}
-            onOpen={t => {
-              // The thread itself is the normal view's business — this hands
-              // over rather than building a second reader.
-              setMode('normal')
-              try { localStorage.setItem('mail-mode', 'normal') } catch { /* quota */ }
-              setSelectedId(t.threadId)
-            }}
-            onDraft={handleSmartDraft}
-            onTask={handleSmartTasks}
-            onHandled={handleSmartDone}
-            onArchive={ts => void handleSmartArchive(ts)}
-            onIgnore={handleSmartIgnore}
-            onAcknowledge={handleSmartAcknowledge}
-            onRsvp={(t, a) => void handleSmartRsvp(t, a)}
-          />
+          /* The list, and the thread you are reading beside it. `align-items:
+             start` so the panel sticks to the top of the column rather than
+             stretching to the height of a list that may be thirty rows long. */
+          <div className="mail-smart-split" style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SmartView
+                result={smart}
+                loading={smartLoading}
+                accounts={accounts}
+                openThreadId={reading?.threadId ?? null}
+                onRefresh={full => void runSmart(full)}
+                onOpen={openSmartThread}
+                onDraft={handleSmartDraft}
+                onSendDraft={t => void handleSmartSend(t)}
+                onDiscardDraft={handleSmartDiscardDraft}
+                onTask={handleSmartTasks}
+                onHandled={(ts, h) => void handleSmartDone(ts, h)}
+                onArchive={ts => void handleSmartArchive(ts)}
+                onIgnore={handleSmartIgnore}
+                onAcknowledge={handleSmartAcknowledge}
+                onRsvp={(t, a) => void handleSmartRsvp(t, a)}
+              />
+            </div>
+            {reading && (
+              <SmartReader
+                target={reading}
+                width={readerWidth}
+                className="mail-smart-reader"
+                actions={{
+                  onClose: () => setReading(null),
+                  onReply: (to, subject, threadId, quoted, messageId) =>
+                    setCompose({ mode: 'reply', account: reading.account, to, subject, threadId, inReplyTo: messageId, quoted }),
+                  onReplyAll: (to, cc, subject, threadId, quoted, messageId) =>
+                    setCompose({ mode: 'replyAll', account: reading.account, to, cc, subject, threadId, inReplyTo: messageId, quoted }),
+                  onForward: (subject, quoted) =>
+                    setCompose({ mode: 'forward', account: reading.account, to: '', subject, quoted }),
+                  onArchive: () => { void archiveReading() },
+                  onDelete: () => { void trashReading() },
+                  onUnread: () => { void unreadReading() },
+                }}
+              />
+            )}
+          </div>
         ) : (<>
 
         {/* Stats bar */}

@@ -770,3 +770,27 @@ img { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   .cal-ctl:active { transform: none; }
 }
+
+/* ─── The smart mail view: list, and the thread beside it ──────────────────── */
+/*
+   The reader is given a pixel width by the module, because how wide a reading
+   pane should be is a number a person sets rather than a fraction of whatever
+   window they happen to have open. An inline width beats every stylesheet rule,
+   so the narrow cases are handled here on a class instead — the same trick the
+   calendar's columns needed.
+
+   Below 1280px the panel gives up its fixed width and takes half the row; below
+   1000px there is no room for two columns at all, so it becomes the whole row
+   and sits under the list rather than squeezing it into a strip of broken
+   words. */
+@media (max-width: 1280px) {
+  .mail-smart-reader { width: 46% !important; min-width: 340px; }
+}
+@media (max-width: 1000px) {
+  .mail-smart-split  { flex-wrap: wrap; }
+  .mail-smart-reader {
+    width: 100% !important; min-width: 0;
+    position: static !important;
+    max-height: none !important;
+  }
+}

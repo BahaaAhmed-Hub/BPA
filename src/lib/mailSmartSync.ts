@@ -77,6 +77,13 @@ export interface SmartThread {
   kind: MailKind
   muted: boolean
   acknowledged: boolean
+  /** What was just done about it, in a sentence — "Task made: Confirm the
+   *  October figure". Local to the session and deliberately not stored: it is
+   *  a receipt for the gesture you just made, not a state of the thread. The
+   *  row shows it instead of the action buttons, because leaving Make a task
+   *  lit beside a task that now exists invites a second one and says nothing
+   *  about the first. */
+  acted?: string
 }
 
 export interface PassResult {
@@ -103,6 +110,21 @@ const MAX_BACKFILL = 12
  *  hundreds of thread fetches in one go. What is left is picked up next time,
  *  because the watermark only advances over what was actually read. */
 const MAX_PER_PASS = 40
+
+/** What the view is allowed to see, in the order it sees it. One function, so
+ *  the rows painted before the network and the rows painted after it cannot be
+ *  filtered or sorted differently — which would make the list visibly reshuffle
+ *  a second after it appeared. */
+function visibleThreads(all: SmartThread[], from: number): SmartThread[] {
+  return all
+    .filter(t => t.lastAt >= from)
+    // Ignored means ignored: a new message on a muted thread does not undo the
+    // decision, which is the difference between "ignore" and "done".
+    .filter(t => !t.muted)
+    .sort((a, b) => orderThreads(
+      { bottleneck: a.bottleneck, lastAt: a.lastAt } as ThreadFacts,
+      { bottleneck: b.bottleneck, lastAt: b.lastAt } as ThreadFacts))
+}
 
 function rowToThread(r: SmartRow): SmartThread {
   return {
@@ -151,6 +173,16 @@ export async function runSmartPass(opts: {
   /** Which mail system these mailboxes are on. Gmail unless told otherwise —
    *  the engine itself has no opinion. */
   provider?: MailProvider
+  /** Called with what the store already holds, **before a single byte of mail
+   *  is fetched**.
+   *
+   *  Opening the tab used to mean waiting for the whole pass — every mailbox
+   *  listed, every changed thread fetched, the model asked — before anything
+   *  at all was drawn, so a tab whose answer was already sitting in Postgres
+   *  showed a spinner for several seconds and then the same rows it could have
+   *  drawn immediately. The rows are stored precisely so that this does not
+   *  have to happen. */
+  onCached?: (threads: SmartThread[]) => void
 }): Promise<PassResult> {
   const store = opts.store ?? serverStore
   const provider = opts.provider ?? gmailProvider
@@ -165,6 +197,11 @@ export async function runSmartPass(opts: {
   const cachedRows = await store.load(emails, new Date(from))
   const cached = new Map<string, SmartRow>()
   for (const r of cachedRows ?? []) cached.set(`${r.account_email}|${r.thread_id}`, r)
+
+  // Draw what is known, now. Everything below this line only ever adds to it.
+  if (opts.onCached && cachedRows?.length) {
+    opts.onCached(visibleThreads(cachedRows.map(rowToThread), from))
+  }
 
   const marks = opts.full ? {} : await store.marks(emails)
   const failed: PassResult['failed'] = []
@@ -301,14 +338,7 @@ export async function runSmartPass(opts: {
   for (const r of rows) merged.set(`${r.account_email}|${r.thread_id}`,
     rowToThread({ ...r, analyzed_at: new Date().toISOString() } as SmartRow))
 
-  const threads = [...merged.values()]
-    .filter(t => t.lastAt >= from)
-    // Ignored means ignored: a new message on a muted thread does not undo the
-    // decision, which is the difference between "ignore" and "done".
-    .filter(t => !t.muted)
-    .sort((a, b) => orderThreads(
-      { bottleneck: a.bottleneck, lastAt: a.lastAt } as ThreadFacts,
-      { bottleneck: b.bottleneck, lastAt: b.lastAt } as ThreadFacts))
+  const threads = visibleThreads([...merged.values()], from)
 
   return { threads, fetched, analysed: changed.length, failed, aiError }
 }

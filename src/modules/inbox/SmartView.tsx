@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, X as XIcon, HelpCircle } from 'lucide-react'
+import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, X as XIcon, HelpCircle, Send, Trash2 } from 'lucide-react'
 import { Button, Pill, SectionCard, useOpenSections } from '@/components/ui'
 import { ICON, STROKE } from '@/lib/type'
 import type { MailAccount } from '@/lib/gmail'
@@ -103,17 +103,21 @@ function KindChip({ kind }: { kind: MailKind }) {
 }
 
 export function SmartView({
-  result, loading, accounts, onRefresh, onOpen, onDraft, onTask, onHandled,
-  onArchive, onIgnore, onAcknowledge, onRsvp,
+  result, loading, accounts, openThreadId, onRefresh, onOpen, onDraft, onSendDraft,
+  onDiscardDraft, onTask, onHandled, onArchive, onIgnore, onAcknowledge, onRsvp,
 }: {
   result: PassResult | null
   loading: boolean
   accounts: MailAccount[]
+  /** The thread open in the reader beside this list, so its row can say so. */
+  openThreadId: string | null
   onRefresh: (full: boolean) => void
   /** Show the thread in the normal view. */
   onOpen: (t: SmartThread) => void
   /** Open the real composer, seeded with the drafted reply. */
   onDraft: (t: SmartThread) => void
+  onSendDraft: (t: SmartThread) => void
+  onDiscardDraft: (t: SmartThread) => void
   /** One task, or a batch of them in one undo entry. */
   onTask: (ts: SmartThread[]) => void
   onHandled: (ts: SmartThread[], handled: boolean) => void
@@ -300,8 +304,11 @@ export function SmartView({
                 {list.map(t => (
                   <Row key={key(t)} t={t} picked={picked.has(key(t))} onToggle={() => toggle(t)}
                     manyAccounts={accounts.length > 1}
+                    open={t.threadId === openThreadId}
                     section={s.id}
                     onOpen={() => onOpen(t)} onDraft={() => onDraft(t)}
+                    onSendDraft={() => onSendDraft(t)}
+                    onDiscardDraft={() => onDiscardDraft(t)}
                     onTask={() => onTask([t])} onDone={() => onHandled([t], true)}
                     onArchive={() => onArchive([t])} onIgnore={() => onIgnore([t])}
                     onAcknowledge={() => onAcknowledge([t])}
@@ -317,16 +324,22 @@ export function SmartView({
 }
 
 function Row({
-  t, picked, onToggle, manyAccounts, section,
-  onOpen, onDraft, onTask, onDone, onArchive, onIgnore, onAcknowledge, onRsvp,
+  t, picked, onToggle, manyAccounts, section, open,
+  onOpen, onDraft, onSendDraft, onDiscardDraft, onTask, onDone, onArchive, onIgnore,
+  onAcknowledge, onRsvp,
 }: {
   t: SmartThread
   picked: boolean
   onToggle: () => void
   manyAccounts: boolean
   section: SmartSection
+  /** Being read in the panel beside the list. */
+  open: boolean
   onOpen: () => void
   onDraft: () => void
+  /** Send what is written, as it is written. The only thing here that sends. */
+  onSendDraft: () => void
+  onDiscardDraft: () => void
   onTask: () => void
   onDone: () => void
   onArchive: () => void
@@ -342,6 +355,18 @@ function Row({
   const company = useMemo(
     () => companyOfMail({ fromEmail: t.fromEmail, accountEmail: t.accountEmail }),
     [t.fromEmail, t.accountEmail])
+  // The mailbox, but only where it is not the same word as the chip. With the
+  // company resolved from the mailbox itself the two are usually identical, and
+  // "DX Technologies  DX Technologies" on one line reads as a bug.
+  // A drafted answer is only ever shown where one is actually wanted: a person
+  // writing to you, in the section that means you owe them words.
+  const draftShown = answerable && t.kind === 'reply' && section === 'action'
+    && !!t.draft?.trim() && !t.acted
+  const boxLabel = useMemo(() => {
+    if (!manyAccounts) return ''
+    const label = accountLabel(t.accountEmail)
+    return label === company?.name ? '' : label
+  }, [manyAccounts, t.accountEmail, company?.name])
   return (
     <div style={{
       // `flex-start`, not the default stretch: a stretched checkbox centres its
@@ -352,32 +377,40 @@ function Row({
       // Being the one holding a thread up is the single most useful thing this
       // screen can tell you, so it is marked on the row rather than sorted for
       // silently.
-      background: t.bottleneck ? 'var(--sb-negative-tint)' : 'transparent',
+      // Which row the panel is showing. It beats the bottleneck tint: where
+      // you are is the more urgent thing to know than that somebody is waiting.
+      background: open ? 'var(--sb-accent-tint)'
+        : t.bottleneck ? 'var(--sb-negative-tint)' : 'transparent',
+      boxShadow: open ? 'inset 3px 0 0 var(--sb-accent)' : undefined,
     }}>
       <input type="checkbox" checked={picked} onChange={onToggle}
         aria-label={`Select "${t.subject}"`}
         style={{ marginTop: 3, flexShrink: 0, accentColor: 'var(--sb-ink-1)', cursor: 'pointer' }} />
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexWrap: 'wrap' }}>
+        {/* ── The title line ───────────────────────────────────────────────
+            Subject alone on the left, company alone on the right. It used to
+            be one wrapping row of subject, sender, date, company and the
+            waiting flag, so the chip landed at a different x on every row and
+            the column read as five things that had drifted. A label you scan
+            down has to be in the same place on each line, which means it is
+            pinned to an edge rather than pushed along by whatever precedes it. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button onClick={onOpen} title="Open the thread"
             style={{
+              flex: 1, minWidth: 0,
               padding: 0, border: 'none', background: 'transparent', cursor: 'pointer',
               fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               letterSpacing: '-0.015em', color: 'var(--sb-ink-1)', textAlign: 'left',
-              maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{t.subject}</button>
-          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{t.fromName}</span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>{when(t.lastAt)}</span>
-          {/* Whose business this is, the same chip the flat list carries. A
-              thread's company and the mailbox it landed in are different
-              questions, and both are worth a glance here. */}
           {company && (
-            <span title={company.name} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
-              fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 7px',
+            <span title={`${company.name}${boxLabel ? ` · ${boxLabel}` : ''}`} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
+              fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 8px',
               borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-2)',
               background: `color-mix(in srgb, ${company.color} 16%, transparent)`,
+              maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               <span aria-hidden style={{
                 width: 6, height: 6, borderRadius: '50%', background: company.color, flexShrink: 0,
@@ -385,9 +418,19 @@ function Row({
               {company.name}
             </span>
           )}
-          {manyAccounts && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
-              {accountLabel(t.accountEmail)}
+        </div>
+
+        {/* Who and when, and whether they are waiting. The mailbox is named
+            here **only when it says something the chip does not** — with the
+            company resolved from that same mailbox the two were the identical
+            word twice on one line, which is how a row starts looking like a
+            mistake. */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{t.fromName}</span>
+          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>{when(t.lastAt)}</span>
+          {boxLabel && (
+            <span title={t.accountEmail} style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+              {boxLabel}
             </span>
           )}
           {t.bottleneck && (
@@ -405,6 +448,65 @@ function Row({
             : t.need || 'No summary — the model was not asked or did not answer.'}
         </p>
 
+        {/* ── The reply, written and not sent ──────────────────────────────
+            It used to be behind a button called "Review the reply", which
+            meant a drafted answer was invisible until you asked for it — so
+            the one thing the pass produced that saves any time was the one
+            thing you could not see. Two lines of it sit here, in the mail's
+            own area, with the whole of it a click away and **Send** the only
+            thing that ever sends. */}
+        {draftShown && (
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 6,
+            padding: '9px 11px', borderRadius: 'var(--sb-r-nav)',
+            background: 'var(--sb-field)',
+            border: 'var(--sb-border-width) solid var(--sb-hairline)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em',
+                textTransform: 'uppercase', color: 'var(--sb-ink-3)',
+              }}>Draft reply · not sent</span>
+              <span style={{ flex: 1 }} />
+              <Button size="sm" onClick={onSendDraft} title={`Send this to ${t.fromName}`}>
+                <Send size={ICON.sm} strokeWidth={STROKE.rest} /> Send
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onDraft} title="Open it in the composer">
+                <PenSquare size={ICON.sm} strokeWidth={STROKE.rest} /> Edit
+              </Button>
+              <Button size="sm" variant="ghost" iconOnly onClick={onDiscardDraft} title="Discard this draft">
+                <Trash2 size={ICON.sm} strokeWidth={STROKE.rest} />
+              </Button>
+            </div>
+            {/* Two lines, clamped. Enough to know whether it is worth sending,
+                never so much that the row stops being a row. */}
+            <button onClick={onDraft} title="Open it in the composer"
+              style={{
+                textAlign: 'left', padding: 0, border: 'none', background: 'transparent',
+                cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5,
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}>{t.draft}</button>
+          </div>
+        )}
+
+        {/* An action is over once it has been taken. Leaving Make a task lit
+            beside a task that now exists invites a second one, and says
+            nothing about the first. */}
+        {t.acted ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 7, marginTop: 1,
+            fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)', fontWeight: 600,
+          }}>
+            <Check size={ICON.sm} strokeWidth={STROKE.active} aria-hidden />
+            <span style={{ color: 'var(--sb-ink-2)', fontWeight: 500 }}>{t.acted}</span>
+            <span style={{ flex: 1 }} />
+            <Button size="sm" variant="ghost" iconOnly onClick={onOpen} title="Open the thread">
+              <ExternalLink size={ICON.sm} strokeWidth={STROKE.rest} />
+            </Button>
+          </div>
+        ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 1 }}>
           {/* An invitation has no reply state worth showing — it has an answer,
               and the answer is the three buttons. Nor has a machine's notice:
@@ -453,12 +555,6 @@ function Row({
             </Button>
           ))}
 
-          {t.kind === 'reply' && section === 'action' && t.draft && (
-            <Button size="sm" onClick={onDraft}>
-              <PenSquare size={ICON.sm} strokeWidth={STROKE.rest} /> Review the reply
-            </Button>
-          )}
-
           {/* "Follow up" on a status page is an offer to chase a machine. A
               cancellation and an invitation can still become a task — there is
               a meeting behind each — but a notice has nothing to follow. */}
@@ -476,13 +572,15 @@ function Row({
             title="Ignore this thread — it does not come back">
             <BellOff size={ICON.sm} strokeWidth={STROKE.rest} />
           </Button>
-          <Button size="sm" variant="ghost" iconOnly onClick={onDone} title="Done for now">
+          <Button size="sm" variant="ghost" iconOnly onClick={onDone}
+            title="Done — marks the thread read in Gmail and takes it out of this list. It stays in your inbox.">
             <Check size={ICON.sm} strokeWidth={STROKE.active} />
           </Button>
-          <Button size="sm" variant="ghost" iconOnly onClick={onOpen} title="Open in the mail list">
+          <Button size="sm" variant="ghost" iconOnly onClick={onOpen} title="Read it">
             <ExternalLink size={ICON.sm} strokeWidth={STROKE.rest} />
           </Button>
         </div>
+        )}
       </div>
     </div>
   )

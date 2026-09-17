@@ -1578,6 +1578,54 @@ you cannot tell which times.
   differently. `useOpenSections(key)` is the memory, and a section id nobody has
   touched is **open**, so one added later is not silently shut for everybody.
 
+## Mail — the smart row, and the thread beside it
+- **The title line is subject on the left, company on the right.** It used to
+  be one wrapping row of subject, sender, date, company and the waiting flag, so
+  the chip landed at a different x on every row and the column read as five
+  things that had drifted. A label you scan down has to be pinned to an edge,
+  not pushed along by whatever precedes it. Sender, date and *Waiting on you*
+  are the second line.
+- **The mailbox is named only when it says something the chip does not.** With
+  the company resolved from that same mailbox the two were the identical word
+  twice on one line.
+- **The draft is in the row, not behind a button.** "Review the reply" meant the
+  one thing the pass produces that saves any time was invisible until you asked.
+  Two clamped lines sit in the mail's own area with **Send** (the only control
+  in the view that sends), Edit (the composer, seeded) and Discard. A failed
+  send keeps the words: losing what you wrote is the expensive half.
+- **An action is over once it is taken.** `SmartThread.acted` is a receipt for
+  the gesture — session-only, deliberately unstored — and the row shows it in
+  place of the buttons. Leaving *Make a task* lit beside a task that now exists
+  invites a second one and says nothing about the first.
+- **A task is named for the thing to do, not the thing it is about.**
+  `taskTitleFor`: the triage's own sentence first, then the kind ("Answer the
+  invitation: …"), and the subject last rather than by default — a board of
+  tasks called "Fw: Re: SAWA Cloud Hosting request" says nothing a week later.
+- **Every action reaches Gmail.** Archive removes INBOX, Delete moves to the
+  Bin, the tick removes UNREAD (a thread you have dealt with is one you have
+  read; leaving is what Archive is for), opening one marks it read. An archive
+  the server refuses **puts the row back** and says so — a row that left here
+  and not Gmail is a lie you will never look for again.
+- **`SmartReader.tsx` — the thread, docked right.** Clicking a row used to
+  switch to the other view and hand a *thread* id to a list indexed by *message*
+  id, so it changed the whole screen and selected nothing. It is a column
+  beside the list, not a modal over it: the list is the queue you are working
+  down. Reply / reply-all / forward hand to the composer; archive, bin, mark
+  unread and Open in Gmail act on the server. The whole thread is there with the
+  newest expanded and the rest one line each, since every reply quotes what it
+  answers. The body is a **sandboxed iframe with no `allow-scripts` and no
+  `allow-same-origin`** — a message is somebody else's HTML — sized to its own
+  content so the panel scrolls once. Width is `mail-reader-width` (clamped
+  380–820); `.mail-smart-reader` in `index.css` takes it to 46% under 1280px
+  and stacks it under the list below 1000px, because an inline width beats
+  every stylesheet rule and a media query needs a class to argue with.
+- **Opening the tab draws the stored rows before a single byte of mail is
+  fetched.** `runSmartPass({ onCached })` fires with what Postgres already holds
+  — that is what the table is *for* — and the pass adds to it. A reading also
+  stands for five minutes (`SMART_STALE_MS`), so flicking between tabs costs
+  nothing. `visibleThreads()` filters and sorts both the early paint and the
+  final result, or the list would visibly reshuffle a second after appearing.
+
 ## Mail — the smart view, and what a thread actually wants
 `lib/mailKinds.ts` answers *what kind of thing is this*, from headers and the
 subject alone — no model call, so a row knows the instant it is drawn.
