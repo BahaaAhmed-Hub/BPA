@@ -1,15 +1,10 @@
 /**
  * eventMetadata — DB-backed persistence for per-event user overrides.
  *
- * Wraps the google_event_metadata Supabase table (created in migration 20250012).
- * Replaces localStorage keys: cal-event-statuses, and future prep note storage.
- * Falls back gracefully on error.
- *
- * Design:
- *   - upsertEventStatus(accountId, eventId, calendarId, status) → saves to DB
- *   - loadEventStatuses() → { [eventId]: status } map for all of this user's events
- *   - upsertPrepNotes(accountId, eventId, calendarId, notes) → saves prep to DB
- *   - syncEventMetadataToLocalStorage() → bridges DB state into localStorage
+ * Wraps the google_event_metadata Supabase table (migration 20250012 +
+ * 20260018). account_id is now nullable (SET NULL on account removal) and
+ * account_email is stored alongside it so rows can be relinked when the same
+ * email is reconnected with a new google_accounts UUID.
  */
 
 import { supabase } from './supabase'
@@ -19,29 +14,27 @@ import { supabase } from './supabase'
 export type EventStatus = 'done' | 'cancelled'
 
 export interface EventMetadataRow {
-  id:          string
-  user_id:     string
-  account_id:  string
-  event_id:    string
-  calendar_id: string
-  status:      EventStatus | null
-  prep_notes:  string | null
-  prep_error:  string | null
-  prep_at:     string | null
-  updated_at:  string
+  id:            string
+  user_id:       string
+  account_id:    string | null
+  account_email: string | null
+  event_id:      string
+  calendar_id:   string
+  status:        EventStatus | null
+  prep_notes:    string | null
+  prep_error:    string | null
+  prep_at:       string | null
+  updated_at:    string
 }
 
 // ─── Status operations ─────────────────────────────────────────────────────────
 
-/**
- * Upsert the status (done/cancelled) for an event.
- * Pass null to clear the status.
- */
 export async function upsertEventStatus(
-  accountId:  string,
-  eventId:    string,
-  calendarId: string,
-  status:     EventStatus | null,
+  accountId:    string,
+  eventId:      string,
+  calendarId:   string,
+  status:       EventStatus | null,
+  accountEmail?: string,
 ): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
@@ -50,12 +43,13 @@ export async function upsertEventStatus(
     .from('google_event_metadata')
     .upsert(
       {
-        user_id:    user.id,
-        account_id: accountId,
-        event_id:   eventId,
-        calendar_id: calendarId,
+        user_id:       user.id,
+        account_id:    accountId,
+        account_email: accountEmail ?? null,
+        event_id:      eventId,
+        calendar_id:   calendarId,
         status,
-        updated_at: new Date().toISOString(),
+        updated_at:    new Date().toISOString(),
       },
       { onConflict: 'user_id,event_id', ignoreDuplicates: false }
     )
@@ -67,9 +61,6 @@ export async function upsertEventStatus(
   return true
 }
 
-/**
- * Load all event metadata rows for the signed-in user.
- */
 export async function loadAllEventMetadata(): Promise<EventMetadataRow[]> {
   const { data, error } = await supabase
     .from('google_event_metadata')
@@ -83,9 +74,6 @@ export async function loadAllEventMetadata(): Promise<EventMetadataRow[]> {
   return (data ?? []) as EventMetadataRow[]
 }
 
-/**
- * Load a compact { eventId → status } map. Efficient for bulk status rendering.
- */
 export async function loadEventStatusMap(): Promise<Record<string, EventStatus>> {
   const { data, error } = await supabase
     .from('google_event_metadata')
@@ -106,15 +94,13 @@ export async function loadEventStatusMap(): Promise<Record<string, EventStatus>>
 
 // ─── Prep notes operations ─────────────────────────────────────────────────────
 
-/**
- * Save AI prep notes for an event.
- */
 export async function upsertPrepNotes(
-  accountId:  string,
-  eventId:    string,
-  calendarId: string,
-  prepNotes:  string,
-  prepError?: string | null,
+  accountId:    string,
+  eventId:      string,
+  calendarId:   string,
+  prepNotes:    string,
+  prepError?:   string | null,
+  accountEmail?: string,
 ): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
@@ -123,14 +109,15 @@ export async function upsertPrepNotes(
     .from('google_event_metadata')
     .upsert(
       {
-        user_id:    user.id,
-        account_id: accountId,
-        event_id:   eventId,
-        calendar_id: calendarId,
-        prep_notes: prepNotes,
-        prep_error: prepError ?? null,
-        prep_at:    new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        user_id:       user.id,
+        account_id:    accountId,
+        account_email: accountEmail ?? null,
+        event_id:      eventId,
+        calendar_id:   calendarId,
+        prep_notes:    prepNotes,
+        prep_error:    prepError ?? null,
+        prep_at:       new Date().toISOString(),
+        updated_at:    new Date().toISOString(),
       },
       { onConflict: 'user_id,event_id', ignoreDuplicates: false }
     )
@@ -142,21 +129,26 @@ export async function upsertPrepNotes(
   return true
 }
 
-/**
- * Delete all metadata for an account (called when account is removed).
- */
-export async function deleteEventMetadataForAccount(accountId: string): Promise<void> {
+// ─── Relink after reconnect ────────────────────────────────────────────────────
+// When a Google account is reconnected, a new google_accounts row is created
+// with a new UUID. Rows whose account_id was SET NULL (account removed) but
+// whose account_email matches get re-pointed to the new UUID.
+
+export async function relinkEventMetadata(
+  newAccountId: string,
+  email:        string,
+): Promise<void> {
   const { error } = await supabase
     .from('google_event_metadata')
-    .delete()
-    .eq('account_id', accountId)
+    .update({ account_id: newAccountId, updated_at: new Date().toISOString() })
+    .eq('account_email', email)
+    .is('account_id', null)
 
-  if (error) console.warn('[eventMetadata] delete error:', error)
+  if (error) console.warn('[eventMetadata] relink error:', error)
+  else console.log('[eventMetadata] relinked rows for', email, '→', newAccountId)
 }
 
 // ─── localStorage bridge ───────────────────────────────────────────────────────
-// During migration: write DB state into the localStorage key that CalendarIntelligence
-// currently reads so existing code picks it up without refactoring.
 
 const LS_STATUSES_KEY = 'cal-event-statuses'
 

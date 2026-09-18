@@ -2091,7 +2091,16 @@ function AccountsSection({
         {accounts.length > 0 && (
           <button
             onClick={() => {
-              accounts.forEach(a => removeAccount(a.id))
+              // Mirror individual Remove: call disconnectGoogleAccount for each
+              // so OAuth tokens are cleaned up from the DB (same as Trash button).
+              accounts.forEach(a => {
+                removeAccount(a.id)
+                const serverAcc = serverAccounts.find(s => s.email === a.email)
+                if (serverAcc) {
+                  void disconnectGoogleAccount(serverAcc.id)
+                    .then(() => setServerAccounts(prev => prev.filter(s => s.id !== serverAcc.id)))
+                }
+              })
               const updated = loadAccounts()
               setAccounts(updated)
               saveAccountsToDB(updated).catch(console.warn)
