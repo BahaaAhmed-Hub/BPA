@@ -3684,36 +3684,206 @@ function ShoppingSettingsBlock() {
 
 // ─── Billing Section (11A right column) ──────────────────────────────────────
 
+type BillingCycle = 'monthly' | 'annual'
+type PlanId = 'free' | 'plus' | 'pro'
+
+interface BillingPlan {
+  id: PlanId
+  name: string
+  monthlyPrice: number
+  annualPrice: number   // total per year
+  tagline: string
+  features: string[]
+  highlight?: boolean   // visually promoted tier
+}
+
+const BILLING_PLANS: BillingPlan[] = [
+  {
+    id: 'free',
+    name: 'Free',
+    monthlyPrice: 0,
+    annualPrice: 0,
+    tagline: 'Everything you need to get started',
+    features: [
+      '1 Google account',
+      '2 companies',
+      'Tasks, Habits & Finance basics',
+      '50 AI messages / month',
+      'Web app only',
+    ],
+  },
+  {
+    id: 'plus',
+    name: 'Plus',
+    monthlyPrice: 18,
+    annualPrice: 180,
+    tagline: 'For professionals managing real work',
+    features: [
+      '3 Google accounts',
+      '5 companies',
+      'All modules including Mail',
+      '500 AI messages / month',
+      'Calendar intelligence',
+      'Finance planning & lock',
+      'Apple Health sync',
+    ],
+    highlight: true,
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    monthlyPrice: 30,
+    annualPrice: 300,
+    tagline: 'No limits — for power users and founders',
+    features: [
+      'Unlimited Google accounts',
+      'Unlimited companies',
+      'All modules + early access',
+      'Unlimited AI messages',
+      'Full automation engine',
+      'Priority support',
+      'Team seats (coming soon)',
+    ],
+  },
+]
+
+const CURRENT_PLAN: PlanId = 'pro'
+
 function BillingSection() {
+  const [cycle, setCycle] = useState<BillingCycle>('annual')
+
   const INVOICES = [
-    { date: '14 Mar 2026', desc: 'Professor Pro · annual',   amount: '$180.00' },
-    { date: '14 Mar 2025', desc: 'Professor Pro · annual',   amount: '$180.00' },
+    { date: '14 Mar 2026', desc: 'Professor Pro · annual',   amount: '$300.00' },
+    { date: '14 Mar 2025', desc: 'Professor Pro · annual',   amount: '$300.00' },
     { date: '02 Feb 2025', desc: 'Professor Plus · monthly', amount: '$18.00' },
   ]
-  // Nothing in here is connected to anything: no plan is read, no card is
-  // stored, and none of the eight buttons had a handler. It stays on screen
-  // because the shape of it is the design, and it says what it is.
+
+  const annualSavingPct = Math.round((1 - (BILLING_PLANS[2].annualPrice / 12) / BILLING_PLANS[2].monthlyPrice) * 100)
+
   return (
-    <NotYet text="Billing coming soon">
     <div>
-      {/* Plan tile */}
-      <div style={{ padding: '16px 18px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent)', marginBottom: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h3)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>Professor Pro</span>
-              <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', padding: '3px 7px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
+      {/* ── Eyebrow ── */}
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 14 }}>PLAN</div>
+
+      {/* ── Billing cycle toggle ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+        <Segmented
+          options={[
+            { label: 'Monthly', value: 'monthly' },
+            { label: `Annual  ·  save ${annualSavingPct}%`, value: 'annual' },
+          ]}
+          value={cycle}
+          onChange={v => setCycle(v as BillingCycle)}
+        />
+      </div>
+
+      {/* ── Plan cards ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+        {BILLING_PLANS.map(plan => {
+          const isCurrent = plan.id === CURRENT_PLAN
+          const price = cycle === 'annual' && plan.annualPrice > 0
+            ? Math.round(plan.annualPrice / 12)
+            : plan.monthlyPrice
+
+          return (
+            <div
+              key={plan.id}
+              style={{
+                borderRadius: 'var(--sb-r-card)',
+                border: `var(--sb-border-width) solid ${isCurrent ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                background: isCurrent ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
+                padding: '16px 14px 14px',
+                display: 'flex', flexDirection: 'column', gap: 0,
+                boxShadow: isCurrent ? '0 0 0 1px var(--sb-accent)' : 'var(--sb-shadow-card)',
+                position: 'relative',
+              }}
+            >
+              {/* plan name + current badge */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontFamily: 'var(--sb-font-display)', fontSize: 13, fontWeight: 700, color: 'var(--sb-ink-1)' }}>{plan.name}</span>
+                {isCurrent && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
+                    background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
+                    padding: '2px 6px', borderRadius: 'var(--sb-r-chip)',
+                  }}>CURRENT</span>
+                )}
+              </div>
+
+              {/* price */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: 2 }}>
+                {plan.monthlyPrice === 0 ? (
+                  <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>Free</span>
+                ) : (
+                  <>
+                    <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>${price}</span>
+                    <span style={{ fontSize: 11, color: 'var(--sb-ink-4)' }}>/mo</span>
+                  </>
+                )}
+              </div>
+
+              {/* billing note */}
+              <p style={{ margin: '0 0 10px', fontSize: 10, color: 'var(--sb-ink-4)', minHeight: 14, lineHeight: 1.4 }}>
+                {plan.monthlyPrice === 0
+                  ? 'No card required'
+                  : cycle === 'annual'
+                    ? `$${plan.annualPrice} billed annually`
+                    : 'billed monthly'}
+              </p>
+
+              {/* features */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14, flex: 1 }}>
+                {plan.features.map(f => (
+                  <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 5 }}>
+                    <Check size={10} style={{ color: 'var(--sb-positive)', flexShrink: 0, marginTop: 2 }} strokeWidth={STROKE.active} />
+                    <span style={{ fontSize: 11, color: 'var(--sb-ink-2)', lineHeight: 1.4 }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              {isCurrent ? (
+                <div style={{
+                  ...PILL_BASE, justifyContent: 'center', fontSize: 11, fontWeight: 600,
+                  background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
+                  cursor: 'default',
+                }}>Current plan</div>
+              ) : plan.id === 'free' ? (
+                <button
+                  style={{ ...PILL_BASE, justifyContent: 'center', fontSize: 11, cursor: 'pointer', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', fontFamily: 'inherit', fontWeight: 500 }}
+                  onClick={() => alert('Downgrade to Free — not yet connected')}
+                >Downgrade</button>
+              ) : (
+                <button
+                  style={{ ...PILL_BASE, justifyContent: 'center', fontSize: 11, cursor: 'pointer', color: 'var(--sb-ink-1)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', fontFamily: 'inherit', fontWeight: 600 }}
+                  onClick={() => alert('Upgrade — not yet connected')}
+                >Upgrade to {plan.name}</button>
+              )}
             </div>
-            <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>Renews 14 March 2027 · all four companies, unlimited AI drafts</p>
+          )
+        })}
+      </div>
+
+      {/* ── Current plan summary ── */}
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 8 }}>SUBSCRIPTION</div>
+
+      <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', marginBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>Professor Pro</span>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
+            </div>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>Renews 14 March 2027</p>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <p style={{ margin: 0, fontSize: 'var(--sb-t-h1)', fontWeight: 700, fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>$180</p>
+            <p style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>$300</p>
             <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>per year</p>
           </div>
         </div>
       </div>
 
-      {/* Billing fields */}
+      {/* ── Billing fields ── */}
       <DRow label="Payment method">
         <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Visa ending 4417 · expires 09/28</span>
         <VisaBadge />
@@ -3728,25 +3898,25 @@ function BillingSection() {
         <GhostPill>Add a tax ID</GhostPill>
       </DRow>
 
-      <DRow label="Seats" sub="You plus nobody — this is a personal licence" last>
+      <DRow label="Seats" sub="Personal licence — one person" last>
         <PillValue>1 of 1</PillValue>
       </DRow>
 
-      {/* Invoices */}
-      <div style={{ marginTop: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>Invoices</p>
+      {/* ── Invoices ── */}
+      <div style={{ marginTop: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>INVOICES</div>
           <button style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>Download all</button>
         </div>
         {INVOICES.map((inv, i) => (
-          <div key={inv.date} style={{
-            display: 'flex', alignItems: 'center', gap: 16,
-            padding: '13px 0',
+          <div key={`${inv.date}-${i}`} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '11px 0',
             borderBottom: i === INVOICES.length - 1 ? 'none' : 'var(--sb-border-width) solid var(--sb-hairline)',
           }}>
-            <span style={{ width: 96, flexShrink: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>{inv.date}</span>
+            <span style={{ width: 90, flexShrink: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>{inv.date}</span>
             <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.desc}</span>
-            <span style={{ fontSize: 'var(--sb-t-label)', fontFamily: 'var(--sb-font-num)', fontWeight: 600, color: 'var(--sb-ink-1)', flexShrink: 0 }}>{inv.amount}</span>
+            <span style={{ fontSize: 'var(--sb-t-label)', fontFamily: 'var(--sb-font-num)', fontWeight: 600, color: 'var(--sb-ink-1)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{inv.amount}</span>
             <button title={`Download ${inv.date} invoice`} style={{
               background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)',
               padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0,
@@ -3755,7 +3925,7 @@ function BillingSection() {
         ))}
       </div>
 
-      {/* Cancel */}
+      {/* ── Cancel ── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
         marginTop: 18, paddingTop: 16, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
@@ -3766,7 +3936,6 @@ function BillingSection() {
         <GhostPill tone="rust">Cancel plan</GhostPill>
       </div>
     </div>
-    </NotYet>
   )
 }
 
