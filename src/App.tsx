@@ -935,20 +935,16 @@ function App() {
             } else {
               console.warn('[AddAccount] No provider_refresh_token — google_account_tokens row will be created on first successful bootstrap')
             }
-            const { error: fnErr } = await supabase.functions.invoke('google-oauth', { body })
+            const { data: fnData, error: fnErr } = await supabase.functions.invoke('google-oauth', { body })
             if (fnErr) {
               console.warn('[AddAccount] Failed to save via google-oauth edge fn:', fnErr)
             } else {
               console.log('[AddAccount] ✓ Account row saved for', email, googleRefreshToken ? '(with refresh token)' : '(metadata only)')
-              // Relink any event metadata rows that were orphaned when this
-              // account was previously removed (account_id set to null).
-              const { data: serverRows } = await supabase
-                .from('google_accounts')
-                .select('id')
-                .eq('email', email)
-                .limit(1)
-              if (serverRows?.[0]?.id) {
-                const sid = serverRows[0].id as string
+              // The edge function returns { account_id } — use it directly to relink
+              // any event metadata / calendar settings whose account_id was nulled
+              // when this account was previously removed.
+              const sid = (fnData as { account_id?: string } | null)?.account_id
+              if (sid) {
                 void relinkEventMetadata(sid, email)
                 void relinkCalendarSettings(sid, email)
               }
@@ -1091,20 +1087,16 @@ function App() {
               const measured = await readScopes(u.email ?? '', session.provider_token as string)
               if (measured) body.scopes = measured
               for (let attempt = 1; attempt <= 3; attempt++) {
-                const { error } = await supabase.functions.invoke('google-oauth', { body })
+                const { data: fnData, error } = await supabase.functions.invoke('google-oauth', { body })
                 if (!error) {
                   console.log('[App] ✓ Primary tokens saved to google_account_tokens')
-                  // Relink any event metadata rows whose account_id was nulled when this
-                  // account was previously removed — reconnecting restores the association.
-                  const { data: serverRows } = await supabase
-                    .from('google_accounts')
-                    .select('id')
-                    .eq('email', u.email)
-                    .limit(1)
-                  if (serverRows?.[0]?.id) {
-                    const sid = serverRows[0].id as string
-                    void relinkEventMetadata(sid, u.email ?? '')
-                    void relinkCalendarSettings(sid, u.email ?? '')
+                  // The edge function returns { account_id } — use it directly to relink
+                  // any event metadata / calendar settings rows whose account_id was set
+                  // to NULL when this account was previously removed.
+                  const sid = (fnData as { account_id?: string } | null)?.account_id
+                  if (sid && u.email) {
+                    void relinkEventMetadata(sid, u.email)
+                    void relinkCalendarSettings(sid, u.email)
                   }
                   break
                 }
