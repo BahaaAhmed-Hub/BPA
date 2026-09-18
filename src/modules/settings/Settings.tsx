@@ -75,6 +75,7 @@ import {
 } from '@/modules/finance/reminders'
 import { alpha } from '@/lib/alpha'
 import { SearchSelect } from '@/components/SearchSelect'
+import { listUserTokens, createUserToken, revokeUserToken, type UserToken } from '@/lib/userTokens'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -4052,6 +4053,38 @@ const DEFAULT_INTEGRATIONS: Integration[] = [
 
 function IntegrationsSection() {
   const [integrations, setIntegrations] = useState<Integration[]>(DEFAULT_INTEGRATIONS)
+  const [tokens, setTokens] = useState<UserToken[]>([])
+  const [creatingToken, setCreatingToken] = useState(false)
+  const [newLabel, setNewLabel] = useState('')
+  const [revealedToken, setRevealedToken] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    listUserTokens().then(setTokens)
+  }, [])
+
+  async function handleCreateToken() {
+    if (!newLabel.trim()) return
+    const tok = await createUserToken(newLabel.trim())
+    if (!tok) return
+    setTokens(prev => [tok, ...prev])
+    setRevealedToken(tok.token)
+    setCreatingToken(false)
+    setNewLabel('')
+    setCopied(false)
+  }
+
+  async function handleRevoke(id: string) {
+    const ok = await revokeUserToken(id)
+    if (ok) setTokens(prev => prev.filter(t => t.id !== id))
+  }
+
+  function copyToken() {
+    if (!revealedToken) return
+    navigator.clipboard.writeText(revealedToken).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   function toggleEnabled(id: string) {
     setIntegrations(prev => prev.map(i => i.id === id ? { ...i, enabled: !i.enabled } : i))
@@ -4129,6 +4162,97 @@ function IntegrationsSection() {
         </p>
       </div>
       </NotYet>
+
+      {/* ── CONNECTIONS — personal access tokens ─────────────────────────── */}
+      <div style={{ marginTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Connections</p>
+            <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
+              Tokens let the MCP server, Siri Shortcuts, and Telegram act as you. Each is shown once — copy it before closing.
+            </p>
+          </div>
+          <button onClick={() => { setCreatingToken(true); setRevealedToken(null) }} style={{
+            display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 'var(--sb-r-chip)',
+            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+            fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-2)', cursor: 'pointer', flexShrink: 0,
+          }}>
+            <Plus size={ICON.sm} /> New token
+          </button>
+        </div>
+
+        {/* Create form */}
+        {creatingToken && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
+            <input
+              autoFocus
+              value={newLabel}
+              onChange={e => setNewLabel(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') void handleCreateToken(); if (e.key === 'Escape') setCreatingToken(false) }}
+              placeholder="Label, e.g. Siri Shortcuts"
+              style={{ flex: 1, fontSize: 'var(--sb-t-body-s)', padding: '7px 11px', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-field)', color: 'var(--sb-ink-1)', outline: 'none' }}
+            />
+            <button onClick={() => void handleCreateToken()} disabled={!newLabel.trim()} style={{
+              padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', border: 'none',
+              background: newLabel.trim() ? 'var(--sb-ink-1)' : 'var(--sb-border)', color: newLabel.trim() ? 'var(--sb-page)' : 'var(--sb-ink-4)',
+              fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: newLabel.trim() ? 'pointer' : 'not-allowed',
+            }}>Generate</button>
+            <button onClick={() => setCreatingToken(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: '4px', display: 'flex', alignItems: 'center' }}>
+              <X size={ICON.sm} />
+            </button>
+          </div>
+        )}
+
+        {/* Revealed token (shown once) */}
+        {revealedToken && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10,
+            padding: '10px 13px', borderRadius: 'var(--sb-r-nav)',
+            background: 'color-mix(in srgb, var(--sb-positive) 8%, transparent)',
+            border: 'var(--sb-border-width) solid var(--sb-positive)',
+          }}>
+            <code style={{ flex: 1, fontSize: 11, fontFamily: 'monospace', color: 'var(--sb-ink-1)', wordBreak: 'break-all', lineHeight: 1.5 }}>{revealedToken}</code>
+            <button onClick={copyToken} style={{
+              flexShrink: 0, padding: '5px 11px', borderRadius: 'var(--sb-r-chip)',
+              background: copied ? 'color-mix(in srgb, var(--sb-positive) 14%, transparent)' : 'var(--sb-card)',
+              border: 'var(--sb-border-width) solid var(--sb-border)',
+              fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: copied ? 'var(--sb-positive)' : 'var(--sb-ink-2)', cursor: 'pointer',
+            }}>{copied ? 'Copied' : 'Copy'}</button>
+            <button onClick={() => setRevealedToken(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: '4px', display: 'flex', alignItems: 'center' }}>
+              <X size={ICON.sm} />
+            </button>
+          </div>
+        )}
+
+        {/* Token list */}
+        {tokens.length === 0 && !creatingToken && (
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', padding: '10px 0' }}>No tokens yet.</p>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {tokens.map((tok, i) => (
+            <div key={tok.id} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '9px 13px', borderRadius: 'var(--sb-r-nav)',
+              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+              borderBottom: i === tokens.length - 1 ? undefined : undefined,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{tok.label}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+                  Created {new Date(tok.created_at).toLocaleDateString()}
+                  {tok.last_used_at ? ` · Last used ${new Date(tok.last_used_at).toLocaleDateString()}` : ' · Never used'}
+                </p>
+              </div>
+              <code style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--sb-ink-4)', flexShrink: 0 }}>prof_sk_…</code>
+              <button onClick={() => void handleRevoke(tok.id)} style={{
+                flexShrink: 0, padding: '4px 10px', borderRadius: 'var(--sb-r-chip)',
+                background: 'none', border: 'var(--sb-border-width) solid var(--sb-border)',
+                fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-negative)', cursor: 'pointer',
+              }}>Revoke</button>
+            </div>
+          ))}
+        </div>
+      </div>
 
     </div>
   )
