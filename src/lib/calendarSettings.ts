@@ -18,15 +18,16 @@ import { supabase } from './supabase'
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 export interface CalendarSettingRow {
-  id:           string
-  user_id:      string
-  account_id:   string
-  calendar_id:  string
-  is_visible:   boolean
-  custom_color: string | null
-  display_name: string | null
-  sort_order:   number
-  updated_at:   string
+  id:            string
+  user_id:       string
+  account_id:    string | null
+  account_email: string | null
+  calendar_id:   string
+  is_visible:    boolean
+  custom_color:  string | null
+  display_name:  string | null
+  sort_order:    number
+  updated_at:    string
 }
 
 export type CalendarSettingPatch = Partial<Pick<
@@ -78,9 +79,10 @@ export async function getCalendarSetting(
  * Returns true on success, false on error.
  */
 export async function upsertCalendarSetting(
-  accountId: string,
-  calendarId: string,
-  patch: CalendarSettingPatch,
+  accountId:    string,
+  calendarId:   string,
+  patch:        CalendarSettingPatch,
+  accountEmail?: string,
 ): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
@@ -89,11 +91,12 @@ export async function upsertCalendarSetting(
     .from('google_calendar_settings')
     .upsert(
       {
-        user_id:    user.id,
-        account_id: accountId,
-        calendar_id: calendarId,
+        user_id:       user.id,
+        account_id:    accountId,
+        account_email: accountEmail ?? null,
+        calendar_id:   calendarId,
         ...patch,
-        updated_at: new Date().toISOString(),
+        updated_at:    new Date().toISOString(),
       },
       { onConflict: 'user_id,calendar_id', ignoreDuplicates: false }
     )
@@ -103,6 +106,25 @@ export async function upsertCalendarSetting(
     return false
   }
   return true
+}
+
+/**
+ * Relink calendar settings rows after the same email reconnects.
+ * Rows whose account_id was SET NULL on account removal are re-pointed
+ * to the new google_accounts UUID.
+ */
+export async function relinkCalendarSettings(
+  newAccountId: string,
+  email:        string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('google_calendar_settings')
+    .update({ account_id: newAccountId, updated_at: new Date().toISOString() })
+    .eq('account_email', email)
+    .is('account_id', null)
+
+  if (error) console.warn('[calendarSettings] relink error:', error)
+  else console.log('[calendarSettings] relinked rows for', email, '→', newAccountId)
 }
 
 /**

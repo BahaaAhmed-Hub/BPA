@@ -26,6 +26,8 @@ import { supabase } from './lib/supabase'
 import { signInWithGoogle, signOut as googleSignOut, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
 import { addAccount, loadAccounts, saveAccounts, setAccountScopes } from './lib/multiAccount'
 import { readScopes, cachedScopes } from './lib/googleScopes'
+import { relinkEventMetadata } from './lib/eventMetadata'
+import { relinkCalendarSettings } from './lib/calendarSettings'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB, mergeCompanies } from './lib/dbSync'
 import type { CompanyRow } from './lib/dbSync'
 import { startPrefSync } from './lib/prefSync'
@@ -934,8 +936,23 @@ function App() {
               console.warn('[AddAccount] No provider_refresh_token — google_account_tokens row will be created on first successful bootstrap')
             }
             const { error: fnErr } = await supabase.functions.invoke('google-oauth', { body })
-            if (fnErr) console.warn('[AddAccount] Failed to save via google-oauth edge fn:', fnErr)
-            else console.log('[AddAccount] ✓ Account row saved for', email, googleRefreshToken ? '(with refresh token)' : '(metadata only)')
+            if (fnErr) {
+              console.warn('[AddAccount] Failed to save via google-oauth edge fn:', fnErr)
+            } else {
+              console.log('[AddAccount] ✓ Account row saved for', email, googleRefreshToken ? '(with refresh token)' : '(metadata only)')
+              // Relink any event metadata rows that were orphaned when this
+              // account was previously removed (account_id set to null).
+              const { data: serverRows } = await supabase
+                .from('google_accounts')
+                .select('id')
+                .eq('email', email)
+                .limit(1)
+              if (serverRows?.[0]?.id) {
+                const sid = serverRows[0].id as string
+                void relinkEventMetadata(sid, email)
+                void relinkCalendarSettings(sid, email)
+              }
+            }
           } else {
             console.warn('[AddAccount] No provider_token — account not persisted to DB')
           }
@@ -1075,7 +1092,22 @@ function App() {
               if (measured) body.scopes = measured
               for (let attempt = 1; attempt <= 3; attempt++) {
                 const { error } = await supabase.functions.invoke('google-oauth', { body })
-                if (!error) { console.log('[App] ✓ Primary tokens saved to google_account_tokens'); break }
+                if (!error) {
+                  console.log('[App] ✓ Primary tokens saved to google_account_tokens')
+                  // Relink any event metadata rows whose account_id was nulled when this
+                  // account was previously removed — reconnecting restores the association.
+                  const { data: serverRows } = await supabase
+                    .from('google_accounts')
+                    .select('id')
+                    .eq('email', u.email)
+                    .limit(1)
+                  if (serverRows?.[0]?.id) {
+                    const sid = serverRows[0].id as string
+                    void relinkEventMetadata(sid, u.email ?? '')
+                    void relinkCalendarSettings(sid, u.email ?? '')
+                  }
+                  break
+                }
                 console.warn(`[App] save_primary attempt ${attempt}/3 failed:`, error)
                 if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500))
               }
