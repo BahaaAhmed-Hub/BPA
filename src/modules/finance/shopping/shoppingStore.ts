@@ -49,11 +49,33 @@ function computeSuggestedStores(item: ShoppingItem, stores: ShoppingStore[]): st
     .map(s => s.id)
 }
 
+/**
+ * The stores this item actually gets checked at — **the one answer**, used by
+ * the price watch, by the trip order and by the picker that draws it.
+ *
+ * Your own choice wins where you have made one; where you have not, the
+ * category match stands in. Those are two different questions and used to be
+ * one field: the picker wrote `suggestedStores`, which `enrichItems` recomputed
+ * from the category on the very next render, and the price watch re-derived the
+ * category match itself rather than reading either. So the pills reset and
+ * changed nothing in between.
+ */
+export function storesToCheck(item: ShoppingItem, stores: ShoppingStore[]): ShoppingStore[] {
+  const chosen = item.storeIds ?? []
+  if (chosen.length) {
+    // A store deleted since the choice was made is simply gone from it.
+    const kept = stores.filter(s => chosen.includes(s.id))
+    if (kept.length) return kept
+  }
+  return stores.filter(s => s.categories.includes(item.category))
+}
+
 function enrichItems(items: ShoppingItem[], snapshots: PriceSnapshot[], stores: ShoppingStore[]): ShoppingItem[] {
   return items.map(item => ({
     ...item,
     bestPrice: computeBestPrice(item.id, snapshots, stores),
     priceHistory: snapshots.filter(s => s.itemId === item.id).sort((a, b) => new Date(b.scrapedAt).getTime() - new Date(a.scrapedAt).getTime()),
+    // Derived only. `storeIds` — what you picked — is left exactly as it came.
     suggestedStores: computeSuggestedStores(item, stores),
   }))
 }
@@ -268,9 +290,7 @@ export const useShoppingStore = create<ShoppingState>((set, get) => ({
     const payload = targets.map(item => ({
       id: item.id,
       name: item.name,
-      stores: stores
-        .filter(s => s.categories.includes(item.category))
-        .map(s => ({ id: s.id, url: s.url })),
+      stores: storesToCheck(item, stores).map(s => ({ id: s.id, url: s.url })),
     })).filter(p => p.stores.length > 0)
 
     if (!payload.length) { set({ priceWatchLoading: false }); return }

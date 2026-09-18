@@ -157,6 +157,29 @@ const AUDIT = () => {
   return [...seen.values()].sort((a, b) => a.ratio - b.ratio)
 }
 
+// Shopping has a screen, a board and a stores page, all of which draw text on
+// tints and on fills — so it is audited like anything else. It is behind a
+// switch and reads four tables, which is why it gets rows of its own here.
+const SU = 'u1'
+const SHOPPING = {
+  shopping_groups: [
+    { id: 'sg1', user_id: SU, name: 'Weekly groceries', color: '#F5D14E', icon: '\u{1F966}', scheduled_date: '2026-09-19', recurrence: 'weekly', recurrence_rule: null, next_run_at: null, status: 'active', sort_order: 0, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' },
+    { id: 'sg2', user_id: SU, name: 'Pharmacy run', color: '#F5D14E', icon: '\u{1F48A}', scheduled_date: null, recurrence: 'none', recurrence_rule: null, next_run_at: null, status: 'active', sort_order: 1, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' },
+  ],
+  shopping_stores: [
+    { id: 'ss1', user_id: SU, name: 'Carrefour', url: 'https://carrefouregypt.com', country: 'EG', categories: ['Groceries'], last_scraped_at: null, last_scrape_ok: null, sort_order: 0, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' },
+    { id: 'ss2', user_id: SU, name: 'El Ezaby', url: 'https://elezabypharmacy.com', country: 'EG', categories: ['Pharmacy'], last_scraped_at: null, last_scrape_ok: false, sort_order: 1, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' },
+  ],
+  shopping_items: [
+    { id: 'si1', user_id: SU, group_id: 'sg1', name: 'Olive oil', category: 'Groceries', quantity: 1, unit: 'L', priority: 2, status: 'wanted', target_price_max: 450, currency: 'EGP', budget_envelope_id: null, calendar_event_id: null, task_id: null, notes: null, purchased_at: null, final_price: null, store_used_id: null, store_ids: ['ss1'], sort_order: 0, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' },
+    { id: 'si2', user_id: SU, group_id: 'sg2', name: 'Vitamin D', category: 'Pharmacy', quantity: 1, unit: null, priority: 1, status: 'wanted', target_price_max: null, currency: 'EGP', budget_envelope_id: null, calendar_event_id: null, task_id: null, notes: null, purchased_at: null, final_price: null, store_used_id: null, store_ids: [], sort_order: 0, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' },
+    { id: 'si3', user_id: SU, group_id: null, name: 'Light bulbs', category: 'Home & Kitchen', quantity: 4, unit: null, priority: 0, status: 'purchased', target_price_max: null, currency: 'EGP', budget_envelope_id: null, calendar_event_id: null, task_id: null, notes: 'warm white', purchased_at: '2026-09-10T09:00:00Z', final_price: 320, store_used_id: 'ss1', store_ids: [], sort_order: 0, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' },
+  ],
+  shopping_price_snapshots: [
+    { id: 'sp1', item_id: 'si1', store_id: 'ss1', price: 410, currency: 'EGP', product_url: null, available: true, scraped_at: '2026-09-17T09:00:00Z' },
+  ],
+}
+
 const THEMES = ['sunlit-bento', 'warm-minimal', 'glass-depth', 'evergreen']
 const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] })
 
@@ -166,6 +189,8 @@ for (const theme of THEMES) {
     const u = r.request().url()
     if (u.includes('/auth/v1/user')) return r.fulfill({ json: session.user })
     if (u.includes('/auth/v1/token')) return r.fulfill({ json: session })
+    const t = /\/rest\/v1\/([a-z_]+)/.exec(u)?.[1]
+    if (t && SHOPPING[t] && r.request().method() === 'GET') return r.fulfill({ json: SHOPPING[t] })
     return r.fulfill({ json: [] })
   })
   await page.route('**://*.googleapis.com/**', r => {
@@ -185,6 +210,12 @@ for (const theme of THEMES) {
     localStorage.setItem('cal-intel-cals-cache', JSON.stringify(cs))
     localStorage.setItem('cal-view', 'week')
     localStorage.setItem('professor-ui', JSON.stringify({ state: { themeId: th }, version: 0 }))
+    // The Shopping screen is behind a switch, and so is its tab in Finance.
+    localStorage.setItem('shopping-settings', JSON.stringify({
+      enabled: true, viewMode: 'byWeek', priceWatchFrequency: 'off',
+      markCalendarDoneOnPurchase: false, markTaskDoneOnPurchase: false,
+    }))
+    localStorage.setItem('shopping-layout', 'list')
   }, [session, cals, theme])
 
   await page.goto(`http://localhost:${process.argv[2]}/BPA/`, { waitUntil: 'domcontentloaded' })
@@ -209,6 +240,33 @@ for (const theme of THEMES) {
   await visit('Tasks', async () => { await page.locator('header nav button', { hasText: /^Tasks$/ }).first().click() })
   await visit('Habits', async () => { await page.locator('header nav button', { hasText: /^Habits$/ }).first().click() })
   await visit('Finance', async () => { await page.locator('header nav button', { hasText: /^Finance$/ }).first().click() })
+  // Shopping: the list with an item open (every field of the editor), the board
+  // (cards on a column ground), and the stores page with one opened.
+  const shoppingTab = async () => {
+    await page.locator('header nav button', { hasText: /^Finance$/ }).first().click()
+    await page.waitForTimeout(1200)
+    await page.locator('button', { hasText: /^Shopping$/ }).first().click()
+    await page.waitForTimeout(1400)
+  }
+  await visit('Shopping · list + item editor', async () => {
+    await shoppingTab()
+    await page.evaluate(() => {
+      const n = [...document.querySelectorAll('span')].find(x => x.textContent.trim() === 'Olive oil')
+      n?.closest('div[style*="cursor: pointer"]')?.click()
+    })
+  })
+  await visit('Shopping · board', async () => {
+    await page.locator('button', { hasText: /^Board$/ }).first().click()
+  })
+  await visit('Shopping · stores', async () => {
+    await page.locator('button', { hasText: /^Stores$/ }).first().click()
+    await page.waitForTimeout(900)
+    await page.evaluate(() => {
+      const d = [...document.querySelectorAll('div')].find(x => x.textContent.trim() === 'Carrefour')
+      d?.parentElement?.click()
+    })
+  })
+
   await visit('Dashboard', async () => { await page.locator('header nav button', { hasText: /^Dashboard$/ }).first().click() })
   // Settings is behind the avatar menu, and carries every colour picker there
   // is — the company swatches, the habit colours, the category palette.

@@ -42,13 +42,22 @@ export interface ShoppingItem {
   purchasedAt?:     string
   finalPrice?:      number
   storeUsedId?:     string
+  /** The stores **you** chose to check for this one. Empty means nobody has
+   *  chosen, and the category match (`suggestedStores`) is what gets checked —
+   *  which is what every item written before this column did. It is a different
+   *  question from "which of my stores sell this kind of thing", so it is a
+   *  different field: answering the second on behalf of the first is what made
+   *  the picker reset itself. */
+  storeIds?:        string[]
   sortOrder:        number
   createdAt:        string
   updatedAt:        string
   // Populated client-side from snapshots
   bestPrice?:       PriceSummary
   priceHistory?:    PriceSnapshot[]
-  suggestedStores?: string[]   // store ids whose categories match item.category
+  /** Derived, never stored: the stores whose categories include this item's.
+   *  Recomputed on every enrich, so nothing may write to it. */
+  suggestedStores?: string[]
 }
 
 export interface ShoppingStore {
