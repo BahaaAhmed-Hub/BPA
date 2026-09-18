@@ -20,6 +20,7 @@ interface ItemRow {
   target_price_max?: number | null; currency: string; budget_envelope_id?: string | null
   calendar_event_id?: string | null; task_id?: string | null; notes?: string | null
   purchased_at?: string | null; final_price?: number | null; store_used_id?: string | null
+  store_ids?: string[] | null
   sort_order: number; created_at: string; updated_at: string
 }
 
@@ -63,6 +64,7 @@ function toItem(r: ItemRow): ShoppingItem {
     purchasedAt: r.purchased_at ?? undefined,
     finalPrice: r.final_price ?? undefined,
     storeUsedId: r.store_used_id ?? undefined,
+    storeIds: r.store_ids ?? undefined,
     sortOrder: r.sort_order, createdAt: r.created_at, updatedAt: r.updated_at,
   }
 }
@@ -127,8 +129,16 @@ export async function loadItems(): Promise<ShoppingItem[] | null> {
   return (data as ItemRow[]).map(toItem)
 }
 
+/** Columns a migration may not have added yet. Dropped **one at a time, and
+ *  only the one the error names** — dropping the whole optional set meant a
+ *  single missing column took the others down with it, which is how
+ *  `financeDb.saveTransaction` once lost every payment date. Remembered for the
+ *  session so the retry happens once, not on every keystroke. */
+const ITEM_OPTIONAL = ['store_ids'] as const
+const droppedItemCols = new Set<string>()
+
 export async function upsertItem(item: Partial<ShoppingItem> & { id: string; userId: string; name: string }): Promise<void> {
-  const row = {
+  const row: Record<string, unknown> = {
     id: item.id, user_id: item.userId, group_id: item.groupId ?? null,
     name: item.name, category: item.category ?? 'General',
     quantity: item.quantity ?? 1, unit: item.unit ?? null,
@@ -142,11 +152,29 @@ export async function upsertItem(item: Partial<ShoppingItem> & { id: string; use
     purchased_at: item.purchasedAt ?? null,
     final_price: item.finalPrice ?? null,
     store_used_id: item.storeUsedId ?? null,
+    store_ids: item.storeIds ?? [],
     sort_order: item.sortOrder ?? 0,
     updated_at: new Date().toISOString(),
   }
-  const { error } = await supabase.from('shopping_items').upsert(row)
+  for (const col of ITEM_OPTIONAL) if (droppedItemCols.has(col)) delete row[col]
+
+  let { error } = await supabase.from('shopping_items').upsert(row)
+  if (error) {
+    const missing = ITEM_OPTIONAL.find(c => !droppedItemCols.has(c) && error!.message.includes(c))
+    if (missing) {
+      droppedItemCols.add(missing)
+      delete row[missing]
+      console.warn(`[shoppingDb] upsertItem: no ${missing} column — run 20260019_shopping_item_stores.sql`)
+      ;({ error } = await supabase.from('shopping_items').upsert(row))
+    }
+  }
   if (error) console.warn('[shoppingDb] upsertItem:', error.message)
+}
+
+/** True while the server has no `store_ids` column, so the picker can say the
+ *  choice is only being kept on this device. */
+export function storeIdsSupported(): boolean {
+  return !droppedItemCols.has('store_ids')
 }
 
 export async function deleteItem(id: string): Promise<void> {
