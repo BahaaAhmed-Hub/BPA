@@ -1069,6 +1069,69 @@ Lists / Stores / History one.
 - Both views and the stores page are in `scripts/ink-audit.mjs` now — the module
   was added without one.
 
+## Boot — an account is pulled down once, not once per auth event
+`hydratedFor` + `hydrate(userId)` in `App.tsx`. `loadAllFromDB` + `beginLiveSync`
+hung off **three** call sites, and Supabase reaches all of them on one cold load.
+Measured on a single boot, straight onto a screen:
+
+```
+SIGNED_IN · getSession · getSession · INITIAL_SESSION
+· TOKEN_REFRESHED · TOKEN_REFRESHED · TOKEN_REFRESHED
+```
+
+Seven full loads of every table — the two `getSession`s are React StrictMode's
+double mount — which came to **108 REST reads on one boot**, spread from 1.1s to
+6.4s. A browser runs ~6 connections to a host, so the hundredth request waits
+behind ninety-nine nobody needed, and every module fills slowly because of it.
+- **Each pass *replaces* its store's contents** rather than merging, and the last
+  three land seconds after you are already reading the screen. So a populated
+  list goes empty and comes back — which is what "it takes ages and I have to
+  refresh a few times" actually was. It was never one module's fault; Shopping
+  was simply the one being looked at.
+- **`TOKEN_REFRESHED` is the plainest case**: the token changed, the person did
+  not, and nothing about their data can have moved.
+- **Module scope, not a ref.** StrictMode's second mount gets fresh refs and
+  would load again — that is two of the seven.
+- **Sign-out calls `forgetHydration()`**, so signing back in (even as the same
+  person) is a real load. It sits in the `!session` branch that already stopped
+  liveSync and dropped the Google token.
+- A different user id hydrates again by construction, so an account switch is
+  unaffected.
+Measured after: **24 reads**, every table once, and the window from 1.1s→6.4s
+became 1.6s→1.7s. Shopping still reads twice in dev only — StrictMode mounts the
+screen twice, and its own `loadAll()` is on that mount.
+
+## Shopping — the Realtime channel, and the reload storm behind it
+Three faults in one subscription, all of which made the module feel slow the
+longer a tab stayed open.
+- **`startRealtime` never tore the previous channel down**, though
+  `beginLiveSync` does exactly that for liveSync two lines above the call to it —
+  the shopping channel was bolted on beside it and did not follow the rule. Each
+  call *overwrote* `_stopRealtime` with the newest channel's remover, so seven
+  auth events left seven live channels and six unremovable ones. Every one of
+  them answered the same change with its own `loadAll()` — two round trips each.
+  It now calls `get().stopRealtime()` first; verified 4 starts → 3 removals,
+  exactly one live.
+- **A change is a reason to reload once, not once per row.** The four
+  subscriptions share one debounced `nudge` (`RELOAD_QUIET_MS`, 400ms): a price
+  refresh writing a snapshot per item used to be a full reload apiece. Verified
+  20 events → 1 reload, and `stopRealtime` cancels one still pending.
+- **`shopping_price_snapshots` cannot be filtered by `user_id`** — it has no such
+  column, being owned through `item_id` — so that one is held to RLS and the
+  debounce instead, and says so.
+- **`addSnapshots` inserts the batch in one request.** One call per snapshot was
+  the same storm on the write side, and each insert came back as its own
+  Realtime event.
+
+## Shopping — a reload is not an empty ledger
+The list view rendered its empty state whenever the store was empty, so every
+reload flashed **"No shopping lists yet"** about lists that were on their way —
+the most misleading thing the screen could say. It now shows *Fetching your
+lists…* while `loading` is true **and** there is nothing yet; once there is
+something on screen a reload is silent, because flashing a spinner over data you
+are already reading is worse than the wait. An account that is genuinely empty
+still gets its empty state — verified both ways.
+
 ## Migrations — the runner remembers what it has applied
 `scripts/migrate.mjs` used to read every `.sql` in `supabase/migrations` and run
 all of them, every time, and `.github/workflows/migrate.yml` invokes it on any

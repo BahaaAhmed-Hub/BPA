@@ -13,6 +13,10 @@ function newId() {
   return crypto.randomUUID()
 }
 
+/** How long a burst of Realtime changes is allowed to settle before the one
+ *  reload it deserves. A batch of price snapshots arrives as N events. */
+const RELOAD_QUIET_MS = 400
+
 function loadSettings(): ShoppingSettings {
   try {
     const raw = localStorage.getItem('shopping-settings')
@@ -333,9 +337,9 @@ export const useShoppingStore = create<ShoppingState>((set, get) => ({
       const kept = s.snapshots.filter(existing => !keys.has(`${existing.itemId}:${existing.storeId}`))
       return { snapshots: [...kept, ...snaps] }
     })
-    for (const snap of snaps) {
-      void db.insertSnapshot(snap)
-    }
+    // One request, not one per snapshot — a refresh across twenty items was
+    // twenty round trips out, each of which came back as a Realtime event.
+    void db.insertSnapshots(snaps)
   },
 
   // ── Settings ──────────────────────────────────────────────────────────────
@@ -366,15 +370,42 @@ export const useShoppingStore = create<ShoppingState>((set, get) => ({
   // ── Realtime ──────────────────────────────────────────────────────────────
 
   startRealtime: (userId) => {
+    // **Restarting tears the previous one down.** It did not, and `beginLiveSync`
+    // — which calls this — runs once per auth event: SIGNED_IN, two getSession
+    // resolutions under StrictMode, INITIAL_SESSION and every TOKEN_REFRESHED.
+    // Seven calls left seven live channels, six of them orphaned because each
+    // call *overwrote* `_stopRealtime` with the newest channel's remover. Every
+    // one of them then answered the same change with its own `loadAll()`.
+    // `beginLiveSync` does exactly this for liveSync, two lines above the call
+    // to this function; the shopping channel was bolted on beside it and did not
+    // follow the rule.
+    get().stopRealtime()
+
+    // **A change is a reason to reload once, not once per row.** A price refresh
+    // writes a snapshot per item; the edge function's nightly run writes dozens.
+    // Undebounced, each one was a full reload — two round trips apiece — so
+    // twenty prices cost forty requests and the screen rebuilt twenty times.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const nudge = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => { timer = undefined; void get().loadAll() }, RELOAD_QUIET_MS)
+    }
+
     const channel = supabase
       .channel(`shopping:${userId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_groups',          filter: `user_id=eq.${userId}` }, () => { void get().loadAll() })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items',           filter: `user_id=eq.${userId}` }, () => { void get().loadAll() })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_stores',          filter: `user_id=eq.${userId}` }, () => { void get().loadAll() })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_price_snapshots'                                  }, () => { void get().loadAll() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_groups', filter: `user_id=eq.${userId}` }, nudge)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items',  filter: `user_id=eq.${userId}` }, nudge)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_stores', filter: `user_id=eq.${userId}` }, nudge)
+      // `shopping_price_snapshots` has no `user_id` column to filter on — it is
+      // owned through `item_id` — so this one cannot be narrowed here and is
+      // held to RLS and the debounce instead.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_price_snapshots' }, nudge)
       .subscribe()
 
-    set({ _stopRealtime: () => { void supabase.removeChannel(channel) } })
+    set({ _stopRealtime: () => {
+      if (timer) clearTimeout(timer)
+      void supabase.removeChannel(channel)
+    } })
   },
 
   stopRealtime: () => {

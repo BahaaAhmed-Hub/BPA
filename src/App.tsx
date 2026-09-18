@@ -751,6 +751,32 @@ function ActiveModule() {
 
 const LAST_USER_KEY = 'professor-last-user-id'
 
+// ─── Pull the account down once, not once per auth event ─────────────────────
+//
+//  `loadAllFromDB` + `beginLiveSync` hung off three call sites, and Supabase
+//  reaches all of them on a single cold load. Measured on one boot:
+//
+//    SIGNED_IN · getSession · getSession · INITIAL_SESSION
+//    · TOKEN_REFRESHED · TOKEN_REFRESHED · TOKEN_REFRESHED
+//
+//  — seven full loads of every table (the two getSessions are React's
+//  StrictMode double-mount), which came to **108 REST reads on one boot**,
+//  spread from 1.1s to 6.4s. A browser runs ~6 connections to a host, so the
+//  hundredth request waits behind ninety-nine it did not need, and every module
+//  is slow to fill because of it. Worse, each pass *replaces* its store's
+//  contents rather than merging, and the last three land seconds after you are
+//  already reading the screen — so a populated list can go empty and come back.
+//  `TOKEN_REFRESHED` is the plainest case of all: the token changed, the user
+//  did not, and nothing about their data can have moved.
+//
+//  So the account is hydrated once, and again only when it is a *different*
+//  account. Module scope rather than a ref, because StrictMode's second mount
+//  gets fresh refs and would load a second time — which is half of the seven.
+let hydratedFor: string | null = null
+
+/** Sign-out. The next sign-in — even as the same person — is a real load. */
+function forgetHydration() { hydratedFor = null }
+
 /**
  * Load all user data from DB into localStorage so every module reads fresh data.
  * Called on every sign-in — database is the source of truth.
@@ -854,7 +880,17 @@ function App() {
       finance: () => useFinanceStore.getState().loadFromDB(),
     })
     // Shopping has its own Realtime channel — start it alongside liveSync.
+    // It tears its own previous channel down, as this function does above.
     useShoppingStore.getState().startRealtime(userId)
+  }
+
+  /** Everything an account needs pulled down, **once per account**. See
+   *  `hydratedFor`: the three call sites below are all reached on one boot. */
+  function hydrate(userId: string) {
+    if (hydratedFor === userId) return
+    hydratedFor = userId
+    void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
+    beginLiveSync(userId)
   }
 
   // themeId kept in store for backward compat — Sunlit Bento uses CSS tokens only
@@ -1001,8 +1037,7 @@ function App() {
       }
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
       if (u) {
-        void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
-        beginLiveSync(u.id)
+        hydrate(u.id)
         // Preferences that are your work rather than this device's.
         stopPrefSync.current?.()
         stopPrefSync.current = startPrefSync()
@@ -1041,8 +1076,7 @@ function App() {
               localStorage.setItem('google_provider_token', session.provider_token)
               localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
             }
-            void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
-            beginLiveSync(u.id)
+            hydrate(u.id)
           }
         } else {
           // Normal sign-in: check for user switch
@@ -1105,10 +1139,10 @@ function App() {
               }
             })()
           }
-          void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
-          beginLiveSync(u.id)
+          hydrate(u.id)
         }
       } else if (!session) {
+        forgetHydration()
         stopLiveSync.current?.()
         stopLiveSync.current = null
         useShoppingStore.getState().stopRealtime()

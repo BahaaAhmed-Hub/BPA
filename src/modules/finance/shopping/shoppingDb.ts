@@ -231,11 +231,16 @@ export async function loadSnapshots(itemIds: string[]): Promise<PriceSnapshot[] 
   return (data as SnapshotRow[]).map(toSnapshot)
 }
 
-export async function insertSnapshot(s: Omit<PriceSnapshot, 'id'>): Promise<void> {
-  const { error } = await supabase.from('shopping_price_snapshots').insert({
-    item_id: s.itemId, store_id: s.storeId, price: s.price,
-    currency: s.currency, product_url: s.productUrl ?? null,
-    available: s.available, scraped_at: s.scrapedAt,
-  })
-  if (error) console.warn('[shoppingDb] insertSnapshot:', error.message)
+/** A whole batch in one request. Sent one at a time, a price refresh over
+ *  twenty items was twenty round trips — and twenty Realtime events back. */
+export async function insertSnapshots(snaps: Omit<PriceSnapshot, 'id'>[]): Promise<void> {
+  if (!snaps.length) return
+  const { error } = await supabase.from('shopping_price_snapshots').insert(
+    snaps.map(s => ({
+      item_id: s.itemId, store_id: s.storeId, price: s.price,
+      currency: s.currency, product_url: s.productUrl ?? null,
+      available: s.available, scraped_at: s.scrapedAt,
+    })),
+  )
+  if (error) console.warn('[shoppingDb] insertSnapshots:', error.message)
 }

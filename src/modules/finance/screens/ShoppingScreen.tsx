@@ -52,6 +52,17 @@ function IconRefresh({ size = 14 }: { size?: number }) {
     </svg>
   )
 }
+/** A first load has to look different from an empty ledger. */
+function Spinner({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2.4" strokeLinecap="round" aria-hidden
+      className="sb-spin" style={{ color: C.ink4 }}>
+      <path d="M12 3a9 9 0 1 0 9 9" />
+    </svg>
+  )
+}
+
 function IconChevronDown({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -833,7 +844,7 @@ export function ShoppingScreen() {
     addGroup, updateGroup, deleteGroup,
     addItem, updateItem, deleteItem, purchaseItem,
     addStore, updateStore, deleteStore,
-    refreshPrices, loadAll, settings,
+    refreshPrices, loadAll, settings, loading,
   } = useShoppingStore()
 
   const enrichedItems = useMemo(
@@ -1271,8 +1282,21 @@ export function ShoppingScreen() {
           onRefreshPrice={handleRefreshItemPrice}
         />
 
+        {/* Still fetching, with nothing to show yet. Without this the screen drew
+            its empty state during every reload — "No shopping lists yet" about
+            lists that are on their way, which is the single most misleading
+            thing it could say. Once there is something on screen a reload is
+            silent: flashing a spinner over data you are already reading is
+            worse than the wait. */}
+        {loading && !activeGroups.length && !unscheduled.length && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 10, paddingTop: 60, color: C.ink4 }}>
+            <Spinner />
+            <div style={{ fontSize: 13, color: C.ink3 }}>Fetching your lists…</div>
+          </div>
+        )}
+
         {/* Empty state */}
-        {!activeGroups.length && !unscheduled.length && (
+        {!loading && !activeGroups.length && !unscheduled.length && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 12, paddingTop: 60, color: C.ink4 }}>
             <span style={{ fontSize: 40 }}>🛒</span>
             <div style={{ fontSize: 15, fontWeight: 600, color: C.ink3 }}>No shopping lists yet</div>
