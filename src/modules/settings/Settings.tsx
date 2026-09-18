@@ -76,6 +76,7 @@ import {
 import { alpha } from '@/lib/alpha'
 import { SearchSelect } from '@/components/SearchSelect'
 import { listUserTokens, createUserToken, revokeUserToken, type UserToken } from '@/lib/userTokens'
+import { getTelegramLinks, revokeTelegramLink, type TelegramLink } from '@/lib/telegramLink'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -4058,9 +4059,11 @@ function IntegrationsSection() {
   const [newLabel, setNewLabel] = useState('')
   const [revealedToken, setRevealedToken] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [telegramLinks, setTelegramLinks] = useState<TelegramLink[]>([])
 
   useEffect(() => {
     listUserTokens().then(setTokens)
+    getTelegramLinks().then(setTelegramLinks)
   }, [])
 
   async function handleCreateToken() {
@@ -4077,6 +4080,11 @@ function IntegrationsSection() {
   async function handleRevoke(id: string) {
     const ok = await revokeUserToken(id)
     if (ok) setTokens(prev => prev.filter(t => t.id !== id))
+  }
+
+  async function handleRevokeTelegram(chatId: string) {
+    const ok = await revokeTelegramLink(chatId)
+    if (ok) setTelegramLinks(prev => prev.filter(l => l.chat_id !== chatId))
   }
 
   function copyToken() {
@@ -4251,6 +4259,74 @@ function IntegrationsSection() {
               }}>Revoke</button>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* ── TELEGRAM ─────────────────────────────────────────────────────────── */}
+      <div style={{ marginTop: 24 }}>
+        <div style={{ marginBottom: 12 }}>
+          <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Telegram</p>
+          <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
+            Talk to Professor from Telegram — ask about tasks, habits and finances, or add things on the go.
+          </p>
+        </div>
+
+        {/* Connected chats */}
+        {telegramLinks.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
+            {telegramLinks.map(link => (
+              <div key={link.chat_id} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '9px 13px', borderRadius: 'var(--sb-r-nav)',
+                background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+              }}>
+                <span style={{ fontSize: 18, lineHeight: 1 }}>💬</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+                    Chat #{link.chat_id}
+                  </p>
+                  <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+                    Connected {new Date(link.linked_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <span style={{
+                  fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em',
+                  padding: '2px 7px', borderRadius: 'var(--sb-r-chip)',
+                  background: 'color-mix(in srgb, var(--sb-positive) 10%, transparent)',
+                  color: 'var(--sb-positive)', textTransform: 'uppercase',
+                }}>Active</span>
+                <button onClick={() => void handleRevokeTelegram(link.chat_id)} style={{
+                  flexShrink: 0, padding: '4px 10px', borderRadius: 'var(--sb-r-chip)',
+                  background: 'none', border: 'var(--sb-border-width) solid var(--sb-border)',
+                  fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-negative)', cursor: 'pointer',
+                }}>Disconnect</button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {/* Setup instructions */}
+        <div style={{
+          padding: '13px 15px', borderRadius: 'var(--sb-r-nav)',
+          background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-border)',
+          borderStyle: 'dashed',
+        }}>
+          <p style={{ margin: '0 0 8px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+            {telegramLinks.length === 0 ? 'Connect your Telegram' : 'Connect another device'}
+          </p>
+          <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {[
+              'Generate a token above (label it "Telegram")',
+              'Open Telegram and search for your Professor bot',
+              <>Send: <code style={{ fontSize: 11, fontFamily: 'monospace', background: 'var(--sb-card)', padding: '1px 5px', borderRadius: 4 }}>/connect prof_sk_…</code></>,
+              'That\'s it — just talk to it naturally after that',
+            ].map((step, i) => (
+              <li key={i} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.45 }}>{step}</li>
+            ))}
+          </ol>
+          <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>
+            The bot can read and add tasks, log habits, and check your balance. Full AI responses when an Anthropic key is set in Supabase.
+          </p>
         </div>
       </div>
 
