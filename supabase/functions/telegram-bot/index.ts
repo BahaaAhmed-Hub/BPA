@@ -212,6 +212,31 @@ async function toolLogHabit(userId: string, args: Record<string, unknown>): Prom
   return `Logged ${habit.name}${habit.unit ? ': ' + savedQty + ' ' + habit.unit : ''}${goalNote} on ${date}`
 }
 
+async function toolGetHabits(userId: string, args: Record<string, unknown>): Promise<string> {
+  const date = (args.date as string | undefined) ?? todayISO()
+
+  const [habitsRes, logsRes] = await Promise.all([
+    sb.from('habits').select('id, name, goal, unit').eq('user_id', userId).eq('is_active', true),
+    sb.from('habit_logs').select('habit_id, completed, quantity').eq('user_id', userId).eq('date', date),
+  ])
+
+  const habits = (habitsRes.data ?? []) as { id: string; name: string; goal: number | null; unit: string | null }[]
+  const logs   = (logsRes.data   ?? []) as { habit_id: string; completed: boolean; quantity: number | null }[]
+  if (!habits.length) return 'No active habits.'
+
+  const logMap = new Map(logs.map(l => [l.habit_id, l]))
+  const lines = habits.map(h => {
+    const l = logMap.get(h.id)
+    if (!l) return `${h.name}: not logged yet`
+    if (h.goal && l.quantity != null) {
+      const pct = Math.round((l.quantity / h.goal) * 100)
+      return `${h.name}: ${l.quantity}/${h.goal}${h.unit ? ' ' + h.unit : ''} (${pct}%)${l.completed ? ' ✓' : ''}`
+    }
+    return `${h.name}: ${l.completed ? 'done ✓' : 'not done'}`
+  })
+  return `Habits for ${date}:\n` + lines.join('\n')
+}
+
 async function toolAddTransaction(userId: string, args: Record<string, unknown>): Promise<string> {
   const { data: accounts } = await sb
     .from('finance_accounts')
@@ -336,6 +361,45 @@ async function toolGetCalendarEvents(userId: string, args: Record<string, unknow
   return events.map(e =>
     `${e.summary ?? 'Untitled'} — ${fmtDT(e.start ?? {})}`
   ).join('\n')
+}
+
+async function toolAddCalendarEvent(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+
+  const title  = args.title as string
+  const start  = args.start as string
+  const allDay = !start.includes('T')
+
+  const startObj = allDay ? { date: start } : { dateTime: start }
+  const endArg   = args.end as string | undefined
+  const endObj   = endArg
+    ? (allDay ? { date: endArg } : { dateTime: endArg })
+    : allDay
+      ? { date: start }
+      : { dateTime: new Date(new Date(start).getTime() + 3600000).toISOString() }
+
+  const event: Record<string, unknown> = { summary: title, start: startObj, end: endObj }
+  if (args.description) event.description = args.description
+  if (args.location)    event.location    = args.location
+
+  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    method:  'POST',
+    headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify(event),
+  })
+
+  if (!res.ok) {
+    const err = await res.json() as { error?: { message?: string } }
+    if (res.status === 403) return 'Cannot create events. Please reconnect Google with calendar permissions.'
+    return `Calendar error: ${err.error?.message ?? res.status}`
+  }
+
+  const created = await res.json() as { summary?: string; start?: { dateTime?: string; date?: string } }
+  const when = created.start?.dateTime
+    ? created.start.dateTime.slice(0, 16).replace('T', ' at ')
+    : (created.start?.date ?? start)
+  return `Created "${created.summary ?? title}" on ${when}.`
 }
 
 // ── Shopping tools ────────────────────────────────────────────────────────────
@@ -513,7 +577,7 @@ async function toolGetEmails(userId: string, args: Record<string, unknown>): Pro
     const from    = headers.find(h => h.name === 'From')?.value ?? ''
     const unread  = m.labelIds?.includes('UNREAD') ? '●' : '○'
     const snippet = m.snippet ? ` — ${m.snippet.slice(0, 80)}…` : ''
-    return `${unread} [${id.slice(0, 8)}] *${subject}*\n  From: ${from}${snippet}`
+    return `${unread} [id:${id}] *${subject}*\n  From: ${from}${snippet}`
   }))
 
   return metas.filter(Boolean).join('\n\n')
@@ -557,6 +621,64 @@ async function toolMarkEmailRead(userId: string, args: Record<string, unknown>):
     return `Failed (${r.status}).`
   }
   return 'Marked as read ✓'
+}
+
+async function toolReplyEmail(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+
+  const messageId = args.message_id as string
+  const replyText = args.text as string
+
+  const origRes = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}` +
+    `?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Message-ID`,
+    { headers: { Authorization: `Bearer ${g.token}` } }
+  )
+  if (!origRes.ok) return `Could not fetch original email (${origRes.status}).`
+
+  const orig = await origRes.json() as {
+    threadId: string
+    payload?: { headers?: { name: string; value: string }[] }
+  }
+
+  const getH = (n: string) =>
+    (orig.payload?.headers ?? []).find(h => h.name.toLowerCase() === n.toLowerCase())?.value ?? ''
+
+  const fromOrig  = getH('From')
+  const subjOrig  = getH('Subject')
+  const msgIdOrig = getH('Message-ID')
+  const subject   = subjOrig.startsWith('Re:') ? subjOrig : `Re: ${subjOrig}`
+  const toMatch   = fromOrig.match(/<([^>]+)>/)
+  const toEmail   = toMatch ? toMatch[1] : fromOrig.trim()
+
+  const rawMsg = [
+    `To: ${toEmail}`,
+    `Subject: ${subject}`,
+    msgIdOrig ? `In-Reply-To: ${msgIdOrig}` : '',
+    msgIdOrig ? `References: ${msgIdOrig}` : '',
+    'Content-Type: text/plain; charset=utf-8',
+    '',
+    replyText,
+  ].filter(Boolean).join('\r\n')
+
+  const bytes = new TextEncoder().encode(rawMsg)
+  let binary  = ''
+  for (const b of bytes) binary += String.fromCharCode(b)
+  const encoded = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
+  const sendRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method:  'POST',
+    headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ raw: encoded, threadId: orig.threadId }),
+  })
+
+  if (!sendRes.ok) {
+    if (sendRes.status === 403) return 'Cannot send email. Please reconnect Google with mail permissions.'
+    return `Failed to send reply (${sendRes.status}).`
+  }
+
+  return `Reply sent to ${toEmail}.`
 }
 
 // ── Claude agent ──────────────────────────────────────────────────────────────
@@ -618,6 +740,16 @@ const CLAUDE_TOOLS = [
     },
   },
   {
+    name:        'get_habits',
+    description: 'Read habit progress for today or a specific date. Use for: "how much water today?", "did I exercise?", "show my habits", "what habits are done?".',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'YYYY-MM-DD — defaults to today' },
+      },
+    },
+  },
+  {
     name:        'add_transaction',
     description: 'Log an expense or income entry. Use this when the user mentions spending money, buying something, or receiving money.',
     input_schema: {
@@ -639,6 +771,21 @@ const CLAUDE_TOOLS = [
       type: 'object',
       properties: {
         days_ahead: { type: 'number', description: 'How many days ahead to look (default 3, max 14)' },
+      },
+    },
+  },
+  {
+    name:        'add_calendar_event',
+    description: 'Create a new Google Calendar event.',
+    input_schema: {
+      type:     'object',
+      required: ['title', 'start'],
+      properties: {
+        title:       { type: 'string' },
+        start:       { type: 'string', description: 'ISO datetime like 2026-09-20T15:00:00 or date 2026-09-20 for all-day' },
+        end:         { type: 'string', description: 'ISO datetime or date. Defaults to 1 hour after start.' },
+        description: { type: 'string' },
+        location:    { type: 'string' },
       },
     },
   },
@@ -732,6 +879,18 @@ const CLAUDE_TOOLS = [
       },
     },
   },
+  {
+    name:        'reply_email',
+    description: 'Reply to an email. First call get_emails to find the message_id, then call this.',
+    input_schema: {
+      type:     'object',
+      required: ['message_id', 'text'],
+      properties: {
+        message_id: { type: 'string', description: 'Full message id from get_emails [id:...]' },
+        text:       { type: 'string', description: 'The reply body text.' },
+      },
+    },
+  },
 ]
 
 type ContentBlock = { type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }
@@ -743,6 +902,7 @@ async function runAgent(userId: string, userMessage: string): Promise<string> {
 
   const today = todayISO()
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10)
+  const tomorrow = new Date(Date.now() + 864e5).toISOString().slice(0, 10)
   const systemPrompt = `CRITICAL RULE — LANGUAGE: You MUST reply in the exact same language the user wrote in.
 - User writes Arabic → your ENTIRE reply must be in Arabic (no English words mixed in)
 - User writes English → reply in English
@@ -757,10 +917,13 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "water 600ml" / "مية 600 مل" → log_habit(habit_name="water", quantity=600)
 - "water 600ml yesterday" / "مية 600 مل امبارح" → log_habit(habit_name="water", quantity=600, date="${yesterday}")
 - Multiple habits in one message → call log_habit multiple times in parallel, one per habit
+- "how much water today?" / "كام مل مية شربت؟" → get_habits
+- "show my habits" / "وريني العادات" → get_habits
 - "add call Ahmed" / "أضف مهمة اتصل بأحمد" → add_task
 - "what do I have today" / "إيه اللي عندي النهارده" → get_today, then get_calendar_events(days_ahead=1)
 - "spent 200 on lunch" / "صرفت 200 على الغداء" → add_transaction(amount=200, payee="lunch")
 - "what's on my calendar" / "فيه إيه في التقويم" → get_calendar_events
+- "add a meeting tomorrow at 3pm" / "حجز اجتماع بكرا الساعة 3" → add_calendar_event(title="meeting", start="${tomorrow}T15:00:00")
 - "what's on my shopping list" / "إيه في قايمة التسوق" → get_shopping_lists, then get_shopping_items
 - ADDING ITEMS — always follow this flow:
   1. Call get_shopping_lists to see what lists exist
@@ -777,10 +940,12 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "show unread" / "الإيميلات الجديدة" → get_emails(query="is:unread in:inbox")
 - "archive that email" / "أرشف الإيميل ده" → archive_email(message_id=...)
 - "mark it as read" / "علّم مقروء" → mark_email_read(message_id=...)
+- "reply to Ahmed saying I'll attend" / "رد على أحمد إني هحضر" → get_emails(query="from:Ahmed"), then reply_email(message_id=..., text="...")
+- "reply to the last email" / "رد على آخر إيميل" → get_emails, then reply_email
 - Never ask the user to rephrase or use a specific format. Just figure it out.
 - When the user lists multiple things to log or add, call the relevant tool in parallel for each one — never ask them to say it again one at a time.
 
-What you CAN do: tasks (list, add, complete), habits (log with quantities and past dates), log expenses/income, calendar events, today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read).
+What you CAN do: tasks (list, add, complete), habits (read with get_habits, log with log_habit), log expenses/income, calendar (read, create events), today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read, reply).
 What you CANNOT do: read financial balances or history — say so briefly if asked, don't apologise.
 
 LIVE DATA — ALWAYS CALL TOOLS: For any question about current state (habits logged today, tasks open, today's schedule, shopping list contents, finance totals) — you MUST call the relevant tool to get FRESH data from the database. NEVER answer these from conversation history — the data changes every minute. History is ONLY for understanding references like "that habit", "the task I just added", "mark it done" — not for reporting current counts or values.
@@ -851,9 +1016,11 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'get_tasks':           return toolGetTasks(userId, args)
     case 'add_task':            return toolAddTask(userId, args)
     case 'complete_task':       return toolCompleteTask(userId, args)
+    case 'get_habits':          return toolGetHabits(userId, args)
     case 'log_habit':           return toolLogHabit(userId, args)
     case 'add_transaction':     return toolAddTransaction(userId, args)
     case 'get_calendar_events': return toolGetCalendarEvents(userId, args)
+    case 'add_calendar_event':  return toolAddCalendarEvent(userId, args)
     case 'get_shopping_lists':    return toolGetShoppingLists(userId)
     case 'get_shopping_items':    return toolGetShoppingItems(userId, args)
     case 'add_shopping_item':     return toolAddShoppingItem(userId, args)
@@ -862,6 +1029,7 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'get_emails':          return toolGetEmails(userId, args)
     case 'archive_email':       return toolArchiveEmail(userId, args)
     case 'mark_email_read':     return toolMarkEmailRead(userId, args)
+    case 'reply_email':         return toolReplyEmail(userId, args)
     default:                    return `Unknown tool: ${name}`
   }
 }

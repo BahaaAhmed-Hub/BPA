@@ -412,6 +412,45 @@ async function toolGetCalendarEvents(userId: string, args: Record<string, unknow
   ).join('\n')
 }
 
+async function toolAddCalendarEvent(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+
+  const title  = args.title as string
+  const start  = args.start as string
+  const allDay = !start.includes('T')
+
+  const startObj = allDay ? { date: start } : { dateTime: start }
+  const endArg   = args.end as string | undefined
+  const endObj   = endArg
+    ? (allDay ? { date: endArg } : { dateTime: endArg })
+    : allDay
+      ? { date: start }
+      : { dateTime: new Date(new Date(start).getTime() + 3600000).toISOString() }
+
+  const event: Record<string, unknown> = { summary: title, start: startObj, end: endObj }
+  if (args.description) event.description = args.description
+  if (args.location)    event.location    = args.location
+
+  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    method:  'POST',
+    headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify(event),
+  })
+
+  if (!res.ok) {
+    const err = await res.json() as { error?: { message?: string } }
+    if (res.status === 403) return 'Cannot create events. Please reconnect Google with calendar permissions.'
+    return `Calendar error: ${err.error?.message ?? res.status}`
+  }
+
+  const created = await res.json() as { summary?: string; start?: { dateTime?: string; date?: string } }
+  const when = created.start?.dateTime
+    ? created.start.dateTime.slice(0, 16).replace('T', ' at ')
+    : (created.start?.date ?? start)
+  return `Created "${created.summary ?? title}" on ${when}.`
+}
+
 // ── Shopping tools ────────────────────────────────────────────────────────────
 
 async function toolGetShoppingLists(userId: string): Promise<string> {
@@ -585,7 +624,7 @@ async function toolGetEmails(userId: string, args: Record<string, unknown>): Pro
     const from    = headers.find(h => h.name === 'From')?.value ?? ''
     const unread  = m.labelIds?.includes('UNREAD') ? 'Unread' : 'Read'
     const snippet = m.snippet ? ` — ${m.snippet.slice(0, 80)}` : ''
-    return `• [${id.slice(0, 8)}] ${subject} — From: ${from} (${unread})${snippet}`
+    return `• [id:${id}] ${subject} — From: ${from} (${unread})${snippet}`
   }))
 
   return metas.filter(Boolean).join('\n')
@@ -629,6 +668,64 @@ async function toolMarkEmailRead(userId: string, args: Record<string, unknown>):
   return 'Marked as read.'
 }
 
+async function toolReplyEmail(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+
+  const messageId = args.message_id as string
+  const replyText = args.text as string
+
+  const origRes = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}` +
+    `?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Message-ID`,
+    { headers: { Authorization: `Bearer ${g.token}` } }
+  )
+  if (!origRes.ok) return `Could not fetch original email (${origRes.status}).`
+
+  const orig = await origRes.json() as {
+    threadId: string
+    payload?: { headers?: { name: string; value: string }[] }
+  }
+
+  const getH = (n: string) =>
+    (orig.payload?.headers ?? []).find(h => h.name.toLowerCase() === n.toLowerCase())?.value ?? ''
+
+  const fromOrig  = getH('From')
+  const subjOrig  = getH('Subject')
+  const msgIdOrig = getH('Message-ID')
+  const subject   = subjOrig.startsWith('Re:') ? subjOrig : `Re: ${subjOrig}`
+  const toMatch   = fromOrig.match(/<([^>]+)>/)
+  const toEmail   = toMatch ? toMatch[1] : fromOrig.trim()
+
+  const rawMsg = [
+    `To: ${toEmail}`,
+    `Subject: ${subject}`,
+    msgIdOrig ? `In-Reply-To: ${msgIdOrig}` : '',
+    msgIdOrig ? `References: ${msgIdOrig}` : '',
+    'Content-Type: text/plain; charset=utf-8',
+    '',
+    replyText,
+  ].filter(Boolean).join('\r\n')
+
+  const bytes = new TextEncoder().encode(rawMsg)
+  let binary  = ''
+  for (const b of bytes) binary += String.fromCharCode(b)
+  const encoded = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
+  const sendRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method:  'POST',
+    headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ raw: encoded, threadId: orig.threadId }),
+  })
+
+  if (!sendRes.ok) {
+    if (sendRes.status === 403) return 'Cannot send email. Please reconnect Google with mail permissions.'
+    return `Failed to send reply (${sendRes.status}).`
+  }
+
+  return `Reply sent to ${toEmail}.`
+}
+
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 
 async function dispatchTool(userId: string, name: string, args: Record<string, unknown>): Promise<string> {
@@ -641,6 +738,7 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'log_habit':            return toolLogHabit(userId, args)
     case 'add_transaction':      return toolAddTransaction(userId, args)
     case 'get_calendar_events':  return toolGetCalendarEvents(userId, args)
+    case 'add_calendar_event':   return toolAddCalendarEvent(userId, args)
     case 'get_shopping_lists':   return toolGetShoppingLists(userId)
     case 'get_shopping_items':   return toolGetShoppingItems(userId, args)
     case 'add_shopping_item':    return toolAddShoppingItem(userId, args)
@@ -649,6 +747,7 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'get_emails':           return toolGetEmails(userId, args)
     case 'archive_email':        return toolArchiveEmail(userId, args)
     case 'mark_email_read':      return toolMarkEmailRead(userId, args)
+    case 'reply_email':          return toolReplyEmail(userId, args)
     default:                     return `Unknown tool: ${name}`
   }
 }
@@ -747,6 +846,21 @@ const CLAUDE_TOOLS = [
     },
   },
   {
+    name:        'add_calendar_event',
+    description: 'Create a new Google Calendar event.',
+    input_schema: {
+      type:     'object',
+      required: ['title', 'start'],
+      properties: {
+        title:       { type: 'string' },
+        start:       { type: 'string', description: 'ISO datetime like 2026-09-20T15:00:00 or date 2026-09-20 for all-day' },
+        end:         { type: 'string', description: 'ISO datetime or date. Defaults to 1 hour after start.' },
+        description: { type: 'string' },
+        location:    { type: 'string' },
+      },
+    },
+  },
+  {
     name:         'get_shopping_lists',
     description:  'List all active shopping lists with item counts.',
     input_schema: { type: 'object', properties: {} },
@@ -836,6 +950,18 @@ const CLAUDE_TOOLS = [
       },
     },
   },
+  {
+    name:        'reply_email',
+    description: 'Reply to an email. First call get_emails to find the message_id, then call this.',
+    input_schema: {
+      type:     'object',
+      required: ['message_id', 'text'],
+      properties: {
+        message_id: { type: 'string', description: 'Full message id from get_emails [id:...]' },
+        text:       { type: 'string', description: 'The reply body text.' },
+      },
+    },
+  },
 ]
 
 // ── Claude agent ──────────────────────────────────────────────────────────────
@@ -853,6 +979,7 @@ async function runAgent(userId: string, userMessage: string): Promise<string> {
 
   const today     = todayISO()
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10)
+  const tomorrow  = new Date(Date.now() + 864e5).toISOString().slice(0, 10)
 
   const systemPrompt = `CRITICAL RULE — LANGUAGE: You MUST reply in the exact same language the user wrote in.
 - User writes Arabic → your ENTIRE reply must be in Arabic (no English words mixed in)
@@ -876,6 +1003,7 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "what do I have today" / "إيه اللي عندي النهارده" → get_today, then get_calendar_events(days_ahead=1)
 - "spent 200 on lunch" / "صرفت 200 على الغداء" → add_transaction(amount=200, payee="lunch")
 - "what's on my calendar" / "فيه إيه في التقويم" → get_calendar_events
+- "add a meeting tomorrow at 3pm" / "حجز اجتماع بكرا الساعة 3" → add_calendar_event(title="meeting", start="${tomorrow}T15:00:00")
 - "what's on my shopping list" / "إيه في قايمة التسوق" → get_shopping_lists, then get_shopping_items
 - ADDING ITEMS — always follow this flow:
   1. Call get_shopping_lists to see what lists exist
@@ -891,10 +1019,12 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "show unread" / "الإيميلات الجديدة" → get_emails(query="is:unread in:inbox")
 - "archive that email" / "أرشف الإيميل ده" → archive_email(message_id=...)
 - "mark it as read" / "علّم مقروء" → mark_email_read(message_id=...)
+- "reply to Ahmed saying I'll attend" / "رد على أحمد إني هحضر" → get_emails(query="from:Ahmed"), then reply_email(message_id=..., text="...")
+- "reply to the last email" / "رد على آخر إيميل" → get_emails, then reply_email
 - Never ask the user to rephrase. Just figure it out.
 - When the user lists multiple things to log or add, call the relevant tool in parallel for each one.
 
-What you CAN do: tasks (list, add, complete), habits (read progress with get_habits, log with log_habit), log expenses/income, calendar events, today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read).
+What you CAN do: tasks (list, add, complete), habits (read with get_habits, log with log_habit), log expenses/income, calendar (read, create events), today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read, reply).
 What you CANNOT do: read financial balances or history — say so briefly if asked.
 
 Reply style: short, warm, direct. No markdown. Use plain bullets with •. After a tool result, one short sentence of context if helpful, then the list. For confirmations a single sentence is fine.`
