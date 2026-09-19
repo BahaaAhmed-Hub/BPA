@@ -378,10 +378,24 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
         const all = [...known, ...arrived, ...localOnly]
 
         saveHabits(all)
-        saveLogs(logs)
-        // null means the server has no quantity column yet — leave this
-        // device's numbers alone rather than reading absence as zero.
-        if (quantities) saveQuantityLogs(quantities)
+
+        // If the server returned no logs at all but local has some, the logs
+        // never reached the DB (e.g. FK blocked inserts while habits weren't
+        // synced). Keep local and push it up rather than wiping it.
+        const dbHasLogs   = Object.keys(logs).some(k => (logs[k] as string[]).length > 0)
+        const localLogs   = loadLogs()
+        const localHasLogs = Object.keys(localLogs).some(k => (localLogs[k] as string[]).length > 0)
+
+        if (dbHasLogs || !localHasLogs) {
+          saveLogs(logs)
+          // null means the server has no quantity column yet — leave this
+          // device's numbers alone rather than reading absence as zero.
+          if (quantities) saveQuantityLogs(quantities)
+        } else {
+          // Push local logs to the server without overwriting them first.
+          commitHabitLogs()
+        }
+
         set({ habits: all })
         // The Habits page holds the logs in its own state, read once on mount.
         // Reloading while it is open has to tell it, or the ticks stay stale.
