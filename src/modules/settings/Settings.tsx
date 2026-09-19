@@ -3868,9 +3868,11 @@ function SiriBlock() {
           <ol style={{ margin: 0, paddingLeft: 18, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.8 }}>
             <li>On iPhone, open <b>Shortcuts</b> → tap <b>+</b> → name it <em>Ask Professor</em>.</li>
             <li>Add action <b>Ask for Input</b> — set prompt to <em>"Ask Professor:"</em>, type <b>Text</b>.</li>
-            <li>Add action <b>Get Contents of URL</b> — paste the URL above into the URL field, then
-              append the <em>Shortcut Input</em> magic variable so the full URL ends with <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)' }}>&q=‹voice input›</code>.
-              Method stays <b>GET</b>.
+            <li>Add action <b>Get Contents of URL</b> — tap <b>URL</b>, paste the address copied above
+              (it already ends with <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)' }}>&q=</code>),
+              then tap right after the <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)' }}>=</code> and
+              insert the <em>Shortcut Input</em> blue variable pill from step 2.
+              Method stays <b>GET</b> — no body needed.
             </li>
             <li>Add action <b>Speak Text</b> — set the text to the result from step 3 (the blue
               <em>Contents of URL</em> variable).</li>
