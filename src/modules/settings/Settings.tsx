@@ -10,7 +10,7 @@ import {
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
   Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard, Sparkles,
-  ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed, Check,
+  ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed, Check, Mic,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { paidAtSupported } from '../finance/unpaid'
@@ -3757,6 +3757,137 @@ interface Integration {
   account: string; tags: string[]; syncMode: 'two-way' | 'import' | 'off'; enabled: boolean
 }
 
+// ─── Settings → Integrations → Siri Shortcuts ────────────────────────────────
+//
+// Siri cannot call a web API itself — Shortcuts can. A shortcut asks for input,
+// sends it to professor-siri, and reads the response aloud. The only setup the
+// user does once: generate a token here and paste the URL into a new shortcut.
+
+function SiriBlock() {
+  const { user } = useAuthStore()
+  const [token, setToken]   = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy]     = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [err, setErr]       = useState<string | null>(null)
+
+  const base = (import.meta.env.VITE_SUPABASE_URL as string ?? '').replace(/\/$/, '')
+  const siriUrl = token && base
+    ? `${base}/functions/v1/professor-siri?token=${token}&q=`
+    : ''
+
+  useEffect(() => {
+    if (!user?.id) { setLoading(false); return }
+    supabase.from('user_tokens')
+      .select('token')
+      .eq('user_id', user.id)
+      .eq('revoked', false)
+      .ilike('token', 'prof_sk_%')
+      .limit(1)
+      .then(({ data }) => {
+        const row = (data as { token: string }[] | null)?.[0]
+        setToken(row?.token ?? null)
+        setLoading(false)
+      })
+  }, [user?.id])
+
+  async function generate() {
+    if (!user?.id) return
+    setBusy(true); setErr(null)
+    const newToken = 'prof_sk_' + crypto.randomUUID().replace(/-/g, '')
+    const { error } = await supabase.from('user_tokens').insert({
+      user_id: user.id,
+      token:   newToken,
+      revoked: false,
+    })
+    if (error) { setErr('Could not generate token: ' + error.message); setBusy(false); return }
+    setToken(newToken)
+    setBusy(false)
+  }
+
+  async function revoke() {
+    if (!token) return
+    setBusy(true)
+    await supabase.from('user_tokens').update({ revoked: true }).eq('token', token)
+    setToken(null)
+    setBusy(false)
+  }
+
+  function copy() {
+    if (!siriUrl) return
+    void navigator.clipboard.writeText(siriUrl).then(() => {
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    })
+  }
+
+  const pill: React.CSSProperties = {
+    height: 28, padding: '0 11px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
+    fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+    background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
+  }
+
+  return (
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+      <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 10 }}>
+        SIRI SHORTCUTS
+      </span>
+      <p style={{ margin: '0 0 14px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.6, maxWidth: 660 }}>
+        Say "Hey Siri, ask Professor" and Siri reads the answer aloud. One-time setup: generate a
+        token here, then paste the URL into a Shortcut on your iPhone — five taps.
+      </p>
+
+      {loading ? (
+        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>Loading…</p>
+      ) : !token ? (
+        <button style={{ ...pill, background: 'var(--sb-accent)', color: '#fff', border: 'none' }}
+          disabled={busy} onClick={() => void generate()}>
+          {busy ? 'Generating…' : 'Generate token'}
+        </button>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 720 }}>
+          {/* URL row */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <code style={{
+              flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
+              background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
+              borderRadius: 'var(--sb-r-chip)', padding: '7px 9px',
+            }}>
+              {siriUrl || 'No Supabase address — check VITE_SUPABASE_URL'}
+            </code>
+            <button style={pill} onClick={copy} disabled={!siriUrl}>
+              {copied ? 'Copied' : 'Copy URL'}
+            </button>
+            <button style={{ ...pill, color: 'var(--sb-negative)' }} disabled={busy} onClick={() => void revoke()}>
+              Revoke
+            </button>
+          </div>
+
+          {/* 5 setup steps */}
+          <ol style={{ margin: 0, paddingLeft: 18, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.8 }}>
+            <li>On iPhone, open <b>Shortcuts</b> → tap <b>+</b> → name it <em>Ask Professor</em>.</li>
+            <li>Add action <b>Ask for Input</b> — set prompt to <em>"Ask Professor:"</em>, type <b>Text</b>.</li>
+            <li>Add action <b>Get Contents of URL</b> — paste the URL above into the URL field, then
+              append the <em>Shortcut Input</em> magic variable so the full URL ends with <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)' }}>&q=‹voice input›</code>.
+              Method stays <b>GET</b>.
+            </li>
+            <li>Add action <b>Speak Text</b> — set the text to the result from step 3 (the blue
+              <em>Contents of URL</em> variable).</li>
+            <li>Tap the Siri icon (top-right) → record the phrase <em>"Ask Professor"</em> → tap <b>Done</b>.</li>
+          </ol>
+
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>
+            The URL is the whole credential. Revoke it to stop it working. Generating a new one
+            does not invalidate the old — revoke first if you want to rotate.
+          </p>
+        </div>
+      )}
+      {err && <p style={{ margin: '8px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)' }}>{err}</p>}
+    </div>
+  )
+}
+
 const DEFAULT_INTEGRATIONS: Integration[] = [
   { id: 'notion',      name: 'Notion',      emoji: '📝', status: 'connected',    account: 'Bahaa · 4 databases',            tags: ['Tasks database', 'Meeting notes', 'Weekly review'], syncMode: 'two-way', enabled: true  },
   { id: 'asana',       name: 'Asana',       emoji: '🎯', status: 'connected',    account: 'DX Technologies workspace',       tags: ['3 projects', 'My tasks', 'Due dates'],              syncMode: 'import',  enabled: true  },
@@ -4502,6 +4633,9 @@ export function Settings() {
           </Card>
           <Card icon={RefreshCw} title="Sync rules" sub="How often, where things land, who wins">
             <SyncRulesSection />
+          </Card>
+          <Card icon={Mic} title="Siri Shortcuts" sub="Talk to Professor through Hey Siri">
+            <SiriBlock />
           </Card>
         </div>
       </div>

@@ -810,7 +810,8 @@ async function runAgent(
   const today = todayISO()
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10)
   const systemPrompt = `CRITICAL RULE — LANGUAGE: You MUST reply in the exact same language the user wrote in.
-- User writes Arabic → your ENTIRE reply must be in Arabic (no English words mixed in)
+- User writes Arabic → your ENTIRE reply must be in Arabic (no English words mixed in).
+  Use Egyptian dialect (اللهجة المصرية): "النهارده / امبارح / إيه / ده / دي / عايز / طب / بقى / يلا / مش عارف / تمام / حلو / أيوه / لأ / زي ما قلت". Natural Egyptian — not Gulf, not formal MSA.
 - User writes English → reply in English
 - This overrides everything. Check the language of the user's message first, before doing anything else.
 
@@ -836,15 +837,15 @@ BUYING SOMETHING FLOW — when the user says they bought/purchased/paid for some
    - On their next reply naming a category → call add_transaction again with just category_name to update it... actually use a note in the reply that the category can be set in the app, and suggest the top match.
 
 IMPORTANT — understand natural speech (Arabic and English):
-- "yesterday", "last night", "this morning" / "امبارح", "الليلة الماضية", "الصبح" → use the right date (${yesterday} for yesterday)
-- "water 600ml" / "مية 600 مل" → log_habit(habit_name="water", quantity=600)
+- "yesterday", "last night", "this morning" / "امبارح", "امبارح بالليل", "الصبح" → use the right date (${yesterday} for yesterday)
+- "water 600ml" / "مية 600 مل" / "شربت 600 مية" → log_habit(habit_name="water", quantity=600)
 - "water 600ml yesterday" / "مية 600 مل امبارح" → log_habit(habit_name="water", quantity=600, date="${yesterday}")
 - Multiple habits in one message → call log_habit multiple times in parallel, one per habit
-- "add call Ahmed" / "أضف مهمة اتصل بأحمد" → add_task
-- "what do I have today" / "إيه اللي عندي النهارده" → get_today, then get_calendar_events(days_ahead=1)
-- "spent 200 on lunch" / "صرفت 200 على الغداء" → add_transaction(amount=200, payee="lunch")
-- "what's on my calendar" / "فيه إيه في التقويم" → get_calendar_events
-- "what's on my shopping list" / "إيه في قايمة التسوق" → get_shopping_lists, then get_shopping_items
+- "add call Ahmed" / "ضيف مهمة كلم أحمد" / "أضف مهمة اتصل بأحمد" → add_task
+- "what do I have today" / "إيه اللي عندي النهارده" / "فيه إيه النهارده" → get_today, then get_calendar_events(days_ahead=1)
+- "spent 200 on lunch" / "صرفت 200 على الغداء" / "دفعت 200 على الأكل" → add_transaction(amount=200, payee="lunch")
+- "what's on my calendar" / "فيه إيه في التقويم" / "ماله التقويم النهارده" → get_calendar_events
+- "what's on my shopping list" / "إيه في قايمة التسوق" / "عايز أشوف قايمة الشراء" → get_shopping_lists, then get_shopping_items
 - MARKING AS PURCHASED — always include final_price and store_name in mark_shopping_item. If the user said "bought milk for 25 at Carrefour" → final_price=25, store_name="Carrefour". If price or store is missing and the item was on the list, ask for the missing one before calling.
 - ADDING ITEMS — always follow this flow:
   1. Call get_shopping_lists to see what lists exist
