@@ -99,7 +99,8 @@ async function resolveToken(req: Request): Promise<string | null> {
 /** Extract the natural-language text from ?text= or a JSON POST body. */
 async function extractText(req: Request): Promise<string> {
   const url   = new URL(req.url)
-  const qText = url.searchParams.get('text')?.trim()
+  // Accept both ?q= (Siri Shortcut format) and ?text=
+  const qText = (url.searchParams.get('q') ?? url.searchParams.get('text'))?.trim()
   if (qText) return qText
 
   if (req.method === 'POST') {
@@ -107,7 +108,7 @@ async function extractText(req: Request): Promise<string> {
     if (ct.includes('application/json')) {
       try {
         const body = await req.json() as Record<string, unknown>
-        const t = (body.text ?? body.query ?? body.message ?? '') as string
+        const t = (body.text ?? body.q ?? body.query ?? body.message ?? '') as string
         return t.trim()
       } catch { /* fall through */ }
     } else {
