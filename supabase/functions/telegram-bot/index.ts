@@ -170,26 +170,27 @@ async function toolLogHabit(userId: string, args: Record<string, unknown>): Prom
   const habit = candidates[0]
   const date  = (args.date as string | undefined) ?? todayISO()
   const qty   = (args.quantity as number | undefined) ?? 1
-  const done  = habit.goal ? qty >= habit.goal : true
 
-  // Check for an existing log on this date
+  // Read existing log first so we can accumulate quantity rather than replace
   const { data: existing } = await sb.from('habit_logs')
-    .select('id')
+    .select('id, quantity')
     .eq('habit_id', habit.id)
     .eq('date', date)
     .maybeSingle()
 
-  const existingId = (existing as { id: string } | null)?.id
+  const existingRow = existing as { id: string; quantity: number | null } | null
+  const totalQty = habit.goal ? (existingRow?.quantity ?? 0) + qty : qty
+  const done  = habit.goal ? totalQty >= habit.goal : true
 
   let writeError: { message: string } | null = null
-  if (existingId) {
+  if (existingRow?.id) {
     const { error } = await sb.from('habit_logs')
-      .update({ quantity: qty, completed: done })
-      .eq('id', existingId)
+      .update({ quantity: totalQty, completed: done })
+      .eq('id', existingRow.id)
     writeError = error
   } else {
     const { error } = await sb.from('habit_logs')
-      .insert({ user_id: userId, habit_id: habit.id, date, quantity: qty, completed: done })
+      .insert({ user_id: userId, habit_id: habit.id, date, quantity: totalQty, completed: done })
     writeError = error
   }
 
@@ -203,7 +204,7 @@ async function toolLogHabit(userId: string, args: Record<string, unknown>): Prom
     .maybeSingle()
 
   const s = saved as { quantity: number | null; completed: boolean } | null
-  const savedQty = s?.quantity ?? qty
+  const savedQty = s?.quantity ?? totalQty
   const goalNote = habit.goal
     ? (s?.completed ? ' ✓ goal reached!' : ` (${savedQty}/${habit.goal}${habit.unit ? ' ' + habit.unit : ''})`)
     : ' ✓'
@@ -781,6 +782,8 @@ IMPORTANT — understand natural speech (Arabic and English):
 
 What you CAN do: tasks (list, add, complete), habits (log with quantities and past dates), log expenses/income, calendar events, today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read).
 What you CANNOT do: read financial balances or history — say so briefly if asked, don't apologise.
+
+LIVE DATA — ALWAYS CALL TOOLS: For any question about current state (habits logged today, tasks open, today's schedule, shopping list contents, finance totals) — you MUST call the relevant tool to get FRESH data from the database. NEVER answer these from conversation history — the data changes every minute. History is ONLY for understanding references like "that habit", "the task I just added", "mark it done" — not for reporting current counts or values.
 
 Reply style: short, warm, direct. No markdown headers.
 - Always present any list of items — tasks, habits, emails, events, shopping items, results — as bullet points (use · or -).
