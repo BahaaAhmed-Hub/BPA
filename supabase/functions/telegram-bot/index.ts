@@ -361,7 +361,7 @@ async function toolGetCalendarEvents(userId: string, args: Record<string, unknow
   if (!calRes.ok) return `Calendar error (${calRes.status}). Try again in a moment.`
 
   const calData = await calRes.json() as {
-    items?: { summary?: string; start?: { dateTime?: string; date?: string } }[]
+    items?: { id?: string; summary?: string; start?: { dateTime?: string; date?: string } }[]
   }
   const events = calData.items ?? []
   if (!events.length) return `No events in the next ${daysAhead} days.`
@@ -389,7 +389,7 @@ async function toolGetCalendarEvents(userId: string, args: Record<string, unknow
   }
 
   return events.map(e =>
-    `${e.summary ?? 'Untitled'} — ${fmtDT(e.start ?? {})}`
+    `[${(e.id ?? '').slice(0, 12)}] ${e.summary ?? 'Untitled'} — ${fmtDT(e.start ?? {})}`
   ).join('\n')
 }
 
@@ -544,6 +544,150 @@ async function toolMarkShoppingItem(userId: string, args: Record<string, unknown
     : 'Marked as still needed.'
 }
 
+// ── Habit full CRUD ───────────────────────────────────────────────────────────
+
+async function toolCreateHabit(userId: string, args: Record<string, unknown>): Promise<string> {
+  const { error } = await sb.from('habits').insert({
+    user_id:   userId,
+    name:      args.name,
+    goal:      args.goal      ?? null,
+    unit:      args.unit      ?? null,
+    is_active: true,
+  })
+  if (error) return `Error: ${error.message}`
+  return `Created habit "${args.name}"${args.goal ? ` (goal: ${args.goal}${args.unit ? ' ' + args.unit : ''})` : ''}.`
+}
+
+async function toolUpdateHabit(userId: string, args: Record<string, unknown>): Promise<string> {
+  const { data: matches, error: fe } = await sb.from('habits')
+    .select('id, name').eq('user_id', userId).eq('is_active', true)
+    .ilike('name', `%${args.habit_name}%`)
+  if (fe) return `Error: ${fe.message}`
+  if (!matches?.length) return `No active habit matching "${args.habit_name}".`
+  const habit = (matches as { id: string; name: string }[])[0]
+  const updates: Record<string, unknown> = {}
+  if (args.new_name !== undefined) updates.name = args.new_name
+  if (args.new_goal !== undefined) updates.goal = args.new_goal
+  if (args.new_unit !== undefined) updates.unit = args.new_unit
+  if (!Object.keys(updates).length) return 'No changes specified.'
+  const { error } = await sb.from('habits').update(updates).eq('id', habit.id).eq('user_id', userId)
+  if (error) return `Error: ${error.message}`
+  return `Updated "${habit.name}" ✓`
+}
+
+async function toolDeactivateHabit(userId: string, args: Record<string, unknown>): Promise<string> {
+  const { data: matches, error: fe } = await sb.from('habits')
+    .select('id, name').eq('user_id', userId).eq('is_active', true)
+    .ilike('name', `%${args.habit_name}%`)
+  if (fe) return `Error: ${fe.message}`
+  if (!matches?.length) return `No active habit matching "${args.habit_name}".`
+  const habit = (matches as { id: string; name: string }[])[0]
+  const { error } = await sb.from('habits').update({ is_active: false }).eq('id', habit.id).eq('user_id', userId)
+  if (error) return `Error: ${error.message}`
+  return `"${habit.name}" deactivated. Logs are kept — you can reactivate from the app.`
+}
+
+async function toolGetHabitLogs(userId: string, args: Record<string, unknown>): Promise<string> {
+  const { data: matches, error: fe } = await sb.from('habits')
+    .select('id, name, goal, unit').eq('user_id', userId)
+    .ilike('name', `%${args.habit_name}%`)
+  if (fe) return `Error: ${fe.message}`
+  if (!matches?.length) return `No habit matching "${args.habit_name}".`
+  const habit = (matches as { id: string; name: string; goal: number | null; unit: string | null }[])[0]
+  const days = Math.min((args.days as number | undefined) ?? 7, 30)
+  const since = new Date(Date.now() - days * 86400e3).toISOString().slice(0, 10)
+  const { data: logs, error: le } = await sb.from('habit_logs')
+    .select('date, quantity, completed').eq('habit_id', habit.id)
+    .gte('date', since).order('date', { ascending: false })
+  if (le) return `Error: ${le.message}`
+  if (!logs?.length) return `No logs for "${habit.name}" in the last ${days} days.`
+  const rows = (logs as { date: string; quantity: number | null; completed: boolean }[])
+    .map(l => {
+      const qty = l.quantity != null ? ` ${l.quantity}${habit.unit ? ' ' + habit.unit : ''}` : ''
+      return `${l.completed ? '✓' : '○'} ${l.date}${qty}`
+    })
+  const done = rows.filter(r => r.startsWith('✓')).length
+  return `*${habit.name}* — last ${days} days (${done}/${rows.length} done):\n${rows.join('\n')}`
+}
+
+// ── Task full CRUD ─────────────────────────────────────────────────────────────
+
+async function toolUpdateTask(userId: string, args: Record<string, unknown>): Promise<string> {
+  const updates: Record<string, unknown> = {}
+  if (args.title    !== undefined) updates.title    = args.title
+  if (args.quadrant !== undefined) updates.quadrant = args.quadrant
+  if (args.due_date !== undefined) updates.due_date = args.due_date === '' ? null : args.due_date
+  if (args.notes    !== undefined) updates.notes    = args.notes
+  if (!Object.keys(updates).length) return 'No changes specified.'
+  const { error } = await sb.from('tasks').update(updates).eq('id', args.task_id).eq('user_id', userId)
+  if (error) return `Error: ${error.message}`
+  return 'Task updated ✓'
+}
+
+async function toolDeleteTask(userId: string, args: Record<string, unknown>): Promise<string> {
+  const { error } = await sb.from('tasks').delete().eq('id', args.task_id).eq('user_id', userId)
+  if (error) return `Error: ${error.message}`
+  return 'Task deleted ✓'
+}
+
+// ── Calendar full CRUD ─────────────────────────────────────────────────────────
+
+async function toolCreateCalendarEvent(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+  const tz = (args.timezone as string | undefined) ?? 'Africa/Cairo'
+  const event: Record<string, unknown> = { summary: args.summary }
+  if (args.description) event.description = args.description
+  if (args.location)    event.location    = args.location
+  if (args.start_date) {
+    event.start = { date: args.start_date }
+    event.end   = { date: (args.end_date ?? args.start_date) as string }
+  } else {
+    event.start = { dateTime: args.start_datetime, timeZone: tz }
+    event.end   = { dateTime: args.end_datetime,   timeZone: tz }
+  }
+  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(event),
+  })
+  if (!res.ok) return `Calendar error (${res.status}).`
+  const ev = await res.json() as { id: string; summary?: string }
+  return `Created "${ev.summary}" on your calendar [${(ev.id ?? '').slice(0, 12)}] ✓`
+}
+
+async function toolUpdateCalendarEvent(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+  const tz = (args.timezone as string | undefined) ?? 'Africa/Cairo'
+  const patch: Record<string, unknown> = {}
+  if (args.summary     !== undefined) patch.summary     = args.summary
+  if (args.description !== undefined) patch.description = args.description
+  if (args.location    !== undefined) patch.location    = args.location
+  if (args.start_datetime) {
+    patch.start = { dateTime: args.start_datetime, timeZone: tz }
+    if (args.end_datetime) patch.end = { dateTime: args.end_datetime, timeZone: tz }
+  }
+  if (!Object.keys(patch).length) return 'No changes specified.'
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(args.event_id as string)}`,
+    { method: 'PATCH', headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }
+  )
+  if (!res.ok) return `Update failed (${res.status}).`
+  return 'Event updated ✓'
+}
+
+async function toolDeleteCalendarEvent(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(args.event_id as string)}`,
+    { method: 'DELETE', headers: { Authorization: `Bearer ${g.token}` } }
+  )
+  if (!res.ok && res.status !== 204) return `Delete failed (${res.status}).`
+  return 'Event deleted ✓'
+}
+
 // ── Mail tools ────────────────────────────────────────────────────────────────
 
 async function toolGetEmails(userId: string, args: Record<string, unknown>): Promise<string> {
@@ -628,6 +772,102 @@ async function toolMarkEmailRead(userId: string, args: Record<string, unknown>):
     return `Failed (${r.status}).`
   }
   return 'Marked as read ✓'
+}
+
+async function toolReadEmail(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+  const r = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${args.message_id}?format=full`,
+    { headers: { Authorization: `Bearer ${g.token}` } }
+  )
+  if (!r.ok) return `Failed to read email (${r.status}).`
+  const m = await r.json() as {
+    id: string; threadId: string; snippet?: string
+    payload?: {
+      headers?: { name: string; value: string }[]
+      body?: { data?: string }
+      parts?: { mimeType: string; body?: { data?: string }; parts?: unknown[] }[]
+    }
+  }
+  const hdrs    = m.payload?.headers ?? []
+  const subject = hdrs.find(h => h.name === 'Subject')?.value    ?? '(no subject)'
+  const from    = hdrs.find(h => h.name === 'From')?.value       ?? ''
+  const date    = hdrs.find(h => h.name === 'Date')?.value       ?? ''
+  const msgId   = hdrs.find(h => h.name === 'Message-ID')?.value ?? ''
+
+  type Part = { mimeType: string; body?: { data?: string }; parts?: Part[] }
+  function extractText(p: Part): string {
+    if (p.mimeType === 'text/plain' && p.body?.data)
+      return atob(p.body.data.replace(/-/g, '+').replace(/_/g, '/'))
+    if (p.parts) for (const c of p.parts) { const t = extractText(c); if (t) return t }
+    return ''
+  }
+  const body = m.payload ? extractText(m.payload as Part) || (m.snippet ?? '') : (m.snippet ?? '')
+  return [`From: ${from}`, `Subject: ${subject}`, `Date: ${date}`, `Message-ID: ${msgId}`, `Thread-ID: ${m.threadId}`, '', body.slice(0, 3000)].join('\n')
+}
+
+function _toBase64url(str: string): string {
+  const bytes = new TextEncoder().encode(str)
+  let bin = ''
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+async function toolSendEmail(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+  const lines = [
+    `To: ${args.to}`,
+    `Subject: ${args.subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset=utf-8',
+  ]
+  if (args.in_reply_to) {
+    lines.push(`In-Reply-To: ${args.in_reply_to}`)
+    lines.push(`References: ${args.in_reply_to}`)
+  }
+  lines.push('', String(args.body ?? ''))
+  const raw = _toBase64url(lines.join('\r\n'))
+  const payload: Record<string, unknown> = { raw }
+  if (args.thread_id) payload.threadId = args.thread_id
+  const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    if (res.status === 403) return "Can't send — please reconnect Google with mail permissions in the Professor app."
+    return `Send failed (${res.status}).`
+  }
+  return `Email sent to ${args.to} ✓`
+}
+
+async function toolTrashEmail(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+  const res = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${args.message_id}/trash`,
+    { method: 'POST', headers: { Authorization: `Bearer ${g.token}` } }
+  )
+  if (!res.ok) return `Trash failed (${res.status}).`
+  return 'Moved to trash ✓'
+}
+
+async function toolStarEmail(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+  const star = args.starred !== false
+  const res = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${args.message_id}/modify`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(star ? { addLabelIds: ['STARRED'] } : { removeLabelIds: ['STARRED'] }),
+    }
+  )
+  if (!res.ok) return `Failed (${res.status}).`
+  return star ? 'Starred ✓' : 'Unstarred ✓'
 }
 
 // ── Claude agent ──────────────────────────────────────────────────────────────
@@ -788,6 +1028,158 @@ const CLAUDE_TOOLS = [
       },
     },
   },
+  // ── Habit full CRUD ──
+  {
+    name:        'create_habit',
+    description: 'Create a new habit to track.',
+    input_schema: {
+      type: 'object', required: ['name'],
+      properties: {
+        name: { type: 'string' },
+        goal: { type: 'number', description: 'Target amount per day (optional)' },
+        unit: { type: 'string', description: 'Unit, e.g. glasses, km, minutes (optional)' },
+      },
+    },
+  },
+  {
+    name:        'update_habit',
+    description: 'Rename a habit or change its goal/unit.',
+    input_schema: {
+      type: 'object', required: ['habit_name'],
+      properties: {
+        habit_name: { type: 'string', description: 'Current habit name (partial OK)' },
+        new_name:   { type: 'string' },
+        new_goal:   { type: 'number' },
+        new_unit:   { type: 'string' },
+      },
+    },
+  },
+  {
+    name:        'deactivate_habit',
+    description: 'Deactivate (stop tracking) a habit. Logs are kept.',
+    input_schema: {
+      type: 'object', required: ['habit_name'],
+      properties: { habit_name: { type: 'string' } },
+    },
+  },
+  {
+    name:        'get_habit_logs',
+    description: 'View recent log history for a habit.',
+    input_schema: {
+      type: 'object', required: ['habit_name'],
+      properties: {
+        habit_name: { type: 'string' },
+        days: { type: 'number', description: 'How many days back (default 7, max 30)' },
+      },
+    },
+  },
+  // ── Task update / delete ──
+  {
+    name:        'update_task',
+    description: 'Update a task\'s title, quadrant, due date, or notes. Get task_id from get_tasks.',
+    input_schema: {
+      type: 'object', required: ['task_id'],
+      properties: {
+        task_id:  { type: 'string' },
+        title:    { type: 'string' },
+        quadrant: { type: 'string', enum: ['do', 'schedule', 'delegate', 'dump'] },
+        due_date: { type: 'string', description: 'YYYY-MM-DD, or empty string to clear' },
+        notes:    { type: 'string' },
+      },
+    },
+  },
+  {
+    name:        'delete_task',
+    description: 'Permanently delete a task. Get task_id from get_tasks.',
+    input_schema: {
+      type: 'object', required: ['task_id'],
+      properties: { task_id: { type: 'string' } },
+    },
+  },
+  // ── Calendar full CRUD ──
+  {
+    name:        'create_calendar_event',
+    description: 'Create a new event on Google Calendar.',
+    input_schema: {
+      type: 'object', required: ['summary'],
+      properties: {
+        summary:        { type: 'string', description: 'Event title' },
+        start_datetime: { type: 'string', description: 'ISO 8601 with offset, e.g. 2026-09-20T14:00:00+03:00' },
+        end_datetime:   { type: 'string', description: 'ISO 8601 with offset' },
+        start_date:     { type: 'string', description: 'YYYY-MM-DD for all-day events (use instead of start_datetime)' },
+        end_date:       { type: 'string', description: 'YYYY-MM-DD for all-day events' },
+        description:    { type: 'string' },
+        location:       { type: 'string' },
+        timezone:       { type: 'string', description: 'IANA timezone, defaults to Africa/Cairo' },
+      },
+    },
+  },
+  {
+    name:        'update_calendar_event',
+    description: 'Update an existing calendar event. Get event_id from get_calendar_events.',
+    input_schema: {
+      type: 'object', required: ['event_id'],
+      properties: {
+        event_id:       { type: 'string', description: 'Event ID from get_calendar_events (12-char prefix)' },
+        summary:        { type: 'string' },
+        start_datetime: { type: 'string', description: 'ISO 8601 with offset' },
+        end_datetime:   { type: 'string', description: 'ISO 8601 with offset' },
+        description:    { type: 'string' },
+        location:       { type: 'string' },
+        timezone:       { type: 'string' },
+      },
+    },
+  },
+  {
+    name:        'delete_calendar_event',
+    description: 'Delete a calendar event. Get event_id from get_calendar_events.',
+    input_schema: {
+      type: 'object', required: ['event_id'],
+      properties: { event_id: { type: 'string' } },
+    },
+  },
+  // ── Mail extended ──
+  {
+    name:        'read_email',
+    description: 'Read the full body of an email. Call this before replying to see the content and get the Message-ID and Thread-ID needed for send_email.',
+    input_schema: {
+      type: 'object', required: ['message_id'],
+      properties: { message_id: { type: 'string' } },
+    },
+  },
+  {
+    name:        'send_email',
+    description: 'Send a new email or reply to one. For replies, pass thread_id and in_reply_to (Message-ID) from read_email.',
+    input_schema: {
+      type: 'object', required: ['to', 'subject', 'body'],
+      properties: {
+        to:           { type: 'string', description: 'Recipient email address' },
+        subject:      { type: 'string' },
+        body:         { type: 'string', description: 'Plain text body' },
+        thread_id:    { type: 'string', description: 'Thread-ID from read_email — for replies' },
+        in_reply_to:  { type: 'string', description: 'Message-ID from read_email — for replies' },
+      },
+    },
+  },
+  {
+    name:        'trash_email',
+    description: 'Move an email to the trash.',
+    input_schema: {
+      type: 'object', required: ['message_id'],
+      properties: { message_id: { type: 'string' } },
+    },
+  },
+  {
+    name:        'star_email',
+    description: 'Star or unstar an email.',
+    input_schema: {
+      type: 'object', required: ['message_id'],
+      properties: {
+        message_id: { type: 'string' },
+        starred:    { type: 'boolean', description: 'true to star (default), false to unstar' },
+      },
+    },
+  },
   {
     name:        'get_emails',
     description: 'List emails from Gmail. Defaults to unread inbox. Can search with a query.',
@@ -891,7 +1283,24 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "mark it as read" / "علّم مقروء" → mark_email_read(message_id=...)
 - Never ask the user to rephrase. When the user lists multiple things, call tools in parallel.
 
-What you CAN do: tasks, habits, log expenses (with category), calendar, shopping lists, email.
+What you CAN do:
+- Habits: list, log, create, rename, change goal/unit, deactivate, view history
+- Tasks: list, add, complete, update (title/quadrant/due date/notes), delete
+- Calendar: list events (with IDs), create event, update event, delete event
+- Finance: log expenses with category (cannot read balances or history)
+- Shopping: full shopping list management
+- Email: list, read full body, send new email, reply, archive, trash, star/unstar, mark read
+
+CALENDAR WORKFLOW: When the user asks to create/update/delete an event:
+- Use ISO 8601 datetimes with +03:00 offset for Cairo (e.g. 2026-09-20T14:00:00+03:00)
+- For update/delete: first call get_calendar_events to find the event ID, then act
+- Confirm with the user before deleting
+
+MAIL REPLY WORKFLOW:
+- call read_email(message_id) first to get the full body, Thread-ID, and Message-ID
+- Use those in send_email(to, subject, body, thread_id, in_reply_to)
+- Subject for replies: prepend "Re: " if not already there
+
 What you CANNOT do: read financial balances or history — say so briefly.
 
 Reply style: short, warm, direct. No markdown headers.
@@ -915,7 +1324,7 @@ Reply style: short, warm, direct. No markdown headers.
       },
       body: JSON.stringify({
         model:      'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
+        max_tokens: 2048,
         system:     systemPrompt,
         tools:      CLAUDE_TOOLS,
         messages,
@@ -969,6 +1378,19 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'complete_task':       return toolCompleteTask(userId, args)
     case 'list_habits':         return toolListHabits(userId)
     case 'log_habit':           return toolLogHabit(userId, args)
+    case 'create_habit':        return toolCreateHabit(userId, args)
+    case 'update_habit':        return toolUpdateHabit(userId, args)
+    case 'deactivate_habit':    return toolDeactivateHabit(userId, args)
+    case 'get_habit_logs':      return toolGetHabitLogs(userId, args)
+    case 'update_task':         return toolUpdateTask(userId, args)
+    case 'delete_task':         return toolDeleteTask(userId, args)
+    case 'create_calendar_event': return toolCreateCalendarEvent(userId, args)
+    case 'update_calendar_event': return toolUpdateCalendarEvent(userId, args)
+    case 'delete_calendar_event': return toolDeleteCalendarEvent(userId, args)
+    case 'read_email':          return toolReadEmail(userId, args)
+    case 'send_email':          return toolSendEmail(userId, args)
+    case 'trash_email':         return toolTrashEmail(userId, args)
+    case 'star_email':          return toolStarEmail(userId, args)
     case 'get_finance_categories': return toolGetFinanceCategories(userId, args)
     case 'add_transaction':        return toolAddTransaction(userId, args)
     case 'get_calendar_events': return toolGetCalendarEvents(userId, args)
