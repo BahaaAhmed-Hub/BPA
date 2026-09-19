@@ -167,14 +167,36 @@ async function toolCompleteTask(userId: string, args: Record<string, unknown>): 
   return `Done ✓ — task marked as ${args.status}.`
 }
 
-async function toolLogHabit(userId: string, args: Record<string, unknown>): Promise<string> {
-  const { data: matches } = await sb.from('habits')
+async function toolListHabits(userId: string): Promise<string> {
+  const { data } = await sb.from('habits')
     .select('id, name, goal, unit').eq('user_id', userId).eq('is_active', true)
-    .ilike('name', `%${args.habit_name}%`)
+    .order('sort_order')
+  if (!data?.length) return 'No active habits.'
+  return (data as { id: string; name: string; goal: number | null; unit: string | null }[])
+    .map(h => `· ${h.name}${h.goal ? ` (goal: ${h.goal}${h.unit ? ' ' + h.unit : ''})` : ''}`)
+    .join('\n')
+}
 
-  if (!matches?.length) return `No habit found matching "${args.habit_name}".`
-  const candidates = matches as { id: string; name: string; goal: number | null; unit: string | null }[]
-  if (candidates.length > 1) return `Multiple matches: ${candidates.map(h => h.name).join(', ')}. Be more specific.`
+async function toolLogHabit(userId: string, args: Record<string, unknown>): Promise<string> {
+  // Fetch all active habits and do client-side matching so Arabic synonyms & partial matches work
+  const { data: allHabits } = await sb.from('habits')
+    .select('id, name, goal, unit').eq('user_id', userId).eq('is_active', true)
+
+  const allH = (allHabits ?? []) as { id: string; name: string; goal: number | null; unit: string | null }[]
+  const searchName = String(args.habit_name ?? '').toLowerCase().trim()
+
+  // 1. Exact match (case-insensitive)
+  let candidates = allH.filter(h => h.name.toLowerCase() === searchName)
+  // 2. Substring match
+  if (!candidates.length) candidates = allH.filter(h => h.name.toLowerCase().includes(searchName) || searchName.includes(h.name.toLowerCase()))
+
+  if (!candidates.length) {
+    const names = allH.map(h => `· ${h.name}`).join('\n')
+    return `No habit found matching "${args.habit_name}". Active habits:\n${names}\nCall log_habit again with the exact name from the list above.`
+  }
+  if (candidates.length > 1) {
+    return `Multiple matches: ${candidates.map(h => h.name).join(', ')}. Be more specific.`
+  }
 
   const habit = candidates[0]
   const date  = (args.date as string | undefined) ?? todayISO()
@@ -653,13 +675,18 @@ const CLAUDE_TOOLS = [
     },
   },
   {
+    name:        'list_habits',
+    description: 'List all active habits with their names, goals and units. Call this first when the user mentions a habit and you are not sure of the exact name stored.',
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
     name:        'log_habit',
-    description: 'Log a habit completion. Name can be partial.',
+    description: 'Log a habit completion. If unsure of the exact habit name (e.g. user spoke in Arabic about a habit stored in English), call list_habits first to get the exact name.',
     input_schema: {
       type:     'object',
       required: ['habit_name'],
       properties: {
-        habit_name: { type: 'string' },
+        habit_name: { type: 'string', description: 'The habit name — use the exact name from list_habits if called first' },
         quantity:   { type: 'number' },
         date:       { type: 'string', description: 'YYYY-MM-DD — defaults to today' },
       },
@@ -823,6 +850,9 @@ CONTEXT MEMORY: You have the last several messages of this conversation in your 
 - When the user says "yes", "add it", "the first one", "Groceries", "ok" — check the recent history to understand what they're referring to.
 - Never ask for information the user already gave you earlier in the conversation.
 - A follow-up reply (e.g. "add it" after you asked about a shopping list, or "Food" after you asked about a category) is a direct answer to your last question — act on it immediately.
+- When the user asks "what did we do?" / "what were my last actions?" / "what did you just do?" / "كنا بنعمل إيه" / "إيه اللي حصل" → look at the actual conversation history above, summarize the actions that were completed (tasks added, habits logged, transactions recorded, etc.). NEVER say you don't have access to previous messages — the history IS there in the conversation above.
+
+HABITS — IMPORTANT: Habit names in the database may be in English while the user speaks Arabic (or vice versa). When the user mentions a habit by description ("المية", "الماء", "الرياضة", "نوم") → call list_habits first to see the actual stored names, then use the exact stored name in log_habit. Never guess a name that might not match.
 
 BUYING SOMETHING FLOW — when the user says they bought/purchased/paid for something with a price:
 1. In parallel: call get_shopping_items (search for the item) AND get_finance_categories(tx_type="expense")
@@ -838,8 +868,8 @@ BUYING SOMETHING FLOW — when the user says they bought/purchased/paid for some
 
 IMPORTANT — understand natural speech (Arabic and English):
 - "yesterday", "last night", "this morning" / "امبارح", "امبارح بالليل", "الصبح" → use the right date (${yesterday} for yesterday)
-- "water 600ml" / "مية 600 مل" / "شربت 600 مية" → log_habit(habit_name="water", quantity=600)
-- "water 600ml yesterday" / "مية 600 مل امبارح" → log_habit(habit_name="water", quantity=600, date="${yesterday}")
+- "water 600ml" / "مية 600 مل" / "شربت 600 مية" / "شربت 600 ميه" → FIRST call list_habits to find the water habit's exact name, THEN log_habit(habit_name=<exact name>, quantity=600)
+- "water 600ml yesterday" / "مية 600 مل امبارح" / "شربت 600 ميه امبارح" → list_habits then log_habit(..., date="${yesterday}")
 - Multiple habits in one message → call log_habit multiple times in parallel, one per habit
 - "add call Ahmed" / "ضيف مهمة كلم أحمد" / "أضف مهمة اتصل بأحمد" → add_task
 - "what do I have today" / "إيه اللي عندي النهارده" / "فيه إيه النهارده" → get_today, then get_calendar_events(days_ahead=1)
@@ -936,6 +966,7 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'get_tasks':           return toolGetTasks(userId, args)
     case 'add_task':            return toolAddTask(userId, args)
     case 'complete_task':       return toolCompleteTask(userId, args)
+    case 'list_habits':         return toolListHabits(userId)
     case 'log_habit':           return toolLogHabit(userId, args)
     case 'get_finance_categories': return toolGetFinanceCategories(userId, args)
     case 'add_transaction':        return toolAddTransaction(userId, args)
