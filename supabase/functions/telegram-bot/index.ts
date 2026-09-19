@@ -173,7 +173,7 @@ async function toolListHabits(userId: string): Promise<string> {
     .select('*', { count: 'exact', head: true }).eq('user_id', userId)
   if (ce) return `DB error (count): ${ce.message}`
   if (count === 0) {
-    return `You have no habits set up yet. Open the Professor app to create some, then I'll be able to track them here.`
+    return `No habits found in the database. If you have habits in the Professor app, they haven't synced yet. Please open the Professor web app (it syncs automatically on load) and then try again. If you haven't created any habits yet, open the app to add some.`
   }
 
   const { data, error } = await sb.from('habits')

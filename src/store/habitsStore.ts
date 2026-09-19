@@ -305,6 +305,20 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
     try {
       const [dbHabits, logRes] = await Promise.all([loadHabitsFromDB(), loadHabitLogsFromDB()])
       const { logs, quantities } = logRes
+      // If the DB has 0 habits but local has some that are dirty (never pushed),
+      // push them now so they reach the server. Without this branch, a device
+      // whose habits never synced would sit at 0 in the DB forever, because
+      // scheduleHabitsSync is only called from inside the dbHabits.length > 0
+      // block below.
+      if (dbHabits.length === 0) {
+        const local = get().habits
+        const dirty = loadDirty()
+        const localOnly = local.filter(l => dirty.has(l.id))
+        if (localOnly.length > 0) {
+          scheduleHabitsSync(localOnly)
+        }
+      }
+
       if (dbHabits.length > 0) {
         // The server wins, except for habits this device has changed and not
         // yet pushed.
