@@ -173,13 +173,13 @@ async function toolListHabits(userId: string): Promise<string> {
     .select('*', { count: 'exact', head: true }).eq('user_id', userId)
   if (ce) return `DB error (count): ${ce.message}`
   if (count === 0) {
-    return `DIAGNOSTIC: habits table has 0 rows for this user (${userId.slice(0, 8)}…). Habits may only be stored locally in the app and not synced to the server yet. Tell the user: "Your habits aren't in the database yet — please open the Professor app, make sure you're signed in, and let it sync. Then try again."`
+    return `You have no habits set up yet. Open the Professor app to create some, then I'll be able to track them here.`
   }
 
   const { data, error } = await sb.from('habits')
     .select('id, name, goal, unit, is_active').eq('user_id', userId)
   if (error) return `Error fetching habits: ${error.message}`
-  if (!data?.length) return `DIAGNOSTIC: count said ${count} rows but select returned nothing — unexpected.`
+  if (!data?.length) return `No habits found.`
   const rows = data as { id: string; name: string; goal: number | null; unit: string | null; is_active: boolean }[]
   const active   = rows.filter(h => h.is_active)
   const inactive = rows.filter(h => !h.is_active)
