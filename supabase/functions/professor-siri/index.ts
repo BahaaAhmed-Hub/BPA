@@ -238,28 +238,41 @@ You can: check today's tasks and habits (get_today), add a task (add_task), log 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  const corsHeaders = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'text/plain; charset=utf-8' }
+
+  let token = ''
+  let query = ''
+
   if (req.method === 'GET') {
-    const url   = new URL(req.url)
-    const token = url.searchParams.get('token') ?? ''
-    const query = url.searchParams.get('q') ?? url.searchParams.get('text') ?? ''
-
-    if (!token || !query) {
-      return new Response(
-        'Professor Siri endpoint. Usage: ?token=prof_sk_...&q=your+question',
-        { status: 200 }
-      )
+    const url = new URL(req.url)
+    token = url.searchParams.get('token') ?? ''
+    query = url.searchParams.get('q') ?? url.searchParams.get('text') ?? ''
+  } else if (req.method === 'POST') {
+    try {
+      const body = await req.json() as Record<string, string>
+      token = body.token ?? ''
+      query = body.q ?? body.text ?? body.query ?? ''
+    } catch {
+      return new Response('Invalid JSON body.', { status: 400, headers: corsHeaders })
     }
-
-    const userId = await resolveToken(token)
-    if (!userId) {
-      return new Response('Token not found or revoked. Generate a new one in Settings.', {
-        status: 403, headers: { 'Content-Type': 'text/plain' },
-      })
-    }
-
-    const reply = await runSiriAgent(userId, query)
-    return new Response(reply, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+  } else {
+    return new Response('Method not allowed', { status: 405, headers: corsHeaders })
   }
 
-  return new Response('Method not allowed', { status: 405 })
+  if (!token) {
+    return new Response('Missing token. Add ?token=prof_sk_... to the URL.', { status: 400, headers: corsHeaders })
+  }
+  if (!query.trim()) {
+    return new Response('Missing question. Add &q=your+question or send {"q":"..."} in the body.', { status: 400, headers: corsHeaders })
+  }
+
+  const userId = await resolveToken(token)
+  if (!userId) {
+    return new Response('Token not found or revoked. Generate a new one in Settings.', {
+      status: 403, headers: corsHeaders,
+    })
+  }
+
+  const reply = await runSiriAgent(userId, query.trim())
+  return new Response(reply, { headers: corsHeaders })
 })
