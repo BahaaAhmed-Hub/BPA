@@ -251,44 +251,45 @@ async function toolAddTransaction(userId: string, args: Record<string, unknown>)
 const GOOGLE_CLIENT_ID     = Deno.env.get('GOOGLE_CLIENT_ID') ?? ''
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET') ?? ''
 
-async function toolGetCalendarEvents(userId: string, args: Record<string, unknown>): Promise<string> {
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-    return 'Google Calendar is not configured on the server.'
-  }
+// Shared helper — returns access token or an error string
+async function getGoogleToken(userId: string): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET)
+    return { ok: false, error: 'Google is not configured on the server.' }
 
   const { data: account } = await sb
-    .from('google_accounts')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('is_primary', true)
-    .maybeSingle()
+    .from('google_accounts').select('id')
+    .eq('user_id', userId).eq('is_primary', true).maybeSingle()
 
-  if (!account) return "Your Google account isn't connected. Sign in with Google in the Professor app."
+  if (!account)
+    return { ok: false, error: "Your Google account isn't connected. Sign in with Google in the Professor app." }
 
   const { data: tokenRow } = await sb
-    .from('google_account_tokens')
-    .select('refresh_token')
-    .eq('account_id', (account as { id: string }).id)
-    .maybeSingle()
+    .from('google_account_tokens').select('refresh_token')
+    .eq('account_id', (account as { id: string }).id).maybeSingle()
 
   const refreshToken = (tokenRow as { refresh_token: string } | null)?.refresh_token
-  if (!refreshToken) return "I can't reach your calendar right now. Try reconnecting Google in Settings."
+  if (!refreshToken)
+    return { ok: false, error: "Can't reach Google right now. Try reconnecting in Settings." }
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-    method:  'POST',
+    method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body:    new URLSearchParams({
-      grant_type:    'refresh_token',
-      client_id:     GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
-      refresh_token: refreshToken,
+    body: new URLSearchParams({
+      grant_type: 'refresh_token', client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET, refresh_token: refreshToken,
     }),
   })
 
-  const tokenData = await tokenRes.json() as { access_token?: string; error?: string }
-  if (!tokenData.access_token) {
-    return "Calendar token expired. Please reconnect Google in the Professor app."
-  }
+  const td = await tokenRes.json() as { access_token?: string }
+  if (!td.access_token)
+    return { ok: false, error: 'Google token expired. Please reconnect in the Professor app.' }
+
+  return { ok: true, token: td.access_token }
+}
+
+async function toolGetCalendarEvents(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
 
   const daysAhead = Math.min((args.days_ahead as number | undefined) ?? 3, 14)
   const now       = new Date()
@@ -298,7 +299,7 @@ async function toolGetCalendarEvents(userId: string, args: Record<string, unknow
   const calRes = await fetch(
     'https://www.googleapis.com/calendar/v3/calendars/primary/events?' +
     new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '20' }),
-    { headers: { Authorization: `Bearer ${tokenData.access_token}` } }
+    { headers: { Authorization: `Bearer ${g.token}` } }
   )
 
   if (!calRes.ok) return `Calendar error (${calRes.status}). Try again in a moment.`
@@ -448,6 +449,92 @@ async function toolMarkShoppingItem(userId: string, args: Record<string, unknown
   return status === 'purchased' ? '✓ Marked as purchased.' : 'Marked as still needed.'
 }
 
+// ── Mail tools ────────────────────────────────────────────────────────────────
+
+async function toolGetEmails(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+
+  const maxResults = Math.min((args.limit as number | undefined) ?? 10, 20)
+  const q = (args.query as string | undefined) ?? 'is:unread in:inbox'
+
+  const listRes = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?` +
+    new URLSearchParams({ q, maxResults: String(maxResults) }),
+    { headers: { Authorization: `Bearer ${g.token}` } }
+  )
+  if (!listRes.ok) {
+    if (listRes.status === 403) return "Can't read email — please reconnect Google with mail permissions in the Professor app."
+    return `Gmail error (${listRes.status}).`
+  }
+
+  const listData = await listRes.json() as { messages?: { id: string }[] }
+  const ids = listData.messages ?? []
+  if (!ids.length) return 'No emails found.'
+
+  const metas = await Promise.all(ids.slice(0, 10).map(async ({ id }) => {
+    const r = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`,
+      { headers: { Authorization: `Bearer ${g.token}` } }
+    )
+    if (!r.ok) return null
+    const m = await r.json() as {
+      id: string
+      snippet?: string
+      labelIds?: string[]
+      payload?: { headers?: { name: string; value: string }[] }
+    }
+    const headers = m.payload?.headers ?? []
+    const subject = headers.find(h => h.name === 'Subject')?.value ?? '(no subject)'
+    const from    = headers.find(h => h.name === 'From')?.value ?? ''
+    const unread  = m.labelIds?.includes('UNREAD') ? '●' : '○'
+    const snippet = m.snippet ? ` — ${m.snippet.slice(0, 80)}…` : ''
+    return `${unread} [${id.slice(0, 8)}] *${subject}*\n  From: ${from}${snippet}`
+  }))
+
+  return metas.filter(Boolean).join('\n\n')
+}
+
+async function toolArchiveEmail(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+
+  const messageId = args.message_id as string
+  const r = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
+    {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ removeLabelIds: ['INBOX'] }),
+    }
+  )
+  if (!r.ok) {
+    if (r.status === 403) return "Can't archive — please reconnect Google with mail permissions in the Professor app."
+    return `Archive failed (${r.status}).`
+  }
+  return 'Archived ✓'
+}
+
+async function toolMarkEmailRead(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+
+  const messageId = args.message_id as string
+  const r = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
+    {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ removeLabelIds: ['UNREAD'] }),
+    }
+  )
+  if (!r.ok) {
+    if (r.status === 403) return "Can't mark as read — please reconnect Google with mail permissions in the Professor app."
+    return `Failed (${r.status}).`
+  }
+  return 'Marked as read ✓'
+}
+
 // ── Claude agent ──────────────────────────────────────────────────────────────
 
 const CLAUDE_TOOLS = [
@@ -575,6 +662,39 @@ const CLAUDE_TOOLS = [
       },
     },
   },
+  {
+    name:        'get_emails',
+    description: 'List emails from Gmail. Defaults to unread inbox. Can search with a query.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Gmail search query, e.g. "is:unread in:inbox" or "from:boss". Defaults to unread inbox.' },
+        limit: { type: 'number', description: 'Max emails to return (default 10, max 20)' },
+      },
+    },
+  },
+  {
+    name:        'archive_email',
+    description: 'Archive an email (remove from inbox). Get the message_id from get_emails.',
+    input_schema: {
+      type:     'object',
+      required: ['message_id'],
+      properties: {
+        message_id: { type: 'string', description: '8-char or full message id from get_emails' },
+      },
+    },
+  },
+  {
+    name:        'mark_email_read',
+    description: 'Mark an email as read. Get the message_id from get_emails.',
+    input_schema: {
+      type:     'object',
+      required: ['message_id'],
+      properties: {
+        message_id: { type: 'string', description: '8-char or full message id from get_emails' },
+      },
+    },
+  },
 ]
 
 type ContentBlock = { type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }
@@ -590,24 +710,33 @@ async function runAgent(userId: string, userMessage: string): Promise<string> {
 
 Today is ${today}. Yesterday was ${yesterday}.
 
-IMPORTANT — understand natural speech:
-- "yesterday", "last night", "this morning" → use the right date (${yesterday} for yesterday)
-- "water 600ml" → log_habit(habit_name="water", quantity=600)
-- "water 600ml yesterday" → log_habit(habit_name="water", quantity=600, date="${yesterday}")
+LANGUAGE: Detect the user's language from their message and always reply in the same language.
+- If they write in Arabic → reply in Arabic
+- If they write in English → reply in English
+- If they mix → match the dominant language
+
+IMPORTANT — understand natural speech (Arabic and English):
+- "yesterday", "last night", "this morning" / "امبارح", "الليلة الماضية", "الصبح" → use the right date (${yesterday} for yesterday)
+- "water 600ml" / "مية 600 مل" → log_habit(habit_name="water", quantity=600)
+- "water 600ml yesterday" / "مية 600 مل امبارح" → log_habit(habit_name="water", quantity=600, date="${yesterday}")
 - Multiple habits in one message → call log_habit multiple times in parallel, one per habit
-- "add call Ahmed" or "remind me to call Ahmed" → add_task
-- "what do I have today" or "what's on" → get_today, then get_calendar_events(days_ahead=1)
-- "spent 200 on lunch" → add_transaction(amount=200, payee="lunch")
-- "what's on my calendar" or "any meetings?" → get_calendar_events
-- "what's on my shopping list" or "shopping" → get_shopping_lists, then get_shopping_items
-- "add milk to groceries" → add_shopping_item(name="milk", list_name="groceries")
-- "add eggs, bread, and butter" → call add_shopping_item in parallel, one per item
-- "bought the milk" or "got it" → mark_shopping_item(item_name="milk")
+- "add call Ahmed" / "أضف مهمة اتصل بأحمد" → add_task
+- "what do I have today" / "إيه اللي عندي النهارده" → get_today, then get_calendar_events(days_ahead=1)
+- "spent 200 on lunch" / "صرفت 200 على الغداء" → add_transaction(amount=200, payee="lunch")
+- "what's on my calendar" / "فيه إيه في التقويم" → get_calendar_events
+- "what's on my shopping list" / "إيه في قايمة التسوق" → get_shopping_lists, then get_shopping_items
+- "add milk to groceries" / "أضف لبن للجروسيري" → add_shopping_item(name="milk", list_name="groceries")
+- "add eggs, bread, and butter" / "أضف بيض وعيش وزبدة" → call add_shopping_item in parallel, one per item
+- "bought the milk" / "اشتريت اللبن" → mark_shopping_item(item_name="milk")
+- "check my email" / "شوف الإيميلات" → get_emails
+- "show unread" / "الإيميلات الجديدة" → get_emails(query="is:unread in:inbox")
+- "archive that email" / "أرشف الإيميل ده" → archive_email(message_id=...)
+- "mark it as read" / "علّم مقروء" → mark_email_read(message_id=...)
 - Never ask the user to rephrase or use a specific format. Just figure it out.
 - When the user lists multiple things to log or add, call the relevant tool in parallel for each one — never ask them to say it again one at a time.
 
-What you CAN do: tasks (list, add, complete), habits (log with quantities and past dates), log expenses/income, calendar events, today's overview, shopping lists (view, add items, mark bought).
-What you CANNOT do: read financial balances or history, email — say so briefly if asked, don't apologise.
+What you CAN do: tasks (list, add, complete), habits (log with quantities and past dates), log expenses/income, calendar events, today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read).
+What you CANNOT do: read financial balances or history — say so briefly if asked, don't apologise.
 
 Reply style: short, warm, direct. One or two sentences after using a tool. No markdown headers. Bullet points only when listing 3+ things.`
 
@@ -678,6 +807,9 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'get_shopping_items':  return toolGetShoppingItems(userId, args)
     case 'add_shopping_item':   return toolAddShoppingItem(userId, args)
     case 'mark_shopping_item':  return toolMarkShoppingItem(userId, args)
+    case 'get_emails':          return toolGetEmails(userId, args)
+    case 'archive_email':       return toolArchiveEmail(userId, args)
+    case 'mark_email_read':     return toolMarkEmailRead(userId, args)
     default:                    return `Unknown tool: ${name}`
   }
 }
