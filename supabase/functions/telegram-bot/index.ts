@@ -168,11 +168,18 @@ async function toolCompleteTask(userId: string, args: Record<string, unknown>): 
 }
 
 async function toolListHabits(userId: string): Promise<string> {
-  // Fetch all habits (active and inactive) so the agent can see what exists
+  // First do a count-only query to see if anything exists at all
+  const { count, error: ce } = await sb.from('habits')
+    .select('*', { count: 'exact', head: true }).eq('user_id', userId)
+  if (ce) return `DB error (count): ${ce.message}`
+  if (count === 0) {
+    return `DIAGNOSTIC: habits table has 0 rows for this user (${userId.slice(0, 8)}…). Habits may only be stored locally in the app and not synced to the server yet. Tell the user: "Your habits aren't in the database yet — please open the Professor app, make sure you're signed in, and let it sync. Then try again."`
+  }
+
   const { data, error } = await sb.from('habits')
     .select('id, name, goal, unit, is_active').eq('user_id', userId)
   if (error) return `Error fetching habits: ${error.message}`
-  if (!data?.length) return 'No habits found in database.'
+  if (!data?.length) return `DIAGNOSTIC: count said ${count} rows but select returned nothing — unexpected.`
   const rows = data as { id: string; name: string; goal: number | null; unit: string | null; is_active: boolean }[]
   const active   = rows.filter(h => h.is_active)
   const inactive = rows.filter(h => !h.is_active)
