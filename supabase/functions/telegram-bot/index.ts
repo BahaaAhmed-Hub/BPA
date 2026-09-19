@@ -172,16 +172,43 @@ async function toolLogHabit(userId: string, args: Record<string, unknown>): Prom
   const qty   = (args.quantity as number | undefined) ?? 1
   const done  = habit.goal ? qty >= habit.goal : true
 
-  const { error } = await sb.from('habit_logs').upsert({
-    user_id:   userId,
-    habit_id:  habit.id,
-    date,
-    quantity:  qty,
-    completed: done,
-  }, { onConflict: 'habit_id,date' })
+  // Check for an existing log on this date
+  const { data: existing } = await sb.from('habit_logs')
+    .select('id')
+    .eq('habit_id', habit.id)
+    .eq('date', date)
+    .maybeSingle()
 
-  if (error) return `Error: ${error.message}`
-  return `Logged ${habit.name}: ${qty}${habit.unit ? ' ' + habit.unit : ''}${done ? ' ✓' : ''}`
+  const existingId = (existing as { id: string } | null)?.id
+
+  let writeError: { message: string } | null = null
+  if (existingId) {
+    const { error } = await sb.from('habit_logs')
+      .update({ quantity: qty, completed: done })
+      .eq('id', existingId)
+    writeError = error
+  } else {
+    const { error } = await sb.from('habit_logs')
+      .insert({ user_id: userId, habit_id: habit.id, date, quantity: qty, completed: done })
+    writeError = error
+  }
+
+  if (writeError) return `Error: ${writeError.message}`
+
+  // Read back to confirm
+  const { data: saved } = await sb.from('habit_logs')
+    .select('quantity, completed')
+    .eq('habit_id', habit.id)
+    .eq('date', date)
+    .maybeSingle()
+
+  const s = saved as { quantity: number | null; completed: boolean } | null
+  const savedQty = s?.quantity ?? qty
+  const goalNote = habit.goal
+    ? (s?.completed ? ' ✓ goal reached!' : ` (${savedQty}/${habit.goal}${habit.unit ? ' ' + habit.unit : ''})`)
+    : ' ✓'
+
+  return `Logged ${habit.name}${habit.unit ? ': ' + savedQty + ' ' + habit.unit : ''}${goalNote} on ${date}`
 }
 
 async function toolAddTransaction(userId: string, args: Record<string, unknown>): Promise<string> {
