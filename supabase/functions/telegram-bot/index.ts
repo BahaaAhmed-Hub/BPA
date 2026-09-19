@@ -336,6 +336,118 @@ async function toolGetCalendarEvents(userId: string, args: Record<string, unknow
   ).join('\n')
 }
 
+// ── Shopping tools ────────────────────────────────────────────────────────────
+
+async function toolGetShoppingLists(userId: string): Promise<string> {
+  const { data } = await sb.from('shopping_groups')
+    .select('id, name, icon, scheduled_date')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .order('sort_order')
+
+  if (!data?.length) return 'No shopping lists.'
+  const lists = data as { id: string; name: string; icon: string; scheduled_date: string | null }[]
+
+  const counts = await Promise.all(lists.map(l =>
+    sb.from('shopping_items')
+      .select('*', { count: 'exact', head: true })
+      .eq('group_id', l.id)
+      .in('status', ['wanted', 'planned'])
+  ))
+
+  return lists.map((l, i) => {
+    const n = counts[i].count ?? 0
+    const d = l.scheduled_date ? ` · ${l.scheduled_date}` : ''
+    return `${l.icon} ${l.name}${d} — ${n} item${n !== 1 ? 's' : ''} [${l.id.slice(0, 8)}]`
+  }).join('\n')
+}
+
+async function toolGetShoppingItems(userId: string, args: Record<string, unknown>): Promise<string> {
+  let groupId: string | null = null
+
+  if (args.list_name) {
+    const { data: groups } = await sb.from('shopping_groups')
+      .select('id, name').eq('user_id', userId).ilike('name', `%${args.list_name}%`)
+    if (!groups?.length) return `No list found matching "${args.list_name}".`
+    groupId = (groups as { id: string }[])[0].id
+  }
+
+  let q = sb.from('shopping_items')
+    .select('id, name, quantity, unit, status, notes')
+    .eq('user_id', userId)
+    .order('sort_order')
+
+  if (groupId)      q = q.eq('group_id', groupId)
+  if (args.status)  q = q.eq('status', args.status as string)
+  else              q = q.in('status', ['wanted', 'planned'])
+
+  const { data, error } = await q.limit(30)
+  if (error) return `Error: ${error.message}`
+  if (!data?.length) return 'No items.'
+
+  return (data as { id: string; name: string; quantity: number; unit: string | null; status: string; notes: string | null }[])
+    .map(i => {
+      const qty = i.quantity !== 1 ? ` ×${i.quantity}` : ''
+      const unit = i.unit ? ' ' + i.unit : ''
+      const note = i.notes ? ` (${i.notes})` : ''
+      return `${i.status === 'purchased' ? '✓' : '○'} ${i.name}${qty}${unit}${note} [${i.id.slice(0, 8)}]`
+    }).join('\n')
+}
+
+async function toolAddShoppingItem(userId: string, args: Record<string, unknown>): Promise<string> {
+  let groupId: string | null = null
+
+  if (args.list_name) {
+    const { data: groups } = await sb.from('shopping_groups')
+      .select('id').eq('user_id', userId).ilike('name', `%${args.list_name}%`)
+    if (groups?.length) groupId = (groups as { id: string }[])[0].id
+  }
+
+  const { error } = await sb.from('shopping_items').insert({
+    user_id:  userId,
+    group_id: groupId,
+    name:     args.name,
+    quantity: args.quantity ?? 1,
+    unit:     args.unit    ?? null,
+    notes:    args.notes   ?? null,
+    status:   'wanted',
+  })
+
+  if (error) return `Error: ${error.message}`
+  const listPart = args.list_name ? ` to ${args.list_name}` : ''
+  return `Added "${args.name}"${listPart}.`
+}
+
+async function toolMarkShoppingItem(userId: string, args: Record<string, unknown>): Promise<string> {
+  let itemId = args.item_id as string | undefined
+
+  if (!itemId) {
+    const { data } = await sb.from('shopping_items')
+      .select('id, name')
+      .eq('user_id', userId)
+      .ilike('name', `%${args.item_name}%`)
+      .in('status', ['wanted', 'planned'])
+      .limit(3)
+
+    if (!data?.length) return `No item found matching "${args.item_name}".`
+    const candidates = data as { id: string; name: string }[]
+    if (candidates.length > 1)
+      return `Multiple matches: ${candidates.map(i => i.name).join(', ')}. Be more specific.`
+    itemId = candidates[0].id
+  }
+
+  const status = (args.status as string | undefined) ?? 'purchased'
+  const updates: Record<string, unknown> = { status }
+  if (status === 'purchased') updates.purchased_at = new Date().toISOString()
+  if (args.final_price !== undefined) updates.final_price = args.final_price
+
+  const { error } = await sb.from('shopping_items')
+    .update(updates).eq('id', itemId).eq('user_id', userId)
+
+  if (error) return `Error: ${error.message}`
+  return status === 'purchased' ? '✓ Marked as purchased.' : 'Marked as still needed.'
+}
+
 // ── Claude agent ──────────────────────────────────────────────────────────────
 
 const CLAUDE_TOOLS = [
@@ -419,6 +531,50 @@ const CLAUDE_TOOLS = [
       },
     },
   },
+  {
+    name:        'get_shopping_lists',
+    description: 'List all active shopping lists with item counts.',
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name:        'get_shopping_items',
+    description: 'List items in a shopping list. Omit list_name to see all pending items.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        list_name: { type: 'string', description: 'Partial list name (optional)' },
+        status:    { type: 'string', enum: ['wanted', 'planned', 'purchased'] },
+      },
+    },
+  },
+  {
+    name:        'add_shopping_item',
+    description: 'Add an item to a shopping list.',
+    input_schema: {
+      type:     'object',
+      required: ['name'],
+      properties: {
+        name:      { type: 'string' },
+        quantity:  { type: 'number' },
+        unit:      { type: 'string' },
+        notes:     { type: 'string', description: 'Optional note, e.g. brand or size' },
+        list_name: { type: 'string', description: 'Which list to add it to (partial name)' },
+      },
+    },
+  },
+  {
+    name:        'mark_shopping_item',
+    description: 'Mark a shopping item as purchased or back to wanted.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        item_id:     { type: 'string', description: '8-char prefix from get_shopping_items' },
+        item_name:   { type: 'string', description: 'Partial item name if no item_id' },
+        status:      { type: 'string', enum: ['purchased', 'wanted'], description: 'Defaults to purchased' },
+        final_price: { type: 'number', description: 'What it actually cost' },
+      },
+    },
+  },
 ]
 
 type ContentBlock = { type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }
@@ -438,15 +594,20 @@ IMPORTANT — understand natural speech:
 - "yesterday", "last night", "this morning" → use the right date (${yesterday} for yesterday)
 - "water 600ml" → log_habit(habit_name="water", quantity=600)
 - "water 600ml yesterday" → log_habit(habit_name="water", quantity=600, date="${yesterday}")
+- Multiple habits in one message → call log_habit multiple times in parallel, one per habit
 - "add call Ahmed" or "remind me to call Ahmed" → add_task
 - "what do I have today" or "what's on" → get_today, then get_calendar_events(days_ahead=1)
 - "spent 200 on lunch" → add_transaction(amount=200, payee="lunch")
-- "paid 450 at Carrefour" → add_transaction(amount=450, payee="Carrefour")
 - "what's on my calendar" or "any meetings?" → get_calendar_events
+- "what's on my shopping list" or "shopping" → get_shopping_lists, then get_shopping_items
+- "add milk to groceries" → add_shopping_item(name="milk", list_name="groceries")
+- "add eggs, bread, and butter" → call add_shopping_item in parallel, one per item
+- "bought the milk" or "got it" → mark_shopping_item(item_name="milk")
 - Never ask the user to rephrase or use a specific format. Just figure it out.
+- When the user lists multiple things to log or add, call the relevant tool in parallel for each one — never ask them to say it again one at a time.
 
-What you CAN do: tasks (list, add, complete), habits (log with quantities and past dates), log expenses/income, calendar events, today's overview.
-What you CANNOT do: read financial balances or history, email, shopping lists — say so briefly if asked, don't apologise.
+What you CAN do: tasks (list, add, complete), habits (log with quantities and past dates), log expenses/income, calendar events, today's overview, shopping lists (view, add items, mark bought).
+What you CANNOT do: read financial balances or history, email — say so briefly if asked, don't apologise.
 
 Reply style: short, warm, direct. One or two sentences after using a tool. No markdown headers. Bullet points only when listing 3+ things.`
 
@@ -454,7 +615,7 @@ Reply style: short, warm, direct. One or two sentences after using a tool. No ma
     { role: 'user', content: userMessage },
   ]
 
-  for (let turn = 0; turn < 4; turn++) {
+  for (let turn = 0; turn < 6; turn++) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:  'POST',
       headers: {
@@ -513,6 +674,10 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'log_habit':           return toolLogHabit(userId, args)
     case 'add_transaction':     return toolAddTransaction(userId, args)
     case 'get_calendar_events': return toolGetCalendarEvents(userId, args)
+    case 'get_shopping_lists':  return toolGetShoppingLists(userId)
+    case 'get_shopping_items':  return toolGetShoppingItems(userId, args)
+    case 'add_shopping_item':   return toolAddShoppingItem(userId, args)
+    case 'mark_shopping_item':  return toolMarkShoppingItem(userId, args)
     default:                    return `Unknown tool: ${name}`
   }
 }
