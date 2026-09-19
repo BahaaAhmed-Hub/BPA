@@ -319,7 +319,8 @@ Use plain text. No markdown headers. Bold only for emphasis (**like this**). Bul
 
     if (!res.ok) {
       const err = await res.text()
-      return `API error ${res.status}: ${err.slice(0, 300)}`
+      console.error('Anthropic error:', err)
+      return 'Sorry, I ran into a problem. Try again in a moment.'
     }
 
     const data = await res.json() as { stop_reason: string; content: ContentBlock[] }
