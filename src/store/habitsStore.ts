@@ -396,7 +396,15 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
         // If the server returned no logs at all but local has some, the logs
         // never reached the DB (e.g. FK blocked inserts while habits weren't
         // synced). Keep local and push it up rather than wiping it.
-        const dbHasLogs   = Object.keys(logs).some(k => (logs[k] as string[]).length > 0)
+        //
+        // "Has logs" means either completed ticks OR partial quantities — a
+        // quantity-only day (e.g. 300 ml of 2000, not yet complete) has no
+        // entry in `logs` but IS a real DB record; ignoring it made the app
+        // incorrectly treat the DB as empty and push local over it.
+        const dbHasCompletedLogs = Object.keys(logs).some(k => (logs[k] as string[]).length > 0)
+        const dbHasQtyLogs       = quantities != null &&
+          Object.values(quantities).some(byDate => Object.keys(byDate).length > 0)
+        const dbHasLogs   = dbHasCompletedLogs || dbHasQtyLogs
         const localLogs   = loadLogs()
         const localHasLogs = Object.keys(localLogs).some(k => (localLogs[k] as string[]).length > 0)
 
@@ -404,7 +412,23 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
           saveLogs(logs)
           // null means the server has no quantity column yet — leave this
           // device's numbers alone rather than reading absence as zero.
-          if (quantities) saveQuantityLogs(quantities)
+          if (quantities) {
+            // Merge quantities by taking the higher value per habit/date.
+            // Siri or the bot may have added to DB while this device was offline;
+            // blindly replacing local with DB would lose those additions, and
+            // replacing DB with local (on the next push) would undo them.
+            const localQty = loadQuantityLogs()
+            const merged: HabitQuantityLogs = { ...quantities }
+            for (const [hid, byDate] of Object.entries(localQty)) {
+              for (const [date, localVal] of Object.entries(byDate)) {
+                const dbVal = merged[hid]?.[date] ?? 0
+                if (localVal > dbVal) {
+                  merged[hid] = { ...(merged[hid] ?? {}), [date]: localVal }
+                }
+              }
+            }
+            saveQuantityLogs(merged)
+          }
         } else {
           // Push local logs to the server without overwriting them first.
           commitHabitLogs()
