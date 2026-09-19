@@ -168,9 +168,9 @@ async function toolCompleteTask(userId: string, args: Record<string, unknown>): 
 }
 
 async function toolListHabits(userId: string): Promise<string> {
-  const { data } = await sb.from('habits')
+  const { data, error } = await sb.from('habits')
     .select('id, name, goal, unit').eq('user_id', userId).eq('is_active', true)
-    .order('sort_order')
+  if (error) return `Error fetching habits: ${error.message}`
   if (!data?.length) return 'No active habits.'
   return (data as { id: string; name: string; goal: number | null; unit: string | null }[])
     .map(h => `· ${h.name}${h.goal ? ` (goal: ${h.goal}${h.unit ? ' ' + h.unit : ''})` : ''}`)
@@ -179,9 +179,10 @@ async function toolListHabits(userId: string): Promise<string> {
 
 async function toolLogHabit(userId: string, args: Record<string, unknown>): Promise<string> {
   // Fetch all active habits and do client-side matching so Arabic synonyms & partial matches work
-  const { data: allHabits } = await sb.from('habits')
+  const { data: allHabits, error: habitsErr } = await sb.from('habits')
     .select('id, name, goal, unit').eq('user_id', userId).eq('is_active', true)
 
+  if (habitsErr) return `Error fetching habits: ${habitsErr.message}`
   const allH = (allHabits ?? []) as { id: string; name: string; goal: number | null; unit: string | null }[]
   const searchName = String(args.habit_name ?? '').toLowerCase().trim()
 
