@@ -97,22 +97,26 @@ async function logHabit(userId: string, name: string, quantity?: number): Promis
   const done  = habit.goal ? qty >= habit.goal : true
 
   const { data: existing } = await sb.from('habit_logs')
-    .select('id').eq('habit_id', habit.id).eq('date', date).maybeSingle()
-  const id = (existing as { id: string } | null)?.id
+    .select('id, quantity').eq('habit_id', habit.id).eq('date', date).maybeSingle()
+  const existingRow = existing as { id: string; quantity: number | null } | null
+  // Accumulate: Siri calls are stateless so each amount is additive.
+  const totalQty = (existingRow?.quantity ?? 0) + qty
+  const totalDone = habit.goal ? totalQty >= habit.goal : true
 
   let err: { message: string } | null = null
-  if (id) {
-    const { error } = await sb.from('habit_logs').update({ quantity: qty, completed: done }).eq('id', id)
+  if (existingRow?.id) {
+    const { error } = await sb.from('habit_logs')
+      .update({ quantity: totalQty, completed: totalDone }).eq('id', existingRow.id)
     err = error
   } else {
     const { error } = await sb.from('habit_logs')
-      .insert({ user_id: userId, habit_id: habit.id, date, quantity: qty, completed: done })
+      .insert({ user_id: userId, habit_id: habit.id, date, quantity: totalQty, completed: totalDone })
     err = error
   }
 
   if (err) return `Could not log habit: ${err.message}`
-  const goal = habit.goal ? ` (${qty} of ${habit.goal}${habit.unit ? ' ' + habit.unit : ''})` : ''
-  return done
+  const goal = habit.goal ? ` (${totalQty} of ${habit.goal}${habit.unit ? ' ' + habit.unit : ''})` : ''
+  return totalDone
     ? `Logged ${habit.name}${goal} — goal reached!`
     : `Logged ${habit.name}${goal}.`
 }
