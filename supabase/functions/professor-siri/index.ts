@@ -21,15 +21,23 @@ const ANTHROPIC_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
-async function resolveToken(token: string): Promise<string | null> {
+type SiriContext = { role: string; content: string }[]
+
+async function resolveToken(token: string): Promise<{ userId: string; context: SiriContext } | null> {
   if (!token.startsWith('prof_sk_')) return null
   const { data } = await sb
     .from('user_tokens')
-    .select('user_id')
+    .select('user_id, siri_context')
     .eq('token', token)
     .eq('revoked', false)
     .maybeSingle()
-  return (data as { user_id: string } | null)?.user_id ?? null
+  if (!data) return null
+  const row = data as { user_id: string; siri_context: SiriContext | null }
+  return { userId: row.user_id, context: row.siri_context ?? [] }
+}
+
+async function saveContext(token: string, context: SiriContext) {
+  await sb.from('user_tokens').update({ siri_context: context }).eq('token', token)
 }
 
 // ── Minimal tool set for Siri (one-shot voice queries) ───────────────────────
@@ -171,18 +179,27 @@ const SIRI_TOOLS = [
 
 type ContentBlock = { type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }
 
-async function runSiriAgent(userId: string, query: string): Promise<string> {
-  if (!ANTHROPIC_KEY) return 'Professor AI is not configured. Ask your admin to set the Anthropic API key.'
+async function runSiriAgent(
+  userId: string,
+  query: string,
+  history: SiriContext,
+): Promise<{ text: string; updatedHistory: SiriContext }> {
+  if (!ANTHROPIC_KEY) return {
+    text: 'Professor AI is not configured. Ask your admin to set the Anthropic API key.',
+    updatedHistory: history,
+  }
 
   const today     = todayISO()
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10)
 
-  const system = `You are Professor AI, answering a voice query from Siri Shortcuts. Today is ${today}. Yesterday was ${yesterday}.
+  const system = `You are Professor AI, answering voice queries from Siri Shortcuts. Today is ${today}. Yesterday was ${yesterday}.
 Reply in plain spoken sentences — no markdown, no bullet points. Keep it short (1–3 sentences max).
-CRITICAL: reply in the same language the user spoke in. If Arabic, use Egyptian dialect.
+CRITICAL: reply in the same language the user spoke in. If Arabic, use Egyptian dialect (اللهجة المصرية).
+CONTEXT MEMORY: you have the last several messages in your history — use them. If the user says "add it", "yes", "the first one", check the history to understand what they mean.
 You can: check today's tasks and habits (get_today), add a task (add_task), log a habit (log_habit), log an expense (add_expense).`
 
   const messages: { role: string; content: unknown }[] = [
+    ...history.map(h => ({ role: h.role, content: h.content })),
     { role: 'user', content: query },
   ]
 
@@ -203,12 +220,18 @@ You can: check today's tasks and habits (get_today), add a task (add_task), log 
       }),
     })
 
-    if (!res.ok) return 'Something went wrong. Try again in a moment.'
+    if (!res.ok) return { text: 'Something went wrong. Try again in a moment.', updatedHistory: history }
 
     const data = await res.json() as { stop_reason: string; content: ContentBlock[] }
 
     if (data.stop_reason === 'end_turn') {
-      return data.content.find(b => b.type === 'text')?.text?.trim() ?? 'Done.'
+      const text = data.content.find(b => b.type === 'text')?.text?.trim() ?? 'Done.'
+      const updatedHistory: SiriContext = [
+        ...history,
+        { role: 'user', content: query },
+        { role: 'assistant', content: text },
+      ].slice(-20)
+      return { text, updatedHistory }
     }
 
     if (data.stop_reason === 'tool_use') {
@@ -232,7 +255,7 @@ You can: check today's tasks and habits (get_today), add a task (add_task), log 
     }
   }
 
-  return 'Could not process that. Try again.'
+  return { text: 'Could not process that. Try again.', updatedHistory: history }
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -266,13 +289,14 @@ Deno.serve(async (req) => {
     return new Response('Missing question. Add &q=your+question or send {"q":"..."} in the body.', { status: 400, headers: corsHeaders })
   }
 
-  const userId = await resolveToken(token)
-  if (!userId) {
+  const auth = await resolveToken(token)
+  if (!auth) {
     return new Response('Token not found or revoked. Generate a new one in Settings.', {
       status: 403, headers: corsHeaders,
     })
   }
 
-  const reply = await runSiriAgent(userId, query.trim())
-  return new Response(reply, { headers: corsHeaders })
+  const { text, updatedHistory } = await runSiriAgent(auth.userId, query.trim(), auth.context)
+  await saveContext(token, updatedHistory)
+  return new Response(text, { headers: corsHeaders })
 })
