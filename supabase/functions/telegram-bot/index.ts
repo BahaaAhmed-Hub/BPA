@@ -137,13 +137,11 @@ async function toolGetTasks(userId: string, args: Record<string, unknown>): Prom
 
 async function toolAddTask(userId: string, args: Record<string, unknown>): Promise<string> {
   const { data, error } = await sb.from('tasks').insert({
-    user_id:    userId,
-    title:      args.title,
-    quadrant:   args.quadrant ?? 'dump',
-    due_date:   args.due_date ?? null,
-    status:     'todo',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    user_id:  userId,
+    title:    args.title,
+    quadrant: args.quadrant ?? 'dump',
+    due_date: args.due_date ?? null,
+    status:   'todo',
   }).select('id').single()
 
   if (error) return `Error: ${error.message}`
@@ -154,7 +152,6 @@ async function toolCompleteTask(userId: string, args: Record<string, unknown>): 
   const { error } = await sb.from('tasks').update({
     status:       args.status,
     completed_at: new Date().toISOString(),
-    updated_at:   new Date().toISOString(),
   }).eq('id', args.task_id).eq('user_id', userId)
 
   if (error) return `Error: ${error.message}`
@@ -176,12 +173,11 @@ async function toolLogHabit(userId: string, args: Record<string, unknown>): Prom
   const done  = habit.goal ? qty >= habit.goal : true
 
   const { error } = await sb.from('habit_logs').upsert({
-    user_id:    userId,
-    habit_id:   habit.id,
+    user_id:   userId,
+    habit_id:  habit.id,
     date,
-    quantity:   qty,
-    completed:  done,
-    updated_at: new Date().toISOString(),
+    quantity:  qty,
+    completed: done,
   }, { onConflict: 'habit_id,date' })
 
   if (error) return `Error: ${error.message}`
@@ -219,8 +215,6 @@ async function toolAddTransaction(userId: string, args: Record<string, unknown>)
     date,
     paid_at:    date,
     is_cleared: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
   })
 
   if (error) return `Error: ${error.message}`
