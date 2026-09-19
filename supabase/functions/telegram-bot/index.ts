@@ -168,22 +168,29 @@ async function toolCompleteTask(userId: string, args: Record<string, unknown>): 
 }
 
 async function toolListHabits(userId: string): Promise<string> {
+  // Fetch all habits (active and inactive) so the agent can see what exists
   const { data, error } = await sb.from('habits')
-    .select('id, name, goal, unit').eq('user_id', userId).eq('is_active', true)
+    .select('id, name, goal, unit, is_active').eq('user_id', userId)
   if (error) return `Error fetching habits: ${error.message}`
-  if (!data?.length) return 'No active habits.'
-  return (data as { id: string; name: string; goal: number | null; unit: string | null }[])
-    .map(h => `· ${h.name}${h.goal ? ` (goal: ${h.goal}${h.unit ? ' ' + h.unit : ''})` : ''}`)
-    .join('\n')
+  if (!data?.length) return 'No habits found in database.'
+  const rows = data as { id: string; name: string; goal: number | null; unit: string | null; is_active: boolean }[]
+  const active   = rows.filter(h => h.is_active)
+  const inactive = rows.filter(h => !h.is_active)
+  const fmt = (h: typeof rows[0]) =>
+    `· ${h.name}${h.goal ? ` (goal: ${h.goal}${h.unit ? ' ' + h.unit : ''})` : ''}`
+  const lines: string[] = []
+  if (active.length)   lines.push('Active:\n' + active.map(fmt).join('\n'))
+  if (inactive.length) lines.push('Inactive:\n' + inactive.map(fmt).join('\n'))
+  return lines.join('\n\n')
 }
 
 async function toolLogHabit(userId: string, args: Record<string, unknown>): Promise<string> {
-  // Fetch all active habits and do client-side matching so Arabic synonyms & partial matches work
+  // Fetch all habits (skip is_active filter — let the model decide)
   const { data: allHabits, error: habitsErr } = await sb.from('habits')
-    .select('id, name, goal, unit').eq('user_id', userId).eq('is_active', true)
+    .select('id, name, goal, unit, is_active').eq('user_id', userId)
 
   if (habitsErr) return `Error fetching habits: ${habitsErr.message}`
-  const allH = (allHabits ?? []) as { id: string; name: string; goal: number | null; unit: string | null }[]
+  const allH = (allHabits ?? []) as { id: string; name: string; goal: number | null; unit: string | null; is_active: boolean }[]
   const searchName = String(args.habit_name ?? '').toLowerCase().trim()
 
   // 1. Exact match (case-insensitive)
@@ -560,8 +567,7 @@ async function toolCreateHabit(userId: string, args: Record<string, unknown>): P
 
 async function toolUpdateHabit(userId: string, args: Record<string, unknown>): Promise<string> {
   const { data: matches, error: fe } = await sb.from('habits')
-    .select('id, name').eq('user_id', userId).eq('is_active', true)
-    .ilike('name', `%${args.habit_name}%`)
+    .select('id, name').eq('user_id', userId).ilike('name', `%${args.habit_name}%`)
   if (fe) return `Error: ${fe.message}`
   if (!matches?.length) return `No active habit matching "${args.habit_name}".`
   const habit = (matches as { id: string; name: string }[])[0]
@@ -577,8 +583,7 @@ async function toolUpdateHabit(userId: string, args: Record<string, unknown>): P
 
 async function toolDeactivateHabit(userId: string, args: Record<string, unknown>): Promise<string> {
   const { data: matches, error: fe } = await sb.from('habits')
-    .select('id, name').eq('user_id', userId).eq('is_active', true)
-    .ilike('name', `%${args.habit_name}%`)
+    .select('id, name').eq('user_id', userId).ilike('name', `%${args.habit_name}%`)
   if (fe) return `Error: ${fe.message}`
   if (!matches?.length) return `No active habit matching "${args.habit_name}".`
   const habit = (matches as { id: string; name: string }[])[0]
@@ -589,8 +594,7 @@ async function toolDeactivateHabit(userId: string, args: Record<string, unknown>
 
 async function toolGetHabitLogs(userId: string, args: Record<string, unknown>): Promise<string> {
   const { data: matches, error: fe } = await sb.from('habits')
-    .select('id, name, goal, unit').eq('user_id', userId)
-    .ilike('name', `%${args.habit_name}%`)
+    .select('id, name, goal, unit').eq('user_id', userId).ilike('name', `%${args.habit_name}%`)
   if (fe) return `Error: ${fe.message}`
   if (!matches?.length) return `No habit matching "${args.habit_name}".`
   const habit = (matches as { id: string; name: string; goal: number | null; unit: string | null }[])[0]
