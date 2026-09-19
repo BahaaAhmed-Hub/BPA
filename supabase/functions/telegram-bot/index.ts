@@ -397,11 +397,18 @@ async function toolGetShoppingItems(userId: string, args: Record<string, unknown
 
 async function toolAddShoppingItem(userId: string, args: Record<string, unknown>): Promise<string> {
   let groupId: string | null = null
+  let resolvedListName: string | null = null
 
-  if (args.list_name) {
+  if (args.list_id) {
+    groupId = args.list_id as string
+    resolvedListName = args.list_name as string | null
+  } else if (args.list_name) {
     const { data: groups } = await sb.from('shopping_groups')
-      .select('id').eq('user_id', userId).ilike('name', `%${args.list_name}%`)
-    if (groups?.length) groupId = (groups as { id: string }[])[0].id
+      .select('id, name').eq('user_id', userId).ilike('name', `%${args.list_name}%`)
+    if (groups?.length) {
+      groupId = (groups as { id: string; name: string }[])[0].id
+      resolvedListName = (groups as { id: string; name: string }[])[0].name
+    }
   }
 
   const { error } = await sb.from('shopping_items').insert({
@@ -415,8 +422,24 @@ async function toolAddShoppingItem(userId: string, args: Record<string, unknown>
   })
 
   if (error) return `Error: ${error.message}`
-  const listPart = args.list_name ? ` to ${args.list_name}` : ''
+  const listPart = resolvedListName ? ` to *${resolvedListName}*` : ' (no list assigned)'
   return `Added "${args.name}"${listPart}.`
+}
+
+async function toolCreateShoppingList(userId: string, args: Record<string, unknown>): Promise<string> {
+  const name = args.name as string
+  const icon = (args.icon as string | undefined) ?? '🛒'
+
+  const { data, error } = await sb.from('shopping_groups').insert({
+    user_id: userId,
+    name,
+    icon,
+    status:     'active',
+    sort_order: 0,
+  }).select('id').single()
+
+  if (error) return `Error: ${error.message}`
+  return `Created list *${name}* ${icon} [${(data as { id: string }).id.slice(0, 8)}]`
 }
 
 async function toolMarkShoppingItem(userId: string, args: Record<string, unknown>): Promise<string> {
@@ -636,7 +659,7 @@ const CLAUDE_TOOLS = [
   },
   {
     name:        'add_shopping_item',
-    description: 'Add an item to a shopping list.',
+    description: 'Add an item to a shopping list. Always call get_shopping_lists first to find the right list. Pass list_id (from get_shopping_lists) when you have matched a list.',
     input_schema: {
       type:     'object',
       required: ['name'],
@@ -645,7 +668,20 @@ const CLAUDE_TOOLS = [
         quantity:  { type: 'number' },
         unit:      { type: 'string' },
         notes:     { type: 'string', description: 'Optional note, e.g. brand or size' },
-        list_name: { type: 'string', description: 'Which list to add it to (partial name)' },
+        list_id:   { type: 'string', description: 'Exact list id (8-char prefix from get_shopping_lists) — preferred over list_name' },
+        list_name: { type: 'string', description: 'Partial list name fallback if no list_id' },
+      },
+    },
+  },
+  {
+    name:        'create_shopping_list',
+    description: 'Create a new shopping list. Only call this after the user confirms they want a new list.',
+    input_schema: {
+      type:     'object',
+      required: ['name'],
+      properties: {
+        name: { type: 'string', description: 'Name of the new list' },
+        icon: { type: 'string', description: 'Single emoji for the list icon' },
       },
     },
   },
@@ -725,8 +761,16 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "spent 200 on lunch" / "صرفت 200 على الغداء" → add_transaction(amount=200, payee="lunch")
 - "what's on my calendar" / "فيه إيه في التقويم" → get_calendar_events
 - "what's on my shopping list" / "إيه في قايمة التسوق" → get_shopping_lists, then get_shopping_items
-- "add milk to groceries" / "أضف لبن للجروسيري" → add_shopping_item(name="milk", list_name="groceries")
-- "add eggs, bread, and butter" / "أضف بيض وعيش وزبدة" → call add_shopping_item in parallel, one per item
+- ADDING ITEMS — always follow this flow:
+  1. Call get_shopping_lists to see what lists exist
+  2. Detect the item's category (grocery/food, pharmacy/medicine, electronics, hardware, clothing, etc.)
+  3. Match to the most suitable list by name or category (e.g. milk → Groceries, paracetamol → Pharmacy)
+  4. If a good match exists → call add_shopping_item with list_id
+  5. If NO suitable list exists → ask the user: "I don't have a [category] list. Want me to create one?" — then call create_shopping_list only after they confirm
+  6. For multiple items at once → call add_shopping_item in parallel for all of them (one call per item), matching each to the right list
+- "add milk to groceries" / "أضف لبن للجروسيري" → get_shopping_lists, match, add_shopping_item
+- "add paracetamol" → get_shopping_lists, detect pharmacy, match or ask
+- "add eggs, bread, and butter" / "أضف بيض وعيش وزبدة" → get_shopping_lists once, then add_shopping_item in parallel for each item
 - "bought the milk" / "اشتريت اللبن" → mark_shopping_item(item_name="milk")
 - "check my email" / "شوف الإيميلات" → get_emails
 - "show unread" / "الإيميلات الجديدة" → get_emails(query="is:unread in:inbox")
@@ -807,10 +851,11 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'log_habit':           return toolLogHabit(userId, args)
     case 'add_transaction':     return toolAddTransaction(userId, args)
     case 'get_calendar_events': return toolGetCalendarEvents(userId, args)
-    case 'get_shopping_lists':  return toolGetShoppingLists(userId)
-    case 'get_shopping_items':  return toolGetShoppingItems(userId, args)
-    case 'add_shopping_item':   return toolAddShoppingItem(userId, args)
-    case 'mark_shopping_item':  return toolMarkShoppingItem(userId, args)
+    case 'get_shopping_lists':    return toolGetShoppingLists(userId)
+    case 'get_shopping_items':    return toolGetShoppingItems(userId, args)
+    case 'add_shopping_item':     return toolAddShoppingItem(userId, args)
+    case 'mark_shopping_item':    return toolMarkShoppingItem(userId, args)
+    case 'create_shopping_list':  return toolCreateShoppingList(userId, args)
     case 'get_emails':          return toolGetEmails(userId, args)
     case 'archive_email':       return toolArchiveEmail(userId, args)
     case 'mark_email_read':     return toolMarkEmailRead(userId, args)
