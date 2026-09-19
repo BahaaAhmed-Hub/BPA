@@ -288,17 +288,31 @@ async function toolGetCalendarEvents(userId: string, args: Record<string, unknow
   const events = calData.items ?? []
   if (!events.length) return `No events in the next ${daysAhead} days.`
 
-  return events.map(e => {
-    const raw = e.start?.dateTime ?? e.start?.date ?? ''
-    const dt  = raw ? new Date(raw) : null
-    const time = dt
-      ? (e.start?.dateTime
-          ? dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) +
-            ' ' + dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-          : dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · all day')
-      : ''
-    return `${e.summary ?? 'Untitled'} — ${time}`
-  }).join('\n')
+  const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+  function fmtDT(start: { dateTime?: string; date?: string }): string {
+    if (start.dateTime) {
+      // Parse local time directly from the ISO string — avoids server TZ conversion.
+      // "2026-09-19T15:30:00+03:00" → Wed 19 Sep, 15:30
+      const m = start.dateTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+      if (!m) return start.dateTime
+      const [, yr, mo, dy, hh, mm] = m
+      const dow = DAYS[new Date(Date.UTC(+yr, +mo - 1, +dy)).getUTCDay()]
+      return `${dow} ${+dy} ${MONTHS[+mo - 1]}, ${hh}:${mm}`
+    }
+    if (start.date) {
+      // All-day: "2026-09-19"
+      const [yr, mo, dy] = start.date.split('-')
+      const dow = DAYS[new Date(Date.UTC(+yr, +mo - 1, +dy)).getUTCDay()]
+      return `${dow} ${+dy} ${MONTHS[+mo - 1]} · all day`
+    }
+    return ''
+  }
+
+  return events.map(e =>
+    `${e.summary ?? 'Untitled'} — ${fmtDT(e.start ?? {})}`
+  ).join('\n')
 }
 
 // ── Claude agent ──────────────────────────────────────────────────────────────
