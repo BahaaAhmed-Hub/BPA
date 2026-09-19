@@ -256,6 +256,31 @@ async function toolCompleteTask(userId: string, args: Record<string, unknown>): 
   return `Done. Task marked as ${args.status}.`
 }
 
+async function toolGetHabits(userId: string, args: Record<string, unknown>): Promise<string> {
+  const date = (args.date as string | undefined) ?? todayISO()
+
+  const [habitsRes, logsRes] = await Promise.all([
+    sb.from('habits').select('id, name, goal, unit').eq('user_id', userId).eq('is_active', true),
+    sb.from('habit_logs').select('habit_id, completed, quantity').eq('user_id', userId).eq('date', date),
+  ])
+
+  const habits = (habitsRes.data ?? []) as { id: string; name: string; goal: number | null; unit: string | null }[]
+  const logs   = (logsRes.data   ?? []) as { habit_id: string; completed: boolean; quantity: number | null }[]
+  if (!habits.length) return 'No active habits.'
+
+  const logMap = new Map(logs.map(l => [l.habit_id, l]))
+  const lines = habits.map(h => {
+    const l = logMap.get(h.id)
+    if (!l) return `${h.name}: not logged yet`
+    if (h.goal && l.quantity != null) {
+      const pct = Math.round((l.quantity / h.goal) * 100)
+      return `${h.name}: ${l.quantity}/${h.goal}${h.unit ? ' ' + h.unit : ''} (${pct}%)${l.completed ? ' ✓' : ''}`
+    }
+    return `${h.name}: ${l.completed ? 'done' : 'not done'}`
+  })
+  return `Habits for ${date}:\n` + lines.join('\n')
+}
+
 async function toolLogHabit(userId: string, args: Record<string, unknown>): Promise<string> {
   const { data: matches } = await sb.from('habits')
     .select('id, name, goal, unit').eq('user_id', userId).eq('is_active', true)
@@ -612,6 +637,7 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'get_tasks':            return toolGetTasks(userId, args)
     case 'add_task':             return toolAddTask(userId, args)
     case 'complete_task':        return toolCompleteTask(userId, args)
+    case 'get_habits':           return toolGetHabits(userId, args)
     case 'log_habit':            return toolLogHabit(userId, args)
     case 'add_transaction':      return toolAddTransaction(userId, args)
     case 'get_calendar_events':  return toolGetCalendarEvents(userId, args)
@@ -669,6 +695,16 @@ const CLAUDE_TOOLS = [
       properties: {
         task_id: { type: 'string' },
         status:  { type: 'string', enum: ['done', 'deferred'] },
+      },
+    },
+  },
+  {
+    name:        'get_habits',
+    description: 'Read habit progress for today or a specific date. Use for: "how much water today?", "did I exercise?", "show my habits", "what habits are done?".',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'YYYY-MM-DD — defaults to today' },
       },
     },
   },
@@ -832,6 +868,10 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "water 600ml" / "مية 600 مل" → log_habit(habit_name="water", quantity=600)
 - "water 600ml yesterday" / "مية 600 مل امبارح" → log_habit(habit_name="water", quantity=600, date="${yesterday}")
 - Multiple habits in one message → call log_habit multiple times in parallel, one per habit
+- "how much water today?" / "كام مل مية شربت؟" → get_habits
+- "did I exercise?" / "عملت رياضة؟" → get_habits
+- "show my habits" / "وريني العادات" → get_habits
+- "what habits are done?" / "إيه اللي خلصته؟" → get_habits
 - "add call Ahmed" / "أضف مهمة اتصل بأحمد" → add_task
 - "what do I have today" / "إيه اللي عندي النهارده" → get_today, then get_calendar_events(days_ahead=1)
 - "spent 200 on lunch" / "صرفت 200 على الغداء" → add_transaction(amount=200, payee="lunch")
@@ -854,7 +894,7 @@ IMPORTANT — understand natural speech (Arabic and English):
 - Never ask the user to rephrase. Just figure it out.
 - When the user lists multiple things to log or add, call the relevant tool in parallel for each one.
 
-What you CAN do: tasks (list, add, complete), habits (log with quantities and past dates), log expenses/income, calendar events, today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read).
+What you CAN do: tasks (list, add, complete), habits (read progress with get_habits, log with log_habit), log expenses/income, calendar events, today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read).
 What you CANNOT do: read financial balances or history — say so briefly if asked.
 
 Reply style: short, warm, direct. No markdown. Use plain bullets with •. After a tool result, one short sentence of context if helpful, then the list. For confirmations a single sentence is fine.`
