@@ -4059,7 +4059,12 @@ function IntegrationsSection() {
   const [newLabel, setNewLabel] = useState('')
   const [revealedToken, setRevealedToken] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [copiedSiri, setCopiedSiri] = useState(false)
   const [telegramLinks, setTelegramLinks] = useState<TelegramLink[]>([])
+  const [siriToken, setSiriToken] = useState<string | null>(null)
+
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
+  const siriBaseUrl  = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/professor-siri` : ''
 
   useEffect(() => {
     listUserTokens().then(setTokens)
@@ -4328,6 +4333,98 @@ function IntegrationsSection() {
             The bot can read and add tasks, log habits, and check your balance. Full AI responses when an Anthropic key is set in Supabase.
           </p>
         </div>
+      </div>
+
+      {/* ── SIRI SHORTCUTS ───────────────────────────────────────────────────── */}
+      <div style={{ marginTop: 24, paddingTop: 20, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+        <div style={{ marginBottom: 12 }}>
+          <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Siri Shortcuts</p>
+          <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
+            Say "Hey Siri, ask Professor" and talk to your AI naturally — add tasks, log habits, check your calendar, and more.
+          </p>
+        </div>
+
+        {/* Token picker */}
+        <div style={{ marginBottom: 14 }}>
+          <p style={{ margin: '0 0 7px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
+            Pick a token to use (generate one above if you don't have one yet):
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {tokens.filter(t => !t.revoked).map(t => (
+              <button
+                key={t.id}
+                onClick={() => setSiriToken(siriToken === t.token ? null : t.token)}
+                style={{
+                  padding: '5px 12px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
+                  cursor: 'pointer', border: 'var(--sb-border-width) solid',
+                  borderColor: siriToken === t.token ? 'var(--sb-ink-1)' : 'var(--sb-border)',
+                  background:  siriToken === t.token ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+                  color:       siriToken === t.token ? 'var(--sb-bg)'    : 'var(--sb-ink-2)',
+                }}
+              >{t.label || 'Unnamed'}</button>
+            ))}
+            {tokens.filter(t => !t.revoked).length === 0 && (
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>No tokens yet — generate one in the Connections block above.</span>
+            )}
+          </div>
+        </div>
+
+        {siriToken && siriBaseUrl && (() => {
+          const shortcutUrl = `${siriBaseUrl}?token=${siriToken}&text={ShortcutInput}`
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* URL row */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <code style={{
+                  flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
+                  background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                  borderRadius: 'var(--sb-r-chip)', padding: '7px 9px',
+                }}>{shortcutUrl}</code>
+                <button
+                  style={{
+                    flexShrink: 0, padding: '6px 13px', borderRadius: 'var(--sb-r-chip)',
+                    border: 'var(--sb-border-width) solid var(--sb-border)',
+                    background: copiedSiri ? 'var(--sb-positive-tint)' : 'var(--sb-card)',
+                    color: copiedSiri ? 'var(--sb-positive)' : 'var(--sb-ink-2)',
+                    fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
+                  }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(shortcutUrl).then(() => {
+                      setCopiedSiri(true)
+                      setTimeout(() => setCopiedSiri(false), 2000)
+                    })
+                  }}
+                >{copiedSiri ? 'Copied ✓' : 'Copy URL'}</button>
+              </div>
+
+              {/* Setup instructions */}
+              <div style={{
+                padding: '13px 15px', borderRadius: 'var(--sb-r-nav)',
+                background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-border)', borderStyle: 'dashed',
+              }}>
+                <p style={{ margin: '0 0 8px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+                  Set up "Ask Professor" shortcut
+                </p>
+                <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {[
+                    <>On iPhone, open <b>Shortcuts</b> → <b>+</b> → name it <em>Ask Professor</em></>,
+                    <>Add action: <b>Ask for Input</b> — prompt "Ask Professor anything"</>,
+                    <>Add action: <b>Get Contents of URL</b> → paste the URL above (replace <code style={{ fontFamily: 'monospace', fontSize: 10 }}>{'{ShortcutInput}'}</code> with the "Provided Input" variable)</>,
+                    <>Add action: <b>Speak Text</b> — set input to the result from the previous step</>,
+                    <>Optionally: set a <b>Siri Phrase</b> like "Ask Professor" in the shortcut details</>,
+                  ].map((step, i) => (
+                    <li key={i} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>{step}</li>
+                  ))}
+                </ol>
+                <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>
+                  You can also make specific shortcuts — e.g. one that always says "What's on today?" with no input step.
+                  The URL is the whole credential; delete the token above to revoke access.
+                </p>
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
     </div>
