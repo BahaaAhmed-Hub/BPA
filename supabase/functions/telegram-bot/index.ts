@@ -738,7 +738,11 @@ IMPORTANT — understand natural speech (Arabic and English):
 What you CAN do: tasks (list, add, complete), habits (log with quantities and past dates), log expenses/income, calendar events, today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read).
 What you CANNOT do: read financial balances or history — say so briefly if asked, don't apologise.
 
-Reply style: short, warm, direct. One or two sentences after using a tool. No markdown headers. Bullet points only when listing 3+ things.`
+Reply style: short, warm, direct. No markdown headers.
+- Always present any list of items — tasks, habits, emails, events, shopping items, results — as bullet points (use · or -).
+- Even a single result looks better as a bullet when it has multiple fields (e.g. name + date + status).
+- After using a tool, add one short sentence of context if helpful, then the bullet list.
+- For confirmations ("Added ✓", "Logged ✓") a single line is fine — no bullet needed.`
 
   const messages: { role: string; content: unknown }[] = [
     { role: 'user', content: userMessage },
