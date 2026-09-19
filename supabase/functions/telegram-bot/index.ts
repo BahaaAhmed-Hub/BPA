@@ -75,10 +75,9 @@ async function resolveToken(token: string): Promise<string | null> {
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
 async function toolGetToday(userId: string): Promise<string> {
-  const date       = todayISO()
-  const monthStart = date.slice(0, 7) + '-01'
+  const date = todayISO()
 
-  const [tasksRes, habitsRes, logsRes, txRes] = await Promise.all([
+  const [tasksRes, habitsRes, logsRes] = await Promise.all([
     sb.from('tasks').select('title, quadrant, status')
       .eq('user_id', userId).in('status', ['todo', 'in_progress'])
       .order('created_at', { ascending: false }).limit(10),
@@ -86,14 +85,11 @@ async function toolGetToday(userId: string): Promise<string> {
       .eq('user_id', userId).eq('is_active', true),
     sb.from('habit_logs').select('habit_id, completed, quantity')
       .eq('user_id', userId).eq('date', date),
-    sb.from('finance_transactions').select('amount, tx_type')
-      .eq('user_id', userId).gte('date', monthStart).not('paid_at', 'is', null),
   ])
 
   const tasks  = (tasksRes.data  ?? []) as { title: string; quadrant: string | null }[]
   const habits = (habitsRes.data ?? []) as { id: string; name: string; goal: number | null; unit: string | null }[]
   const logs   = (logsRes.data   ?? []) as { habit_id: string; completed: boolean; quantity: number | null }[]
-  const txs    = (txRes.data     ?? []) as { amount: number; tx_type: string }[]
 
   const logMap = new Map(logs.map(l => [l.habit_id, l]))
 
@@ -112,9 +108,6 @@ async function toolGetToday(userId: string): Promise<string> {
       }).join('\n')
     : '  No habits'
 
-  const income   = txs.filter(t => t.tx_type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0)
-  const expenses = txs.filter(t => t.tx_type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
-
   return [
     `*Today — ${date}*`,
     '',
@@ -123,11 +116,6 @@ async function toolGetToday(userId: string): Promise<string> {
     '',
     '*Habits*',
     habitBlock,
-    '',
-    `*This month*`,
-    `  In:  ${income.toLocaleString()}`,
-    `  Out: ${expenses.toLocaleString()}`,
-    `  Net: ${(income - expenses).toLocaleString()}`,
   ].join('\n')
 }
 
@@ -200,18 +188,117 @@ async function toolLogHabit(userId: string, args: Record<string, unknown>): Prom
   return `Logged ${habit.name}: ${qty}${habit.unit ? ' ' + habit.unit : ''}${done ? ' ✓' : ''}`
 }
 
-async function toolGetBalance(userId: string): Promise<string> {
-  const { data: accounts } = await sb.from('finance_accounts')
-    .select('name, balance, currency, account_type')
+async function toolAddTransaction(userId: string, args: Record<string, unknown>): Promise<string> {
+  const { data: accounts } = await sb
+    .from('finance_accounts')
+    .select('id, name, currency')
     .eq('user_id', userId)
-    .in('account_type', ['payment', 'wallet', 'savings'])
-    .order('balance', { ascending: false })
+    .in('account_type', ['payment', 'wallet'])
+    .limit(5)
 
-  if (!accounts?.length) return 'No accounts found.'
+  const accs = (accounts ?? []) as { id: string; name: string; currency: string }[]
+  if (!accs.length) return 'No payment accounts found. Add one in the Professor app first.'
 
-  return (accounts as { name: string; balance: number; currency: string; account_type: string }[])
-    .map(a => `${a.name}: ${Number(a.balance).toLocaleString()} ${a.currency}`)
-    .join('\n')
+  let account = accs[0]
+  if (args.account_name) {
+    const found = accs.find(a => a.name.toLowerCase().includes((args.account_name as string).toLowerCase()))
+    if (found) account = found
+  }
+
+  const date   = (args.date as string | undefined) ?? todayISO()
+  const amount = Math.abs(args.amount as number)
+  const payee  = (args.payee ?? args.description ?? '') as string
+
+  const { error } = await sb.from('finance_transactions').insert({
+    user_id:    userId,
+    account_id: account.id,
+    amount,
+    currency:   account.currency,
+    tx_type:    args.tx_type ?? 'expense',
+    payee,
+    date,
+    paid_at:    date,
+    is_cleared: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  })
+
+  if (error) return `Error: ${error.message}`
+  return `Logged: ${payee || 'transaction'} — ${amount.toLocaleString()} ${account.currency} on ${date} (${account.name})`
+}
+
+const GOOGLE_CLIENT_ID     = Deno.env.get('GOOGLE_CLIENT_ID') ?? ''
+const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET') ?? ''
+
+async function toolGetCalendarEvents(userId: string, args: Record<string, unknown>): Promise<string> {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    return 'Google Calendar is not configured on the server.'
+  }
+
+  const { data: account } = await sb
+    .from('google_accounts')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('is_primary', true)
+    .maybeSingle()
+
+  if (!account) return "Your Google account isn't connected. Sign in with Google in the Professor app."
+
+  const { data: tokenRow } = await sb
+    .from('google_account_tokens')
+    .select('refresh_token')
+    .eq('account_id', (account as { id: string }).id)
+    .maybeSingle()
+
+  const refreshToken = (tokenRow as { refresh_token: string } | null)?.refresh_token
+  if (!refreshToken) return "I can't reach your calendar right now. Try reconnecting Google in Settings."
+
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    new URLSearchParams({
+      grant_type:    'refresh_token',
+      client_id:     GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      refresh_token: refreshToken,
+    }),
+  })
+
+  const tokenData = await tokenRes.json() as { access_token?: string; error?: string }
+  if (!tokenData.access_token) {
+    return "Calendar token expired. Please reconnect Google in the Professor app."
+  }
+
+  const daysAhead = Math.min((args.days_ahead as number | undefined) ?? 3, 14)
+  const now       = new Date()
+  const timeMin   = now.toISOString()
+  const timeMax   = new Date(now.getTime() + daysAhead * 86400e3).toISOString()
+
+  const calRes = await fetch(
+    'https://www.googleapis.com/calendar/v3/calendars/primary/events?' +
+    new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '20' }),
+    { headers: { Authorization: `Bearer ${tokenData.access_token}` } }
+  )
+
+  if (!calRes.ok) return `Calendar error (${calRes.status}). Try again in a moment.`
+
+  const calData = await calRes.json() as {
+    items?: { summary?: string; start?: { dateTime?: string; date?: string } }[]
+  }
+  const events = calData.items ?? []
+  if (!events.length) return `No events in the next ${daysAhead} days.`
+
+  return events.map(e => {
+    const raw = e.start?.dateTime ?? e.start?.date ?? ''
+    const dt  = raw ? new Date(raw) : null
+    const time = dt
+      ? (e.start?.dateTime
+          ? dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) +
+            ' ' + dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+          : dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · all day')
+      : ''
+    return `${e.summary ?? 'Untitled'} — ${time}`
+  }).join('\n')
 }
 
 // ── Claude agent ──────────────────────────────────────────────────────────────
@@ -273,9 +360,29 @@ const CLAUDE_TOOLS = [
     },
   },
   {
-    name:        'get_balance',
-    description: 'Get current account balances.',
-    input_schema: { type: 'object', properties: {} },
+    name:        'add_transaction',
+    description: 'Log an expense or income entry. Use this when the user mentions spending money, buying something, or receiving money.',
+    input_schema: {
+      type:     'object',
+      required: ['amount', 'payee'],
+      properties: {
+        amount:       { type: 'number', description: 'Positive number — direction is set by tx_type' },
+        payee:        { type: 'string', description: 'Merchant, shop, or description of what it was' },
+        tx_type:      { type: 'string', enum: ['expense', 'income'], description: 'Defaults to expense' },
+        date:         { type: 'string', description: 'YYYY-MM-DD — defaults to today' },
+        account_name: { type: 'string', description: 'Partial name of the account to charge. Omit to use default.' },
+      },
+    },
+  },
+  {
+    name:        'get_calendar_events',
+    description: 'List upcoming Google Calendar events.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        days_ahead: { type: 'number', description: 'How many days ahead to look (default 3, max 14)' },
+      },
+    },
   },
 ]
 
@@ -293,15 +400,18 @@ async function runAgent(userId: string, userMessage: string): Promise<string> {
 Today is ${today}. Yesterday was ${yesterday}.
 
 IMPORTANT — understand natural speech:
-- "yesterday", "last night", "this morning" → convert to the right date (${yesterday} for yesterday)
-- "water 600ml" → log_habit with habit_name="water", quantity=600
+- "yesterday", "last night", "this morning" → use the right date (${yesterday} for yesterday)
+- "water 600ml" → log_habit(habit_name="water", quantity=600)
+- "water 600ml yesterday" → log_habit(habit_name="water", quantity=600, date="${yesterday}")
 - "add call Ahmed" or "remind me to call Ahmed" → add_task
-- "what do I have today" or "what's on" → get_today
-- "how much money do I have" → get_balance
+- "what do I have today" or "what's on" → get_today, then get_calendar_events(days_ahead=1)
+- "spent 200 on lunch" → add_transaction(amount=200, payee="lunch")
+- "paid 450 at Carrefour" → add_transaction(amount=450, payee="Carrefour")
+- "what's on my calendar" or "any meetings?" → get_calendar_events
 - Never ask the user to rephrase or use a specific format. Just figure it out.
 
-What you CAN do: tasks (list, add, complete), habits (list, log with quantities and past dates), account balances, today's overview.
-What you CANNOT do: calendar events, email, shopping lists — say so briefly if asked, don't apologise.
+What you CAN do: tasks (list, add, complete), habits (log with quantities and past dates), log expenses/income, calendar events, today's overview.
+What you CANNOT do: read financial balances or history, email, shopping lists — say so briefly if asked, don't apologise.
 
 Reply style: short, warm, direct. One or two sentences after using a tool. No markdown headers. Bullet points only when listing 3+ things.`
 
@@ -361,26 +471,27 @@ Reply style: short, warm, direct. One or two sentences after using a tool. No ma
 
 async function dispatchTool(userId: string, name: string, args: Record<string, unknown>): Promise<string> {
   switch (name) {
-    case 'get_today':    return toolGetToday(userId)
-    case 'get_tasks':    return toolGetTasks(userId, args)
-    case 'add_task':     return toolAddTask(userId, args)
-    case 'complete_task':return toolCompleteTask(userId, args)
-    case 'log_habit':    return toolLogHabit(userId, args)
-    case 'get_balance':  return toolGetBalance(userId)
-    default:             return `Unknown tool: ${name}`
+    case 'get_today':           return toolGetToday(userId)
+    case 'get_tasks':           return toolGetTasks(userId, args)
+    case 'add_task':            return toolAddTask(userId, args)
+    case 'complete_task':       return toolCompleteTask(userId, args)
+    case 'log_habit':           return toolLogHabit(userId, args)
+    case 'add_transaction':     return toolAddTransaction(userId, args)
+    case 'get_calendar_events': return toolGetCalendarEvents(userId, args)
+    default:                    return `Unknown tool: ${name}`
   }
 }
 
 // Fallback when no Anthropic key — pattern-match common requests
 async function fallbackProcess(userId: string, text: string): Promise<string> {
   const lower = text.toLowerCase()
-  if (/\b(today|tasks|schedule)\b/.test(lower))    return toolGetToday(userId)
-  if (/\b(balance|money|account)\b/.test(lower))   return toolGetBalance(userId)
+  if (/\b(today|tasks|schedule)\b/.test(lower)) return toolGetToday(userId)
+  if (/\b(calendar|events|meetings)\b/.test(lower)) return toolGetCalendarEvents(userId, {})
   if (/\badd task[:\s](.+)/i.test(text)) {
     const title = text.match(/add task[:\s](.+)/i)?.[1]?.trim()
     if (title) return toolAddTask(userId, { title })
   }
-  return "I can answer:\n· What's on today?\n· My balance\n· Add task: [name]\n\nOr set up an Anthropic API key in Supabase secrets for full AI responses."
+  return "I can answer:\n· What's on today?\n· What's on my calendar?\n· Add task: [name]\n\nOr set up an Anthropic API key in Supabase secrets for full AI responses."
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────────
@@ -403,7 +514,7 @@ async function handleConnect(chatId: number, text: string) {
     { onConflict: 'chat_id' }
   )
 
-  await reply(chatId, "✅ *Connected!* Your Telegram is now linked to Professor.\n\nTry: _What's on today?_ or _My balance_")
+  await reply(chatId, "✅ *Connected!* Your Telegram is now linked to Professor.\n\nTry: _What's on today?_ or _What's on my calendar?_")
 }
 
 async function handleDisconnect(chatId: number) {
