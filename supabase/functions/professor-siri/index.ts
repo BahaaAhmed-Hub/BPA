@@ -229,7 +229,7 @@ async function toolGetTasks(userId: string, args: Record<string, unknown>): Prom
   if (!data?.length) return 'No tasks found.'
 
   return (data as { id: string; title: string; quadrant: string | null; status: string; due_date: string | null }[])
-    .map(t => `• ${t.title} (${t.quadrant ?? 'dump'}${t.due_date ? ', ' + t.due_date : ''})`)
+    .map(t => `[${t.id}] ${t.status === 'done' ? 'Done' : 'Open'}: ${t.title} (${t.quadrant ?? 'dump'}${t.due_date ? ', ' + t.due_date : ''})`)
     .join('\n')
 }
 
@@ -383,7 +383,7 @@ async function toolGetCalendarEvents(userId: string, args: Record<string, unknow
   if (!calRes.ok) return `Calendar error (${calRes.status}). Try again in a moment.`
 
   const calData = await calRes.json() as {
-    items?: { summary?: string; start?: { dateTime?: string; date?: string } }[]
+    items?: { id?: string; summary?: string; start?: { dateTime?: string; date?: string } }[]
   }
   const events = calData.items ?? []
   if (!events.length) return `No events in the next ${daysAhead} days.`
@@ -408,7 +408,7 @@ async function toolGetCalendarEvents(userId: string, args: Record<string, unknow
   }
 
   return events.map(e =>
-    `• ${e.summary ?? 'Untitled'} — ${fmtDT(e.start ?? {})}`
+    `[id:${e.id}] ${e.summary ?? 'Untitled'} — ${fmtDT(e.start ?? {})}`
   ).join('\n')
 }
 
@@ -449,6 +449,62 @@ async function toolAddCalendarEvent(userId: string, args: Record<string, unknown
     ? created.start.dateTime.slice(0, 16).replace('T', ' at ')
     : (created.start?.date ?? start)
   return `Created "${created.summary ?? title}" on ${when}.`
+}
+
+async function toolUpdateTask(userId: string, args: Record<string, unknown>): Promise<string> {
+  const updates: Record<string, unknown> = {}
+  if (args.title    !== undefined) updates.title    = args.title
+  if (args.quadrant !== undefined) updates.quadrant = args.quadrant
+  if (args.due_date !== undefined) updates.due_date = (args.due_date as string) || null
+  if (args.status   !== undefined) updates.status   = args.status
+
+  if (!Object.keys(updates).length) return 'Nothing to update.'
+
+  const { error } = await sb.from('tasks')
+    .update(updates).eq('id', args.task_id).eq('user_id', userId)
+
+  if (error) return `Error: ${error.message}`
+  return `Task updated.`
+}
+
+async function toolUpdateCalendarEvent(userId: string, args: Record<string, unknown>): Promise<string> {
+  const g = await getGoogleToken(userId)
+  if (!g.ok) return g.error
+
+  const eventId = args.event_id as string
+  const patch: Record<string, unknown> = {}
+
+  if (args.title)       patch.summary     = args.title
+  if (args.description) patch.description = args.description
+  if (args.location)    patch.location    = args.location
+  if (args.start) {
+    const s = args.start as string
+    patch.start = s.includes('T') ? { dateTime: s } : { date: s }
+  }
+  if (args.end) {
+    const e = args.end as string
+    patch.end = e.includes('T') ? { dateTime: e } : { date: e }
+  }
+
+  if (!Object.keys(patch).length) return 'Nothing to update.'
+
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
+    {
+      method:  'PATCH',
+      headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify(patch),
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json() as { error?: { message?: string } }
+    if (res.status === 403) return 'Cannot edit events. Please reconnect Google with calendar permissions.'
+    return `Calendar error: ${err.error?.message ?? res.status}`
+  }
+
+  const updated = await res.json() as { summary?: string }
+  return `Updated "${updated.summary ?? args.title}".`
 }
 
 // ── Shopping tools ────────────────────────────────────────────────────────────
@@ -734,11 +790,13 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'get_tasks':            return toolGetTasks(userId, args)
     case 'add_task':             return toolAddTask(userId, args)
     case 'complete_task':        return toolCompleteTask(userId, args)
+    case 'update_task':          return toolUpdateTask(userId, args)
     case 'get_habits':           return toolGetHabits(userId, args)
     case 'log_habit':            return toolLogHabit(userId, args)
     case 'add_transaction':      return toolAddTransaction(userId, args)
     case 'get_calendar_events':  return toolGetCalendarEvents(userId, args)
     case 'add_calendar_event':   return toolAddCalendarEvent(userId, args)
+    case 'update_calendar_event': return toolUpdateCalendarEvent(userId, args)
     case 'get_shopping_lists':   return toolGetShoppingLists(userId)
     case 'get_shopping_items':   return toolGetShoppingItems(userId, args)
     case 'add_shopping_item':    return toolAddShoppingItem(userId, args)
@@ -794,6 +852,21 @@ const CLAUDE_TOOLS = [
       properties: {
         task_id: { type: 'string' },
         status:  { type: 'string', enum: ['done', 'deferred'] },
+      },
+    },
+  },
+  {
+    name:        'update_task',
+    description: 'Edit a task — rename it, change its quadrant, due date, or status. Get task_id from get_tasks first.',
+    input_schema: {
+      type:     'object',
+      required: ['task_id'],
+      properties: {
+        task_id:  { type: 'string' },
+        title:    { type: 'string', description: 'New task name' },
+        quadrant: { type: 'string', enum: ['do', 'schedule', 'delegate', 'dump'] },
+        due_date: { type: 'string', description: 'YYYY-MM-DD, or empty string to clear' },
+        status:   { type: 'string', enum: ['todo', 'in_progress', 'done', 'deferred'] },
       },
     },
   },
@@ -855,6 +928,22 @@ const CLAUDE_TOOLS = [
         title:       { type: 'string' },
         start:       { type: 'string', description: 'ISO datetime like 2026-09-20T15:00:00 or date 2026-09-20 for all-day' },
         end:         { type: 'string', description: 'ISO datetime or date. Defaults to 1 hour after start.' },
+        description: { type: 'string' },
+        location:    { type: 'string' },
+      },
+    },
+  },
+  {
+    name:        'update_calendar_event',
+    description: 'Edit an existing Google Calendar event — rename it, change its time, location, or description. Get event_id from get_calendar_events first.',
+    input_schema: {
+      type:     'object',
+      required: ['event_id'],
+      properties: {
+        event_id:    { type: 'string', description: 'Event id from get_calendar_events [id:...]' },
+        title:       { type: 'string', description: 'New event title' },
+        start:       { type: 'string', description: 'New start — ISO datetime or date' },
+        end:         { type: 'string', description: 'New end — ISO datetime or date' },
         description: { type: 'string' },
         location:    { type: 'string' },
       },
@@ -1004,6 +1093,10 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "spent 200 on lunch" / "صرفت 200 على الغداء" → add_transaction(amount=200, payee="lunch")
 - "what's on my calendar" / "فيه إيه في التقويم" → get_calendar_events
 - "add a meeting tomorrow at 3pm" / "حجز اجتماع بكرا الساعة 3" → add_calendar_event(title="meeting", start="${tomorrow}T15:00:00")
+- "rename the meeting to X" / "غير اسم الاجتماع" → get_calendar_events, then update_calendar_event(event_id=..., title="X")
+- "move the meeting to 4pm" / "حول الاجتماع الساعة 4" → get_calendar_events, then update_calendar_event(event_id=..., start="...T16:00:00")
+- "rename task X to Y" / "غير اسم المهمة" → get_tasks, then update_task(task_id=..., title="Y")
+- "move task X to schedule" / "حول المهمة للجدول" → get_tasks, then update_task(task_id=..., quadrant="schedule")
 - "what's on my shopping list" / "إيه في قايمة التسوق" → get_shopping_lists, then get_shopping_items
 - ADDING ITEMS — always follow this flow:
   1. Call get_shopping_lists to see what lists exist
@@ -1024,7 +1117,7 @@ IMPORTANT — understand natural speech (Arabic and English):
 - Never ask the user to rephrase. Just figure it out.
 - When the user lists multiple things to log or add, call the relevant tool in parallel for each one.
 
-What you CAN do: tasks (list, add, complete), habits (read with get_habits, log with log_habit), log expenses/income, calendar (read, create events), today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read, reply).
+What you CAN do: tasks (list, add, complete, edit), habits (read with get_habits, log with log_habit), log expenses/income, calendar (read, create, edit events), today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read, reply).
 What you CANNOT do: read financial balances or history — say so briefly if asked.
 
 Reply style: short, warm, direct. No markdown. Use plain bullets with •. After a tool result, one short sentence of context if helpful, then the list. For confirmations a single sentence is fine.`
