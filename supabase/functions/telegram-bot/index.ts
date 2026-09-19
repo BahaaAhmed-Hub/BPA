@@ -498,11 +498,27 @@ async function toolMarkShoppingItem(userId: string, args: Record<string, unknown
   if (status === 'purchased') updates.purchased_at = new Date().toISOString()
   if (args.final_price !== undefined) updates.final_price = args.final_price
 
+  // Resolve store_name → store_used_id
+  if (args.store_name) {
+    const { data: storeRows } = await sb.from('shopping_stores')
+      .select('id, name').eq('user_id', userId)
+      .ilike('name', `%${args.store_name}%`).limit(1)
+    const matched = (storeRows as { id: string; name: string }[] | null)?.[0]
+    if (matched) updates.store_used_id = matched.id
+  }
+
   const { error } = await sb.from('shopping_items')
     .update(updates).eq('id', itemId).eq('user_id', userId)
 
   if (error) return `Error: ${error.message}`
-  return status === 'purchased' ? '✓ Marked as purchased.' : 'Marked as still needed.'
+
+  const pricePart = args.final_price !== undefined ? ` for ${(args.final_price as number).toLocaleString()}` : ''
+  const storePart = updates.store_used_id
+    ? ` at ${args.store_name}`
+    : (args.store_name ? ` (store "${args.store_name}" not found in your list — add it in Settings → Shopping → Stores)` : '')
+  return status === 'purchased'
+    ? `✓ Marked as purchased${pricePart}${storePart}.`
+    : 'Marked as still needed.'
 }
 
 // ── Mail tools ────────────────────────────────────────────────────────────────
@@ -732,7 +748,7 @@ const CLAUDE_TOOLS = [
   },
   {
     name:        'mark_shopping_item',
-    description: 'Mark a shopping item as purchased or back to wanted.',
+    description: 'Mark a shopping item as purchased or back to wanted. Always record final_price and store_name when marking purchased.',
     input_schema: {
       type: 'object',
       properties: {
@@ -740,6 +756,7 @@ const CLAUDE_TOOLS = [
         item_name:   { type: 'string', description: 'Partial item name if no item_id' },
         status:      { type: 'string', enum: ['purchased', 'wanted'], description: 'Defaults to purchased' },
         final_price: { type: 'number', description: 'What it actually cost' },
+        store_name:  { type: 'string', description: 'Store or shop where it was bought (partial name OK)' },
       },
     },
   },
@@ -810,7 +827,7 @@ BUYING SOMETHING FLOW — when the user says they bought/purchased/paid for some
 1. In parallel: call get_shopping_items (search for the item) AND get_finance_categories(tx_type="expense")
 2. Log the expense immediately with add_transaction. Don't wait for category confirmation.
 3. Shopping list check:
-   - Item FOUND in list → call mark_shopping_item with the price as final_price
+   - Item FOUND in list → call mark_shopping_item with final_price AND store_name (use the store they mentioned, or ask "Which store?" if not given)
    - Item NOT found → ask: "That wasn't on your shopping list. Want me to add it? And which store?"
      - If user says yes/ok → call get_shopping_lists, detect the right list, add_shopping_item
 4. Category:
@@ -828,6 +845,7 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "spent 200 on lunch" / "صرفت 200 على الغداء" → add_transaction(amount=200, payee="lunch")
 - "what's on my calendar" / "فيه إيه في التقويم" → get_calendar_events
 - "what's on my shopping list" / "إيه في قايمة التسوق" → get_shopping_lists, then get_shopping_items
+- MARKING AS PURCHASED — always include final_price and store_name in mark_shopping_item. If the user said "bought milk for 25 at Carrefour" → final_price=25, store_name="Carrefour". If price or store is missing and the item was on the list, ask for the missing one before calling.
 - ADDING ITEMS — always follow this flow:
   1. Call get_shopping_lists to see what lists exist
   2. Detect the item's category (grocery/food, pharmacy/medicine, electronics, hardware, clothing, etc.)

@@ -117,10 +117,11 @@ interface ItemRowProps {
   suggestedPaymentAccount?: string
 }
 
-function ItemRow({ item, envelopes, onUpdate, onDelete, onPurchase, onRefreshPrice, priceLoading, suggestedPaymentAccount }: ItemRowProps) {
+function ItemRow({ item, stores, envelopes, onUpdate, onDelete, onPurchase, onRefreshPrice, priceLoading, suggestedPaymentAccount }: ItemRowProps) {
   const [expanded, setExpanded] = useState(false)
   const [confirmPurchase, setConfirmPurchase] = useState(false)
   const [finalPrice, setFinalPrice] = useState(item.finalPrice?.toString() ?? item.bestPrice?.price?.toString() ?? '')
+  const [selectedStoreId, setSelectedStoreId] = useState(item.storeUsedId ?? item.bestPrice?.storeId ?? '')
 
   const purchased = item.status === 'purchased'
 
@@ -275,6 +276,19 @@ function ItemRow({ item, envelopes, onUpdate, onDelete, onPurchase, onRefreshPri
                 style={{ marginLeft: 6, fontSize: 12, padding: '3px 6px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.field, width: 100 }}
               />
             </label>
+            {stores.length > 0 && (
+              <label style={{ fontSize: 11, color: C.ink3 }}>
+                Bought at
+                <select
+                  value={selectedStoreId}
+                  onChange={e => setSelectedStoreId(e.target.value)}
+                  style={{ marginLeft: 6, fontSize: 12, padding: '3px 6px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
+                >
+                  <option value="">— store —</option>
+                  {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </label>
+            )}
             {suggestedPaymentAccount && (
               <span style={{ fontSize: 11, color: C.ink3, padding: '2px 8px', borderRadius: 6, background: C.field, border: `1px solid ${C.border}` }}>
                 Pay with <strong style={{ color: C.ink1 }}>{suggestedPaymentAccount}</strong>
@@ -283,7 +297,7 @@ function ItemRow({ item, envelopes, onUpdate, onDelete, onPurchase, onRefreshPri
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
-              onClick={() => { onPurchase(parseFloat(finalPrice) || undefined); setConfirmPurchase(false) }}
+              onClick={() => { onPurchase(parseFloat(finalPrice) || undefined, selectedStoreId || undefined); setConfirmPurchase(false) }}
               style={{ fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 8, background: C.pos, color: '#fff', border: 'none', cursor: 'pointer' }}
             >
               Confirm
