@@ -128,30 +128,49 @@ function readHabitImage(file: File): Promise<string> {
 }
 
 /** Picture well: shows the habit's photo, or its emoji until one is picked. */
-function HabitImagePicker({ image, emoji, onChange, size = 54 }: {
+function HabitImagePicker({ image, emoji, onChange, onEmojiChange, size = 54 }: {
   image?: string
   emoji: string
   onChange: (v: string | undefined) => void
+  onEmojiChange?: (v: string) => void
   size?: number
 }) {
   const ref = useRef<HTMLInputElement>(null)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
       <span style={{ position: 'relative', display: 'inline-flex' }}>
-        <button
-          type="button"
-          onClick={() => ref.current?.click()}
-          title={image ? 'Change picture' : 'Add a picture'}
-          style={{
-            width: size, height: size, borderRadius: 'var(--sb-r-nav)', padding: 0, cursor: 'pointer',
-            overflow: 'hidden', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: Math.round(size * 0.5), lineHeight: 1,
-          }}>
-          {image
-            ? <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            : (emoji || '🎯')}
-        </button>
+        {/* When no image is set, the main button is an emoji picker; otherwise it opens the file dialog */}
+        {image
+          ? (
+            <button
+              type="button"
+              onClick={() => ref.current?.click()}
+              title="Change picture"
+              style={{
+                width: size, height: size, borderRadius: 'var(--sb-r-nav)', padding: 0, cursor: 'pointer',
+                overflow: 'hidden', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+              <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            </button>
+          )
+          : onEmojiChange
+            ? <EmojiBtn value={emoji || '🎯'} onSelect={onEmojiChange} size={size} />
+            : (
+              <button
+                type="button"
+                onClick={() => ref.current?.click()}
+                title="Add a picture"
+                style={{
+                  width: size, height: size, borderRadius: 'var(--sb-r-nav)', padding: 0, cursor: 'pointer',
+                  overflow: 'hidden', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: Math.round(size * 0.5), lineHeight: 1,
+                }}>
+                {emoji || '🎯'}
+              </button>
+            )
+        }
         {image && (
           <button
             type="button"
@@ -174,7 +193,14 @@ function HabitImagePicker({ image, emoji, onChange, size = 54 }: {
           if (!file) return
           try { onChange(await readHabitImage(file)) } catch { /* not a usable image */ }
         }} />
-      {!image && <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-micro)' }}>Picture</span>}
+      {/* Photo upload link — shown when the emoji picker is the primary button */}
+      {!image && onEmojiChange && (
+        <button type="button" onClick={() => ref.current?.click()} title="Upload a photo"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-micro)', padding: 0 }}>
+          Photo
+        </button>
+      )}
+      {!image && !onEmojiChange && <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-micro)' }}>Picture</span>}
     </div>
   )
 }
@@ -726,7 +752,8 @@ function HabitDetailPanel({
       {/* Header — picture, name, and what the habit is in one line */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <HabitImagePicker image={habit.image} emoji={habit.emoji} size={46}
-          onChange={v => onUpdate({ image: v })} />
+          onChange={v => onUpdate({ image: v })}
+          onEmojiChange={v => onUpdate({ emoji: v })} />
         <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
           <input
             value={habit.name}
@@ -747,11 +774,6 @@ function HabitDetailPanel({
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
           <X size={ICON.sm} />
         </button>
-      </div>
-
-      {/* Its icon — the colour comes with the habit and needs no picker */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <EmojiBtn value={habit.emoji} onSelect={v => onUpdate({ emoji: v })} size={32} />
       </div>
 
       {/* Today — the one thing you came here to change */}
