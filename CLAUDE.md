@@ -1132,6 +1132,58 @@ something on screen a reload is silent, because flashing a spinner over data you
 are already reading is worse than the wait. An account that is genuinely empty
 still gets its empty state — verified both ways.
 
+## Bots — a company calendar is not on the account you signed in with
+`supabase/functions/_shared/googleCalendars.ts`, used by **both** the Telegram
+bot and Siri. Each had its own copy of two stacked narrowings:
+
+```
+.from('google_accounts').eq('is_primary', true)      ← only the signed-in account
+GET /calendars/primary/events                        ← only *its* default calendar
+```
+
+Teradix and DX are connected accounts, so neither bot could ever see them — and
+a second calendar on the primary account was invisible too. The bots reported a
+diary that was true of one calendar and said nothing about the rest, which reads
+as "you have nothing on" rather than "I cannot see it".
+- **`CalendarHub` answers "which calendars are mine"** the way the app does:
+  every row in `google_accounts`, every calendar in each one's `calendarList`,
+  minus anything hidden in `google_calendar_settings`, with your `display_name`
+  winning over Google's summary. Capped at 12 calendars for one question.
+- **One dead account is not an empty diary.** An account whose refresh token has
+  expired is skipped and **named** in the reply; the others still answer.
+  Returning nothing because the third account is stale is the same failure in a
+  new costume.
+- **An event id is only unique inside its calendar.** Reads hand back
+  `eventId::calendarId`, which is what an edit needs; `locate()` also accepts a
+  bare id and searches for it, because a model echoing a string back is not a
+  channel to trust. A patch sent to `calendars/primary` for an event on Teradix
+  is a 404 that reads as "the event is gone".
+- **Writing says where it went.** `pickWritable(name)` matches a calendar
+  loosely — "teradix" finds "Teradix Ltd", an address matches too — never picks
+  a read-only one, and falls back to the signed-in account's own. The reply
+  names the calendar, because with several in play "Created" alone does not tell
+  you whether it went where you meant.
+- Both system prompts now state that several calendars exist and how to name
+  one; without that the model answers about "your calendar" as though there were
+  one. `getGoogleToken` stays for **Gmail**, which really is one mailbox.
+
+## Bots — "I got a bit confused" was usually a truncated answer
+Both agents ran the tool loop and, for any `stop_reason` that was neither
+`end_turn` nor `tool_use`, fell straight out to *"I got a bit confused — could
+you rephrase that?"*. The commonest such stop reason is **`max_tokens`**: the
+reply was cut off, often mid tool-call. Siri's ceiling was **512**, which a tool
+call plus its sentence reaches easily — so it told you it had not understood a
+question it had understood perfectly, and only sometimes, which is exactly how
+it felt from the outside.
+- `max_tokens` is now its own case: speak the partial text with an ellipsis, or
+  ask for a narrower slice — never claim a misunderstanding.
+- Ceilings raised: Siri 512 → 1024, Telegram 1024 → 2048 (a day across several
+  calendars is a longer reply than it used to be). Siri's answers stay short
+  because its prompt says so, not because the ceiling cuts them off.
+- **An API failure says which kind.** 429, 5xx and everything else read
+  differently and point at different fixes; "Sorry, I ran into a problem" for a
+  rate limit sends you to rephrase a sentence that was fine.
+
 ## Migrations — the runner remembers what it has applied
 `scripts/migrate.mjs` used to read every `.sql` in `supabase/migrations` and run
 all of them, every time, and `.github/workflows/migrate.yml` invokes it on any

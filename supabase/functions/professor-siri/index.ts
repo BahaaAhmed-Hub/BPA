@@ -17,6 +17,7 @@
  * Response: Content-Type: text/plain, always HTTP 200 (errors spoken by Siri too).
  */
 
+import { CalendarHub, eventLine } from '../_shared/googleCalendars.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const sb = createClient(
@@ -365,56 +366,85 @@ async function toolAddTransaction(userId: string, args: Record<string, unknown>)
   return `Logged: ${payee || 'transaction'} — ${amount.toLocaleString()} ${account.currency} on ${date} (${account.name})`
 }
 
+async function toolUpdateTask(userId: string, args: Record<string, unknown>): Promise<string> {
+  const updates: Record<string, unknown> = {}
+  if (args.title    !== undefined) updates.title    = args.title
+  if (args.quadrant !== undefined) updates.quadrant = args.quadrant
+  if (args.due_date !== undefined) updates.due_date = (args.due_date as string) || null
+  if (args.status   !== undefined) updates.status   = args.status
+
+  if (!Object.keys(updates).length) return 'Nothing to update.'
+
+  const { error } = await sb.from('tasks')
+    .update(updates).eq('id', args.task_id).eq('user_id', userId)
+
+  if (error) return `Error: ${error.message}`
+  return `Task updated.`
+}
+
+// ── Calendars: every account, every calendar ──────────────────────────────────
+// `getGoogleToken` above stays for Gmail, which is genuinely about one mailbox.
+// Calendars are not: a company calendar lives on a connected account, so these
+// go through `CalendarHub`, which reads them all. See _shared/googleCalendars.ts.
+
+function calendarHub(userId: string): CalendarHub {
+  return new CalendarHub(sb, userId, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+}
+
 async function toolGetCalendarEvents(userId: string, args: Record<string, unknown>): Promise<string> {
-  const g = await getGoogleToken(userId)
-  if (!g.ok) return g.error
+  const hub = calendarHub(userId)
+  if (!hub.configured) return 'Google is not configured on the server.'
+
+  const accounts = await hub.accounts()
+  if (!accounts.length)
+    return "Your Google account isn't connected. Sign in with Google in the Professor app."
 
   const daysAhead = Math.min((args.days_ahead as number | undefined) ?? 3, 14)
-  const now       = new Date()
-  const timeMin   = now.toISOString()
-  const timeMax   = new Date(now.getTime() + daysAhead * 86400e3).toISOString()
+  const now     = new Date()
+  const timeMin = now.toISOString()
+  const timeMax = new Date(now.getTime() + daysAhead * 86400e3).toISOString()
 
-  const calRes = await fetch(
-    'https://www.googleapis.com/calendar/v3/calendars/primary/events?' +
-    new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '20' }),
-    { headers: { Authorization: `Bearer ${g.token}` } }
-  )
-
-  if (!calRes.ok) return `Calendar error (${calRes.status}). Try again in a moment.`
-
-  const calData = await calRes.json() as {
-    items?: { id?: string; summary?: string; start?: { dateTime?: string; date?: string } }[]
-  }
-  const events = calData.items ?? []
-  if (!events.length) return `No events in the next ${daysAhead} days.`
-
-  const DAYS   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-  function fmtDT(start: { dateTime?: string; date?: string }): string {
-    if (start.dateTime) {
-      const m = start.dateTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
-      if (!m) return start.dateTime
-      const [, yr, mo, dy, hh, mm] = m
-      const dow = DAYS[new Date(Date.UTC(+yr, +mo - 1, +dy)).getUTCDay()]
-      return `${dow} ${+dy} ${MONTHS[+mo - 1]}, ${hh}:${mm}`
-    }
-    if (start.date) {
-      const [yr, mo, dy] = start.date.split('-')
-      const dow = DAYS[new Date(Date.UTC(+yr, +mo - 1, +dy)).getUTCDay()]
-      return `${dow} ${+dy} ${MONTHS[+mo - 1]} (all day)`
-    }
-    return ''
+  const cals = await hub.calendars()
+  if (!cals.length) {
+    return hub.unreachable.length
+      ? `Couldn't reach ${hub.unreachable.join(', ')}. Reconnect in Settings and try again.`
+      : 'No calendars are visible. Check Settings if you expect some.'
   }
 
-  return events.map(e =>
-    `[id:${e.id}] ${e.summary ?? 'Untitled'} — ${fmtDT(e.start ?? {})}`
-  ).join('\n')
+  // A name narrows it — "what is on the Teradix calendar".
+  const want = (args.calendar as string | undefined)?.trim().toLowerCase()
+  const events = await hub.events({ timeMin, timeMax })
+  const shown = want
+    ? events.filter(e =>
+        e.calendarName.toLowerCase().includes(want) || e.accountEmail.toLowerCase().includes(want))
+    : events
+
+  // Name the calendar on each row only where more than one is in play.
+  const showCal = new Set(shown.map(e => e.calendarId)).size > 1
+  const trouble = hub.unreachable.length
+    ? `\n(Couldn't reach ${hub.unreachable.join(', ')} — reconnect in Settings.)`
+    : ''
+
+  if (!shown.length) {
+    const scope = want ? ` on a calendar matching "${args.calendar as string}"` : ''
+    return `No events in the next ${daysAhead} days${scope}.${trouble}`
+  }
+
+  return shown.map(e => eventLine(e, showCal)).join('\n') + trouble
 }
 
 async function toolAddCalendarEvent(userId: string, args: Record<string, unknown>): Promise<string> {
-  const g = await getGoogleToken(userId)
-  if (!g.ok) return g.error
+  const hub = calendarHub(userId)
+  if (!hub.configured) return 'Google is not configured on the server.'
+
+  const target = await hub.pickWritable(args.calendar as string | undefined)
+  if (!target) {
+    return hub.unreachable.length
+      ? `Couldn't reach ${hub.unreachable.join(', ')}. Reconnect in Settings and try again.`
+      : "No calendar you can write to. Sign in with Google in the Professor app."
+  }
+  const token = await hub.token(target.accountId)
+  if (!token) return `Couldn't reach ${target.accountEmail}. Reconnect in Settings.`
 
   const title  = args.title as string
   const start  = args.start as string
@@ -432,14 +462,17 @@ async function toolAddCalendarEvent(userId: string, args: Record<string, unknown
   if (args.description) event.description = args.description
   if (args.location)    event.location    = args.location
 
-  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-    method:  'POST',
-    headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
-    body:    JSON.stringify(event),
-  })
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(target.calendarId)}/events`,
+    {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify(event),
+    },
+  )
 
   if (!res.ok) {
-    const err = await res.json() as { error?: { message?: string } }
+    const err = await res.json().catch(() => ({})) as { error?: { message?: string } }
     if (res.status === 403) return 'Cannot create events. Please reconnect Google with calendar permissions.'
     return `Calendar error: ${err.error?.message ?? res.status}`
   }
@@ -448,32 +481,19 @@ async function toolAddCalendarEvent(userId: string, args: Record<string, unknown
   const when = created.start?.dateTime
     ? created.start.dateTime.slice(0, 16).replace('T', ' at ')
     : (created.start?.date ?? start)
-  return `Created "${created.summary ?? title}" on ${when}.`
-}
-
-async function toolUpdateTask(userId: string, args: Record<string, unknown>): Promise<string> {
-  const updates: Record<string, unknown> = {}
-  if (args.title    !== undefined) updates.title    = args.title
-  if (args.quadrant !== undefined) updates.quadrant = args.quadrant
-  if (args.due_date !== undefined) updates.due_date = (args.due_date as string) || null
-  if (args.status   !== undefined) updates.status   = args.status
-
-  if (!Object.keys(updates).length) return 'Nothing to update.'
-
-  const { error } = await sb.from('tasks')
-    .update(updates).eq('id', args.task_id).eq('user_id', userId)
-
-  if (error) return `Error: ${error.message}`
-  return `Task updated.`
+  // Say which calendar it landed on — with several in play, "created" alone
+  // does not tell you whether it went where you meant.
+  return `Created "${created.summary ?? title}" on ${when} in ${target.name}.`
 }
 
 async function toolUpdateCalendarEvent(userId: string, args: Record<string, unknown>): Promise<string> {
-  const g = await getGoogleToken(userId)
-  if (!g.ok) return g.error
+  const hub = calendarHub(userId)
+  if (!hub.configured) return 'Google is not configured on the server.'
 
-  const eventId = args.event_id as string
+  const ref = String(args.event_id ?? '').trim()
+  if (!ref) return 'Which event? Ask for the calendar first, then edit by its id.'
+
   const patch: Record<string, unknown> = {}
-
   if (args.title)       patch.summary     = args.title
   if (args.description) patch.description = args.description
   if (args.location)    patch.location    = args.location
@@ -485,26 +505,31 @@ async function toolUpdateCalendarEvent(userId: string, args: Record<string, unkn
     const e = args.end as string
     patch.end = e.includes('T') ? { dateTime: e } : { date: e }
   }
-
   if (!Object.keys(patch).length) return 'Nothing to update.'
 
+  // An event id means nothing without its calendar, and the id may come back
+  // bare — so it is looked up rather than assumed to be on the default one.
+  const found = await hub.locate(ref)
+  if (!found) return "Couldn't find that event on any of your calendars. Ask for the calendar again and use the id it gives."
+  if (!found.calendar.writable) return `"${found.calendar.name}" is read-only for you, so that event can't be edited.`
+
   const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(found.calendar.calendarId)}/events/${encodeURIComponent(found.eventId)}`,
     {
       method:  'PATCH',
-      headers: { Authorization: `Bearer ${g.token}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${found.token}`, 'Content-Type': 'application/json' },
       body:    JSON.stringify(patch),
-    }
+    },
   )
 
   if (!res.ok) {
-    const err = await res.json() as { error?: { message?: string } }
+    const err = await res.json().catch(() => ({})) as { error?: { message?: string } }
     if (res.status === 403) return 'Cannot edit events. Please reconnect Google with calendar permissions.'
     return `Calendar error: ${err.error?.message ?? res.status}`
   }
 
   const updated = await res.json() as { summary?: string }
-  return `Updated "${updated.summary ?? args.title}".`
+  return `Updated "${updated.summary ?? args.title}" in ${found.calendar.name}.`
 }
 
 // ── Shopping tools ────────────────────────────────────────────────────────────
@@ -910,11 +935,12 @@ const CLAUDE_TOOLS = [
   },
   {
     name:        'get_calendar_events',
-    description: 'List upcoming Google Calendar events.',
+    description: 'List upcoming events across ALL the user\'s Google calendars — personal and company (e.g. Teradix, DX). Each row names its calendar when more than one is involved.',
     input_schema: {
       type: 'object',
       properties: {
         days_ahead: { type: 'number', description: 'How many days ahead to look (default 3, max 14)' },
+        calendar:   { type: 'string', description: 'Optional: only this calendar, matched loosely by name or account address (e.g. "Teradix", "DX").' },
       },
     },
   },
@@ -930,6 +956,7 @@ const CLAUDE_TOOLS = [
         end:         { type: 'string', description: 'ISO datetime or date. Defaults to 1 hour after start.' },
         description: { type: 'string' },
         location:    { type: 'string' },
+        calendar:    { type: 'string', description: 'Which calendar to put it on, by name (e.g. "Teradix", "DX"). Defaults to the main one.' },
       },
     },
   },
@@ -940,7 +967,7 @@ const CLAUDE_TOOLS = [
       type:     'object',
       required: ['event_id'],
       properties: {
-        event_id:    { type: 'string', description: 'Event id from get_calendar_events [id:...]' },
+        event_id:    { type: 'string', description: 'The full id from get_calendar_events [id:...], which looks like eventId::calendarId. Pass it exactly as given.' },
         title:       { type: 'string', description: 'New event title' },
         start:       { type: 'string', description: 'New start — ISO datetime or date' },
         end:         { type: 'string', description: 'New end — ISO datetime or date' },
@@ -1092,6 +1119,8 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "what do I have today" / "إيه اللي عندي النهارده" → get_today, then get_calendar_events(days_ahead=1)
 - "spent 200 on lunch" / "صرفت 200 على الغداء" → add_transaction(amount=200, payee="lunch")
 - "what's on my calendar" / "فيه إيه في التقويم" → get_calendar_events
+- "what's on the Teradix calendar" / "إيه اللي في تقويم Teradix" → get_calendar_events(calendar="Teradix")
+- "add it to the DX calendar" / "حطها في تقويم DX" → add_calendar_event(..., calendar="DX")
 - "add a meeting tomorrow at 3pm" / "حجز اجتماع بكرا الساعة 3" → add_calendar_event(title="meeting", start="${tomorrow}T15:00:00")
 - "rename the meeting to X" / "غير اسم الاجتماع" → get_calendar_events, then update_calendar_event(event_id=..., title="X")
 - "move the meeting to 4pm" / "حول الاجتماع الساعة 4" → get_calendar_events, then update_calendar_event(event_id=..., start="...T16:00:00")
@@ -1117,6 +1146,8 @@ IMPORTANT — understand natural speech (Arabic and English):
 - Never ask the user to rephrase. Just figure it out.
 - When the user lists multiple things to log or add, call the relevant tool in parallel for each one.
 
+Calendars: the user has SEVERAL — a personal one and company ones (Teradix, DX). get_calendar_events reads them all at once and names each event's calendar. Pass calendar="<name>" to narrow to one, and when creating an event pass calendar="<name>" if the user says which. Never claim they have only one calendar.
+
 What you CAN do: tasks (list, add, complete, edit), habits (read with get_habits, log with log_habit), log expenses/income, calendar (read, create, edit events), today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read, reply).
 What you CANNOT do: read financial balances or history — say so briefly if asked.
 
@@ -1136,7 +1167,11 @@ Reply style: short, warm, direct. No markdown. Use plain bullets with •. After
       },
       body: JSON.stringify({
         model:      'claude-haiku-4-5-20251001',
-        max_tokens: 512,
+        // 512 truncated a tool call plus its sentence often enough that the
+        // loop fell through to "I got a bit confused" on questions it had
+        // understood. Spoken answers stay short because the prompt says so,
+        // not because the ceiling cuts them off.
+        max_tokens: 1024,
         system:     systemPrompt,
         tools:      CLAUDE_TOOLS,
         messages,
@@ -1146,7 +1181,11 @@ Reply style: short, warm, direct. No markdown. Use plain bullets with •. After
     if (!res.ok) {
       const err = await res.text()
       console.error('Anthropic error:', err)
-      return 'Sorry, I ran into a problem. Try again in a moment.'
+      // Say which kind of failure it was. "I didn't understand" about a 529 is
+      // a lie that sends you on to rephrase a sentence that was already fine.
+      if (res.status === 429) return 'I am being rate limited right now — try again in a few seconds.'
+      if (res.status >= 500)  return 'The AI service is having a moment. Try again shortly.'
+      return `Sorry, I could not reach the AI service (${res.status}). Try again in a moment.`
     }
 
     const data = await res.json() as { stop_reason: string; content: ContentBlock[] }
@@ -1168,9 +1207,21 @@ Reply style: short, warm, direct. No markdown. Use plain bullets with •. After
 
       messages.push({ role: 'assistant', content: data.content })
       messages.push({ role: 'user',      content: toolResults })
-    } else {
-      break
+      continue
     }
+
+    // **`max_tokens` is not a misunderstanding.** The reply was cut off
+    // mid-sentence, or mid tool-call. Speak whatever text did arrive rather
+    // than asking the person to rephrase a sentence that was understood
+    // perfectly well — that was the commonest way this said "I don't
+    // understand you" to a question it had got right.
+    if (data.stop_reason === 'max_tokens') {
+      const partial = data.content.find(b => b.type === 'text')?.text?.trim()
+      if (partial) return partial + ' …'
+      return 'That answer got too long for me. Could you ask for a narrower slice — a single day, or one list?'
+    }
+
+    break
   }
 
   return 'I got a bit confused. Could you rephrase that?'
