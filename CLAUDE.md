@@ -1184,6 +1184,24 @@ it felt from the outside.
   differently and point at different fixes; "Sorry, I ran into a problem" for a
   rate limit sends you to rephrase a sentence that was fine.
 
+## Bots — nothing deployed them
+`telegram-bot` and `professor-siri` were in **no** workflow. Between
+`deploy-functions.yml` and `supabase-deploy.yml` only five functions ship —
+`google-token-refresh`, `mail-smart-run`, `google-oauth`, `google-calendar-sync`,
+`google-calendar-write` — and the bots were never added, so every change to them
+since they were written went out by hand or not at all. A fix could be merged to
+main, the workflow could run green on the very push that carried it, and the bot
+would keep its old behaviour: the run deployed the five functions it knows about
+and said nothing about the two it does not.
+- Both now deploy with **`--no-verify-jwt`**, and neither is thereby
+  unauthenticated: Telegram's webhook POSTs with no Supabase session and a Siri
+  Shortcut is a plain URL, so the gateway would reject both before the function
+  ran — each resolves a `prof_sk_` token of its own instead (the chat's linked
+  token, or `?token=`/Bearer) and answers nothing without a valid one.
+- Still not in any workflow, and still hand-deployed: `professor-mcp`,
+  `health-ingest`, `shopping-price-watch`. Each has its own token or session
+  check; adding them is the same two lines when someone wants them automatic.
+
 ## Migrations — the runner remembers what it has applied
 `scripts/migrate.mjs` used to read every `.sql` in `supabase/migrations` and run
 all of them, every time, and `.github/workflows/migrate.yml` invokes it on any

@@ -44,3 +44,29 @@ jobs:
             --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      # ── The bots ────────────────────────────────────────────────────────────
+      # These two were never in any workflow, so every change to them since they
+      # were written has been deployed by hand or not at all — which is why a
+      # merged fix could sit on main and the bot kept its old behaviour.
+      #
+      # `--no-verify-jwt` for both: Telegram's webhook POSTs with no Supabase
+      # session, and a Siri Shortcut is a plain URL. The gateway would reject
+      # them before the function ran. Neither is unauthenticated — each resolves
+      # a `prof_sk_` token of its own (the chat's linked token for Telegram, the
+      # `?token=`/Bearer one for Siri) and answers nothing without a valid one.
+      - name: Deploy telegram-bot
+        run: |
+          supabase functions deploy telegram-bot \
+            --no-verify-jwt \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy professor-siri
+        run: |
+          supabase functions deploy professor-siri \
+            --no-verify-jwt \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
