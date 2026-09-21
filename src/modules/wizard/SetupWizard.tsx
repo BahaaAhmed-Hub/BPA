@@ -81,10 +81,27 @@ export function SetupWizard({ onClose }: Props) {
   const [step, setStep]       = useState(1)
   const [dir,  setDir]        = useState<'fwd' | 'back'>('fwd')
   const [animKey, setAnimKey] = useState(0)
-  const [data, setData]       = useState<WizardData>({
-    displayName: authName, themeId: currentThemeId,
-    companies: [], selectedTemplates: [], customHabits: [],
-    todoistToken: '', importedTasks: [], selectedTaskIds: new Set(),
+  const [data, setData]       = useState<WizardData>(() => {
+    // Pre-populate from whatever the account already has so re-opening the
+    // wizard shows real data, not a blank slate.
+    const storedCos: Array<{ id: string; name: string; color: string; emailDomain?: string; accountId?: string }> =
+      JSON.parse(localStorage.getItem('professor-companies') ?? '[]')
+    const companies: CompanyDraft[] = storedCos.map(c => ({
+      id: c.id, name: c.name, color: c.color,
+      emailDomain: c.emailDomain ?? '',
+      accountId:   c.accountId   ?? '',
+    }))
+
+    const existingHabits = useHabitsStore.getState().habits
+    const selectedTemplates = HABIT_TEMPLATES
+      .filter(t => existingHabits.some(h => h.name.toLowerCase() === t.name.toLowerCase()))
+      .map(t => t.id)
+
+    return {
+      displayName: authName, themeId: currentThemeId,
+      companies, selectedTemplates, customHabits: [],
+      todoistToken: '', importedTasks: [], selectedTaskIds: new Set(),
+    }
   })
 
   // Restore wizard state after OAuth redirect
@@ -140,13 +157,18 @@ export function SetupWizard({ onClose }: Props) {
       try { await saveCompaniesToDB(rows) } catch { /* offline */ }
     }
 
-    const addHabit = useHabitsStore.getState().addHabit
+    const { addHabit, habits: existingHabits } = useHabitsStore.getState()
+    const existingNames = new Set(existingHabits.map(h => h.name.toLowerCase()))
     for (const tid of data.selectedTemplates) {
       const t = HABIT_TEMPLATES.find(x => x.id === tid)
-      if (t) addHabit({ name: t.name, emoji: t.emoji, color: t.color, type: t.type, goal: (t as {goal?: number}).goal, unit: (t as {unit?: string}).unit, frequency: t.frequency, isActive: true })
+      if (t && !existingNames.has(t.name.toLowerCase())) {
+        addHabit({ name: t.name, emoji: t.emoji, color: t.color, type: t.type, goal: (t as {goal?: number}).goal, unit: (t as {unit?: string}).unit, frequency: t.frequency, isActive: true })
+      }
     }
     for (const ch of data.customHabits) {
-      addHabit({ name: ch.name, emoji: ch.emoji, color: ch.color, type: ch.type, goal: ch.goal, unit: ch.unit, frequency: ch.frequency, isActive: true })
+      if (!existingNames.has(ch.name.toLowerCase())) {
+        addHabit({ name: ch.name, emoji: ch.emoji, color: ch.color, type: ch.type, goal: ch.goal, unit: ch.unit, frequency: ch.frequency, isActive: true })
+      }
     }
 
     const addTask = useTaskStore.getState().addTask

@@ -1240,11 +1240,25 @@ function App() {
   const [showWizard, setShowWizard] = useState(false)
   const wizardChecked = useRef(false)
 
-  // Show wizard on first login (once per account), and on professor:openWizard event
+  // Show wizard on first login, and on professor:openWizard event.
+  // Defer by 2.5 s so the initial DB hydration can finish before we judge whether
+  // the account has data — a new device for an existing user must not be mistaken
+  // for a brand-new account just because localStorage is empty there.
   useEffect(() => {
     if (!user || wizardChecked.current) return
     wizardChecked.current = true
-    if (!localStorage.getItem('bpa-wizard-done')) setShowWizard(true)
+    if (localStorage.getItem('bpa-wizard-done')) return
+    const timer = setTimeout(() => {
+      const hasCompanies = (JSON.parse(localStorage.getItem('professor-companies') ?? '[]') as unknown[]).length > 0
+      const hasHabits    = useHabitsStore.getState().habits.length > 0
+      if (hasCompanies || hasHabits) {
+        // Existing user on a new device — suppress silently
+        localStorage.setItem('bpa-wizard-done', '1')
+      } else {
+        setShowWizard(true)
+      }
+    }, 2500)
+    return () => clearTimeout(timer)
   }, [user])
 
   useEffect(() => {
