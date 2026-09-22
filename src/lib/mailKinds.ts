@@ -72,7 +72,7 @@ const NO_REPLY_SENDER =
  *  addressed you by name and that you have never written in: a machine's
  *  announcement, which is what it always is in that shape. */
 const ROLE_SENDER =
-  /^(notifications?|alerts?|updates?|news|newsletters?|info|hello|hi|team|marketing|promo|promotions|offers|events?|webinars?|billing|invoices?|receipts?|system|automated|notify|digest|community|members?|store|shop|feedback|survey)[@+._-]/i
+  /^(notifications?|alerts?|updates?|news|newsletters?|info|hello|hi|team|marketing|promo|promotions|offers|events?|webinars?|billing|invoices?|receipts?|system|automated|notify|digest|community|members?|store|shop|feedback|survey|stories|editorial|picks|roundup|briefing|highlights?|curator?|weekly|daily|trending|featured|selected|curated|topstories|morning|evening|share)[@+._-]/i
 
 /** A conversation, whoever started it. A `Re:` or a forward has been carried
  *  by a person, so no amount of role-sounding sender demotes it. */

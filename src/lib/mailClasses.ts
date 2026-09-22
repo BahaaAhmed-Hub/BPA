@@ -59,7 +59,12 @@ export const CLASS_INFO: Record<MailClass, ClassMeta> = {
  *  themselves. A well-behaved sender sets List-Unsubscribe; plenty do not, so
  *  the sending address, the campaign headers the big platforms stamp on, and an
  *  unsubscribe line in the body all count too. */
-const BULK_SENDERS = /^(no[-_.]?reply|donotreply|newsletter|news|mailer|mail|marketing|promo|promotions|offers|deals|campaign|updates|update|notification|notifications|info|hello|hi|team|support|community|digest|alerts?|store|shop|club|members?)[+@._-]/i
+const BULK_SENDERS = /^(no[-_.]?reply|donotreply|newsletter|news|mailer|mail|marketing|promo|promotions|offers|deals|campaign|updates|update|notification|notifications|info|hello|hi|team|support|community|digest|alerts?|store|shop|club|members?|stories|edition|picks|roundup|briefing|highlights?|editorial|curator?|weekly|daily|trending|featured|selected|curated|topstories|top|share)[+@._-]/i
+
+/** Words in a FROM display name that say "service digest", not "person".
+ *  Names like "Flipboard 10 For Today", "GitHub Digest", "Morning Brew". */
+const NEWSLETTER_FROM_NAME =
+  /\b(digest|newsletter|weekly|daily|roundup|edition|briefing|summary|stories|highlights|curated|updates?|for today|this week|for you|morning|evening|news|trending|top \d+|alert|recap)\b/i
 
 const ESP_DOMAINS = /(mailchimp|mcsv|mcdlv|sendgrid|sendinblue|brevo|exponea|klaviyo|hubspot|braze|exacttarget|salesforce|mailgun|sparkpost|iterable|customer\.io|sailthru|campaign-archive|cmail\d|createsend|constantcontact|omnisend|drip|activecampaign|convertkit|substack|beehiiv|mailerlite|amazonses|postmark|mandrill)/i
 
@@ -76,6 +81,8 @@ const TRANSACTIONAL = /\b(receipt|invoice|payment|paid|order|shipped|delivery|st
 export interface Classifiable {
   headers: GmailHeader[]
   fromEmail: string
+  /** The display name from the From header, e.g. "Flipboard 10 For Today". */
+  fromName?: string
   /** The `To` header, lower-cased. */
   to: string
   cc?: string
@@ -88,7 +95,7 @@ export interface Classifiable {
   isInvitation?: boolean
 }
 
-export function looksLikeBulk(headers: GmailHeader[], email: string, body: string): boolean {
+export function looksLikeBulk(headers: GmailHeader[], email: string, body: string, fromName?: string): boolean {
   const h = (n: string) => header(headers, n)
 
   // The headers a list or campaign is supposed to carry
@@ -105,6 +112,11 @@ export function looksLikeBulk(headers: GmailHeader[], email: string, body: strin
   if (BULK_SENDERS.test(`${local}@`)) return true
   if (ESP_DOMAINS.test(domain)) return true
   if (BULK_SUBDOMAIN.test(domain)) return true
+
+  // A FROM display name like "Flipboard 10 For Today" or "Morning Brew" is a
+  // service digest, not a person writing to you, even when the address looks
+  // neutral. Checked before the body so a truncated snippet cannot hide it.
+  if (fromName && NEWSLETTER_FROM_NAME.test(fromName)) return true
 
   // And, failing all that, an unsubscribe line in the message
   return MARKETING_WORDS.test(body.slice(0, 4000))
@@ -129,15 +141,20 @@ export function unsubscribeLink(headers: GmailHeader[]): string | null {
 export function classifyMail(m: Classifiable): MailClass {
   if (m.isInvitation) return 'invitation'
 
-  const bulk = looksLikeBulk(m.headers, m.fromEmail, m.body)
+  const bulk = looksLikeBulk(m.headers, m.fromEmail, m.body, m.fromName)
   if (bulk) {
-    // A campaign asks you to buy or to read; a receipt tells you something
-    // happened. Both are automated, and only one is worth sweeping unread.
+    // A receipt, an alert or a build is transactional — automated, but something
+    // worth reading before archiving. Everything else bulk — a digest, a
+    // campaign, a curated list — is a newsletter. The old fallback returned
+    // 'notification' when no marketing words appeared in the snippet (which is
+    // only a few hundred characters), so a Flipboard digest whose snippet
+    // contains no "unsubscribe" was filed beside GitHub alerts. A snippet that
+    // says nothing either way is digest content, not a receipt.
     const marketing = MARKETING_WORDS.test(m.body.slice(0, 4000))
       || !!header(m.headers, 'List-Unsubscribe')
     const transactional = TRANSACTIONAL.test(`${m.subject} ${m.body.slice(0, 600)}`)
     if (transactional && !marketing) return 'notification'
-    return marketing ? 'newsletter' : 'notification'
+    return 'newsletter'
   }
 
   const me = m.mailbox.toLowerCase()

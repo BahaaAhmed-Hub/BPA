@@ -210,6 +210,7 @@ export function isBusinessThread(
   const cls = classifyMail({
     headers: h,
     fromEmail: facts.fromEmail,
+    fromName: facts.fromName,
     to: newest.to.join(', '),
     cc: newest.cc.join(', '),
     subject: facts.subject,
@@ -223,19 +224,13 @@ export function isBusinessThread(
     // something to discard. The header is the same test the nightly run makes.
     isInvitation: /text\/calendar/i.test(headerOf(h, 'Content-Type')),
   })
-  // **A campaign goes, and nothing else does.**
-  //
-  //  There used to be a second clause here: automated mail was discarded
-  //  wherever the row had nothing but a Draft button to put under it. That was
-  //  written when `kindOf` called everything it did not recognise a `reply`,
-  //  so the clause was doing the work of telling an announcement from a
-  //  conversation — badly. It threw away a support thread because the address
-  //  said `support@`. `kindOf` decides that now, from the shape of the thread
-  //  rather than from the spelling of one address, and anything it still calls
-  //  a `reply` is a conversation or a message that names you. Keeping the
-  //  clause as well meant two rules answering one question and disagreeing.
+  // Campaigns go. Notifications (receipts, alerts) also go when the thread
+  // kind is not something a person needs to act on — a build failure from
+  // GitHub lands here when the snippet is too short to carry "receipt" but
+  // the thread shape makes it clear nobody is waiting.
   void kind
   if (cls === 'newsletter') return false
+  if (cls === 'notification' && !canNeedAction(facts.kind)) return false
   if (accountIsBusiness) return true
   // A personal mailbox still carries work: a named person on an organisation's
   // own domain counts, a free-mail address does not.

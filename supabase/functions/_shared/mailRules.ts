@@ -63,6 +63,16 @@ export const FREE_MAIL = new Set([
   'yandex.com','zoho.com',
 ])
 
+/** FROM display names like "Flipboard 10 For Today" or "Morning Brew" — a
+ *  service digest, not a person writing to you. Checked before the body so a
+ *  truncated snippet cannot hide it. */
+const NEWSLETTER_FROM_NAME =
+  /\b(digest|newsletter|weekly|daily|roundup|edition|briefing|summary|stories|highlights|curated|updates?|for today|this week|for you|morning|evening|news|trending|top \d+|alert|recap)\b/i
+
+/** A bulk-sender local part — the address itself says "I am a list". */
+const BULK_SENDERS =
+  /^(no[-_.]?reply|donotreply|newsletter|news|mailer|mail|marketing|promo|promotions|offers|deals|campaign|updates?|update|notification|notifications|info|hello|hi|team|support|community|digest|alerts?|store|shop|club|members?|stories|edition|picks|roundup|briefing|highlights?|editorial|curator?|weekly|daily|trending|featured|selected|curated|topstories|top|share)[+@._-]/i
+
 /** A campaign: something sent to a list, whatever its subject line says. It is
  *  discarded outright — there is no version of a marketing send that the smart
  *  view has an answer for. */
@@ -72,6 +82,13 @@ export function looksCampaign(m: NeutralMessage): boolean {
   if (has('List-Unsubscribe') || has('List-Id') || has('List-Post')) return true
   if (/bulk|list|junk/i.test(headerOf(hs, 'Precedence'))) return true
   if (has('X-Campaign-Id') || has('X-Mailer-Campaign') || has('X-Feedback-Id')) return true
+  if (has('Auto-Submitted') && !/^no$/i.test(headerOf(hs, 'Auto-Submitted'))) return true
+  // A FROM display name like "Flipboard 10 For Today" or "Morning Brew" is a
+  // service digest, not a person writing.
+  if (NEWSLETTER_FROM_NAME.test(m.fromName)) return true
+  // The local part of the address announces it is a list.
+  const local = m.from.toLowerCase().split('@')[0] ?? ''
+  if (BULK_SENDERS.test(local + '@')) return true
   return false
 }
 
