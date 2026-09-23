@@ -344,6 +344,12 @@ for (const theme of THEMES) {
     })
     await page.waitForTimeout(3200)
   })
+  for (const sec of ['Appearance', 'Accounts & companies', 'Habits']) {
+    await visit(`Settings · ${sec}`, async () => {
+      await page.getByRole('button', { name: sec, exact: true }).first().click({ timeout: 4000 })
+    })
+  }
+
   // The admin panel — four faces, all of them new text on new grounds.
   const goAdmin = async () => {
     await page.evaluate(() => {
@@ -367,20 +373,6 @@ for (const theme of THEMES) {
     await page.waitForTimeout(700)
   })
 
-  // Settings again, since the admin visit reloaded onto another module.
-  await visit('Settings (return)', async () => {
-    await page.evaluate(() => {
-      const s = Object.keys(localStorage).find(k => k.includes('professor-ui'))
-      if (s) { const v = JSON.parse(localStorage.getItem(s)); v.state.activeModule = 'settings'; localStorage.setItem(s, JSON.stringify(v)) }
-      window.location.reload()
-    })
-    await page.waitForTimeout(3200)
-  })
-  for (const sec of ['Appearance', 'Accounts & companies', 'Habits']) {
-    await visit(`Settings · ${sec}`, async () => {
-      await page.getByRole('button', { name: sec, exact: true }).first().click({ timeout: 4000 })
-    })
-  }
 
   // One row per distinct colour pair across the whole theme.
   const uniq = new Map()
