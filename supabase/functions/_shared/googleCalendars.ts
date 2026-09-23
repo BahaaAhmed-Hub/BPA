@@ -172,14 +172,15 @@ export class CalendarHub {
           // A calendar whose id looks like someone else's email address is their
           // calendar, shared with you — Google Workspace lets colleagues share
           // with 'writer' access too, so accessRole alone is not enough.
-          // Your own calendars are either: the account's own primary
-          // (id === account email), or ones you created
-          // (id ends with @group.calendar.google.com).
+          // Safe keeps: the account's own primary (c.primary === true), calendars
+          // you created (id ends with calendar.google.com), or the account's own
+          // email as the id (the primary calendar's canonical form).
+          // Never skip the primary flag even if the email comparison fails.
           const id = c.id.toLowerCase()
           const isOtherPersonsCalendar =
+            !c.primary &&
             id.includes('@') &&
-            !id.endsWith('@group.calendar.google.com') &&
-            !id.endsWith('@resource.calendar.google.com') &&
+            !id.endsWith('calendar.google.com') &&
             id !== acc.email.toLowerCase()
           if (isOtherPersonsCalendar) continue
           out.push({
