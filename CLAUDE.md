@@ -1255,6 +1255,49 @@ self-grant, rewriting a plan, making a module core, reading another user's
 overrides or profile), 9 admin cases, and three consecutive applies exiting 0
 with no duplicated seed and no clobbered override.
 
+## SaaS — the client reads what it may see, before it reads anything else
+`lib/entitlements.ts`. `my_modules()` resolves the whole set server-side in one
+round trip; this is the browser's copy of that answer and nothing more. It
+decides what is **drawn** and what is **loaded**, never what is permitted —
+the bundle is public and editable, so the boundary is RLS and this is a
+courtesy to the person reading it.
+- **Off means never loaded, not loaded-and-hidden.** A store that fetches into
+  an RLS denial replaces its contents with nothing, and an empty Finance
+  screen reads as *"my ledger is gone"* rather than *"this is not on your
+  plan"* — the same failure as *a reload is not an empty ledger*, one layer
+  down. So `hydrate()` settles the answer **before** `loadAllFromDB`, and each
+  loader, each `liveSync` handler and Shopping's Realtime channel ask first.
+  Shopping is a tab of Finance rather than a module, so it follows Finance.
+- **A warm browser does not wait for it.** A cached answer for *this* user
+  starts the load at once and refreshes behind; only a cold boot pays the round
+  trip. Guessing is what this exists to stop, so with nothing cached it waits.
+- **A failed read is not evidence that a module went away.** The last answer
+  for this user stands — `googleScopes.ts`'s rule. With nothing cached at all,
+  everything is on: locking somebody out of their own app over a dropped
+  request is far worse than drawing a tab whose data the server declines
+  anyway. An **empty** registry is treated as no answer, not as a user with no
+  modules, so a project where `20260021` has not run behaves exactly as before.
+- **The cache is keyed by user id**, so another account's answer can never be
+  read as this one's. `clearUserData`'s hand-maintained key list has drifted
+  before (14 keys against 34 the app writes); this does not depend on being
+  on it, and `forgetEntitlements()` runs on sign-out regardless.
+- **An id the registry has never heard of is not off.** `settings`, `review`,
+  `behavioral` and `planning` are not modules, and a gate that read "not
+  enabled" rather than "registered and disabled" would take the way into
+  Settings with it. Verified on a plan holding only the two core modules.
+- **`activeModule` is persisted**, so a plan that changed under a shut laptop
+  reopens on a tab that is no longer there. The nav lands on the first module
+  that is, rather than on a blank page.
+Verified in Chromium against the real bundle, with `my_modules` stubbed:
+Mail + Finance off → neither drawn, and **not one** of the nine `finance_*`
+tables or `shopping_*` fetched, while `tasks` and `habits` were — the control
+that makes the absences mean something. The mirror (tasks + habits off) fetches
+all nine finance tables and neither of theirs; nothing off draws all seven.
+A laptop reopened on a withdrawn Finance lands on Today, not a blank page.
+**Known gap:** Today's own shortcuts ("📅 Calendar", "📋 Manage Tasks") are
+still drawn for modules that are off. The redirect catches them — the page
+bounces back rather than blanking — so it is a dead button, not a broken app.
+
 ## Migrations — the runner remembers what it has applied
 `scripts/migrate.mjs` used to read every `.sql` in `supabase/migrations` and run
 all of them, every time, and `.github/workflows/migrate.yml` invokes it on any

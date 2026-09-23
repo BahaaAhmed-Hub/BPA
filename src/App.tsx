@@ -14,6 +14,7 @@ import { PlanningAssistant } from './modules/planning/PlanningAssistant'
 import { FinanceModule } from './modules/finance/FinanceModule'
 import { NavRow } from './components/ui'
 import { useUIStore } from './store/uiStore'
+import { cachedModules, fetchModules, forgetEntitlements, moduleIsOff, useModules } from './lib/entitlements'
 import {
   collect, loadNotifSettings, inQuietHours, markSeen, dormantKinds, NOTIF_EVENT,
   type Notification, type NotifSetting,
@@ -549,6 +550,16 @@ const KIND_COLOR: Record<string, string> = {
 function TopNav() {
   const activeModule    = useUIStore(s => s.activeModule)
   const setActiveModule = useUIStore(s => s.setActiveModule)
+  // Drawn, not enforced — the bundle is public, so this is for the person
+  // reading it. RLS is what actually answers.
+  useModules()
+  const navItems = NAV_ITEMS.filter(item => !moduleIsOff(item.id))
+  // `activeModule` is persisted, so a plan that changed under a shut laptop
+  // reopens on a tab that is no longer there. Land on the first one that is
+  // rather than on a blank page.
+  useEffect(() => {
+    if (moduleIsOff(activeModule) && navItems.length) setActiveModule(navItems[0].id)
+  }, [activeModule, navItems, setActiveModule])
   const user            = useAuthStore(s => s.user)
 
   const initials = user?.name
@@ -596,7 +607,7 @@ function TopNav() {
           which is worse than small, because a covered button cannot be
           clicked. */}
       <nav style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-        {NAV_ITEMS.map(item => {
+        {navItems.map(item => {
           const active = activeModule === item.id
           return (
             <NavRow
@@ -722,26 +733,29 @@ function TopNav() {
 function ActiveModule() {
   const activeModule = useUIStore(s => s.activeModule)
   const everMounted  = useRef<Set<string>>(new Set([activeModule]))
+  useModules()
 
   // Track which modules have ever been active so we only mount them once.
   everMounted.current.add(activeModule)
 
+  // A module switched off stays mounted-but-hidden if it was ever open, which
+  // is a screen holding data the account is no longer entitled to. Drop it.
   const show = (id: string): CSSProperties =>
-    activeModule === id ? {} : { display: 'none' }
+    activeModule === id && !moduleIsOff(id) ? {} : { display: 'none' }
 
   return (
     <>
-      {everMounted.current.has('dashboard')  && <div style={show('dashboard')}><ExecutiveDashboard /></div>}
-      {everMounted.current.has('tasks')      && <div style={show('tasks')}><TaskCommand /></div>}
-      {everMounted.current.has('calendar')   && <div style={show('calendar')}><CalendarModule /></div>}
-      {everMounted.current.has('inbox')      && <div style={show('inbox')}><InboxModule /></div>}
-      {everMounted.current.has('habits')     && <div style={show('habits')}><HabitsModule /></div>}
+      {everMounted.current.has('dashboard') && !moduleIsOff('dashboard')  && <div style={show('dashboard')}><ExecutiveDashboard /></div>}
+      {everMounted.current.has('tasks') && !moduleIsOff('tasks')      && <div style={show('tasks')}><TaskCommand /></div>}
+      {everMounted.current.has('calendar') && !moduleIsOff('calendar')   && <div style={show('calendar')}><CalendarModule /></div>}
+      {everMounted.current.has('inbox') && !moduleIsOff('inbox')      && <div style={show('inbox')}><InboxModule /></div>}
+      {everMounted.current.has('habits') && !moduleIsOff('habits')     && <div style={show('habits')}><HabitsModule /></div>}
       {everMounted.current.has('review')     && <div style={show('review')}><ReviewModule /></div>}
-      {everMounted.current.has('morning')    && <div style={show('morning')}><MorningModule /></div>}
+      {everMounted.current.has('morning') && !moduleIsOff('morning')    && <div style={show('morning')}><MorningModule /></div>}
       {everMounted.current.has('settings')   && <div style={show('settings')}><SettingsModule /></div>}
       {everMounted.current.has('behavioral') && <div style={show('behavioral')}><BehavioralOS /></div>}
       {everMounted.current.has('planning')   && <div style={show('planning')}><PlanningAssistant /></div>}
-      {everMounted.current.has('finance')    && <div style={show('finance')}><FinanceModule /></div>}
+      {everMounted.current.has('finance') && !moduleIsOff('finance')    && <div style={show('finance')}><FinanceModule /></div>}
     </>
   )
 }
@@ -785,13 +799,17 @@ async function loadAllFromDB(
   loadTasksFn: () => Promise<void>,
   loadHabitsFn: () => Promise<void>,
 ): Promise<void> {
+  // A module that is off is not fetched. Loading it would hand the store an
+  // RLS denial to replace its contents with, and an empty screen reads as
+  // "my data is gone" rather than "this is not on your plan".
+  const off = moduleIsOff
   await Promise.allSettled([
-    loadTasksFn(),
-    loadHabitsFn(),
+    off('tasks')  ? Promise.resolve() : loadTasksFn(),
+    off('habits') ? Promise.resolve() : loadHabitsFn(),
     // Finance writes through to Supabase on every change but nothing ever read
     // it back, so a transaction added on the laptop simply did not exist on the
     // iPad — each device saw only what it had entered itself.
-    useFinanceStore.getState().loadFromDB(),
+    off('finance') ? Promise.resolve() : useFinanceStore.getState().loadFromDB(),
     // Companies
     loadCompaniesFromDB().then(companies => {
       if (companies.length === 0) return
@@ -849,6 +867,9 @@ function clearUserData(clearTasks: () => void, clearHabits: () => void) {
     'google_provider_token', 'google_provider_token_saved_at',
   ]
   userKeys.forEach(k => localStorage.removeItem(k))
+  // Keyed by user id as well, so it cannot be read as the next account's —
+  // but a signed-out browser should not keep the answer either.
+  forgetEntitlements()
   // Clear dynamic day-plan keys
   Object.keys(localStorage)
     .filter(k => k.startsWith('professor-dayplan-'))
@@ -874,21 +895,29 @@ function App() {
    *  only at sign-in. Restarting is safe — it tears the previous one down. */
   function beginLiveSync(userId: string) {
     stopLiveSync.current?.()
+    const quiet = async () => {}
     stopLiveSync.current = startLiveSync(userId, {
-      habits:  loadHabitsFromDB,
-      tasks:   loadTasksFromDB,
-      finance: () => useFinanceStore.getState().loadFromDB(),
+      habits:  moduleIsOff('habits')  ? quiet : loadHabitsFromDB,
+      tasks:   moduleIsOff('tasks')   ? quiet : loadTasksFromDB,
+      finance: moduleIsOff('finance') ? quiet : () => useFinanceStore.getState().loadFromDB(),
     })
     // Shopping has its own Realtime channel — start it alongside liveSync.
     // It tears its own previous channel down, as this function does above.
-    useShoppingStore.getState().startRealtime(userId)
+    // Shopping is a tab of Finance, not a module of its own, so it follows it.
+    if (!moduleIsOff('finance')) useShoppingStore.getState().startRealtime(userId)
   }
 
   /** Everything an account needs pulled down, **once per account**. See
    *  `hydratedFor`: the three call sites below are all reached on one boot. */
-  function hydrate(userId: string) {
+  async function hydrate(userId: string) {
     if (hydratedFor === userId) return
     hydratedFor = userId
+    // What this account may see has to be settled before a byte is pulled —
+    // see `loadAllFromDB`. A warm browser already knows and starts at once,
+    // refreshing behind; a cold one waits for the one round trip, because
+    // guessing here is the mistake this exists to stop.
+    if (cachedModules(userId)) void fetchModules(userId)
+    else await fetchModules(userId)
     void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
     beginLiveSync(userId)
   }
@@ -1037,7 +1066,7 @@ function App() {
       }
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
       if (u) {
-        hydrate(u.id)
+        void hydrate(u.id)
         // Preferences that are your work rather than this device's.
         stopPrefSync.current?.()
         stopPrefSync.current = startPrefSync()
@@ -1076,7 +1105,7 @@ function App() {
               localStorage.setItem('google_provider_token', session.provider_token)
               localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
             }
-            hydrate(u.id)
+            void hydrate(u.id)
           }
         } else {
           // Normal sign-in: check for user switch
@@ -1139,7 +1168,7 @@ function App() {
               }
             })()
           }
-          hydrate(u.id)
+          void hydrate(u.id)
         }
       } else if (!session) {
         forgetHydration()
