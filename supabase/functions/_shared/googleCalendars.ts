@@ -167,9 +167,21 @@ export class CalendarHub {
         for (const c of body.items ?? []) {
           if (hidden.has(c.id)) continue
           // 'reader' and 'freeBusyReader' are calendars other people shared with
-          // you — they belong to those people, not to you. Only 'owner' and
-          // 'writer' are yours (owned or delegated).
+          // you as read-only. Skip them.
           if (c.accessRole !== 'owner' && c.accessRole !== 'writer') continue
+          // A calendar whose id looks like someone else's email address is their
+          // calendar, shared with you — Google Workspace lets colleagues share
+          // with 'writer' access too, so accessRole alone is not enough.
+          // Your own calendars are either: the account's own primary
+          // (id === account email), or ones you created
+          // (id ends with @group.calendar.google.com).
+          const id = c.id.toLowerCase()
+          const isOtherPersonsCalendar =
+            id.includes('@') &&
+            !id.endsWith('@group.calendar.google.com') &&
+            !id.endsWith('@resource.calendar.google.com') &&
+            id !== acc.email.toLowerCase()
+          if (isOtherPersonsCalendar) continue
           out.push({
             accountId: acc.id,
             accountEmail: acc.email,
