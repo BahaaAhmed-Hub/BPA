@@ -1202,6 +1202,59 @@ and said nothing about the two it does not.
   `health-ingest`, `shopping-price-watch`. Each has its own token or session
   check; adding them is the same two lines when someone wants them automatic.
 
+## SaaS — plans, modules, and the admin who cannot read your ledger
+`20260021_entitlements.sql`. Three questions that used to have no answer at all,
+kept apart because they have three different ones: what modules exist
+(`modules`), what a plan includes (`plan_modules`), and what *this* user gets
+anyway (`user_modules`).
+- **The override is a row's presence, not a nullable boolean.** Present-and-true
+  grants a module the plan does not include; present-and-false revokes one it
+  does; no row means inherit the plan — which is the commonest case by far,
+  since most users are exactly their plan. `note` and `set_by` are not
+  decoration: in four months the only thing that can explain why one user has
+  Mail on a free plan is a sentence somebody wrote at the time.
+- **`has_module(uid, mod)` is the only thing that resolves the three**, so an
+  RLS policy, an edge function and the client cannot reach different
+  conclusions about the same user. The order is the whole policy: **core** beats
+  everything, then the user's override, then the plan, then no. An unknown
+  module id resolves to false — a typo must never grant anything.
+- **`core` is a module that cannot be revoked**, by a plan or by an override.
+  Today and Dashboard are core, or a downgrade leaves somebody signed in with no
+  home screen and no way to reach Settings — a support ticket rather than a
+  plan.
+- **Admin is its own table, never a column on `public.users`.** That table
+  carries `for all … using (auth.uid() = id)` from `20240001`, so an `is_admin`
+  column on it would be writable *by its own subject*: every user one UPDATE
+  away from being an admin. `public.admins` has no write policy at all — with
+  RLS on, that means nobody holding an anon key can write it, admins included.
+  Rows go in by hand with the service role.
+- **What an admin may do is deliberately narrow.** Switch any module for any
+  user, edit what a plan includes, read `users`/`subscriptions`/usage. Not:
+  rewrite a subscription (Stripe owns that, and a hand-edit puts the two out of
+  step with the thing that actually bills), mint another admin, or read
+  `finance_transactions`, tasks, habits or mail — **no admin policy exists on
+  any data table**. Power over modules without the liability of someone's
+  ledger. Grant it per incident if you ever truly need it.
+- **A lapsed subscription is not a deleted one.** `plan_of()` reads any status
+  outside (`active`, `trialing`) as free, and a user with no row at all is free
+  too. Downgrade, keep the data.
+- **Hiding the nav item is cosmetic** — the bundle is public and editable, so
+  the gate has to be RLS on each module's own tables (`and
+  public.has_module(auth.uid(), 'finance')`). The admin panel can live in the
+  same app for exactly this reason: a non-admin who forces the route gets an
+  empty page, because every query returns nothing.
+- **A module that is off must never be LOADED.** `my_modules()` is one round
+  trip for the whole resolved set, and it has to land *before* `hydrate()`: a
+  store that loads into an RLS denial and replaces itself with nothing reads as
+  "my data is gone" rather than "this is not on your plan" — the same trap as
+  *a reload is not an empty ledger*, one layer down.
+Verified on a throwaway Postgres 16: 14 resolver cases (plan, override both
+ways, core beating a revoke, lapsed, no row, unknown id, signed out), 9
+escalations blocked as the `authenticated` role (self-admin, self-upgrade,
+self-grant, rewriting a plan, making a module core, reading another user's
+overrides or profile), 9 admin cases, and three consecutive applies exiting 0
+with no duplicated seed and no clobbered override.
+
 ## Migrations — the runner remembers what it has applied
 `scripts/migrate.mjs` used to read every `.sql` in `supabase/migrations` and run
 all of them, every time, and `.github/workflows/migrate.yml` invokes it on any
