@@ -1119,7 +1119,13 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "add call Ahmed" / "أضف مهمة اتصل بأحمد" → add_task
 - "what do I have today" / "إيه اللي عندي النهارده" → get_today, then get_calendar_events(days_ahead=1)
 - "spent 200 on lunch" / "صرفت 200 على الغداء" → add_transaction(amount=200, payee="lunch")
+- ANY question about events, meetings, or calendar → ALWAYS call get_calendar_events. Examples:
 - "what's on my calendar" / "فيه إيه في التقويم" → get_calendar_events
+- "how many events I have today" / "كام حدث عندي النهارده" → get_calendar_events(days_ahead=1)
+- "how many events do I have" / "كام اجتماع عندي" → get_calendar_events
+- "do I have any meetings today" / "عندي اجتماعات النهارده؟" → get_calendar_events(days_ahead=1)
+- "show me my events" / "وريني الأحداث بتاعتي" → get_calendar_events
+- "what meetings do I have" / "عندي إيه من اجتماعات" → get_calendar_events
 - "what's on the Teradix calendar" / "إيه اللي في تقويم Teradix" → get_calendar_events(calendar="Teradix")
 - "add it to the DX calendar" / "حطها في تقويم DX" → add_calendar_event(..., calendar="DX")
 - "add a meeting tomorrow at 3pm" / "حجز اجتماع بكرا الساعة 3" → add_calendar_event(title="meeting", start="${tomorrow}T15:00:00")
