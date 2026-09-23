@@ -180,6 +180,44 @@ const SHOPPING = {
   ],
 }
 
+// ─── The admin panel's tables ────────────────────────────────────────────────
+// Its own screens, because a module added without an audit is how Shopping
+// shipped ten failing pairs. `users` is deliberately NOT served wholesale —
+// the app reads that table for the profile too, and answering both with this
+// fixture would change every other screen in the run.
+const AME = 'u1'
+const A_MODULES = [
+  { id: 'morning', label: 'Today', core: true, sort_order: 10 },
+  { id: 'calendar', label: 'Calendar', core: false, sort_order: 20 },
+  { id: 'inbox', label: 'Mail', core: false, sort_order: 30 },
+  { id: 'tasks', label: 'Tasks', core: false, sort_order: 40 },
+  { id: 'habits', label: 'Habits', core: false, sort_order: 50 },
+  { id: 'finance', label: 'Finance', core: false, sort_order: 60 },
+  { id: 'dashboard', label: 'Dashboard', core: true, sort_order: 70 },
+]
+const A_USERS = [
+  { id: AME, email: ME, full_name: 'Bahaa Ahmed', created_at: '2026-01-05T00:00:00Z' },
+  { id: 'u2', email: 'omar@teradix.com', full_name: 'Omar Said', created_at: '2026-03-11T00:00:00Z' },
+  { id: 'u3', email: 'lina@dx.com', full_name: null, created_at: '2026-06-02T00:00:00Z' },
+]
+const ADMIN_T = {
+  admins: [{ user_id: AME }],
+  modules: A_MODULES,
+  subscriptions: [
+    { user_id: AME, plan: 'pro', status: 'active' },
+    { user_id: 'u2', plan: 'free', status: 'active' },
+    { user_id: 'u3', plan: 'pro', status: 'canceled' },
+  ],
+  plan_modules: [
+    ...['morning', 'dashboard', 'calendar', 'tasks', 'habits'].map(m => ({ plan: 'free', module_id: m })),
+    ...A_MODULES.map(m => ({ plan: 'pro', module_id: m.id })),
+  ],
+  user_modules: [
+    { user_id: 'u2', module_id: 'finance', enabled: true, note: 'beta tester', set_at: '2026-09-01T10:00:00Z', set_by: AME },
+    { user_id: 'u3', module_id: 'inbox', enabled: false, note: 'abuse — mail sending', set_at: '2026-09-18T08:00:00Z', set_by: AME },
+  ],
+}
+
 const THEMES = ['sunlit-bento', 'warm-minimal', 'glass-depth', 'evergreen']
 const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] })
 
@@ -190,7 +228,23 @@ for (const theme of THEMES) {
     if (u.includes('/auth/v1/user')) return r.fulfill({ json: session.user })
     if (u.includes('/auth/v1/token')) return r.fulfill({ json: session })
     const t = /\/rest\/v1\/([a-z_]+)/.exec(u)?.[1]
-    if (t && SHOPPING[t] && r.request().method() === 'GET') return r.fulfill({ json: SHOPPING[t] })
+    const GET = r.request().method() === 'GET'
+    if (t && SHOPPING[t] && GET) return r.fulfill({ json: SHOPPING[t] })
+    if (t === 'rpc' || u.includes('/rpc/has_module')) {
+      const b = (() => { try { return r.request().postDataJSON() } catch { return {} } })()
+      const m = A_MODULES.find(x => x.id === b.mod)
+      if (!m) return r.fulfill({ json: false })
+      if (m.core) return r.fulfill({ json: true })
+      const o = ADMIN_T.user_modules.find(x => x.user_id === b.uid && x.module_id === b.mod)
+      if (o) return r.fulfill({ json: o.enabled })
+      const sub = ADMIN_T.subscriptions.find(x => x.user_id === b.uid)
+      const plan = sub && ['active', 'trialing'].includes(sub.status) ? sub.plan : 'free'
+      return r.fulfill({ json: ADMIN_T.plan_modules.some(x => x.plan === plan && x.module_id === b.mod) })
+    }
+    // Only the admin panel's own shape of the users query — the profile read
+    // asks for different columns and must keep getting nothing.
+    if (t === 'users' && GET && u.includes('created_at')) return r.fulfill({ json: A_USERS })
+    if (t && t !== 'users' && ADMIN_T[t] && GET) return r.fulfill({ json: ADMIN_T[t] })
     return r.fulfill({ json: [] })
   })
   await page.route('**://*.googleapis.com/**', r => {
@@ -276,6 +330,38 @@ for (const theme of THEMES) {
       const s = Object.keys(localStorage).find(k => k.includes('professor-ui'))
       if (s) { const v = JSON.parse(localStorage.getItem(s)); v.state.activeModule = 'settings'; localStorage.setItem(s, JSON.stringify(v)) }
       w.location.reload()
+    })
+    await page.waitForTimeout(3200)
+  })
+  // The admin panel — four faces, all of them new text on new grounds.
+  const goAdmin = async () => {
+    await page.evaluate(() => {
+      const s = Object.keys(localStorage).find(k => k.includes('professor-ui'))
+      if (s) { const v = JSON.parse(localStorage.getItem(s)); v.state.activeModule = 'admin'; localStorage.setItem(s, JSON.stringify(v)) }
+      window.location.reload()
+    })
+    await page.waitForTimeout(3200)
+  }
+  await visit('Admin · users', goAdmin)
+  await visit('Admin · one account open', async () => {
+    await page.locator('button', { hasText: 'omar@teradix.com' }).first().click({ timeout: 4000 }).catch(() => {})
+    await page.waitForTimeout(1200)
+  })
+  await visit('Admin · plans', async () => {
+    await page.locator('button', { hasText: /^Plans$/ }).first().click({ timeout: 4000 }).catch(() => {})
+    await page.waitForTimeout(700)
+  })
+  await visit('Admin · audit', async () => {
+    await page.locator('button', { hasText: /^Audit/ }).first().click({ timeout: 4000 }).catch(() => {})
+    await page.waitForTimeout(700)
+  })
+
+  // Settings again, since the admin visit reloaded onto another module.
+  await visit('Settings (return)', async () => {
+    await page.evaluate(() => {
+      const s = Object.keys(localStorage).find(k => k.includes('professor-ui'))
+      if (s) { const v = JSON.parse(localStorage.getItem(s)); v.state.activeModule = 'settings'; localStorage.setItem(s, JSON.stringify(v)) }
+      window.location.reload()
     })
     await page.waitForTimeout(3200)
   })
