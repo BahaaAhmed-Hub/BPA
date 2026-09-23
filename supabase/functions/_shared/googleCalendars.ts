@@ -166,6 +166,10 @@ export class CalendarHub {
         }
         for (const c of body.items ?? []) {
           if (hidden.has(c.id)) continue
+          // 'reader' and 'freeBusyReader' are calendars other people shared with
+          // you — they belong to those people, not to you. Only 'owner' and
+          // 'writer' are yours (owned or delegated).
+          if (c.accessRole !== 'owner' && c.accessRole !== 'writer') continue
           out.push({
             accountId: acc.id,
             accountEmail: acc.email,
