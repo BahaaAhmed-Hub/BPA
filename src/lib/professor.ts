@@ -4,10 +4,32 @@ import type { AIConfig } from '@/modules/settings/Settings'
 
 // ─── Client ──────────────────────────────────────────────────────────────────
 
-const client = new Anthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY ?? '',
-  dangerouslyAllowBrowser: true,
-})
+// ─── The key is the person's, and it is never in the bundle ──────────────────
+// `VITE_ANTHROPIC_API_KEY` was read at build time, which means Vite inlines it
+// into a JavaScript file served to everyone who opens the page — a public
+// GitHub Pages site. A key in a client bundle is not a secret, whatever the
+// variable is called, and `dangerouslyAllowBrowser` is the SDK saying so.
+//
+// The app was already able to do this properly: Settings → AI takes a key and
+// keeps it in `professor-ai-config`, on that browser and nowhere else. The
+// build-time value was only ever a fallback, so removing it leaves one way of
+// answering the question instead of two.
+//
+// There is no module-level client any more either — one built at import time
+// would capture whatever the config said then, and the key is a thing the
+// person can change while the app is open.
+export function anthropicKey(): string {
+  return getAIConfig().anthropicKey
+}
+
+function anthropic(): Anthropic {
+  const apiKey = anthropicKey()
+  if (!apiKey) throw new ProfessorError(
+    'No Anthropic API key. Go to Settings → AI and enter one, or switch to Groq.',
+    'config_error',
+  )
+  return new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
+}
 
 const MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 4000
@@ -20,12 +42,12 @@ function getAIConfig(): AIConfig {
     const saved = raw ? JSON.parse(raw) as Partial<AIConfig> : {}
     return {
       provider: saved.provider ?? 'anthropic',
-      anthropicKey: saved.anthropicKey ?? import.meta.env.VITE_ANTHROPIC_API_KEY ?? '',
+      anthropicKey: saved.anthropicKey ?? '',
       groqKey: saved.groqKey ?? '',
       groqModel: saved.groqModel ?? 'llama-3.3-70b-versatile',
     }
   } catch {
-    return { provider: 'anthropic', anthropicKey: import.meta.env.VITE_ANTHROPIC_API_KEY ?? '', groqKey: '', groqModel: 'llama-3.3-70b-versatile' }
+    return { provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile' }
   }
 }
 
@@ -204,9 +226,9 @@ export async function call(system: string, userMessage: string): Promise<string>
   }
 
   // Anthropic
-  const apiKey = aiCfg.anthropicKey || (import.meta.env.VITE_ANTHROPIC_API_KEY ?? '')
+  const apiKey = aiCfg.anthropicKey
   if (!apiKey) throw new ProfessorError(
-    'Anthropic API key not set. Go to Settings → Professor AI and enter your key, or switch to Groq (free).',
+    'Anthropic API key not set. Go to Settings → AI and enter your key, or switch to Groq (free).',
     'config_error',
   )
   try {
@@ -547,7 +569,7 @@ export async function analyzeTask(
   }
   if (!title.trim()) return fallback
 
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? ''
+  const apiKey = anthropicKey()
   if (!apiKey) return fallback
 
   const companyList = companies.map(c => ({
@@ -661,7 +683,7 @@ Your tone is authoritative yet warm, concise, and always actionable.
 ${systemContext ?? ''}`
 
   try {
-    const msg = await client.messages.create({
+    const msg = await anthropic().messages.create({
       model: MODEL,
       max_tokens: MAX_TOKENS,
       system,

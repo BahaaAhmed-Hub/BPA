@@ -1,10 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { Quadrant, TaskType } from '@/types'
+import { anthropicKey } from './professor'
 
-const client = new Anthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY ?? '',
-  dangerouslyAllowBrowser: true,
-})
+/** The person's own key, read when it is used rather than at import time —
+ *  see `professor.ts`. Nothing about the key is baked into the bundle. */
+function anthropic(): Anthropic {
+  const apiKey = anthropicKey()
+  if (!apiKey) throw new Error('No Anthropic API key. Settings → AI.')
+  return new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
+}
 
 export interface ExtractedDraftTask {
   id: string
@@ -85,7 +89,7 @@ Extract EVERY task visible. Keep titles concise but complete.`
           },
         }
 
-  const message = await client.messages.create({
+  const message = await anthropic().messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: systemPrompt,

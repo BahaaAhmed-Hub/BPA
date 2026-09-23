@@ -1305,6 +1305,36 @@ already returns and falls back to the id: an id on screen is a bug report, an
 invented label is a wrong answer. The command palette drops those results
 outright — a hit you cannot open is noise in a list you are scanning fast.
 
+## The AI key is the person's, and it is never in the bundle
+`VITE_ANTHROPIC_API_KEY` was read at build time in six places and injected by
+`deploy.yml`, which means Vite inlined it into a JavaScript file served to
+everyone who opens a **public GitHub Pages site**. A key in a client bundle is
+not a secret whatever the variable is called — `dangerouslyAllowBrowser` is the
+SDK saying exactly that — and no amount of care elsewhere makes it one.
+- **The app could already do this properly.** Settings → AI takes a key and
+  keeps it in `professor-ai-config`, on that browser and nowhere else;
+  `getAIConfig()` read it *first* and fell back to the build-time value. So the
+  baked key was only ever a second answer to a question that already had one,
+  and removing it leaves the right one.
+- **There is no module-level client.** One built at import time captures
+  whatever the config said then, and the key is a thing the person can change
+  while the app is open. `anthropic()` builds one per call and throws a
+  `config_error` naming Settings → AI when there is no key;
+  `imageTaskExtractor.ts` imports `anthropicKey()` rather than keeping a second
+  copy of the question.
+- **The measurement is a canary, not a grep of the source.** Build with
+  `VITE_ANTHROPIC_API_KEY=sk-ant-CANARY-…` set and search `dist`: **3
+  occurrences before, 0 after**, with the variable deliberately present. A
+  source grep proves what is written; this proves what is *shipped*.
+- **A claim about exposure needs the deployed artifact, not the mechanism.**
+  The canary proves the pipeline would inline a key; it says nothing about
+  whether the secret had a value. The one reachable deployed bundle
+  (`gh-pages`) compiled it to `apiKey:``` — empty — and its only `sk-ant` string
+  is the placeholder in the Settings input. Those are two different questions
+  and the first was reported as the second here once already.
+- The bots keep their own **server-side** `ANTHROPIC_API_KEY` in Supabase
+  secrets, which is a different key in a different place and is not affected.
+
 ## Migrations — the runner remembers what it has applied
 `scripts/migrate.mjs` used to read every `.sql` in `supabase/migrations` and run
 all of them, every time, and `.github/workflows/migrate.yml` invokes it on any
