@@ -218,7 +218,8 @@ const ADMIN_T = {
   ],
 }
 
-const THEMES = ['sunlit-bento', 'warm-minimal', 'glass-depth', 'evergreen']
+const THEMES = process.env.INK_THEME ? [process.env.INK_THEME]
+  : ['sunlit-bento', 'warm-minimal', 'glass-depth', 'evergreen']
 const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] })
 
 for (const theme of THEMES) {
@@ -278,10 +279,20 @@ for (const theme of THEMES) {
   await page.waitForTimeout(700)
 
   const found = []
+  const seen = []
   const visit = async (label, go) => {
-    try { await go() } catch { return }
+    let opened = true
+    try { await go() } catch (e) { opened = false; seen.push({ label, pairs: 0, why: String(e).split('\n')[0].slice(0, 70) }) }
+    if (!opened) return
     await page.waitForTimeout(1500)
-    for (const f of await page.evaluate(AUDIT)) found.push({ ...f, screen: label })
+    const rows = await page.evaluate(AUDIT)
+    // `AUDIT` returns only the FAILING pairs, so it cannot say whether a screen
+    // was measured at all. Count the text it actually looked at as well: a
+    // screen that never opened reports 0 failures over 0 nodes, which reads
+    // identically to a clean one and is how a whole module can slip the gate.
+    const measured = await page.evaluate(() => document.querySelectorAll('body *').length)
+    seen.push({ label, pairs: rows.length, nodes: measured })
+    for (const f of rows) found.push({ ...f, screen: label })
   }
 
   await visit('Today', async () => { await page.locator('header nav button', { hasText: /^Today$/ }).first().click() })
@@ -378,7 +389,12 @@ for (const theme of THEMES) {
     if (!uniq.has(k)) uniq.set(k, f)
   }
   const rows = [...uniq.values()].sort((a, b) => a.ratio - b.ratio)
-  console.log(`\n━━ ${theme} — ${rows.length} failing pair${rows.length === 1 ? '' : 's'}`)
+  const blind = seen.filter(v => v.why || (v.nodes ?? 0) < 40)
+  console.log(`\n━━ ${theme} — ${rows.length} failing pair${rows.length === 1 ? '' : 's'} over ${seen.length} screens`)
+  if (blind.length) {
+    console.log(`   ⚠ ${blind.length} screen(s) measured nothing — a clean result over nothing is not a clean result:`)
+    for (const v of blind) console.log(`     ${v.label}${v.why ? ` — ${v.why}` : ' — opened but empty'}`)
+  }
   for (const f of rows.slice(0, 14)) {
     console.log(`   ${String(f.ratio).padStart(5)} (need ${f.need})  ${f.fg.padEnd(18)} on ${f.bg.padEnd(18)} ${String(f.size).padStart(5)}px  ${f.screen} · ${JSON.stringify(f.text)}`)
   }
