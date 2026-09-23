@@ -1335,6 +1335,45 @@ SDK saying exactly that — and no amount of care elsewhere makes it one.
 - The bots keep their own **server-side** `ANTHROPIC_API_KEY` in Supabase
   secrets, which is a different key in a different place and is not affected.
 
+## SaaS — the gate that actually enforces
+`20260022_module_rls.sql`. Everything before it decided what to **draw** and
+what to **load**, and both live in a JavaScript file served to the public — a
+courtesy to the person reading the screen, not a boundary. This is the part
+that answers somebody who edits the bundle and asks for the rows anyway: each
+module's own tables gain `and (select public.has_module(auth.uid(), '<module>'))`
+to the policy they already had. Ownership still decides first; this only narrows.
+- **The scalar subquery is not decoration.** A bare `has_module(auth.uid(), …)`
+  in a policy is re-evaluated **per row** — ten thousand calls on a ledger of
+  ten thousand entries. Wrapped in `(select …)`, with arguments constant for
+  the statement, Postgres hoists it into an InitPlan and runs it once.
+- **`%I`, never `%L`, for a policy name in `format()`.** A policy name is an
+  identifier (`"x"`), not a string (`'x'`); `%L` produces
+  `drop policy if exists 'finance_accounts: own rows'` and a syntax error. The
+  eight finance tables are driven by a loop, so the mistake hit all eight.
+- **Shopping is gated on `finance`**, being a tab of it rather than a module —
+  the same answer the client gives. `shopping_price_snapshots` has no `user_id`
+  (it is owned through `item_id`), so its own clause is kept verbatim and only
+  the gate is added beside it.
+- **What is deliberately NOT gated**: `users`, `companies`, the Google account
+  and token tables, `google_calendar_settings`, `weekly_reviews`,
+  `energy_logs`, `health_links`, `user_tokens`, `telegram_links`. None is a
+  module's data — they are who you are, what you have connected, and how other
+  things reach you. Locking somebody out of their own connected accounts
+  because a plan changed is a support ticket, not a downgrade.
+- **This is the one that can lock somebody out, and the seeds decide who.**
+  `20260021`'s backfill put every existing account on `free`, and the seeded
+  `free` plan carries neither `finance` nor `inbox`. Applying this without
+  moving either the plan or the account first makes a real ledger unreadable to
+  its owner. Nothing is deleted — a module that is off is unreadable, not gone,
+  and restoring the plan restores the data.
+Verified on a throwaway Postgres 16 against the real policy shapes: a pro
+account reads its own ledger and tasks; a free account reads **neither its own
+ledger nor its own mail rows nor shopping nor the snapshots**, cannot write to
+the ledger either, and still reads its tasks and its profile; an override opens
+Finance on a free plan; and a pro account still cannot read anybody else's
+ledger or profile, because ownership is unchanged. 12 cases, and a second apply
+exits 0 with the same 20 gated policies rather than 40.
+
 ## Migrations — the runner remembers what it has applied
 `scripts/migrate.mjs` used to read every `.sql` in `supabase/migrations` and run
 all of them, every time, and `.github/workflows/migrate.yml` invokes it on any
