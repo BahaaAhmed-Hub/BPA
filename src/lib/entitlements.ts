@@ -36,7 +36,7 @@ export type Modules = Record<string, boolean>
 const KEY = 'professor-modules'
 export const MODULES_CHANGED = 'professor:modulesChanged'
 
-type Cached = { uid: string; at: number; modules: Modules }
+type Cached = { uid: string; at: number; modules: Modules; labels?: Record<string,string> }
 
 let current: Cached | null = null
 
@@ -52,8 +52,8 @@ function read(): Cached | null {
   } catch { return null }
 }
 
-function write(uid: string, modules: Modules) {
-  current = { uid, at: Date.now(), modules }
+function write(uid: string, modules: Modules, labels?: Record<string,string>) {
+  current = { uid, at: Date.now(), modules, labels }
   try { localStorage.setItem(KEY, JSON.stringify(current)) } catch { /* private window */ }
   window.dispatchEvent(new Event(MODULES_CHANGED))
 }
@@ -77,13 +77,16 @@ export async function fetchModules(uid: string): Promise<Modules | null> {
     const { data, error } = await supabase.rpc('my_modules')
     if (error || !Array.isArray(data)) return cachedModules(uid)
     const modules: Modules = {}
-    for (const row of data as { module_id: string; enabled: boolean }[]) {
-      if (row?.module_id) modules[row.module_id] = !!row.enabled
+    const labels: Record<string, string> = {}
+    for (const row of data as { module_id: string; label?: string; enabled: boolean }[]) {
+      if (!row?.module_id) continue
+      modules[row.module_id] = !!row.enabled
+      if (row.label) labels[row.module_id] = row.label
     }
     // An empty registry means the migration has not run here. That is a
     // question nobody answered, not a user with no modules.
     if (Object.keys(modules).length === 0) return cachedModules(uid)
-    write(uid, modules)
+    write(uid, modules, labels)
     return modules
   } catch { return cachedModules(uid) }
 }
@@ -119,4 +122,12 @@ export function useModules(): Modules | null {
     }
   }, [])
   return currentModules()
+}
+
+/** The module's own name, for a sentence a person reads. Falls back to the id
+ *  rather than inventing one — an id on screen is a bug report, a made-up
+ *  label is a wrong answer. */
+export function labelOf(id: string): string {
+  const c = read()
+  return c?.labels?.[id] ?? id
 }

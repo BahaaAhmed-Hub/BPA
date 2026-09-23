@@ -1294,9 +1294,16 @@ tables or `shopping_*` fetched, while `tasks` and `habits` were — the control
 that makes the absences mean something. The mirror (tasks + habits off) fetches
 all nine finance tables and neither of theirs; nothing off draws all seven.
 A laptop reopened on a withdrawn Finance lands on Today, not a blank page.
-**Known gap:** Today's own shortcuts ("📅 Calendar", "📋 Manage Tasks") are
-still drawn for modules that are off. The redirect catches them — the page
-bounces back rather than blanking — so it is a dead button, not a broken app.
+**Every way into a module is one door.** `setActiveModule` and `focusOn` in
+`uiStore` refuse a module that is off and **say why** — "Calendar is not on
+your plan" — so the nav, the palette, Today's shortcuts, a task's calendar row
+and the sidebar are all covered, including the ways in nobody has thought of
+yet. Gating each caller covers only the ones somebody remembered. A refusal
+that silently did nothing would be the dead button this replaced, and the
+sentence is the upgrade prompt. `labelOf` reads the label `my_modules()`
+already returns and falls back to the id: an id on screen is a bug report, an
+invented label is a wrong answer. The command palette drops those results
+outright — a hit you cannot open is noise in a list you are scanning fast.
 
 ## Migrations — the runner remembers what it has applied
 `scripts/migrate.mjs` used to read every `.sql` in `supabase/migrations` and run

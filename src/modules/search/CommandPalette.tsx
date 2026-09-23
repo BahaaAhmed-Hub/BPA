@@ -4,6 +4,7 @@
 // or ⌘K; arrows move, Enter opens, ⌘Enter captures the query as a task.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { moduleIsOff } from '@/lib/entitlements'
 import {
   Search, CheckSquare, CalendarDays, Repeat, Wallet, Settings as SettingsIcon,
   Plus, CornerDownLeft,
@@ -186,7 +187,13 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       },
     })
 
-    return out
+    // A result you cannot open is noise in a list you are scanning fast, so a
+    // module that is off contributes none. The store refuses the navigation
+    // anyway — this is about not offering it, not about safety.
+    const GROUP_MODULE: Record<string, string> = {
+      Tasks: 'tasks', Calendar: 'calendar', Habits: 'habits', Finance: 'finance', Mail: 'inbox',
+    }
+    return out.filter(h => !moduleIsOff(GROUP_MODULE[h.group] ?? ''))
   }, [query, q, tasks, habits, addTask, setActiveModule, onClose])
 
   // Keep the cursor inside the list as results change
