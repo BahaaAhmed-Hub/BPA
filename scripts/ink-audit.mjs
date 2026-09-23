@@ -343,10 +343,19 @@ for (const theme of THEMES) {
       w.location.reload()
     })
     await page.waitForTimeout(3200)
+    // Settings is the heaviest module in the app and 3.2s is not always enough
+    // for its rail; without this the section clicks below aimed at nothing.
+    await page.getByRole('button', { name: 'Appearance', exact: true })
+      .last().waitFor({ timeout: 10000 })
   })
   for (const sec of ['Appearance', 'Accounts & companies', 'Habits']) {
     await visit(`Settings · ${sec}`, async () => {
-      await page.getByRole('button', { name: sec, exact: true }).first().click({ timeout: 4000 })
+      // `.last()`, never `.first()`: the header nav comes first in the DOM and
+      // carries some of the same words — `Habits` is in both, so `.first()`
+      // clicked the top nav and navigated out of Settings entirely. That
+      // screen was measuring the Habits module under a Settings label.
+      await page.getByRole('button', { name: sec, exact: true }).last().click({ timeout: 6000 })
+      await page.waitForTimeout(400)
     })
   }
 
