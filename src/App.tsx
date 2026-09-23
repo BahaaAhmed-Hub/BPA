@@ -15,6 +15,8 @@ import { FinanceModule } from './modules/finance/FinanceModule'
 import { NavRow } from './components/ui'
 import { useUIStore } from './store/uiStore'
 import { cachedModules, fetchModules, forgetEntitlements, moduleIsOff, useModules } from './lib/entitlements'
+import { amIAdmin } from './lib/admin'
+import AdminPanel from './modules/admin/AdminPanel'
 import {
   collect, loadNotifSettings, inQuietHours, markSeen, dormantKinds, NOTIF_EVENT,
   type Notification, type NotifSetting,
@@ -46,7 +48,7 @@ import { useTaskCalendarPush } from './lib/taskAutoSchedule'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
-import { Search, Settings, LogOut } from 'lucide-react'
+import { Search, Settings, LogOut, ShieldCheck } from 'lucide-react'
 import { ICON } from '@/lib/type'
 
 // ─── Sunlit Bento — Login screen (1A) ────────────────────────────────────────
@@ -550,6 +552,15 @@ const KIND_COLOR: Record<string, string> = {
 function TopNav() {
   const activeModule    = useUIStore(s => s.activeModule)
   const setActiveModule = useUIStore(s => s.setActiveModule)
+  // The menu row is drawn for an admin only — but that is politeness, not the
+  // gate: `public.admins` hands out own-row-only and every table behind the
+  // panel answers to its own policy, so forcing the route gets empty lists.
+  const [isAdmin, setIsAdmin] = useState(false)
+  useEffect(() => {
+    let live = true
+    void amIAdmin().then(v => { if (live) setIsAdmin(v) })
+    return () => { live = false }
+  }, [])
   // Drawn, not enforced — the bundle is public, so this is for the person
   // reading it. RLS is what actually answers.
   useModules()
@@ -704,6 +715,19 @@ function TopNav() {
                 }}>
                 <Settings size={ICON.md} color="var(--sb-ink-3)" /> Settings
               </button>
+              {isAdmin && (
+                <button
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); setActiveModule('admin') }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
+                    padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
+                    background: activeModule === 'admin' ? 'var(--sb-accent-tint)' : 'transparent',
+                    color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
+                  }}>
+                  <ShieldCheck size={ICON.md} color="var(--sb-ink-3)" /> Admin
+                </button>
+              )}
               <button
                 role="menuitem"
                 onClick={() => { setMenuOpen(false); void googleSignOut() }}
@@ -753,6 +777,7 @@ function ActiveModule() {
       {everMounted.current.has('review')     && <div style={show('review')}><ReviewModule /></div>}
       {everMounted.current.has('morning') && !moduleIsOff('morning')    && <div style={show('morning')}><MorningModule /></div>}
       {everMounted.current.has('settings')   && <div style={show('settings')}><SettingsModule /></div>}
+      {everMounted.current.has('admin')      && <div style={show('admin')}><AdminPanel /></div>}
       {everMounted.current.has('behavioral') && <div style={show('behavioral')}><BehavioralOS /></div>}
       {everMounted.current.has('planning')   && <div style={show('planning')}><PlanningAssistant /></div>}
       {everMounted.current.has('finance') && !moduleIsOff('finance')    && <div style={show('finance')}><FinanceModule /></div>}
