@@ -333,7 +333,7 @@ async function toolLogHabit(userId: string, args: Record<string, unknown>): Prom
 async function toolAddTransaction(userId: string, args: Record<string, unknown>): Promise<string> {
   const { data: accounts } = await sb
     .from('finance_accounts').select('id, name, currency')
-    .eq('user_id', userId).in('account_type', ['payment', 'wallet']).limit(5)
+    .eq('user_id', userId).in('account_type', ['payment', 'wallet', 'credit_card']).limit(20)
 
   const accs = (accounts ?? []) as { id: string; name: string; currency: string }[]
   if (!accs.length) return 'No payment accounts found. Add one in the Professor app first.'
@@ -344,6 +344,7 @@ async function toolAddTransaction(userId: string, args: Record<string, unknown>)
       a.name.toLowerCase().includes((args.account_name as string).toLowerCase())
     )
     if (found) account = found
+    else return `No account matching "${args.account_name}" found. Available: ${accs.map(a => a.name).join(', ')}.`
   }
 
   const date   = (args.date as string | undefined) ?? todayISO()
