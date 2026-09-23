@@ -254,13 +254,63 @@ async function toolGetHabits(userId: string, args: Record<string, unknown>): Pro
   return `Habits for ${date}:\n` + lines.join('\n')
 }
 
+async function toolGetTransactions(userId: string, args: Record<string, unknown>): Promise<string> {
+  const dateFrom = (args.date_from as string | undefined) ?? (args.date as string | undefined) ?? todayISO()
+  const dateTo   = (args.date_to   as string | undefined) ?? dateFrom
+
+  let q = sb.from('finance_transactions')
+    .select('amount, currency, tx_type, payee, date, paid_at, account_id')
+    .eq('user_id', userId)
+    .gte('date', dateFrom)
+    .lte('date', dateTo)
+    .order('date', { ascending: false })
+    .limit(50)
+
+  const { data, error } = await q
+  if (error) return `Error: ${error.message}`
+
+  const txs = (data ?? []) as { amount: number; currency: string; tx_type: string; payee: string; date: string; paid_at: string | null; account_id: string }[]
+  if (!txs.length) return dateFrom === dateTo
+    ? `No transactions on ${dateFrom}.`
+    : `No transactions between ${dateFrom} and ${dateTo}.`
+
+  const { data: accounts } = await sb.from('finance_accounts').select('id, name').eq('user_id', userId)
+  const acctMap = new Map(((accounts ?? []) as { id: string; name: string }[]).map(a => [a.id, a.name]))
+
+  const expenses = txs.filter(t => t.tx_type === 'expense')
+  const income   = txs.filter(t => t.tx_type === 'income')
+
+  const label = dateFrom === dateTo ? dateFrom : `${dateFrom} – ${dateTo}`
+  const lines: string[] = [`*Transactions for ${label}*`]
+
+  if (expenses.length) {
+    lines.push('', `*Expenses (${expenses.length})*`)
+    for (const tx of expenses) {
+      const acct = acctMap.get(tx.account_id) ?? 'Unknown'
+      const unpaid = tx.paid_at ? '' : ' *(unpaid)*'
+      lines.push(`- ${tx.amount.toLocaleString()} ${tx.currency} — ${tx.payee} · ${acct}${unpaid}`)
+    }
+  }
+  if (income.length) {
+    lines.push('', `*Income (${income.length})*`)
+    for (const tx of income) {
+      const acct = acctMap.get(tx.account_id) ?? 'Unknown'
+      lines.push(`+ ${tx.amount.toLocaleString()} ${tx.currency} — ${tx.payee} · ${acct}`)
+    }
+  }
+
+  return lines.join('\n')
+}
+
 async function toolAddTransaction(userId: string, args: Record<string, unknown>): Promise<string> {
+  // Include credit cards — the app's type is 'credit_card', and a "platinum card"
+  // or any named card must be findable here or the expense lands on the wrong account.
   const { data: accounts } = await sb
     .from('finance_accounts')
     .select('id, name, currency')
     .eq('user_id', userId)
-    .in('account_type', ['payment', 'wallet'])
-    .limit(5)
+    .in('account_type', ['payment', 'wallet', 'credit_card'])
+    .limit(20)
 
   const accs = (accounts ?? []) as { id: string; name: string; currency: string }[]
   if (!accs.length) return 'No payment accounts found. Add one in the Professor app first.'
@@ -269,6 +319,7 @@ async function toolAddTransaction(userId: string, args: Record<string, unknown>)
   if (args.account_name) {
     const found = accs.find(a => a.name.toLowerCase().includes((args.account_name as string).toLowerCase()))
     if (found) account = found
+    else return `No account matching "${args.account_name}" found. Available: ${accs.map(a => a.name).join(', ')}.`
   }
 
   const date   = (args.date as string | undefined) ?? todayISO()
@@ -843,6 +894,18 @@ const CLAUDE_TOOLS = [
     },
   },
   {
+    name:        'get_transactions',
+    description: "Read finance transactions. Use for: 'show today expenses', 'what did I spend today?', 'show this week's spending', 'list my transactions'.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        date:      { type: 'string', description: 'YYYY-MM-DD — a single day. Defaults to today.' },
+        date_from: { type: 'string', description: 'YYYY-MM-DD — start of a range. Use with date_to.' },
+        date_to:   { type: 'string', description: 'YYYY-MM-DD — end of a range. Use with date_from.' },
+      },
+    },
+  },
+  {
     name:        'add_transaction',
     description: 'Log an expense or income entry. Use this when the user mentions spending money, buying something, or receiving money.',
     input_schema: {
@@ -853,7 +916,7 @@ const CLAUDE_TOOLS = [
         payee:        { type: 'string', description: 'Merchant, shop, or description of what it was' },
         tx_type:      { type: 'string', enum: ['expense', 'income'], description: 'Defaults to expense' },
         date:         { type: 'string', description: 'YYYY-MM-DD — defaults to today' },
-        account_name: { type: 'string', description: 'Partial name of the account to charge. Omit to use default.' },
+        account_name: { type: 'string', description: 'Partial name of the account to charge — include card name (e.g. "platinum") to pick the right card.' },
       },
     },
   },
@@ -1033,6 +1096,10 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "add call Ahmed" / "أضف مهمة اتصل بأحمد" → add_task
 - "what do I have today" / "إيه اللي عندي النهارده" → get_today, then get_calendar_events(days_ahead=1)
 - "spent 200 on lunch" / "صرفت 200 على الغداء" → add_transaction(amount=200, payee="lunch")
+- "add 420 as digital app expense on platinum card" → add_transaction(amount=420, payee="digital app", account_name="platinum")
+- "show today expenses" / "وريني مصاريف النهارده" → get_transactions
+- "what did I spend today?" / "صرفت كام النهارده؟" → get_transactions
+- "show this week's spending" / "مصاريف الأسبوع" → get_transactions(date_from="<monday>", date_to="<today>")
 - "what's on my calendar" / "فيه إيه في التقويم" → get_calendar_events
 - "what's on the Teradix calendar" / "إيه اللي في تقويم Teradix" → get_calendar_events(calendar="Teradix")
 - "add it to the DX calendar" / "حطها في تقويم DX" → add_calendar_event(..., calendar="DX")
@@ -1064,8 +1131,8 @@ IMPORTANT — understand natural speech (Arabic and English):
 
 Calendars: the user has SEVERAL — a personal one and company ones (Teradix, DX). get_calendar_events reads them all at once and names each event's calendar. Pass calendar="<name>" to narrow to one, and when creating an event pass calendar="<name>" if the user says which. Never claim they have only one calendar.
 
-What you CAN do: tasks (list, add, complete, edit), habits (read with get_habits, log with log_habit), log expenses/income, calendar (read, create, edit events), today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read, reply).
-What you CANNOT do: read financial balances or history — say so briefly if asked, don't apologise.
+What you CAN do: tasks (list, add, complete, edit), habits (read with get_habits, log with log_habit), log expenses/income (add_transaction), read transactions (get_transactions), calendar (read, create, edit events), today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read, reply).
+What you CANNOT do: read account balances, budget envelopes, or goal progress — say so briefly if asked, don't apologise.
 
 LIVE DATA — ALWAYS CALL TOOLS: For any question about current state (habits logged today, tasks open, today's schedule, shopping list contents, finance totals) — you MUST call the relevant tool to get FRESH data from the database. NEVER answer these from conversation history — the data changes every minute. History is ONLY for understanding references like "that habit", "the task I just added", "mark it done" — not for reporting current counts or values.
 
@@ -1155,6 +1222,7 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'update_task':           return toolUpdateTask(userId, args)
     case 'get_habits':            return toolGetHabits(userId, args)
     case 'log_habit':           return toolLogHabit(userId, args)
+    case 'get_transactions':    return toolGetTransactions(userId, args)
     case 'add_transaction':     return toolAddTransaction(userId, args)
     case 'get_calendar_events':    return toolGetCalendarEvents(userId, args)
     case 'add_calendar_event':     return toolAddCalendarEvent(userId, args)
