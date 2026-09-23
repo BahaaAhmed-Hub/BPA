@@ -1335,6 +1335,61 @@ SDK saying exactly that — and no amount of care elsewhere makes it one.
 - The bots keep their own **server-side** `ANTHROPIC_API_KEY` in Supabase
   secrets, which is a different key in a different place and is not affected.
 
+## SaaS — the admin panel, and what it deliberately cannot do
+`lib/admin.ts` + `modules/admin/AdminPanel.tsx`, reached from the avatar menu
+when `amIAdmin()` finds your row. Three tabs over `20260021`'s tables: **Users**
+(who exists, their plan, how many exceptions they carry), **Plans** (what each
+plan includes), **Audit** (the overrides themselves, newest first — a change
+that left no row was undone, and the current state already says so).
+- **The control is tri-state and has to be**: `Plan / On / Off`. "Inherit the
+  plan" is the commonest state by far and a two-way switch cannot say it, so
+  turning an override off would have to mean *revoked* — a different decision
+  nobody asked for. Choosing **Plan** DELETEs the row rather than writing
+  `false`, and On and Off each ask for a sentence, because in four months that
+  sentence is the only thing that will explain the exception.
+- **The resolved state is `has_module()` itself**, per module, not a second
+  implementation of core→override→plan→no. Seven small calls for one open user
+  is the right price for not having two answers to one question.
+- **It lives in the same public bundle as everything else**, which is safe only
+  because the security is RLS: a non-admin who forces the route gets a page of
+  empty lists, and the panel says so rather than looking broken. Verified both
+  ways — 19 assertions as an admin (including that clicking On writes the right
+  user, module, flag, reason and `set_by`), and as an ordinary account no menu
+  row, the empty state, and no other address anywhere on the page.
+- **Every override control names its module** in its `aria-label`. Seven
+  controls announcing "module override" tell a screen reader which *kind* of
+  control it is and nothing about which one.
+- **`listUsers` joins three reads in JS.** `subscriptions` and `user_modules`
+  hang off `auth.users`, not `public.users`, so there is no foreign key for a
+  PostgREST embed to follow. The tables are small and this is one screen.
+- **There is no screen here for anybody's ledger, tasks or mail**, and no
+  policy that would allow one. Power over modules without the liability of
+  their data.
+
+## The ink audit could not tell you what it never looked at
+`visit()` swallowed a navigation failure and returned, and `AUDIT` reports only
+the **failing** pairs — so a screen's name reached the output only when
+something on it failed. A run at zero failures therefore printed no screen
+names at all, which reads identically whether a screen was measured and clean
+or never opened. Three faults hid under that, all of them found in one
+afternoon and none of them by reading the code:
+- **`Settings · Habits` was auditing the Habits module.** The section click used
+  `.first()`, the header nav comes first in the DOM, and `Habits` is in both
+  `NAV_ITEMS` and `SECTION_META`. It clicked the top nav, navigated out of
+  Settings, threw nothing, and reported clean about the wrong page. `.last()`
+  takes the rail.
+- **The Admin screens were auditing Today.** Writing `activeModule` into
+  localStorage and reloading does not reach a module outside the nav — the app
+  came back up on the morning page. They are reached by clicking the avatar
+  menu now, and the step **asserts it arrived** (`/Plans & modules/`) rather
+  than assuming the click worked.
+- **Settings' own three screens still measure nothing** and now say so. That
+  one predates all of this — proven by running the same file with the Admin
+  visits removed entirely.
+Every visit records what it looked at; a screen that threw or came up empty is
+named under the count, with the reason. `INK_THEME=<name>` runs one theme, so a
+check costs a minute rather than fifteen.
+
 ## Migrations — the runner remembers what it has applied
 `scripts/migrate.mjs` used to read every `.sql` in `supabase/migrations` and run
 all of them, every time, and `.github/workflows/migrate.yml` invokes it on any
