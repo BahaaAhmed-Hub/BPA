@@ -360,13 +360,18 @@ for (const theme of THEMES) {
   }
 
   // The admin panel — four faces, all of them new text on new grounds.
+  // Through the avatar menu, the way a person reaches it. Writing the module
+  // into localStorage and reloading does NOT work for a module outside the nav
+  // — the app came back up on Today, so these four screens were auditing the
+  // morning page under an Admin label. Clicking is also the only version that
+  // proves the menu row exists at all.
   const goAdmin = async () => {
-    await page.evaluate(() => {
-      const s = Object.keys(localStorage).find(k => k.includes('professor-ui'))
-      if (s) { const v = JSON.parse(localStorage.getItem(s)); v.state.activeModule = 'admin'; localStorage.setItem(s, JSON.stringify(v)) }
-      window.location.reload()
-    })
-    await page.waitForTimeout(3200)
+    await page.locator('header button', { hasText: /^(BA|A)$/ }).last().click({ timeout: 4000 })
+    await page.waitForTimeout(400)
+    await page.locator('button[role="menuitem"]', { hasText: 'Admin' }).first().click({ timeout: 4000 })
+    await page.waitForTimeout(1400)
+    const onIt = await page.evaluate(() => /Plans & modules/.test(document.body.innerText))
+    if (!onIt) throw new Error('the Admin panel did not open')
   }
   await visit('Admin · users', goAdmin)
   await visit('Admin · one account open', async () => {
