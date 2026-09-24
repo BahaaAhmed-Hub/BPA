@@ -890,7 +890,7 @@ export function InboxModule() {
   /** The drafted reply, in the ordinary composer. Nothing here sends. */
   function handleSmartDraft(t: SmartThread) {
     const account = accounts.find(a => a.email === t.accountEmail) ?? accounts[0]
-    if (!account) return
+    if (!account) return notify('No mailbox is connected to reply from')
     setCompose({
       mode: 'reply',
       account,
@@ -2314,7 +2314,35 @@ export function InboxModule() {
                 onRsvp={(t, a) => void handleSmartRsvp(t, a)}
               />
             </div>
-            {reading && (
+            {/* Edit opens the reply here. The only other `Composer` in this
+                file sits inside the flat list's selected-email panel, reading
+                `selectedEmail.id`, so in this view `setCompose` was setting
+                state that nothing rendered: the button did nothing and said
+                nothing. It takes the right-hand column, and the reader comes
+                back when it closes — you asked to write, so writing wins the
+                column while it is open. */}
+            {compose && compose.mode !== 'new' && (
+              <div className="mail-smart-reader" style={{ width: readerWidth, flexShrink: 0 }}>
+                <Composer
+                  seed={compose}
+                  accounts={accounts}
+                  onClose={() => setCompose(null)}
+                  onSent={() => {
+                    const t = smart?.threads.find(x => x.threadId === compose.threadId)
+                    setCompose(null)
+                    if (!t) return
+                    // Exactly what the row's own Send does, so a reply written
+                    // in the composer leaves the thread in the same state as
+                    // one sent from the row.
+                    markSmart([t], { acted: `Replied to ${t.fromName}`, draft: '' })
+                    forgetBrief(t.threadId)
+                    forgetWaiting(t.threadId)
+                    void markHandled(t.accountEmail, t.threadId, true)
+                  }}
+                />
+              </div>
+            )}
+            {reading && !compose && (
               <SmartReader
                 target={reading}
                 width={readerWidth}
