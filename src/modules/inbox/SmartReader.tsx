@@ -82,19 +82,51 @@ function nameOf(v: string): string {
   return n || addressOf(v).split('@')[0] || 'Unknown'
 }
 
+/** Split an address header into its addresses.
+ *
+ *  Not `split(',')`: a display name is allowed to contain one, and plenty do —
+ *  `"BahaaElDin Amar-AbdElSalam, Vodafone" <…>` is one person, and splitting on
+ *  the comma invents a second whose name is a company and who has no address at
+ *  all. Only a comma outside quotes and outside angle brackets separates. */
+function addressList(v: string): string[] {
+  const out: string[] = []
+  let cur = '', quoted = false, angled = false
+  for (const ch of v) {
+    if (ch === '"') quoted = !quoted
+    else if (ch === '<' && !quoted) angled = true
+    else if (ch === '>' && !quoted) angled = false
+    if (ch === ',' && !quoted && !angled) { out.push(cur); cur = '' } else cur += ch
+  }
+  out.push(cur)
+  return out.map(x => x.trim()).filter(Boolean)
+}
+
 /** One row of the envelope, or nothing at all where the header is empty. A
  *  label with no value beside it is a field you spend a moment reading before
  *  realising it says nothing. */
 function Field({ label, value }: { label: string; value: string }) {
   if (!value.trim()) return null
+  // One of the two, never both. `"Name" <address>` repeated down six recipients
+  // is a wall in which the names — the only part you read — are the minority of
+  // the characters. The name is what identifies a person to you; the address is
+  // the fallback for when there is no name, and the whole raw header is on
+  // hover, so nothing is lost, only stacked.
+  // Joined with a middle dot, never a comma: half these display names contain
+  // one — "Surname, Company" is how a corporate directory writes itself — so a
+  // comma between them is the same character doing two jobs, and five people
+  // read as eight. The dot is the app's own separator everywhere else.
+  const people = addressList(value)
   return (
     <>
       <span style={{
         color: 'var(--sb-ink-4)', fontWeight: 600, letterSpacing: '0.04em',
         textTransform: 'uppercase', fontSize: 'var(--sb-t-micro)', whiteSpace: 'nowrap',
       }}>{label}</span>
-      <span style={{ color: 'var(--sb-ink-3)', wordBreak: 'break-word', minWidth: 0 }}>
-        {value}
+      <span
+        title={value}
+        style={{ color: 'var(--sb-ink-3)', wordBreak: 'break-word', minWidth: 0 }}
+      >
+        {people.map(nameOf).join(' · ')}
       </span>
     </>
   )

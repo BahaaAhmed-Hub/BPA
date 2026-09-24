@@ -2181,6 +2181,21 @@ filters by class with — plus **All**.
   than an arrow and has nowhere to put Bcc at all. FROM / TO / CC / BCC down the
   left, each absent when empty — Bcc therefore appears only on your own sent
   copy, which is exactly where it is worth seeing.
+- **A row shows the name or the address, never both.** `"Name" <address>`
+  repeated down six recipients is a wall in which the names — the only part
+  anybody reads — are the minority of the characters. `nameOf` falls back to the
+  address where there is no name, and the raw header is on hover, so nothing is
+  lost, only stacked.
+- **Splitting that header on `,` invents people.** A display name may contain a
+  comma and corporate directories are full of them: `"BahaaElDin
+  Amar-AbdElSalam, Vodafone" <…>` is one person, and a naive split makes a
+  second whose name is a company and who has no address at all. `addressList`
+  separates only on a comma that is outside quotes **and** outside angle
+  brackets (`<a,b@x>` is one address too).
+- **And the names are joined with a middle dot, not a comma**, for the same
+  reason read backwards: half of them already contain one, so a comma between
+  them is the same character doing two jobs and five people render as eight.
+  Checked on the real header: 5 parsed, 5 rendered, no address in the text.
 - A row's *shape* belongs to the row: an FYI thread is one compact line whether
   you are looking at FYI or at everything. `mail-smart-view` remembers the view;
   changing it clears the selection, which was aimed at rows the next view does
