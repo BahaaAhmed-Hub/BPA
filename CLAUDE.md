@@ -2254,6 +2254,14 @@ filters by class with — plus **All**.
   Two clamped lines sit in the mail's own area with **Send** (the only control
   in the view that sends), Edit (the composer, seeded) and Discard. A failed
   send keeps the words: losing what you wrote is the expensive half.
+- **The composer lives in both views, or Edit is a button that does nothing.**
+  `handleSmartDraft` set `compose` and the file's only `<Composer>` sat inside
+  the *flat* list's selected-email panel, reading `selectedEmail.id` — which the
+  smart view never renders. So Edit set state nothing drew. The smart branch
+  renders its own, in the right-hand column with the reader hidden behind it
+  (one column, not two), seeded To / subject-prefixed-once / the draft as
+  paragraphs; sending does what the row's own Send does — acted, `forgetBrief`,
+  `forgetWaiting`, `markHandled`.
 - **An action is over once it is taken.** `SmartThread.acted` is a receipt for
   the gesture — session-only, deliberately unstored — and the row shows it in
   place of the buttons. Leaving *Make a task* lit beside a task that now exists
