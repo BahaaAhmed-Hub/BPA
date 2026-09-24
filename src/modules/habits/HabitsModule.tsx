@@ -8,7 +8,7 @@ import {
   calcStreak, getHabitColors,
   type Habit,
 } from '@/store/habitsStore'
-import { ICON, STROKE } from '@/lib/type'
+import { ICON } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { dayProgress, dayTotals, spanTotals } from '@/lib/habitProgress'
 
@@ -171,19 +171,6 @@ function HabitImagePicker({ image, emoji, onChange, onEmojiChange, size = 54 }: 
               </button>
             )
         }
-        {image && (
-          <button
-            type="button"
-            onClick={() => onChange(undefined)}
-            title="Remove picture"
-            style={{
-              position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: 'var(--sb-r-pill)',
-              padding: 0, cursor: 'pointer', background: 'var(--sb-ink-1)', border: 'var(--sb-border-emphasis) solid var(--sb-card)',
-              color: 'var(--sb-ink-on-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-            <X size={ICON.sm} strokeWidth={STROKE.active} />
-          </button>
-        )}
       </span>
       <input
         ref={ref} type="file" accept="image/*" style={{ display: 'none' }}
@@ -193,6 +180,23 @@ function HabitImagePicker({ image, emoji, onChange, onEmojiChange, size = 54 }: 
           if (!file) return
           try { onChange(await readHabitImage(file)) } catch { /* not a usable image */ }
         }} />
+      {/* ── What you can do to the picture, in words, under it ──────────────
+          Removal used to be a filled ✕ pinned to the picture's top-right
+          corner. In the detail panel that put **two ✕ in one header band** —
+          the panel's own Close, and this one — and this was the stronger of
+          the two: solid ink-1, ringed in the card colour, against a grey
+          hairline glyph. So the obvious ✕ deleted the habit's photo and the
+          faint one closed the panel, which is the wrong way round for a
+          destructive control and an unrecoverable one for a photo. It is a
+          word now, in the slot this column already uses for "Photo" and
+          "Picture", so every state of the picker says what it offers in the
+          same place and the header carries exactly one ✕. */}
+      {image && (
+        <button type="button" onClick={() => onChange(undefined)} title="Remove this picture"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-micro)', padding: 0 }}>
+          Remove
+        </button>
+      )}
       {/* Photo upload link — shown when the emoji picker is the primary button */}
       {!image && onEmojiChange && (
         <button type="button" onClick={() => ref.current?.click()} title="Upload a photo"
@@ -771,7 +775,8 @@ function HabitDetailPanel({
             {isQty && ` · ${hasGoal ? `${habit.goal} ${habit.unit ?? 'times'} a day` : `counts ${habit.unit ?? 'times'}, no target`}`}
           </div>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
+        <button onClick={onClose} title="Close" aria-label="Close this habit's record"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
           <X size={ICON.sm} />
         </button>
       </div>
