@@ -1825,6 +1825,29 @@ until the next load and vanished. `completed` now says which kind of day it is,
 and `loadHabitLogsFromDB` reads it back rather than ticking every row it finds.
 A `quantity` of 0 is not a day.
 
+## Habits — one ✕ in a header, and it closes
+The habit record's header carried two: the panel's own Close, and the
+picture's Remove pinned to its top-right corner. Remove was the **stronger**
+of the two — solid `--sb-ink-1`, ringed in the card colour, sitting on the
+photo — against Close's grey hairline glyph 200px to the right. So the ✕ that
+draws the eye deleted the habit's photo and the faint one closed the panel,
+which is the wrong way round for a destructive control and an unrecoverable
+one for a picture.
+- **Removal is a word, in the slot the column already has.**
+  `HabitImagePicker` is a picture over a caption, and that caption is already
+  "Photo" (no image, emoji picker) or "Picture" (no image, no picker). With an
+  image it is now **Remove** — same place, same `--sb-ink-4` micro type — so
+  every state of the picker says what it offers in one spot and the header has
+  exactly one ✕.
+- **The panel geometry was never the problem.** Measured at 768 / 820 / 1024 /
+  1440 in fill and table: no child overflows the 288px panel and it never
+  overlaps the cards beside it. A screenshot at ~2.4× DPR reads like a
+  spilling layout; measuring says the collision was in the header alone.
+- Close had no accessible name at all, and now has a title and an aria-label.
+- **The same pinned-✕-on-a-picture still exists in Settings → Habits'
+  add/edit form** (`Settings.tsx`), where it collides with nothing — that form
+  has Save/Cancel, not a ✕. It is the one remaining copy of the pattern.
+
 ## Habits — what one tap adds
 `lib/habitSteps.ts`. A measurable habit was counted one at a time, which is
 right for glasses and wrong for anything in real units: 200 ml at 1 ml a tap is
