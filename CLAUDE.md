@@ -1428,6 +1428,44 @@ Every visit records what it looked at; a screen that threw or came up empty is
 named under the count, with the reason. `INK_THEME=<name>` runs one theme, so a
 check costs a minute rather than fifteen.
 
+## Mail — Arabic, and every other right-to-left script
+`lib/messageDoc.ts` builds the document every mail body is drawn in. Three
+screens each built their own by hand and had already drifted — different
+padding, different colours, and two of them reaching for `var(--sb-ink-1)` and
+`var(--sb-info)` inside a **sandboxed iframe**, which cannot see the parent's
+custom properties, so those rules resolved to nothing and always had.
+- **A mail body arrives with no `dir` on anything**, so the frame's own
+  direction decided it — left to right — for all of it. Arabic rendered with
+  its full stops at the *start* of the line and its markers on the wrong side:
+  the characters were right, their order was not.
+- **`unicode-bidi: plaintext` is not enough, and finding that out needed a
+  browser.** It reorders the *text* inside a block correctly and stops there:
+  the computed `direction` stays `ltr`, so everything the box hangs off that
+  property — the list marker, the quote rule, `text-align: start` — is still
+  left-handed. `dir` is the property those read, so `dir` is what has to be set.
+- **One `dir="auto"` on `<body>` is not enough either.** It takes the first
+  strong character of the whole document and applies that one verdict to all of
+  it, and business mail here opens with an English heading — so every Arabic
+  paragraph under it would stay broken.
+- So `markDirection` gives **every block its own `dir="auto"`**, via
+  `DOMParser`, which builds a tree without running a script or fetching a
+  resource. A block that already carries a `dir` is left alone: the sender said
+  what they meant. `text-align` is never set — its initial `start` already
+  follows whatever each block resolved to, and overriding an inline
+  `text-align: left` would break every deliberately left-aligned layout to fix
+  the ones that said nothing.
+- **First-strong is the rule, with its edge accepted.** A list item opening
+  `"Vouchers / Certificates:"` and continuing in Arabic resolves LTR and keeps
+  its marker on the left, while the Arabic block inside it flips. A
+  majority-script heuristic would fix that case and be wrong the other way
+  round on genuinely English-led content.
+Verified in Chromium against the **module the dev server serves**, not a copy:
+9 `dir="auto"` injected; the Arabic paragraph starts 753px into a 760px block
+and the English one at 0px; list body, blockquote and paragraph all compute
+`rtl`; the quote rule moves to the right. An earlier run of this test proved
+nothing — it called `markDirection` in Node, where `DOMParser` is undefined and
+the function returns its input untouched, exactly as its guard says.
+
 ## Migrations — the runner remembers what it has applied
 `scripts/migrate.mjs` used to read every `.sql` in `supabase/migrations` and run
 all of them, every time, and `.github/workflows/migrate.yml` invokes it on any

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { messageDoc } from '@/lib/messageDoc'
 import {
   Archive, Trash2, X as XIcon, Reply, ReplyAll, Forward, MailOpen, ExternalLink,
   RefreshCw, ChevronDown, ChevronRight, Paperclip, ListPlus, Check, BellOff,
@@ -7,7 +8,7 @@ import {
 import { Button } from '@/components/ui'
 import { ICON, STROKE } from '@/lib/type'
 import {
-  getThread, header, extractHtmlBody, extractBody, escapeHtml,
+  getThread, header, extractHtmlBody, extractBody,
   type MailAccount, type GmailMessage,
 } from '@/lib/gmail'
 
@@ -425,20 +426,7 @@ function Body({ html, text }: { html: string | null; text: string }) {
   const ref = useRef<HTMLIFrameElement>(null)
   const [height, setHeight] = useState(180)
 
-  const doc = useMemo(() => {
-    const body = html ?? `<pre style="white-space:pre-wrap;font:inherit;margin:0">${escapeHtml(text)}</pre>`
-    return `<!doctype html><html><head><meta charset="utf-8">
-      <base target="_blank">
-      <style>
-        html,body{margin:0;padding:0;background:transparent;
-          font:14px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;color:#191712;
-          word-wrap:break-word;overflow-wrap:anywhere}
-        img{max-width:100%;height:auto}
-        table{max-width:100%}
-        a{color:#0B63C5}
-        blockquote{margin:0 0 0 10px;padding-left:10px;border-left:2px solid #E8E1CE;color:#6C6553}
-      </style></head><body>${body}</body></html>`
-  }, [html, text])
+  const doc = useMemo(() => messageDoc(html, text), [html, text])
 
   useEffect(() => {
     const frame = ref.current

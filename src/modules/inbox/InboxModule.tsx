@@ -1,5 +1,6 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { messageDoc } from '@/lib/messageDoc'
 import { AVATAR_COLORS, ACCOUNT_COLORS } from '@/lib/palettes'
 import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, FolderInput, Send, FileEdit, Star, MailOpen, Sparkles, AlertTriangle, GitBranch, Info, UserPlus, Minus, Check, Trash2 } from 'lucide-react'
 
@@ -206,17 +207,8 @@ function EmailBodyFrame({ html, messageId, account }: {
   // first would make the body jump as each one landed.
   const body = images ? applyInlineImages(tidyDataUris(html), images) : tidyDataUris(html)
 
-  // Inject base tag so relative links open in new tab, and a minimal reset
-  const doc = `<!DOCTYPE html><html><head>
-<base target="_blank">
-<meta charset="utf-8">
-<style>
-  body { margin: 0; padding: 12px 4px; font-family: -apple-system, sans-serif; font-size: 14px; line-height: 1.6; word-break: break-word; }
-  img { max-width: 100%; height: auto; }
-  a { color: var(--sb-info); }
-  pre, blockquote { white-space: pre-wrap; }
-</style>
-</head><body>${body}</body></html>`
+  // `body`, not `html`: inline cid: images have been substituted into it.
+  const doc = messageDoc(body, '', { padding: '12px 4px' })
 
   function onLoad() {
     const iframe = ref.current

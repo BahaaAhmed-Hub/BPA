@@ -5,6 +5,7 @@
 // app writes to — nothing here is illustrative.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { messageDoc } from '@/lib/messageDoc'
 import {
  RefreshCw, ArrowRight, Zap, Archive, Plus,
   Clock, Check, Flame, Sun, Quote, CheckSquare, X, ChevronDown, Trash2,
@@ -252,14 +253,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
   }, [onClose])
 
   // The sender's HTML runs in a sandboxed frame — never in the app's document
-  const doc = `<!DOCTYPE html><html><head><base target="_blank"><meta charset="utf-8"><style>
-    body { margin:0; padding:4px 2px; font-family:-apple-system,system-ui,sans-serif; font-size:14px;
-           line-height:1.6; color:var(--sb-ink-1); word-break:break-word; }
-    img { max-width:100%; height:auto; }
-    a { color:var(--sb-info); }
-    pre, blockquote { white-space:pre-wrap; }
-    blockquote { margin:0 0 0 12px; padding-left:10px; border-left:2px solid var(--sb-border); color:var(--sb-ink-3); }
-  </style></head><body>${row.html ?? `<pre>${row.body.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string))}</pre>`}</body></html>`
+  const doc = messageDoc(row.html ?? null, row.body, { padding: '4px 2px' })
 
   function fit() {
     const f = frameRef.current
