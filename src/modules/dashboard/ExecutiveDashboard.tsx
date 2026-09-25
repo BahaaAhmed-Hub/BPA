@@ -264,11 +264,11 @@ export function ExecutiveDashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 24 }}>
           <MetricCard
             label="Today's Habits"
-            value={`${habitProgress.done}/${habitProgress.total}`}
-            delta={habitProgress.done === habitProgress.total && habitProgress.total > 0 ? 'All done!'
+            value={`${habitProgress.pct}%`}
+            delta={habitProgress.pct >= 100 && habitProgress.total > 0 ? 'All done!'
               : habitProgress.total === 0 ? 'No habits set'
-              : `${habitProgress.pct}% of today · ${habitProgress.total - habitProgress.done} to finish`}
-            deltaPositive={habitProgress.done === habitProgress.total}
+              : `${habitProgress.done} of ${habitProgress.total} finished · ${habitProgress.total - habitProgress.done} to go`}
+            deltaPositive={habitProgress.pct >= 100}
             icon={Target}
             accentColor="var(--sb-positive)"
             onClick={() => setModule('habits')}

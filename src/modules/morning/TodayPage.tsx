@@ -1475,7 +1475,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
     <div style={CARD}>
       <CardHead
         title="Habits"
-        meta={`${doneToday} of ${habits.length} today · ${weekPct}% this week · best streak ${best}d`}>
+        meta={`${todayTotals.pct}% of today · ${doneToday} of ${habits.length} finished · ${weekPct}% this week · best streak ${best}d`}>
         {coldDays > 0 && (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-negative)', flexShrink: 0 }}>
             <Flame size={ICON.sm} strokeWidth={STROKE.rest} /> {coldDays} days cold

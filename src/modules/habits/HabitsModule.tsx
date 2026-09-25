@@ -345,8 +345,16 @@ function QuantityControl({ value, goal, unit, onSet }: { value: number; goal?: n
 /** The ring fills with *progress* — six glasses of eight is three quarters of
  *  that habit's day — and the figure inside it stays the count of habits
  *  actually finished, which is a different question. */
-function ProgressRing({ done, total, progress }: { done: number; total: number; progress?: number }) {
-  const pct = total > 0 ? (progress ?? done) / total : 0
+/** The day as a share, not a tally.
+ *
+ *  The arc always drew the real fraction and the label in the middle of it read
+ *  `2/5` — so a day at 73% showed an arc most of the way round with a number
+ *  saying two. They are answers to different questions and only one of them is
+ *  the one this screen is about: how much of the day is done, with every habit
+ *  weighted the same and a measurable one counting for the part of its goal it
+ *  reached. The tally is still worth knowing and sits beside the ring in words. */
+function ProgressRing({ fraction }: { fraction: number }) {
+  const pct = Math.max(0, Math.min(1, fraction))
   const deg = Math.round(pct * 360)
   return (
     <span style={{
@@ -356,7 +364,7 @@ function ProgressRing({ done, total, progress }: { done: number; total: number; 
     }}>
       <span style={{ position: 'absolute', inset: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)' }} />
       <span style={{ position: 'relative', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
-        {done}<span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>/{total}</span>
+        {Math.round(pct * 100)}<span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>%</span>
       </span>
     </span>
   )
@@ -1030,11 +1038,16 @@ export function HabitsModule() {
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)' }}>HABITS TRACKER</span>
+          {/* The headline is the share of the day, not the count of habits
+              that happen to have crossed their own line. Six glasses of eight
+              is most of a habit and the tally called it nothing; the share
+              calls it three quarters, which is what the day actually was. The
+              tally is still true and still here, one line down. */}
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-display)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
-            {todayDone} of {totalActive} done today
+            {completionPct}% of today done
           </span>
           <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', paddingTop: 3 }}>
-            {completionPct}% complete
+            {todayDone} of {totalActive} finished
             {bestStreak > 0 ? ` · ${bestStreak}d streak` : coldDays > 0 ? ` · ${coldDays} days cold` : ' · no streak yet'}
             {' · '}{weekPct}% this week
           </span>
@@ -1063,20 +1076,19 @@ export function HabitsModule() {
       {/* ─── Summary card ──────────────────────────────────────────────────── */}
       <div style={{ flexShrink: 0, background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
         {/* Progress ring — for the day you are looking at */}
-        <ProgressRing done={dayDone} total={totalActive} progress={dayTotal.progress} />
+        <ProgressRing fraction={dayTotal.fraction} />
 
         {/* Status text */}
         <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0, minWidth: 0 }}>
           <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap' }}>
             {totalActive === 0 ? 'No habits yet'
-              : dayDone === totalActive ? 'All habits complete! 🎉'
-              : dayDone === 0 ? (isToday ? 'Nothing logged yet today' : 'Nothing logged that day')
-              : `${dayDone} of ${totalActive} done`}
+              : dayTotal.pct >= 100 ? 'All habits complete! 🎉'
+              : dayTotal.progress === 0 ? (isToday ? 'Nothing logged yet today' : 'Nothing logged that day')
+              : `${dayTotal.pct}% of the day done`}
           </span>
           <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' }}>
             {totalActive === 0 ? 'Add your first habit below'
-              : isToday ? `Resets at midnight · ${totalActive - dayDone} remaining`
-              : selectedLabel}
+              : `${dayDone} of ${totalActive} finished${isToday ? ' · resets at midnight' : ` · ${selectedLabel}`}`}
           </span>
         </span>
 
@@ -1133,7 +1145,7 @@ export function HabitsModule() {
         <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>{weekPct}%</span>
           <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-2)' }}>This week</span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>{weekCheckIns} of {weekTotal} check-ins</span>
+          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>{weekCheckIns} of {weekTotal} habit-days finished</span>
         </span>
 
         {/* Divider */}
@@ -1474,7 +1486,7 @@ export function HabitsModule() {
       </div>
 
       {/* ─── All-done banner ────────────────────────────────────────────────── */}
-      {todayDone === totalActive && totalActive > 0 && (
+      {todayTotals.pct >= 100 && totalActive > 0 && (
         <div style={{ padding: '14px 18px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-ink-3) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-3) 20.0%, transparent)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-3)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
           <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>
