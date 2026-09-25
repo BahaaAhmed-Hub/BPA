@@ -1183,6 +1183,18 @@ it felt from the outside.
 - **An API failure says which kind.** 429, 5xx and everything else read
   differently and point at different fixes; "Sorry, I ran into a problem" for a
   rate limit sends you to rephrase a sentence that was fine.
+- **401 and 403 are the one failure retrying can never fix**, and they were
+  falling through to *"I could not reach the AI service"* — which points at the
+  network and sends you off to try again for ever. The request arrived; the key
+  on it was refused. The branch names it, and names **where that key lives**:
+  the bots read `ANTHROPIC_API_KEY` from **Supabase function secrets**, which is
+  a different secret in a different place from the web app's own key (Settings →
+  AI, per browser) and from the GitHub secret the build once used. So rotating
+  the key anywhere else leaves this one holding the revoked value, and the bot
+  goes quiet with a sentence about the network. `if (!ANTHROPIC_KEY)` already
+  covers an *unset* secret, so a 401 always means set-but-refused.
+  Both bots keep their own copy of the branch; both were changed, and the test
+  lifts the branch verbatim out of each file rather than restating it.
 
 ## Bots — nothing deployed them
 `telegram-bot` and `professor-siri` were in **no** workflow. Between

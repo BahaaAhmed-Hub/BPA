@@ -1192,6 +1192,17 @@ Reply style: short, warm, direct. No markdown. Use plain bullets with •. After
       // a lie that sends you on to rephrase a sentence that was already fine.
       if (res.status === 429) return 'I am being rate limited right now — try again in a few seconds.'
       if (res.status >= 500)  return 'The AI service is having a moment. Try again shortly.'
+      // 401/403 is the one failure that trying again can never fix: the request
+      // arrived and the key on it was refused. "I could not reach the AI
+      // service" points at the network and sends you off to retry for ever —
+      // and the key this reads is the **Supabase** secret, which is a different
+      // secret in a different place from the one the web app uses, so rotating
+      // the app's key leaves this one holding the revoked value. Name it.
+      if (res.status === 401 || res.status === 403) {
+        return 'My Anthropic key was refused (' + res.status + '). It has most likely been '
+          + 'rotated or revoked — set ANTHROPIC_API_KEY in the Supabase function secrets to the '
+          + 'current key and redeploy. Trying again will not help until then.'
+      }
       return `Sorry, I could not reach the AI service (${res.status}). Try again in a moment.`
     }
 
