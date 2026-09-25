@@ -873,3 +873,14 @@ img { max-width: 100%; }
   .mail-controls > .sb-segmented { margin-left: auto; }
   .mail-filter-rail { flex: 1 1 100% !important; }
 }
+
+/* ─── Habits: the record goes under the views, not over them ──────────────────
+   The record is a fixed 288px that cannot shrink, and the fill view's cards
+   carry hard min-widths, so under about 745px of window the two fought for the
+   same pixels and the cards won — silently, because the page itself never
+   scrolled. Below 860px the record takes the full width and sits underneath,
+   the way `.mail-smart-reader` stacks under its list. */
+@media (max-width: 860px) {
+  .habits-record-row { flex-direction: column; }
+  .habits-record { width: 100% !important; align-self: stretch; }
+}

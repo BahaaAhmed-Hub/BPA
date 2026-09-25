@@ -748,7 +748,7 @@ function HabitDetailPanel({
   const pct = hasGoal ? Math.min(100, Math.round((qtyToday / habit.goal!) * 100)) : 0
 
   return (
-    <div style={{
+    <div className="habits-record" style={{
       width: 288, flexShrink: 0, background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
       borderRadius: 'var(--sb-r-card)', padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 10,
       alignSelf: 'flex-start',
@@ -1164,8 +1164,15 @@ export function HabitsModule() {
         </span>
       </div>
 
-      {/* ─── Views + the habit record they all share ───────────────────────── */}
-      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', minWidth: 0 }}>
+      {/* ─── Views + the habit record they all share ─────────────────────────
+          `.habits-record-row` in index.css stacks the record UNDER the views
+          below 860px. The record is 288px and cannot shrink; the fill view's
+          cards carry hard `minWidth`s — so under about 745px of window the
+          cards overflowed their own column and were painted straight over the
+          record beside them. Nothing scrolled and nothing said so: the page's
+          own scrollWidth still equalled the viewport, and `elementFromPoint`
+          at the record's top-left corner answered *a habit card*. */}
+      <div className="habits-record-row" style={{ display: 'flex', gap: 14, alignItems: 'flex-start', minWidth: 0 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
 
       {/* ─── Wall view (12A) ────────────────────────────────────────────────── */}
@@ -1208,7 +1215,15 @@ export function HabitsModule() {
 
       {/* ─── Fill view (12B) ────────────────────────────────────────────────── */}
       {view === 'fill' && (
-        <div style={{ display: 'flex', gap: 8, minWidth: 0, minHeight: 520, padding: '4px 0 8px' }}>
+        <div style={{
+          display: 'flex', gap: 8, minWidth: 0, minHeight: 520, padding: '4px 0 8px',
+          // Three cards with `minWidth` 92/92/190 need ~390px between them. Given
+          // less, a flex row does not shrink past a min-width — it overflows, and
+          // with no overflow set here that spill was painted over whatever sat
+          // beside it. Scrolling keeps the cards side by side, which is the whole
+          // point of this view, and keeps the spill inside this column.
+          overflowX: 'auto', overflowY: 'hidden',
+        }}>
           {activeHabits.map((habit, i) => {
             const habitLogs   = logs[habit.id] ?? []
             const todayDoneH  = habitLogs.includes(selectedDay)
