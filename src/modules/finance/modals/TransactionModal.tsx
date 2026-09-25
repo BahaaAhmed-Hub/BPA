@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import {
-  X, ChevronDown, Plus, Paperclip, Check,
+  X, ChevronDown, Plus, Paperclip, Check, Trash2,
   Image as ImageIcon, Hash, User, Repeat,
 } from 'lucide-react'
 import type { Transaction, Account, Category, Currency, TxType } from '../types'
@@ -267,7 +267,23 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             {isEdit ? 'Transaction' : 'New transaction'}
           </span>
           <span style={{ flex: 1 }} />
-          <button onClick={onClose} title="Close" style={ROUND}><X size={ICON.sm} /></button>
+          {/* Delete sits with the other things you do TO this entry, not at the
+              foot of the form. Down there it was below the fold on any window
+              short enough to scroll — the one control you could not reach
+              without hunting for it — and a full-width red bar under Save reads
+              as a third way to commit. It is the task detail panel's
+              arrangement: what you do to the thing, then the way out. A
+              different glyph from Close and no stronger than it, and the store
+              pushes an undo entry, so a slip costs one ⌘Z. */}
+          {isEdit && onDelete && (
+            <button
+              onClick={() => { onDelete(transaction.id); onClose() }}
+              title="Delete this transaction" aria-label="Delete this transaction"
+              style={{ ...ROUND, color: 'var(--sb-negative)' }}>
+              <Trash2 size={ICON.sm} />
+            </button>
+          )}
+          <button onClick={onClose} title="Close" aria-label="Close" style={ROUND}><X size={ICON.sm} /></button>
         </div>
 
         {/* Type — three choices you can see, rather than a title that cycles */}
@@ -653,8 +669,18 @@ export function TransactionModal({ transaction, accounts, categories, history = 
           })}
         </div>
 
-        {/* The one action that commits, and the ways not to */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+        {/* The one action that commits, and the way not to. It is **sticky at
+            the foot of the scroll area**: the form is taller than a short
+            window and the scrollbar was the only thing saying so, which is
+            what made it feel like furniture. With Save and Cancel always on
+            screen, scrolling is for reading the fields rather than for
+            reaching the button, and the bar can be hidden without hiding
+            anything you need. */}
+        <div style={{
+          display: 'flex', gap: 8, marginTop: 20,
+          position: 'sticky', bottom: -22, zIndex: 2,
+          background: 'var(--sb-overlay)', paddingTop: 10, paddingBottom: 12, marginBottom: -12,
+        }}>
           <button onClick={handleSave} disabled={!canSave} style={{
             ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
             background: canSave ? 'var(--sb-ink-1)' : 'var(--sb-field)',
@@ -664,17 +690,6 @@ export function TransactionModal({ transaction, accounts, categories, history = 
           <button onClick={onClose} style={{ ...PILL, color: 'var(--sb-ink-3)' }}>Cancel</button>
         </div>
 
-        {isEdit && onDelete && (
-          <button
-            onClick={() => { onDelete(transaction.id); onClose() }}
-            style={{
-              marginTop: 12, width: '100%', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-sm)',
-              background: 'none', border: 'none', fontFamily: 'inherit',
-              color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
-            }}>
-            Delete this transaction
-          </button>
-        )}
     </>
   )
 
@@ -704,11 +719,11 @@ export function TransactionModal({ transaction, accounts, categories, history = 
 
       <div style={{
         width: 'clamp(320px, 94vw, 460px)', maxHeight: '90vh', overflowY: 'auto',
-        boxSizing: 'border-box', scrollbarWidth: 'thin',
+        boxSizing: 'border-box',
         background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: 'var(--sb-shadow-frame)',
         padding: '18px 20px 22px',
-      }}>{body}</div>
+      }} className="sb-no-scrollbar">{body}</div>
     </div>
   )
 }
