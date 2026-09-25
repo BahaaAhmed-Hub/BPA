@@ -1839,14 +1839,84 @@ one for a picture.
   image it is now **Remove** — same place, same `--sb-ink-4` micro type — so
   every state of the picker says what it offers in one spot and the header has
   exactly one ✕.
-- **The panel geometry was never the problem.** Measured at 768 / 820 / 1024 /
-  1440 in fill and table: no child overflows the 288px panel and it never
-  overlaps the cards beside it. A screenshot at ~2.4× DPR reads like a
-  spilling layout; measuring says the collision was in the header alone.
+- **The panel geometry was a second, separate bug — and measuring only wide
+  windows missed it.** No child overflows the 288px panel, at any width. But
+  the panel is `flexShrink: 0` and the fill view's cards carry hard `minWidth`s
+  of 92 / 92 / 190, so under about 745px of window their minimums exceed the
+  column they live in — and a flex row does not shrink past a min-width, it
+  overflows. With no `overflow` on that row the spill was painted straight over
+  the panel. Nothing said so: the page's own `scrollWidth` still equalled the
+  viewport, so there was no scrollbar and no clipping, and only
+  `elementFromPoint` at the panel's top-left corner gave it away, by answering
+  *a habit card*. "Measured at 768 and above, no overlap" was reported here as
+  "never overlaps"; 768 was simply the narrowest width that still fitted.
+  `.habits-record-row` stacks the record under the views below 860px — the move
+  `.mail-smart-reader` makes under 1000px — and the fill row scrolls inside its
+  own column. Measured at 390 / 430 / 600 / 768 / 820 / 860 / 900 / 1024 / 1440
+  in all three views: no card intersects the record by 4px².
 - Close had no accessible name at all, and now has a title and an aria-label.
 - **The same pinned-✕-on-a-picture still exists in Settings → Habits'
   add/edit form** (`Settings.tsx`), where it collides with nothing — that form
   has Save/Cancel, not a ✕. It is the one remaining copy of the pattern.
+
+## Habits — a day is a share of itself, not a count
+`lib/habitProgress.ts` has always weighted every habit equally and given a
+measurable one `quantity / goal`, capped at 1 — and every figure on screen
+still **led with the tally**. 1,000ml of 2,000 and 2,500 steps of 10,000
+beside one ticked habit is 58% of the day; the screens said "1 of 3 done
+today", which is 33%, and the ring drew an arc at 58% with the number **1** in
+the middle of it. Two answers to one question, on one card.
+- **The share leads, the tally supports.** The page headline, the ring's own
+  label, the summary card, Today's habits card and the Dashboard tile. The
+  count is still true and still printed one line down — "1 of 3 finished".
+- **The all-done banner fires on the share** (`pct >= 100`), not on
+  `done === total`. A day finished entirely by quantity never earned it.
+- The week strip and the weekly percentage were already built on `fraction`
+  and did not move.
+- A **streak** still is not built on this, deliberately: a streak claims the
+  thing was *done*, and a part-day does not extend one.
+Verified on a fixture built so the two models disagree (tally 33%, share 58%):
+the headline reads 58% and never 33%, the ring's arc is 210° = 58.3% matching
+its label, the week strip is `[0,0,0,0,0.58,0,0]`, and Today and the Dashboard
+both lead with 58%. Every goal met reads 100% and raises the banner.
+
+## Finance — the module measures its own height
+`ActiveModule` renders every module in a bare `<div>` with no height, so
+`FinanceModule`'s `height: 100%` resolved against `auto` — a percentage against
+an auto height is ignored — and the module fell back to its content. Measured:
+891px inside an 824px `<main>`, and `<main>` is the one box in that chain with
+`overflow-y: auto`, so **it** became the scroller for the whole screen.
+Scrolling the Financials entries panel therefore took the table off the top
+with it, and the panel's own `overflowY: auto` never fired, because its content
+fitted the box it had grown to. Nothing about the panel was wrong; it had never
+been given a height to be shorter than.
+- **`useFillsTheWindow` is `lib/fillsTheWindow.ts` now**, promoted out of
+  `shopping/BoardView.tsx` — it was written for exactly this one layer down,
+  and two copies of an answer drift. It also watches the document, since the
+  bars above a box can change height without the window doing anything.
+- A `calc(100vh - …)` would be a guess about every bar above it, which is the
+  mistake the calendar panel made.
+Measured with 60 entries in one cell: the page does not scroll, `<main>` does
+not scroll, the panel's inner list is 401px over 4,013px, a wheel over it moves
+it 600px and the table's top does not move a pixel. The control — the same
+harness with the module reverted — scrolls the table from 223 to **−534** while
+the panel stays at 0. Today, Balance, Budget, Reports, Goals and Shopping were
+each checked for content clipped with no way to reach it: none.
+
+## Finance — the transaction modal's one destructive control is in its header
+"Delete this transaction" was a full-width red bar under Save, at the bottom of
+a form taller than a short window — so the one control you could not reach was
+the destructive one, and a red bar directly under the commit button reads as a
+third way to commit. It is a trash glyph beside Close now: the task detail
+panel's arrangement, what you do *to* the thing and then the way out. A
+different glyph from Close and no stronger than it, and `removeTransaction`
+pushes an undo entry, so a slip costs one ⌘Z.
+- **The scrollbar goes with it.** The action row is `position: sticky` at the
+  foot of the scroll area, so Save and Cancel are always on screen; with
+  nothing you need below the fold the bar is 15px of furniture down the side of
+  a form, and `.sb-no-scrollbar` stops drawing it. It still scrolls.
+- Measuring a scrollbar with `offsetWidth - clientWidth` also counts the
+  border: net of it, 0px at 900 / 700 / 560px tall.
 
 ## Habits — what one tap adds
 `lib/habitSteps.ts`. A measurable habit was counted one at a time, which is
