@@ -14,6 +14,7 @@ import { LockGate } from './FinanceLockScreen'
 import { useFinanceLock } from './useFinanceLock'
 import { NavRow, Button } from '@/components/ui'
 import { lockNow } from './lock'
+import { useFillsTheWindow } from '@/lib/fillsTheWindow'
 
 // ─── Nav icon SVGs ────────────────────────────────────────────────────────────
 
@@ -231,10 +232,21 @@ export function FinanceModule() {
     }
   }
 
+  const { ref: fillRef, height: fillHeight } = useFillsTheWindow(360)
+
   if (locked) return <LockGate onUnlocked={unlock} />
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--sb-page)' }}>
+    // **Measured, not `height: 100%`.** `ActiveModule` renders every module in
+    // a bare `<div>` with no height of its own, so a percentage here resolves
+    // against `auto` and is ignored: the module fell back to its content,
+    // came out taller than `<main>`, and `<main>` — which does have
+    // `overflow-y: auto` — became the scroller for the whole screen. Scrolling
+    // the Financials entries panel therefore took the table with it, and the
+    // panel's own `overflowY: auto` never fired because its content fitted the
+    // box it had grown to. With a real height the module bounds its own
+    // columns and each one scrolls where it should.
+    <div ref={fillRef} style={{ display: 'flex', flexDirection: 'column', height: fillHeight ?? '100%', overflow: 'hidden', background: 'var(--sb-page)' }}>
 
       {/* Layer 1 — main app header (64px): aligns with sidebar logo */}
 

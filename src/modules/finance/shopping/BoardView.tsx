@@ -15,13 +15,14 @@
 //  "No list" is a column like any other and is always drawn, or an item has no
 //  way *out* of a list — you could put things in and never take them out again.
 
-import { useState, useRef, useLayoutEffect } from 'react'
+import { useState } from 'react'
 import {
   DndContext, pointerWithin, PointerSensor, TouchSensor, useSensor, useSensors,
   useDraggable, useDroppable, DragOverlay, type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import type { ShoppingGroup, ShoppingItem, ShoppingStore } from './types'
 import { ItemFields, type EnvelopeRow } from './ItemFields'
+import { useFillsTheWindow } from '@/lib/fillsTheWindow'
 
 const C = {
   page:   'var(--sb-page)',
@@ -313,37 +314,6 @@ export interface BoardViewProps {
   onUpdateGroup:  (id: string, patch: Partial<ShoppingGroup>) => void
   onAddItem:      (groupId: string | undefined) => void
   onNewList:      () => void
-}
-
-/**
- * How tall the board may be, **measured**, not guessed at.
- *
- * `height: 100%` is no use here: the Shopping screen sits in a column that is
- * sized to its content, so its own 100% resolves to whatever the list view
- * happened to draw — 269px of a 1000px window. A `calc(100vh - 212px)` in its
- * place would be a guess about the height of every bar above it, which is the
- * mistake the calendar panel made and put its footer below the fold.
- *
- * So the board asks where it actually starts and takes the rest of the window,
- * and asks again whenever the window changes.
- */
-function useFillsTheWindow() {
-  const ref = useRef<HTMLDivElement>(null)
-  const [height, setHeight] = useState<number>()
-
-  useLayoutEffect(() => {
-    const measure = () => {
-      const el = ref.current
-      if (!el) return
-      const top = el.getBoundingClientRect().top
-      setHeight(Math.max(260, window.innerHeight - top - 16))
-    }
-    measure()
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [])
-
-  return { ref, height }
 }
 
 export function BoardView({
