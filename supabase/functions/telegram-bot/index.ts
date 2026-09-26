@@ -26,21 +26,46 @@ const ANTHROPIC_KEY = Deno.env.get('ANTHROPIC_API_KEY')  ?? ''
 
 // ── Telegram helpers ──────────────────────────────────────────────────────────
 
-async function tg(method: string, body: Record<string, unknown>) {
-  if (!BOT_TOKEN) return
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
-  }).catch(() => {})
+async function tg(method: string, body: Record<string, unknown>): Promise<boolean> {
+  if (!BOT_TOKEN) return false
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    })
+    if (!res.ok) console.error(`telegram ${method} ${res.status}:`, await res.text())
+    return res.ok
+  } catch (e) {
+    console.error(`telegram ${method} threw:`, e)
+    return false
+  }
 }
 
+/**
+ * Send a reply, and never lose one to its own punctuation.
+ *
+ * Every reply went out as legacy `Markdown`, where `_` and `*` are formatting.
+ * Two things follow, and both bit:
+ *
+ *  - **An identifier is silently rewritten.** `ANTHROPIC_API_KEY` has a matched
+ *    pair of underscores, so Telegram renders *API* in italics and **drops both
+ *    underscores** — the message telling you which secret to set arrived saying
+ *    `ANTHROPICAPIKEY`, which is not a variable anybody has. Anything with a
+ *    `_` in it — a table name, a file, a tool name — is rewritten the same way.
+ *  - **An odd one throws the message away entirely.** Unbalanced markup is a
+ *    400 `can't parse entities`, and `tg` used to swallow every outcome
+ *    (`.catch(() => {})`, no `res.ok`), so the reply simply never arrived and
+ *    nothing anywhere said so. The model writes free prose; one stray asterisk
+ *    was a silent dropped answer.
+ *
+ * So: try Markdown, and if Telegram refuses it, send the same text again as
+ * **plain text**. Ugly beats absent, and the words are what matter.
+ */
 async function reply(chatId: number, text: string) {
-  await tg('sendMessage', {
-    chat_id:    chatId,
-    text:       text.slice(0, 4096),     // Telegram hard limit
-    parse_mode: 'Markdown',
-  })
+  const body = { chat_id: chatId, text: text.slice(0, 4096) }   // Telegram hard limit
+  if (await tg('sendMessage', { ...body, parse_mode: 'Markdown' })) return
+  await tg('sendMessage', body)
 }
 
 async function sendChatAction(chatId: number, action = 'typing') {
@@ -1179,7 +1204,7 @@ Reply style: short, warm, direct. No markdown headers.
       // the app's key leaves this one holding the revoked value. Name it.
       if (res.status === 401 || res.status === 403) {
         return 'My Anthropic key was refused (' + res.status + '). It has most likely been '
-          + 'rotated or revoked — set ANTHROPIC_API_KEY in the Supabase function secrets to the '
+          + 'rotated or revoked — set `ANTHROPIC_API_KEY` in the Supabase function secrets to the '
           + 'current key and redeploy. Trying again will not help until then.'
       }
       return `Sorry, I could not reach the AI service (${res.status}). Try again in a moment.`

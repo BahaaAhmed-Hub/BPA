@@ -1196,6 +1196,31 @@ it felt from the outside.
   Both bots keep their own copy of the branch; both were changed, and the test
   lifts the branch verbatim out of each file rather than restating it.
 
+## Bots — Telegram's Markdown ate the variable name
+The 401 message above arrived in Telegram as **`ANTHROPICAPIKEY`**. Every reply
+goes out as legacy `Markdown`, where `_` is an italic marker, so
+`ANTHROPIC_API_KEY`'s matched pair opened and closed emphasis around `API` and
+**both underscores were consumed**. A sentence whose whole job is to name a
+secret named one nobody has. Anything carrying a `_` is rewritten the same way —
+a table name, a file, a tool name.
+- **The identifier goes in a code span.** Inside backticks nothing is markup, so
+  the underscores are literal, and Telegram makes a code span tap-to-copy, which
+  is what you want to do with a variable name anyway.
+- **The worse half: an *odd* marker threw the whole reply away.** Unbalanced
+  markup is a 400 `can't parse entities`, and `tg()` swallowed every outcome —
+  `.catch(() => {})` and no `res.ok` — so the message simply never arrived and
+  nothing anywhere said so. The model writes free prose: one stray asterisk, or
+  a lone `finance_transactions`, was a silently dropped answer.
+  `reply()` now tries Markdown and, if Telegram refuses it, **sends the same
+  text again as plain text**. Ugly beats absent. `tg()` returns whether it
+  worked and logs the status and body when it did not.
+- Siri sends no `parse_mode`, so none of this reaches it.
+Verified against a stub that implements legacy Markdown's own rules, with the
+real `tg`/`reply` lifted out of the file by index rather than restated: the old
+string renders as `ANTHROPICAPIKEY` and the new one as `ANTHROPIC_API_KEY`; a
+message carrying one underscore is retried without `parse_mode` and its words
+arrive intact; a clean message is still sent once, with Markdown.
+
 ## Bots — nothing deployed them
 `telegram-bot` and `professor-siri` were in **no** workflow. Between
 `deploy-functions.yml` and `supabase-deploy.yml` only five functions ship —
