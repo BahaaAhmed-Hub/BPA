@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - 'supabase/functions/**'
+      # Its own secret list is part of what it deploys: changing which keys are
+      # asserted has to be able to reach the project without waiting for an
+      # unrelated change to a function.
+      - '.github/workflows/deploy-functions.yml'
   workflow_dispatch:
 
 jobs:
@@ -17,14 +21,57 @@ jobs:
         with:
           version: latest
 
+      # ─── The secrets the functions read at run time ───────────────────────
+      #
+      # `ANTHROPIC_API_KEY` is what the Telegram bot and Siri present to
+      # Anthropic. It used to be the one secret here set purely by hand, so
+      # rotating the key left it holding the revoked value while every other
+      # secret stayed correct — which is how the bot came to answer "my key was
+      # refused" while nothing looked wrong anywhere else. One home for it now,
+      # re-asserted on every deploy.
+      #
+      # It is NOT the key that was taken out of the web bundle. That one was
+      # `VITE_ANTHROPIC_API_KEY`, read by Vite at build time and inlined into a
+      # JavaScript file served on a public Pages site. This is handed to the
+      # Supabase CLI at deploy time and never reaches a browser.
+      #
+      # **A missing GitHub secret must never wipe a working one.**
+      # `supabase secrets set X=` sets X to the empty string, and the old form
+      # interpolated `${{ secrets.X }}` straight into the command — so a secret
+      # that had not been created in GitHub silently blanked the live value on
+      # the next deploy, which is a worse failure than the one this fixes. Each
+      # key is named only when this run actually has it, and the values arrive
+      # through `env` rather than being pasted into the script. That is the
+      # shape `supabase-deploy.yml` already used for the Google pair.
       - name: Set Edge Function secrets
-        run: |
-          supabase secrets set \
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
-            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
-            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
+          GOOGLE_CLIENT_ID:      ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET:  ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          ANTHROPIC_API_KEY:     ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_PROJECT_REF:  ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          args=()
+          add () {   # add NAME VALUE — only when the value is really there
+            if [ -n "${2:-}" ]; then
+              args+=("$1=$2")
+            else
+              echo "::warning::$1 is not set in GitHub secrets — leaving the existing Supabase secret alone."
+            fi
+          }
+          add GOOGLE_CLIENT_ID     "${GOOGLE_CLIENT_ID:-}"
+          add GOOGLE_CLIENT_SECRET "${GOOGLE_CLIENT_SECRET:-}"
+          add ANTHROPIC_API_KEY    "${ANTHROPIC_API_KEY:-}"
+
+          if [ ${#args[@]} -eq 0 ]; then
+            echo "No secrets to set — nothing in GitHub to assert. Skipping."
+            exit 0
+          fi
+          supabase secrets set "${args[@]}" --project-ref "$SUPABASE_PROJECT_REF"
+          # Names only. Never echo a value.
+          echo "Set: $(printf '%s\n' "${args[@]}" | cut -d= -f1 | tr '\n' ' ')"
+
 
       - name: Deploy google-token-refresh
         run: |

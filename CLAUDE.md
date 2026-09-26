@@ -1196,6 +1196,39 @@ it felt from the outside.
   Both bots keep their own copy of the branch; both were changed, and the test
   lifts the branch verbatim out of each file rather than restating it.
 
+## Bots — the deploy asserts the key, and can never blank one
+`deploy-functions.yml` re-asserted `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+on every run and **not** `ANTHROPIC_API_KEY`, which the Telegram bot and Siri
+present to Anthropic. So that was the one secret set purely by hand: rotating
+the key left it holding the revoked value while every other secret stayed
+correct, and the bot answered "my key was refused" with nothing else looking
+wrong. It is in the list now — one home for it, re-asserted on every deploy.
+- **It is not the key that came out of the bundle.** That was
+  `VITE_ANTHROPIC_API_KEY`, read by Vite at build time and inlined into a
+  JavaScript file served on a public Pages site. This one is handed to the
+  Supabase CLI at deploy time and never reaches a browser. Different variable,
+  different consumer.
+- **A missing GitHub secret must never wipe a working one**, and the old step
+  did exactly that. `supabase secrets set X=` sets X to the empty string, and
+  GitHub substitutes an empty string for a secret that does not exist — so the
+  inline `${{ secrets.X }}` form ran `secrets set GOOGLE_CLIENT_ID=
+  GOOGLE_CLIENT_SECRET=` whenever either was absent, blanking a live
+  credential silently. Adding the Anthropic key to that form would have armed
+  the same trap on the one key the bots cannot work without. Each key is now
+  named **only when the run actually has it**, values arrive through `env`
+  rather than being pasted into the script, and the run log prints names only.
+  That is the shape `supabase-deploy.yml` already used for the Google pair.
+- The workflow's `paths` filter now includes the workflow itself: changing
+  which secrets are asserted has to be able to reach the project without
+  waiting for an unrelated change to a function.
+`scripts/deploy-secrets-check.sh` lifts the step **out of the YAML** — no
+second copy to drift — and runs it against a stub `supabase`: all three
+asserted when present; a missing key never sent as empty (either the Anthropic
+one or the Google pair); nothing to assert calls the CLI not at all; a value
+carrying a space, a `$` and a `*` survives intact; no value is echoed to the
+log. The control is the old step with a secret absent, which really does emit
+`GOOGLE_CLIENT_ID= GOOGLE_CLIENT_SECRET=`.
+
 ## Bots — Telegram's Markdown ate the variable name
 The 401 message above arrived in Telegram as **`ANTHROPICAPIKEY`**. Every reply
 goes out as legacy `Markdown`, where `_` is an italic marker, so
