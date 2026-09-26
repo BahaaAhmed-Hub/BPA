@@ -8,6 +8,7 @@ import {
 import { useFinanceStore } from '../financeStore'
 import { CategoryReviewCard } from './CategoryReviewCard'
 import { CategoryModal } from '../modals/CategoryModal'
+import { TransactionModal } from '../modals/TransactionModal'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { suggestIcon, isPlaceholderIcon, isLucideIcon } from '../categoryIcons'
 import { toBase, rateFor, currenciesNeedingRates, baseCurrency } from '../fx'
@@ -1037,7 +1038,8 @@ export function BudgetScreen(_props?: any) {
   // never mounted anywhere — so there was no way to create a category at all,
   // which left this screen with nothing to configure and every transaction
   // uncategorised.
-  const { categories, transactions, accounts, upsertCategory, removeCategory } = useFinanceStore()
+  const { categories, transactions, accounts, upsertCategory, removeCategory,
+          upsertTransaction, removeTransaction } = useFinanceStore()
   const year    = useFinanceStore(s => s.currentYear)
   const setYear = useFinanceStore(s => s.setYear)
   const [catModal, setCatModal] = useState<{ category: Category | null } | null>(null)
@@ -1159,6 +1161,8 @@ export function BudgetScreen(_props?: any) {
 
   // 20E — Envelope drill-down state
   const [drillOpen, setDrillOpen] = useState(false)
+  /** The entry opened out of the drill-down, if any. */
+  const [drillTx, setDrillTx] = useState<Transaction | null>(null)
   const [drillPeriod, setDrillPeriod] = useState<'month' | '3months' | '6months' | 'year'>('month')
   // Decision flags: { [txId]: 'approved' | 'review' | 'excluded' }
   type TxFlag = 'approved' | 'review' | 'excluded'
@@ -1834,6 +1838,28 @@ export function BudgetScreen(_props?: any) {
         />
       )}
 
+      {/* The entry opened out of the drill-down. The same one form every other
+          feed uses — a second design of what an entry is would drift. */}
+      {drillTx && (
+        // The drill-down sits at 1100 so it clears the category window that
+        // opens it; `TransactionModal` is hard-coded `fixed` at 1000, so on its
+        // own it would open *behind* the drill — the same mistake one layer up.
+        // A positioned wrapper with a higher z makes a stacking context, and
+        // the modal's own 1000 is then measured inside it. Local to this one
+        // call site, rather than moving a z-index every other screen shares.
+        <div style={{ position: 'relative', zIndex: 1200 }}>
+        <TransactionModal
+          transaction={drillTx}
+          accounts={accounts}
+          categories={categories}
+          history={transactions}
+          onSave={tx => { void upsertTransaction(tx); setDrillTx(null) }}
+          onDelete={id => { void removeTransaction(id); setDrillTx(null) }}
+          onClose={() => setDrillTx(null)}
+        />
+        </div>
+      )}
+
       {drillOpen && selectedCat && (() => {
         // Determine date range from drillPeriod
         const now = new Date()
@@ -1893,11 +1919,22 @@ export function BudgetScreen(_props?: any) {
 
         return (
           <div style={{
-            position: 'fixed', inset: 0, zIndex: 200,
+            // **Above the window that opened it.** This overlay is reached by
+            // "View all →" inside the category window, which is `fixed` at
+            // z-index 1000 — so at 200 the drill-down was drawn *behind* its
+            // own opener. Every control in it was unreachable: the period
+            // pills, the three flag buttons on each row, and the row itself.
+            // It read as working from the outside, because `innerText` has no
+            // opinion about stacking and a scripted `.click()` skips
+            // hit-testing; only a real pointer found the scrim in the way.
+            position: 'fixed', inset: 0, zIndex: 1100,
             background: 'var(--sb-scrim)', backdropFilter: 'blur(2px)',
             display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
           }}
-            onClick={() => setDrillOpen(false)}
+            // Only the backdrop closes it. Without the target check every
+            // click *inside* the panel closed it too — picking a period, a
+            // flag, or a row shut the thing you were working in.
+            onClick={e => { if (e.target === e.currentTarget) setDrillOpen(false) }}
           >
             <div
               onClick={e => e.stopPropagation()}
@@ -1997,6 +2034,16 @@ export function BudgetScreen(_props?: any) {
                         faded={flag === 'excluded'}
                         struck={flag === 'excluded'}
                         hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}
+                        // **Clicking a row opens it**, the same gesture as the
+                        // Today, Balances and Financials feeds. It used to set a
+                        // review flag instead — which the three buttons in
+                        // `trailing` already do, on this very row — so the one
+                        // feed that could show you an entry was the one feed
+                        // that would not let you correct it, and the click that
+                        // means "open this" everywhere else meant something
+                        // else here. The flags stop propagation so setting one
+                        // does not also open the entry.
+                        onClick={() => setDrillTx(tx)}
                         trailing={
                           <span style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                             {(['approved', 'review', 'excluded'] as TxFlag[]).map(f => {
@@ -2004,7 +2051,7 @@ export function BudgetScreen(_props?: any) {
                               const active = flag === f
                               return (
                                 <button key={f} title={f}
-                                  onClick={() => setFlag(tx.id, active ? null : f)}
+                                  onClick={e => { e.stopPropagation(); setFlag(tx.id, active ? null : f) }}
                                   style={{
                                     padding: '3px 7px', borderRadius: 'var(--sb-r-chip)', border: `var(--sb-border-width) solid ${active ? st.border : 'var(--sb-border)'}`,
                                     background: active ? st.bg : 'transparent',

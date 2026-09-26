@@ -713,6 +713,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
 
 function HabitDetailPanel({
   habit, hLogs, hQty, qtyToday, today, onClose, onUpdate, onToggleToday, onSetQuantity,
+  onPickDay,
 }: {
   habit: Habit
   hLogs: string[]
@@ -725,6 +726,8 @@ function HabitDetailPanel({
   onUpdate: (patch: Partial<Habit>) => void
   onToggleToday: () => void
   onSetQuantity: (v: number) => void
+  /** Pick the day every control on this screen is pointed at. */
+  onPickDay: (dateKey: string) => void
 }) {
   const isQty   = habit.type === 'quantity'
   const hasGoal = isQty && !!habit.goal && habit.goal > 0
@@ -751,7 +754,14 @@ function HabitDetailPanel({
   const oneQty  = { [habit.id]: hQty }
   const completionRate = Math.round(
     (last30.reduce((n, d) => n + dayProgress(habit, d, oneLogs, oneQty), 0) / 30) * 100)
-  const heatmapDays = Array.from({ length: 91 }, (_, i) => offsetDays(today, -(90 - i)))
+  // **Anchored to the real today, never to the day being edited.** `today` here
+  // is the prop, which is `selectedDay` — so building the window from it slid
+  // the whole quarter back every time you picked a cell, while the axis under
+  // it still said "Today" on the right. You could walk backwards for ever and
+  // never get forward again. The window is the last 13 weeks of the habit's
+  // life; which day you are editing is a mark on it, not its edge.
+  const heatmapEnd  = todayKey()
+  const heatmapDays = Array.from({ length: 91 }, (_, i) => offsetDays(heatmapEnd, -(90 - i)))
 
   const pct = hasGoal ? Math.min(100, Math.round((qtyToday / habit.goal!) * 100)) : 0
 
@@ -847,20 +857,40 @@ function HabitDetailPanel({
       {/* 6-month heatmap */}
       <div>
         <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)', marginBottom: 6 }}>LAST 13 WEEKS</div>
+        {/* Every one of these 91 days is editable, and the square is how you
+            reach it. It used to be a `div` with a tooltip: the record drew a
+            quarter of a year of history and the only day you could correct was
+            whichever one the week strip happened to be pointed at, seven at a
+            time. You remember missing Tuesday three weeks ago — this is where
+            you are already looking when you remember it.
+            Picking a day aims the whole screen at it: the ring, the counter,
+            the tick and the week strip all read `selectedDay`, so nothing
+            here needs its own editor. */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(13, 1fr)', gridAutoRows: 11, gap: 2 }}>
           {heatmapDays.map(d => {
             const p = dayProgress(habit, d, oneLogs, oneQty)
+            // The ring is the day every control is pointed at — the one a click
+            // here moves. The right-hand edge is today by construction, so it
+            // needs no mark of its own.
             const isT = d === today
+            const pct = Math.round(p * 100)
             return (
-              <div key={d} title={p > 0 && p < 1 ? `${d} · ${Math.round(p * 100)}%` : d} style={{
-                borderRadius: 'var(--sb-r-chip)',
-                // A day shades in proportion to how much of it was done, so a
-                // run of half-days reads as a run rather than as nothing.
-                background: p > 0
-                  ? `color-mix(in srgb, var(--sb-positive) ${Math.round(p * 100)}%, var(--sb-hairline))`
-                  : isT ? 'rgba(var(--sb-accent-rgb),0.13)' : 'var(--sb-hairline)',
-                border: isT ? 'var(--sb-border-width) solid var(--sb-accent)' : 'var(--sb-border-width) solid transparent',
-              }} />
+              <button
+                key={d}
+                type="button"
+                onClick={() => onPickDay(d)}
+                aria-label={`${d}${p > 0 ? ` — ${pct}% done` : ' — nothing logged'}`}
+                aria-pressed={isT}
+                title={`${d}${p > 0 ? ` · ${pct}%` : ''} — click to edit this day`}
+                style={{
+                  padding: 0, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
+                  // A day shades in proportion to how much of it was done, so a
+                  // run of half-days reads as a run rather than as nothing.
+                  background: p > 0
+                    ? `color-mix(in srgb, var(--sb-positive) ${pct}%, var(--sb-hairline))`
+                    : isT ? 'rgba(var(--sb-accent-rgb),0.13)' : 'var(--sb-hairline)',
+                  border: isT ? 'var(--sb-border-width) solid var(--sb-accent)' : 'var(--sb-border-width) solid transparent',
+                }} />
             )
           })}
         </div>
@@ -1478,6 +1508,9 @@ export function HabitsModule() {
           qtyToday={qtyLogs[detailHabit.id]?.[selectedDay] ?? 0}
           today={selectedDay}
           onClose={() => setDetailHabitId(null)}
+          // The strip and the record have to agree about which day is open, so
+          // picking one out of the heatmap walks the strip to that day's week.
+          onPickDay={d => { setSelectedDay(d); setWeekAnchor(weekStart(d)) }}
           onUpdate={patch => updateHabit(detailHabit.id, patch)}
           onToggleToday={() => toggleHabit(detailHabit.id, selectedDay)}
           onSetQuantity={v => setQuantity(detailHabit.id, detailHabit.goal ?? 1, selectedDay, v)}

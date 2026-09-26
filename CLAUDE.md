@@ -1959,6 +1959,28 @@ one for a picture.
   add/edit form** (`Settings.tsx`), where it collides with nothing — that form
   has Save/Cancel, not a ✕. It is the one remaining copy of the pattern.
 
+## Habits — every day in the record is editable, from the square
+The 13-week heatmap was a `div` with a tooltip. The record drew a quarter of a
+year of history and the only day you could correct was whichever one the week
+strip happened to point at, seven at a time — so remembering a missed Tuesday
+three weeks ago meant walking the strip back to it. The square is the way in
+now: a button that aims the whole screen at that day (`onPickDay` → the ring,
+the counter, the tick and the strip all read `selectedDay`), so nothing here
+needs an editor of its own.
+- **The window is anchored to the real today, never to the day being edited.**
+  `heatmapDays` was built from the `today` *prop*, which is `selectedDay` — so
+  picking a cell slid the whole quarter backwards while the axis under it still
+  said "Today" on the right, and you could walk back for ever with no way
+  forward. The window is the last 13 weeks of the habit's life; which day you
+  are editing is a **mark on it**, not its edge.
+- A `future` guard written alongside this was unreachable once the window ends
+  at today, so it went: dead code that cannot be exercised is worse than none.
+Verified in Chromium: 91 reachable cells, each a real button; the window ends
+at today and does not move when a cell is picked; the picked day is the one
+ringed; +2 on a quantity habit lands on **that** day and not on today; a
+boolean habit's past day ticks the same way; and neither writes to today by
+accident.
+
 ## Habits — a day is a share of itself, not a count
 `lib/habitProgress.ts` has always weighted every habit equally and given a
 measurable one `quantity / goal`, capped at 1 — and every figure on screen
@@ -1979,6 +2001,33 @@ Verified on a fixture built so the two models disagree (tally 33%, share 58%):
 the headline reads 58% and never 33%, the ring's arc is 210° = 58.3% matching
 its label, the week strip is `[0,0,0,0,0.58,0,0]`, and Today and the Dashboard
 both lead with 58%. Every goal met reads 100% and raises the banner.
+
+## Finance — the Budget drill-down was behind the panel that opens it
+Reached by **View all →** inside the category window, which is `fixed` at
+`z-index: 1000`. The drill-down rendered at **200** — so it was drawn *behind
+its own opener*, and every control in it was unreachable by a pointer: the
+period pills, the three flag buttons on each row, and the row itself. It read
+as working from the outside, because `innerText` has no opinion about stacking
+and a scripted `element.click()` skips hit-testing. Only `elementFromPoint` at
+a control's own centre gave it away — it answered a full-screen scrim that did
+not contain the button. Now 1100; measured, the flag button goes from *not the
+topmost element at its own centre* to being it.
+- **Only the backdrop closes it.** `onClick={() => setDrillOpen(false)}` had no
+  target check, so a click anywhere inside shut the panel you were working in.
+  It takes the `e.target === e.currentTarget` guard `TransactionModal` uses.
+- **The row opens the entry** (`setDrillTx`), the gesture the Today, Balances
+  and Financials feeds all use, into the same `TransactionModal` they use. It
+  used to call `setFlag` — which the three buttons in `trailing` already do, on
+  that very row — so the one feed that could show you an entry was the one that
+  would not let you correct it. The flags now `stopPropagation`, and the modal
+  is wrapped in a positioned div at `z-index: 1200` because its own hard-coded
+  1000 would otherwise put it behind the 1100 drill.
+- **Not verified, and stated as such.** With the stacking corrected, a real
+  pointer click still produces no state change anywhere in that panel — not the
+  row, not a flag, not a period pill — so something further is wrong that this
+  did not reach. The three fixes above are each measured or obviously correct;
+  *editing from the Budget drill-down is not yet proven to work*. The other
+  three feeds are proven end to end.
 
 ## Finance — the module measures its own height
 `ActiveModule` renders every module in a bare `<div>` with no height, so
