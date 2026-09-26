@@ -1164,6 +1164,14 @@ export function BudgetScreen(_props?: any) {
   /** The entry opened out of the drill-down, if any. */
   const [drillTx, setDrillTx] = useState<Transaction | null>(null)
   const [drillPeriod, setDrillPeriod] = useState<'month' | '3months' | '6months' | 'year'>('month')
+  // Escape belongs to the topmost panel. The category window's own handler
+  // stands aside while this one is open, so the drill has to answer for it.
+  useEffect(() => {
+    if (!drillOpen || drillTx) return
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setDrillOpen(false) }
+    document.addEventListener('keydown', esc)
+    return () => document.removeEventListener('keydown', esc)
+  }, [drillOpen, drillTx])
   // Decision flags: { [txId]: 'approved' | 'review' | 'excluded' }
   type TxFlag = 'approved' | 'review' | 'excluded'
   const [txFlags, setTxFlags] = useState<Record<string, TxFlag>>(() => {
@@ -1847,7 +1855,7 @@ export function BudgetScreen(_props?: any) {
         // A positioned wrapper with a higher z makes a stacking context, and
         // the modal's own 1000 is then measured inside it. Local to this one
         // call site, rather than moving a z-index every other screen shares.
-        <div style={{ position: 'relative', zIndex: 1200 }}>
+        <div className="sb-above-modal" style={{ position: 'relative', zIndex: 1200 }}>
         <TransactionModal
           transaction={drillTx}
           accounts={accounts}
@@ -1918,7 +1926,7 @@ export function BudgetScreen(_props?: any) {
         }
 
         return (
-          <div style={{
+          <div className="sb-above-modal" style={{
             // **Above the window that opened it.** This overlay is reached by
             // "View all →" inside the category window, which is `fixed` at
             // z-index 1000 — so at 200 the drill-down was drawn *behind* its

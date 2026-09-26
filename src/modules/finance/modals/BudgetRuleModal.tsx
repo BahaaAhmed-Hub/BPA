@@ -558,11 +558,26 @@ export function BudgetRuleModal({
 
   useEffect(() => {
     const openedAt = Date.now()
+    // **A panel this window itself opened is not "outside" it.** The envelope
+    // drill-down and the entry editor it leads to are rendered as *siblings*
+    // of this modal, not as children, so every pointerdown in either one was
+    // a click away — and closing this window unmounts the drill, which hangs
+    // off the same `selectedCat`. The panel vanished under the finger before
+    // the click landed, which is why nothing in it appeared to respond to a
+    // pointer at all while a scripted `.click()` on the same button worked.
+    const mine = (t: EventTarget | null) => !!(t as HTMLElement | null)?.closest?.('.sb-above-modal')
     const away = (e: Event) => {
       if (Date.now() - openedAt < 400) return
+      if (mine(e.target)) return
       if (box.current && !box.current.contains(e.target as Node)) onClose()
     }
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    // Escape belongs to the topmost thing on screen: with the drill open it
+    // is the drill's, and that panel closes itself.
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (document.querySelector('.sb-above-modal')) return
+      onClose()
+    }
     document.addEventListener('pointerdown', away)
     document.addEventListener('keydown', esc)
     return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc) }

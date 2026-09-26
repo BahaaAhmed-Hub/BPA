@@ -2022,12 +2022,44 @@ topmost element at its own centre* to being it.
   would not let you correct it. The flags now `stopPropagation`, and the modal
   is wrapped in a positioned div at `z-index: 1200` because its own hard-coded
   1000 would otherwise put it behind the 1100 drill.
-- **Not verified, and stated as such.** With the stacking corrected, a real
-  pointer click still produces no state change anywhere in that panel — not the
-  row, not a flag, not a period pill — so something further is wrong that this
-  did not reach. The three fixes above are each measured or obviously correct;
-  *editing from the Budget drill-down is not yet proven to work*. The other
-  three feeds are proven end to end.
+- **The real fault was in the window behind it, and a fourth fix was needed.**
+  With the stacking corrected the flag button was topmost at its own centre and
+  a real click *still* changed nothing. `BudgetRuleModal` carries a
+  `document`-level `pointerdown` handler that closes itself on anything outside
+  `box.current` — and the drill is rendered as a **sibling** of that modal, not
+  a child. So every pointerdown in the drill closed the category window, which
+  is what `selectedCat` hangs off, which unmounted the drill **under the
+  finger** before the click completed. Nothing was inert; the panel was leaving.
+  The handler now stands aside for `.sb-above-modal` (the drill, and the
+  `TransactionModal` opened from it), and Escape does too — the drill closes
+  itself, because Escape belongs to the topmost thing on screen.
+  This is the exact failure `elementFromPoint` alone cannot find: the element
+  *was* hit-testable. Only a pointerdown-to-click sequence, with the panel
+  measured afterwards, shows it — a scripted `.click()` fires one event and
+  never sends the pointerdown that did the damage.
+Verified: the period pill changes state and the panel stays; a flag writes
+`finance-tx-flags` and does not open the entry; the row opens the editor and a
+saved edit reaches the server. The other three feeds still pass unchanged.
+
+## Editing — every module's own records, proven in a browser
+One harness per module, each seeding the shape the **server** sends rather than
+the store's persisted copy — a store hydrates and *replaces* its list, so a
+localStorage seed is overwritten a few seconds after the page settles and the
+screen looks empty for reasons that have nothing to do with the code.
+- **Finance** — an entry opens and saves from all four feeds: Today, Balances,
+  Financials and the Budget envelope drill-down (which needed the four fixes
+  above). 3 assertions each, plus the drill's flags.
+- **Tasks** — the detail panel's title and notes both write through to the
+  store *and* to `tasks` on the server. 8 assertions.
+- **Calendar** — the event panel edits write straight through to Google
+  (`PATCH`, held 700ms), measured by intercepting `www.googleapis.com`.
+- **Habits** — any of the last 91 days from the heatmap square (above).
+- **A task's activity log is deliberately not editable.** `TaskActivity` is
+  machine-written — `created`, `moved`, `status_changed`, `field_updated`,
+  `attachment_added`… — and carries no user-authored entry. Making it editable
+  would be a way to falsify the record of what happened, which is the one thing
+  an audit trail exists to prevent. The things a person *wrote* — the title, the
+  notes, the checklist, the dates — are all editable in the panel above it.
 
 ## Finance — the module measures its own height
 `ActiveModule` renders every module in a bare `<div>` with no height, so
