@@ -1196,6 +1196,29 @@ it felt from the outside.
   Both bots keep their own copy of the branch; both were changed, and the test
   lifts the branch verbatim out of each file rather than restating it.
 
+## Bots — the key you typed is the key they use
+The bots read `ANTHROPIC_API_KEY` from the function secrets and nothing else,
+so typing a new key into **Settings → AI** fixed the web app and left the bot
+presenting the revoked one. Two places holding one key, and no way to tell from
+either screen that the other had drifted — which is the whole of why this took
+four rounds to clear.
+- **The key was already in Postgres.** `professor-ai-config` is one of
+  `prefSync.ts`'s SHARED_KEYS, so Settings → AI already writes it to
+  `users.schedule_rules.shared_prefs` — that is how it follows you to a second
+  device. The bots were the only thing not looking at it.
+- **`anthropicKeyFor(userId)`** in both bots reads that row — the user the
+  caller has already resolved, and only that one — and falls back to
+  `ANTHROPIC_API_KEY`, which still serves anyone who has never opened Settings.
+  A read that fails logs and falls back; it never takes the bot down.
+- Rotating is now one gesture: put the key in Settings → AI. No GitHub secret,
+  no deploy. The refusal message says that first and the function secret
+  second, because the first is the one you can do from your phone.
+20 assertions across both bots, with the function lifted out of each file
+rather than restated: the Settings key wins; exactly one row is read and it is
+the caller's; empty / no prefs / no row / unparsable JSON all fall back; a
+pasted key is trimmed; a thrown read falls back rather than propagating; and
+no call site still passes the module constant.
+
 ## Bots — the deploy asserts the key, and can never blank one
 `deploy-functions.yml` re-asserted `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
 on every run and **not** `ANTHROPIC_API_KEY`, which the Telegram bot and Siri
@@ -1382,7 +1405,7 @@ everyone who opens a **public GitHub Pages site**. A key in a client bundle is
 not a secret whatever the variable is called — `dangerouslyAllowBrowser` is the
 SDK saying exactly that — and no amount of care elsewhere makes it one.
 - **The app could already do this properly.** Settings → AI takes a key and
-  keeps it in `professor-ai-config`, on that browser and nowhere else;
+  keeps it in `professor-ai-config`;
   `getAIConfig()` read it *first* and fell back to the build-time value. So the
   baked key was only ever a second answer to a question that already had one,
   and removing it leaves the right one.
@@ -1402,8 +1425,15 @@ SDK saying exactly that — and no amount of care elsewhere makes it one.
   (`gh-pages`) compiled it to `apiKey:``` — empty — and its only `sk-ant` string
   is the placeholder in the Settings input. Those are two different questions
   and the first was reported as the second here once already.
-- The bots keep their own **server-side** `ANTHROPIC_API_KEY` in Supabase
-  secrets, which is a different key in a different place and is not affected.
+- **It is not "on that browser and nowhere else"** — this said so and was
+  wrong. `professor-ai-config` is one of `prefSync.ts`'s SHARED_KEYS, so it
+  rides in `users.schedule_rules.shared_prefs`, which is what lets the key
+  follow you to a second device rather than being retyped. It is in Postgres,
+  behind that row's own RLS. Worth stating plainly rather than claiming an
+  isolation the code does not provide.
+- The bots have a **server-side** `ANTHROPIC_API_KEY` in Supabase secrets as
+  their fallback, which is a different key in a different place and was not
+  affected — but it is no longer the first thing they read (below).
 
 ## SaaS — the gate that actually enforces
 `20260022_module_rls.sql`. Everything before it decided what to **draw** and

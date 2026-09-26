@@ -11,9 +11,18 @@ import type { AIConfig } from '@/modules/settings/Settings'
 // variable is called, and `dangerouslyAllowBrowser` is the SDK saying so.
 //
 // The app was already able to do this properly: Settings → AI takes a key and
-// keeps it in `professor-ai-config`, on that browser and nowhere else. The
-// build-time value was only ever a fallback, so removing it leaves one way of
-// answering the question instead of two.
+// keeps it in `professor-ai-config`. The build-time value was only ever a
+// fallback, so removing it leaves one way of answering the question instead of
+// two.
+//
+// **It is not "on that browser and nowhere else"** — this comment said so and
+// was wrong. `professor-ai-config` is one of `prefSync.ts`'s SHARED_KEYS, so
+// it rides in `users.schedule_rules.shared_prefs`, which is what lets the key
+// follow you to a second device rather than being retyped. It is in Postgres,
+// behind that row's own RLS. That is a deliberate trade and worth stating
+// plainly rather than claiming an isolation the code does not provide — and it
+// is what lets the Telegram bot and Siri use the key you typed instead of one
+// a deploy set.
 //
 // There is no module-level client any more either — one built at import time
 // would capture whatever the config said then, and the key is a thing the

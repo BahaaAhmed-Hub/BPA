@@ -1091,8 +1091,44 @@ type ContentBlock = {
   input?: Record<string, unknown>
 }
 
+/**
+ * The key this person set in the app, falling back to the project's own.
+ *
+ * Settings → AI writes `professor-ai-config` to localStorage, and
+ * `lib/prefSync.ts` carries it — it is one of the SHARED_KEYS — into
+ * `users.schedule_rules.shared_prefs`, so it follows you between devices.
+ * Which means the key has been sitting in Postgres all along and the bots were
+ * the only thing not looking at it: they read an environment variable set by a
+ * deploy, so typing a new key into Settings fixed the web app and left the bot
+ * holding the revoked one. Two places to keep one key in step, and no way to
+ * tell from either screen that the other had drifted.
+ *
+ * Yours first, then `ANTHROPIC_API_KEY` from the function secrets — which
+ * still serves anyone who has never opened Settings, and every path that has
+ * no user to ask about.
+ *
+ * It reads only the row of the user the caller already resolved.
+ */
+async function anthropicKeyFor(userId: string): Promise<string> {
+  try {
+    const { data } = await sb
+      .from('users').select('schedule_rules').eq('id', userId).maybeSingle()
+    const bag = (data as { schedule_rules?: Record<string, unknown> } | null)
+      ?.schedule_rules?.shared_prefs as Record<string, string> | undefined
+    const raw = bag?.['professor-ai-config']
+    if (typeof raw === 'string') {
+      const key = (JSON.parse(raw) as { anthropicKey?: string }).anthropicKey
+      if (key && key.trim()) return key.trim()
+    }
+  } catch (e) {
+    console.error('could not read the saved AI key:', e)
+  }
+  return ANTHROPIC_KEY
+}
+
 async function runAgent(userId: string, userMessage: string): Promise<string> {
-  if (!ANTHROPIC_KEY) return fallbackProcess(userId, userMessage)
+  const anthropicKey = await anthropicKeyFor(userId)
+  if (!anthropicKey) return fallbackProcess(userId, userMessage)
 
   const today     = todayISO()
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10)
@@ -1169,7 +1205,7 @@ Reply style: short, warm, direct. No markdown. Use plain bullets with •. After
       method:  'POST',
       headers: {
         'Content-Type':      'application/json',
-        'x-api-key':         ANTHROPIC_KEY,
+        'x-api-key':         anthropicKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
@@ -1200,8 +1236,8 @@ Reply style: short, warm, direct. No markdown. Use plain bullets with •. After
       // the app's key leaves this one holding the revoked value. Name it.
       if (res.status === 401 || res.status === 403) {
         return 'My Anthropic key was refused (' + res.status + '). It has most likely been '
-          + 'rotated or revoked — set ANTHROPIC_API_KEY in the Supabase function secrets to the '
-          + 'current key and redeploy. Trying again will not help until then.'
+          + 'rotated or revoked. Put the current key in the app under Settings → AI and I will '
+          + 'use it. Trying again will not help until then.'
       }
       return `Sorry, I could not reach the AI service (${res.status}). Try again in a moment.`
     }
