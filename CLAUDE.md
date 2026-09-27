@@ -1219,6 +1219,64 @@ the caller's; empty / no prefs / no row / unparsable JSON all fall back; a
 pasted key is trimmed; a thrown read falls back rather than propagating; and
 no call site still passes the module constant.
 
+## Bots — Telegram is a conversation, and it was answering one line at a time
+A Telegram webhook is one HTTP request per message with nothing carried between
+them, so `runAgent` was handed a single sentence: `messages` was literally
+`[{ role: 'user', content: userMessage }]`. "Mark it done", "and the other
+one", "what about tomorrow?", and every reply you send by tapping *Reply* on an
+earlier message, arrived with nothing to resolve against.
+- **The prompt already described the history it was never given.** It said, in
+  so many words, *"History is ONLY for understanding references like 'that
+  habit', 'the task I just added', 'mark it done'"* — a rule about a
+  conversation that did not exist. Reading the file top to bottom is how that
+  goes unnoticed: the instruction is right, the plumbing under it is absent.
+- **`telegram_turns` (`20260023`) is the thread.** Per chat, the plain text of
+  each side, the last 16 messages inside 24h and 12,000 characters, oldest
+  first. The bot writes with the service role; a person may **read and delete**
+  their own and nothing else — there is no insert or update policy at all, so
+  nobody holding an anon key can put words in their own history or edit what
+  was said. Verified as `authenticated` with the sequence deliberately granted,
+  so the refusal is RLS's and not a missing grant.
+- **Tool calls and results are deliberately not stored.** They are stale the
+  moment they are written — a count from yesterday is not today's, which is the
+  one thing the prompt forbids answering from — they are most of the tokens,
+  and the API requires a `tool_use` block to be followed immediately by its
+  `tool_result`, which a window truncated at 16 cannot promise.
+- **Ordering is by `id`, never `created_at`.** Both rows of an exchange are
+  written in one statement, so they share the transaction's `now()` — measured:
+  same `created_at`, different ids. A timestamp cannot tell the question from
+  its answer.
+- **The exchange is stored as a pair, after the reply exists.** Writing the
+  question first would leave a lone user turn behind any failure, and two user
+  messages in a row is a 400 that takes the whole reply with it. `alternating()`
+  is the belt to that braces: it opens on the user, merges a same-role run and
+  drops a trailing user turn, so appending this message always alternates —
+  checked on 400 random windows.
+- **Telegram's own reply outranks recency.** `reply_to_message` names one
+  specific message, and the one you are answering may be older than the window,
+  so its text is quoted into the message itself as `↩ replying to: "…"` (a
+  caption counts) rather than left to the thread. The prompt says what that
+  marker means.
+- **`/reset` puts a thread down**, and `/disconnect` takes the history with the
+  link — otherwise what was said is handed to whoever connects that chat next.
+- **A missing table is the old behaviour, not an outage.** If `20260023` has
+  not run the read logs and returns `[]`, and the bot answers each message on
+  its own exactly as before.
+- **Siri still has no memory, deliberately untouched.** Its `messages` array is
+  the same single-element one, and a Shortcut is a one-shot utterance rather
+  than a thread; giving it this needs its own decision about what a "session"
+  even is there.
+`scripts/telegram-memory-check.mjs` — 37 assertions, every function **lifted out
+of the real file** by regex and de-typed with `tsc` itself, since there is no
+Deno on the machine to run the function.
+- **The first assertion is that the file parses at all**, and it earned its
+  place immediately: the prompt's `↩ replying to:` was first written in
+  **backticks inside the system prompt's own template literal**, which closes
+  it and turns the rest of the file into nonsense. Deno would have refused to
+  load the function, the webhook would 500, and the bot would simply go quiet —
+  there is nothing anywhere in the app that would have said why. `npm run
+  build` cannot see it: no edge function is in the Vite build.
+
 ## Bots — the deploy asserts the key, and can never blank one
 `deploy-functions.yml` re-asserted `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
 on every run and **not** `ANTHROPIC_API_KEY`, which the Telegram bot and Siri

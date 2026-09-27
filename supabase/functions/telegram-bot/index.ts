@@ -11,6 +11,11 @@
  * Users connect their account:
  *   1. Copy a prof_sk_* token from Settings → Integrations → Connections
  *   2. Send:  /connect prof_sk_<...>  to the bot
+ *
+ * Commands: /start  /connect <token>  /disconnect  /reset
+ *
+ * The chat is a conversation: `telegram_turns` (20260023) holds what was said,
+ * and each message is answered with the recent thread in front of the model.
  */
 
 import { CalendarHub, eventLine } from '../_shared/googleCalendars.ts'
@@ -94,6 +99,100 @@ async function resolveToken(token: string): Promise<string | null> {
     .eq('revoked', false)
     .maybeSingle()
   return (data as { user_id: string } | null)?.user_id ?? null
+}
+
+// ── The conversation ──────────────────────────────────────────────────────────
+//
+// A Telegram webhook is one request per message with nothing carried between
+// them, so `runAgent` was handed a single sentence and the model had never seen
+// what came before it — "mark it done", "and the other one", "what about
+// tomorrow" all arrived with nothing to resolve against. The system prompt has
+// always explained how to read those against the conversation; there was no
+// conversation to read.
+
+/** How many messages of the chat go back to the model. 8 exchanges. */
+const HISTORY_TURNS = 16
+/** Older than this and it is not the thread you are in. */
+const HISTORY_MAX_AGE_MS = 24 * 60 * 60 * 1000
+/**
+ * A ceiling on the whole window, not just the count. Sixteen long answers is a
+ * far bigger request than sixteen short ones, and every message in this chat
+ * carries the tool schemas as well — a budget nobody set is one that surprises
+ * you on the day somebody pastes an essay.
+ */
+const HISTORY_MAX_CHARS = 12000
+
+type Turn = { role: 'user' | 'assistant'; content: string }
+
+/**
+ * Make a window the API will accept, whatever is in the table.
+ *
+ * Roles have to alternate and the first message has to be the user's. Turns are
+ * only ever written as a pair, so this should never have anything to do — but a
+ * window that has lost its first row to the age bound, or a pair half-written
+ * by a crash, would otherwise 400 the request and take the whole reply with it.
+ * Cheap insurance against a failure whose symptom is the bot going silent.
+ */
+function alternating(turns: Turn[]): Turn[] {
+  const out: Turn[] = []
+  for (const t of turns) {
+    if (!t.content.trim()) continue
+    if (out.length === 0 && t.role !== 'user') continue      // must open on the user
+    if (out.length && out[out.length - 1].role === t.role) {
+      out[out.length - 1] = { role: t.role, content: `${out[out.length - 1].content}\n\n${t.content}` }
+      continue
+    }
+    out.push({ role: t.role, content: t.content })
+  }
+  // A window ending on the user's own words would put two user messages in a
+  // row once this message is appended.
+  while (out.length && out[out.length - 1].role === 'user') out.pop()
+  return out
+}
+
+/** The recent thread for this chat, oldest first. */
+async function recentTurns(chatId: number): Promise<Turn[]> {
+  const since = new Date(Date.now() - HISTORY_MAX_AGE_MS).toISOString()
+  const { data, error } = await sb
+    .from('telegram_turns')
+    .select('role, content')
+    .eq('chat_id', String(chatId))
+    .gte('created_at', since)
+    .order('id', { ascending: false })
+    .limit(HISTORY_TURNS)
+  // No table (the migration has not run), or a failed read: answer this message
+  // on its own rather than not at all. That is exactly the old behaviour.
+  if (error || !data) {
+    if (error) console.error('could not read the chat history:', error.message)
+    return []
+  }
+  // Oldest first, then trimmed from the old end until it fits the budget. A
+  // window that loses its opening question can start on an answer, which
+  // `alternating` is what handles.
+  const turns = (data as Turn[]).reverse()
+  let total = turns.reduce((n, t) => n + t.content.length, 0)
+  while (turns.length && total > HISTORY_MAX_CHARS) total -= turns.shift()!.content.length
+  return alternating(turns)
+}
+
+/**
+ * Write the exchange — both halves, in one insert, once the reply has been
+ * composed. Storing the question before the answer exists would leave a lone
+ * user turn behind any failure, and two user messages in a row is a 400.
+ */
+async function rememberExchange(chatId: number, userId: string, asked: string, answered: string) {
+  const { error } = await sb.from('telegram_turns').insert([
+    { chat_id: String(chatId), user_id: userId, role: 'user',      content: asked.slice(0, 4000) },
+    { chat_id: String(chatId), user_id: userId, role: 'assistant', content: answered.slice(0, 4000) },
+  ])
+  if (error) { console.error('could not save the exchange:', error.message); return }
+  // Keep the table to the window it is read over.
+  const cutoff = new Date(Date.now() - HISTORY_MAX_AGE_MS).toISOString()
+  await sb.from('telegram_turns').delete().eq('chat_id', String(chatId)).lt('created_at', cutoff)
+}
+
+async function forgetChat(chatId: number) {
+  await sb.from('telegram_turns').delete().eq('chat_id', String(chatId))
 }
 
 // ── Professor tools (same logic as professor-mcp) ─────────────────────────────
@@ -1129,7 +1228,7 @@ async function anthropicKeyFor(userId: string): Promise<string> {
   return ANTHROPIC_KEY
 }
 
-async function runAgent(userId: string, userMessage: string): Promise<string> {
+async function runAgent(userId: string, userMessage: string, history: Turn[] = []): Promise<string> {
   const anthropicKey = await anthropicKeyFor(userId)
   if (!anthropicKey) {
     return fallbackProcess(userId, userMessage)
@@ -1197,6 +1296,14 @@ What you CANNOT do: read account balances, budget envelopes, or goal progress �
 
 LIVE DATA — ALWAYS CALL TOOLS: For any question about current state (habits logged today, tasks open, today's schedule, shopping list contents, finance totals) — you MUST call the relevant tool to get FRESH data from the database. NEVER answer these from conversation history — the data changes every minute. History is ONLY for understanding references like "that habit", "the task I just added", "mark it done" — not for reporting current counts or values.
 
+THE CONVERSATION: the messages before this one are what was actually said in
+this chat, oldest first. Read "it", "that one", "the second", "no, the other
+one", "mark it done", "and tomorrow?" against them — a message that only makes
+sense as a continuation IS one. A line starting "↩ replying to:" is the user
+pointing at one specific earlier message with Telegram's own reply: that quoted
+text is what they mean, and it outranks anything else in the thread. Never ask
+them to repeat something that is already above.
+
 Reply style: short, warm, direct. No markdown headers.
 - Always present any list of items — tasks, habits, emails, events, shopping items, results — as bullet points (use · or -).
 - Even a single result looks better as a bullet when it has multiple fields (e.g. name + date + status).
@@ -1204,6 +1311,7 @@ Reply style: short, warm, direct. No markdown headers.
 - For confirmations ("Added ✓", "Logged ✓") a single line is fine — no bullet needed.`
 
   const messages: { role: string; content: unknown }[] = [
+    ...history,
     { role: 'user', content: userMessage },
   ]
 
@@ -1350,6 +1458,10 @@ async function handleConnect(chatId: number, text: string) {
 
 async function handleDisconnect(chatId: number) {
   await sb.from('telegram_links').delete().eq('chat_id', String(chatId))
+  // Unlinking a chat has to take what was said in it too — the row it hangs
+  // off is gone, and leaving the thread behind would hand it to whoever
+  // connects this chat next.
+  await forgetChat(chatId)
   await reply(chatId, "Disconnected. Your chat is no longer linked to any Professor account.\n\nTo reconnect, use `/connect prof_sk_...`")
 }
 
@@ -1362,7 +1474,9 @@ async function handleStart(chatId: number) {
     "2. Go to *Settings → Integrations → Connections*\n" +
     "3. Copy your token\n" +
     "4. Send me: `/connect prof_sk_...`\n\n" +
-    "Once connected, just talk to me — ask about your tasks, habits, or finances."
+    "Once connected, just talk to me — ask about your tasks, habits, or finances. " +
+    "I follow the conversation, so \"mark it done\" and \"what about tomorrow?\" work; " +
+    "`/reset` starts a fresh thread."
   )
 }
 
@@ -1377,6 +1491,10 @@ Deno.serve(async (req) => {
       chat: { id: number }
       from?: { first_name?: string }
       text?: string
+      // Telegram's own reply: the user has pointed at one specific message.
+      // That is a far stronger signal than "recent", and it survives the
+      // window — the message they answered may be older than a day.
+      reply_to_message?: { text?: string; caption?: string }
     }
   }
   try {
@@ -1407,6 +1525,13 @@ Deno.serve(async (req) => {
     await handleDisconnect(chatId)
     return new Response('ok')
   }
+  // A thread you want out of. Following a conversation means a wrong turn in it
+  // follows you too, so there has to be a way to put it down.
+  if (text === '/reset' || text === '/new') {
+    await forgetChat(chatId)
+    await reply(chatId, "Fresh start — I've forgotten what we were talking about.")
+    return new Response('ok')
+  }
 
   // All other messages need an authenticated user
   const auth = await resolveChat(chatId)
@@ -1420,9 +1545,17 @@ Deno.serve(async (req) => {
   // Show typing indicator while we work
   await sendChatAction(chatId)
 
+  // What was said before this, and — if they used Telegram's reply — which
+  // message they are answering. The quote goes in the message itself rather
+  // than the history, because it is part of what they just said.
+  const history = await recentTurns(chatId)
+  const quoted  = (message.reply_to_message?.text ?? message.reply_to_message?.caption ?? '').trim()
+  const asked   = quoted ? `↩ replying to: "${quoted.slice(0, 600)}"\n\n${text}` : text
+
   // Run the agent (or fallback) and reply
-  const response = await runAgent(auth.userId, text)
+  const response = await runAgent(auth.userId, asked, history)
   await reply(chatId, response)
+  await rememberExchange(chatId, auth.userId, asked, response)
 
   return new Response('ok')
 })
