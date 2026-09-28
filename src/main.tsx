@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import AdminApp from './AdminApp'
 import './index.css'
 import { initAppearance } from './lib/themes'
 
@@ -15,8 +16,11 @@ initAppearance()
 console.info(`BPA build ${__BUILD_SHA__} · ${__BUILD_AT__}`)
 Object.assign(window, { __BPA_BUILD__: { sha: __BUILD_SHA__, at: __BUILD_AT__ } })
 
+// Admin panel is at /#admin — hash-based so no server-side routing config needed on GitHub Pages
+const isAdminRoute = window.location.hash === '#admin'
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {isAdminRoute ? <AdminApp /> : <App />}
   </StrictMode>,
 )
