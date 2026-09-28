@@ -219,19 +219,46 @@ export interface ServerAccount {
  * Returns null on error (caller should fall back to localStorage).
  * No tokens are returned — metadata only (email, name, avatar, isPrimary).
  */
+// **`scopes` is not a column on this table** — no migration ever added one, so
+// naming it in the select is a PostgREST 400 and the whole read fails. That is
+// how "read the real table" shipped and still showed no accounts: the union
+// asked the one store that knew, the request was rejected for a column nobody
+// has, `null` came back, and `null` means "could not look" — indistinguishable
+// on screen from the empty list it replaced.
+//
+// So the base select is the columns that certainly exist, and `scopes` is
+// asked for **separately**, once per session: the same drop-only-the-column-
+// the-error-names shape `financeDb.upsertRows` and `saveCompaniesToDB` use, so
+// a migration that adds it later is read without another change here. The
+// badge measures a live token anyway (`googleScopes.ts`) — this was only ever
+// its fallback, and one optional column must never cost the account list.
+const BASE_COLS = 'id, email, name, avatar_url, is_primary, connected_at'
+let scopesCol: boolean | null = null   // null = not tried yet
+
 export async function loadAccountsFromServer(): Promise<ServerAccount[] | null> {
-  const { data, error } = await supabase
+  const read = (cols: string) => supabase
     .from('google_accounts')
-    .select('id, email, name, avatar_url, is_primary, connected_at, scopes')
+    .select(cols)
     .order('is_primary', { ascending: false })
     .order('connected_at', { ascending: true })
+
+  let { data, error } = scopesCol === false
+    ? await read(BASE_COLS)
+    : await read(`${BASE_COLS}, scopes`)
+
+  if (error && scopesCol !== false && /scopes/.test(error.message ?? '')) {
+    scopesCol = false
+    ;({ data, error } = await read(BASE_COLS))
+  } else if (!error && scopesCol === null) {
+    scopesCol = true
+  }
 
   if (error) {
     console.warn('[multiAccount] loadAccountsFromServer error:', error)
     return null
   }
 
-  return (data ?? []).map(row => ({
+  return ((data ?? []) as unknown as Record<string, unknown>[]).map(row => ({
     id:          row.id as string,
     email:       row.email as string,
     name:        row.name as string | null,

@@ -1815,14 +1815,35 @@ time. Three stores, and only the weakest two were being read.
   every device at once. Disconnecting the last account is the only legitimate
   empty write and goes through `removeAccount` and the edge function, which
   delete the row itself.
+- **`scopes` is not a column on `google_accounts`**, and naming it in the
+  select is a PostgREST 400 that fails the whole read. That is how the first
+  attempt at this shipped and still showed nothing: the union finally asked the
+  one store that knew, the request was rejected for a column nobody has,
+  `loadAccountsFromServer` answered `null` — "could not look" — and on screen
+  that is indistinguishable from the empty list it replaced. The base select is
+  now the columns that exist and `scopes` is asked for separately, once per
+  session, with the **drop-only-the-column-the-error-names** retry
+  `financeDb.upsertRows` and `saveCompaniesToDB` use, so a migration adding it
+  later is read without another change. One optional column must never cost the
+  account list — and the badge measures a live token anyway
+  (`googleScopes.ts`); this was only ever its fallback.
+- **A stub that answers every select with the whole fixture cannot find that.**
+  The first harness did exactly that, so a request naming a column nobody has
+  looked identical to one that did: it passed, the real project 400'd, and the
+  accounts were still missing after a deploy. `scripts/accounts-come-back.mjs`
+  now holds `google_accounts`' **real column list**, measured against the
+  project, and rejects an unknown column with the 400 PostgREST sends. A fake
+  server has to be able to refuse.
 Measured in Chromium against the real bundle, localStorage cleared the way
-sign-out clears it: three rows and an empty mirror → **all three restored**;
-the same fixture on the **old code → `[]`**, which is the control that makes
-the result mean something. No rows → nothing invented. A mirror entry plus the
-rows → the mirror's browser-minted id is the one kept. A 500 on the rows →
-nothing written. `scripts/accounts-never-empty.mjs` lifts `saveAccountsToDB`
-out of the file: 6 assertions, including that the rest of `schedule_rules`
-survives and no token ever reaches the mirror.
+sign-out clears it: three rows and an empty mirror → **all three restored**,
+and the request trace shows the `scopes` select refused and the retry
+succeeding. The control — the same fixture on the code before each fix —
+returns `[]` both times: once because the rows were never read, once because
+the read was rejected. No rows → nothing invented. A mirror entry plus the rows
+→ the mirror's browser-minted id is the one kept. A 500 → nothing written.
+`scripts/accounts-never-empty.mjs` lifts `saveAccountsToDB` out of the file: 6
+assertions, including that the rest of `schedule_rules` survives and no token
+ever reaches the mirror.
 
 ## Accounts — a badge is a claim about a token, so it asks the token
 `lib/googleScopes.ts`. The Calendar / Gmail / Drive badges under each connected
