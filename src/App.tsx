@@ -27,7 +27,7 @@ import { useTaskStore } from './store/taskStore'
 import { useHabitsStore } from './store/habitsStore'
 import { supabase } from './lib/supabase'
 import { signInWithGoogle, signOut as googleSignOut, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
-import { addAccount, loadAccounts, saveAccounts, setAccountScopes } from './lib/multiAccount'
+import { addAccount, loadAccounts, loadAccountsFromServer, saveAccounts, setAccountScopes } from './lib/multiAccount'
 import { readScopes, cachedScopes } from './lib/googleScopes'
 import { relinkEventMetadata } from './lib/eventMetadata'
 import { relinkCalendarSettings } from './lib/calendarSettings'
@@ -857,28 +857,68 @@ async function loadAllFromDB(
         localStorage.setItem('professor-settings', JSON.stringify({ ...stored, ...partial }))
       }
     }),
-    // Connected accounts — DB provides metadata, local provides tokens.
-    // Union: keep local-only accounts (e.g. just added, not yet saved to DB).
-    loadAccountsFromDB().then(dbAccounts => {
-      const local = loadAccounts()
-      if (dbAccounts.length === 0 && local.length === 0) return
-      const tokenMap = new Map(local.map(a => [a.email, a as typeof local[number]]))
-      // DB accounts enriched with local tokens
-      const fromDb = dbAccounts.map(a => {
-        const localAcc = tokenMap.get(a.email)
-        return {
-          ...a,
-          providerToken:        localAcc?.providerToken ?? '',
-          providerTokenSavedAt: localAcc?.providerTokenSavedAt,
-          supabaseAccessToken:  localAcc?.supabaseAccessToken,
-          supabaseRefreshToken: localAcc?.supabaseRefreshToken,
+    // ── Connected accounts ───────────────────────────────────────────────
+    //
+    // **`google_accounts` is where a connected account lives.** One row per
+    // account you connected, with its refresh token hanging off it, and it is
+    // what every edge function reads. `users.schedule_rules.connected_accounts`
+    // is a *mirror* the browser writes, and `professor-connected-accounts` is
+    // this browser's cache of that.
+    //
+    // Only the last two were ever read here, and sign-out wipes the cache — so
+    // an account whose mirror was empty (written under a different sign-in,
+    // never written at all, or overwritten with `[]`) came back as **no extra
+    // accounts at all**, while its row and its live token sat in Postgres
+    // untouched. "My accounts are gone" about data that was never lost, and the
+    // one place that could have said otherwise was not being asked.
+    //
+    // Three sources, keyed by **email** — the only identifier all three share,
+    // which is the same reason `serverAccountId()` matches on it:
+    //   · the rows, for who is connected;
+    //   · the mirror, for a row written before the table existed;
+    //   · local, for the tokens and for the browser-minted id a company may be
+    //     linked by, which is not `google_accounts.id`.
+    Promise.all([loadAccountsFromServer(), loadAccountsFromDB().catch(() => [])])
+      .then(([rows, mirror]) => {
+        const local = loadAccounts()
+        const key = (e: string) => e.toLowerCase()
+        // A failed read is not evidence that an account went away —
+        // `loadAccountsFromServer` answers `null` for that, and the mirror and
+        // the cache still stand. `googleScopes.ts`'s rule, one layer up.
+        const merged = new Map(local.map(a => [key(a.email), a]))
+        const learn = (
+          email: string,
+          from: { id?: string; name?: string | null; avatarUrl?: string | null
+                  scopes?: string[] | null; connectedAt?: string; isPrimary?: boolean },
+        ) => {
+          const had = merged.get(key(email))
+          merged.set(key(email), {
+            // The id this browser already knows wins: a company is linked by
+            // it, and swapping it for the row's would break that link.
+            id:            had?.id ?? from.id ?? crypto.randomUUID(),
+            email:         had?.email ?? email,
+            name:          had?.name || from.name || email,
+            avatarUrl:     had?.avatarUrl ?? from.avatarUrl ?? undefined,
+            // Tokens only ever come from this browser.
+            providerToken:        had?.providerToken ?? '',
+            providerTokenSavedAt: had?.providerTokenSavedAt,
+            supabaseAccessToken:  had?.supabaseAccessToken,
+            supabaseRefreshToken: had?.supabaseRefreshToken,
+            scopes:        had?.scopes ?? from.scopes ?? [],
+            connectedAt:   had?.connectedAt ?? from.connectedAt ?? new Date().toISOString(),
+            isPrimary:     had?.isPrimary ?? from.isPrimary ?? false,
+          })
         }
+        for (const m of mirror) learn(m.email, m)
+        if (rows) for (const r of rows) learn(r.email, r)
+        const all = [...merged.values()]
+        // Never write an empty list over one this browser has: that is the
+        // failure being fixed, not a state to reproduce.
+        if (all.length === 0) return
+        saveAccounts(all)
+        window.dispatchEvent(new Event('professor:accountsUpdated'))
       })
-      // Keep local accounts not yet in DB (e.g. just added via OAuth, saveAccountsToDB pending)
-      const dbEmails = new Set(dbAccounts.map(a => a.email))
-      const localOnly = local.filter(a => !dbEmails.has(a.email))
-      saveAccounts([...fromDb, ...localOnly])
-    }),
+      .catch(console.warn),
   ])
 }
 

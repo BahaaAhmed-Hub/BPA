@@ -493,6 +493,19 @@ export async function saveAccountsToDB(accounts: ConnectedAccount[]): Promise<vo
     .from('users').select('schedule_rules').eq('id', userId).maybeSingle()
   const prev = (existing?.schedule_rules as Record<string, unknown>) ?? {}
 
+  // **An empty list never overwrites a full one.** Every caller hands this
+  // whatever `professor-connected-accounts` holds right now, and that key is
+  // emptied by sign-out — so one call made a moment too early wiped the
+  // mirror for every device at once, and the accounts then "disappeared" on
+  // the next sign-in. Disconnecting the last account is the only thing that
+  // may legitimately write nothing, and it goes through `removeAccount` and
+  // the edge function, which delete the `google_accounts` row itself.
+  const before = (prev.connected_accounts as unknown[] | undefined) ?? []
+  if (accounts.length === 0 && before.length > 0) {
+    console.warn('[accounts] refusing to write an empty list over', before.length, 'saved account(s)')
+    return
+  }
+
   // Strip tokens before saving to DB for security — store metadata only
   const safe = accounts.map(a => ({
     id: a.id, email: a.email, name: a.name, avatarUrl: a.avatarUrl,

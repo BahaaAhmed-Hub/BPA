@@ -1788,6 +1788,42 @@ history.
   account. It is offered as the id `primary`, which every consumer already
   reads as "use the primary token" by finding no account with that id.
 
+## Accounts — `google_accounts` is where a connected account lives
+Signing out and back in showed **no extra accounts**, and nothing had been
+lost: all three rows, with live refresh tokens, were in Postgres the whole
+time. Three stores, and only the weakest two were being read.
+- **`google_accounts`** is the real thing — one row per account you connected,
+  its token in `google_account_tokens`, and it is what every edge function
+  reads. **`users.schedule_rules.connected_accounts`** is a jsonb *mirror* the
+  browser writes. **`professor-connected-accounts`** is this browser's cache of
+  that mirror, and the only one carrying tokens and the browser-minted id.
+- `loadAllFromDB` read the mirror and the cache and **never the rows**.
+  Sign-out wipes the cache (`clearUserData`), so an account whose mirror was
+  empty — written under a different sign-in, never written, or overwritten with
+  `[]` — came back as nothing at all. The one store that could have answered
+  was not being asked.
+- **The union is keyed by email**, the only identifier all three share — the
+  same reason `serverAccountId()` matches on it. The id this browser already
+  holds **wins**, because a company is linked by that uuid and swapping it for
+  `google_accounts.id` would break the link. Tokens only ever come from local.
+- **A failed read is not evidence.** `loadAccountsFromServer()` answers `null`
+  for that (`googleScopes.ts`'s rule), and an empty result is never written
+  over a list this browser has.
+- **`saveAccountsToDB` refuses to write `[]` over a non-empty mirror.** Every
+  caller hands it whatever `professor-connected-accounts` holds *now*, and that
+  key is emptied by sign-out — one call a moment too early wiped the mirror for
+  every device at once. Disconnecting the last account is the only legitimate
+  empty write and goes through `removeAccount` and the edge function, which
+  delete the row itself.
+Measured in Chromium against the real bundle, localStorage cleared the way
+sign-out clears it: three rows and an empty mirror → **all three restored**;
+the same fixture on the **old code → `[]`**, which is the control that makes
+the result mean something. No rows → nothing invented. A mirror entry plus the
+rows → the mirror's browser-minted id is the one kept. A 500 on the rows →
+nothing written. `scripts/accounts-never-empty.mjs` lifts `saveAccountsToDB`
+out of the file: 6 assertions, including that the rest of `schedule_rules`
+survives and no token ever reaches the mirror.
+
 ## Accounts — a badge is a claim about a token, so it asks the token
 `lib/googleScopes.ts`. The Calendar / Gmail / Drive badges under each connected
 account were drawn from a **hard-coded list**, the same three strings typed out
