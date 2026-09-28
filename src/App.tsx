@@ -878,10 +878,24 @@ async function loadAllFromDB(
     //   · the mirror, for a row written before the table existed;
     //   · local, for the tokens and for the browser-minted id a company may be
     //     linked by, which is not `google_accounts.id`.
-    Promise.all([loadAccountsFromServer(), loadAccountsFromDB().catch(() => [])])
-      .then(([rows, mirror]) => {
+    Promise.all([
+      loadAccountsFromServer(),
+      loadAccountsFromDB().catch(() => []),
+      supabase.auth.getSession().then(r => r.data.session?.user?.email ?? ''),
+    ])
+      .then(([rows, mirror, signedInEmail]) => {
         const local = loadAccounts()
         const key = (e: string) => e.toLowerCase()
+        // **The account you signed in with is never in this key.** It holds the
+        // *additional* accounts — `mailAccounts`, `companyForAccount` (which
+        // offers it as the id `primary`) and Settings all say so, and Settings
+        // draws the signed-in account as its own card above the list. Writing
+        // its `google_accounts` row in here, as the first pass did, drew it
+        // **twice**: once as the active account and once as a connected one,
+        // with a trash button beside it. Filtered by address rather than by
+        // `is_primary`, because that flag is about this user's own set of
+        // Google accounts and not about which Supabase identity is signed in.
+        const me = key(signedInEmail)
         // A failed read is not evidence that an account went away —
         // `loadAccountsFromServer` answers `null` for that, and the mirror and
         // the cache still stand. `googleScopes.ts`'s rule, one layer up.
@@ -909,9 +923,10 @@ async function loadAllFromDB(
             isPrimary:     had?.isPrimary ?? from.isPrimary ?? false,
           })
         }
-        for (const m of mirror) learn(m.email, m)
-        if (rows) for (const r of rows) learn(r.email, r)
-        const all = [...merged.values()]
+        for (const m of mirror) if (key(m.email) !== me) learn(m.email, m)
+        if (rows) for (const r of rows) if (key(r.email) !== me) learn(r.email, r)
+        // A cache written before that rule was enforced still carries it.
+        const all = [...merged.values()].filter(a => !me || key(a.email) !== me)
         // Never write an empty list over one this browser has: that is the
         // failure being fixed, not a state to reproduce.
         if (all.length === 0) return

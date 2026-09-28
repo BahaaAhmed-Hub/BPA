@@ -1815,6 +1815,16 @@ time. Three stores, and only the weakest two were being read.
   every device at once. Disconnecting the last account is the only legitimate
   empty write and goes through `removeAccount` and the edge function, which
   delete the row itself.
+- **The account you signed in with is never in this key**, and the first pass
+  put it there. `professor-connected-accounts` holds the *additional*
+  accounts — `mailAccounts`, `companyForAccount` (which offers the signed-in
+  one as the id `primary`) and Settings all say so, and Settings draws it as
+  its own card above the list. Writing its `google_accounts` row into the list
+  drew it **twice**: once as the active account, once as a connected one with
+  a trash button beside it. Filtered by **address**, not by `is_primary` —
+  that flag is about this user's own set of Google accounts and says nothing
+  about which Supabase identity is signed in — and a cache written before the
+  rule was enforced is cleaned on the next load rather than left to rot.
 - **`scopes` is not a column on `google_accounts`**, and naming it in the
   select is a PostgREST 400 that fails the whole read. That is how the first
   attempt at this shipped and still showed nothing: the union finally asked the
@@ -1841,9 +1851,23 @@ succeeding. The control — the same fixture on the code before each fix —
 returns `[]` both times: once because the rows were never read, once because
 the read was rejected. No rows → nothing invented. A mirror entry plus the rows
 → the mirror's browser-minted id is the one kept. A 500 → nothing written.
+A cache already holding the primary — the state the first pass shipped — is
+cleaned on the next load, and the extra beside it keeps its local id and its
+token. The control there returns the signed-in address in the list, which is
+what the duplicate card on screen was.
+- **A fixture only tests what the page can actually see.** That `dirty` case
+  branched on a `MODE` variable inside `addInitScript`, which runs in the
+  *page* — Node's scope is not there, so the branch threw, nothing was seeded
+  and the case quietly passed by testing the empty-cache path twice. Anything
+  a page-side callback needs has to be passed in as an argument.
 `scripts/accounts-never-empty.mjs` lifts `saveAccountsToDB` out of the file: 6
 assertions, including that the rest of `schedule_rules` survives and no token
 ever reaches the mirror.
+- **`scripts/select-columns-exist.mjs` checks every `.select()` in `src`
+  against the columns the project really has** — 52 of them, 0 wrong now. The
+  `scopes` mistake is invisible to TypeScript: the column name is a string and
+  the table it names lives in another system. One round trip finds it; a type
+  checker never will.
 
 ## Accounts — a badge is a claim about a token, so it asks the token
 `lib/googleScopes.ts`. The Calendar / Gmail / Drive badges under each connected
