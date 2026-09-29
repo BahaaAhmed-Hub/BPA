@@ -582,6 +582,128 @@ function BlockEditor({ block, onChange, onDelete, onClose }: {
   )
 }
 
+// ─── Inline markdown renderer ─────────────────────────────────────────────────
+
+function renderInline(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = []
+  const re = /\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`/g
+  let last = 0, idx = 0, m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index))
+    if (m[1] !== undefined)
+      parts.push(<strong key={idx++} style={{ fontWeight: 700, color: 'inherit' }}>{m[1]}</strong>)
+    else if (m[2] !== undefined)
+      parts.push(<em key={idx++}>{m[2]}</em>)
+    else if (m[3] !== undefined)
+      parts.push(<code key={idx++} style={{ fontFamily: 'monospace', fontSize: '0.87em', background: 'var(--sb-field)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--sb-hairline)' }}>{m[3]}</code>)
+    last = m.index + m[0].length
+  }
+  if (last < text.length) parts.push(text.slice(last))
+  return parts.length === 1 ? parts[0] : parts
+}
+
+function MarkdownContent({ text }: { text: string }) {
+  const lines = text.split('\n')
+  const blocks: React.ReactNode[] = []
+  let i = 0
+
+  while (i < lines.length) {
+    const line = lines[i]
+    if (!line.trim()) { i++; continue }
+
+    // Table: starts with | and next line is separator
+    if (line.startsWith('|') && i + 1 < lines.length && /^\|[\s\-:|]+\|/.test(lines[i + 1])) {
+      const headers = line.split('|').map(c => c.trim()).filter(Boolean)
+      i += 2
+      const rows: string[][] = []
+      while (i < lines.length && lines[i].startsWith('|')) {
+        rows.push(lines[i].split('|').map(c => c.trim()).filter(Boolean))
+        i++
+      }
+      blocks.push(
+        <div key={blocks.length} style={{ overflowX: 'auto', margin: '10px 0', borderRadius: 8, border: '1px solid var(--sb-border)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
+            <thead>
+              <tr style={{ background: 'var(--sb-field)' }}>
+                {headers.map((h, j) => (
+                  <th key={j} style={{ padding: '7px 11px', textAlign: 'left', fontWeight: 700, borderBottom: '1px solid var(--sb-border)', color: 'var(--sb-ink-2)', fontSize: 10.5, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    {renderInline(h)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, j) => (
+                <tr key={j} style={{ borderBottom: j < rows.length - 1 ? '1px solid var(--sb-hairline)' : 'none', background: j % 2 === 1 ? 'var(--sb-field)' : 'transparent' }}>
+                  {row.map((cell, k) => (
+                    <td key={k} style={{ padding: '6px 11px', color: 'var(--sb-ink-1)', verticalAlign: 'top', fontVariantNumeric: 'tabular-nums' }}>
+                      {renderInline(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+      continue
+    }
+
+    // Numbered list
+    if (/^\d+\.\s/.test(line)) {
+      const items: string[] = []
+      while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
+        items.push(lines[i].replace(/^\d+\.\s+/, ''))
+        i++
+      }
+      blocks.push(
+        <ol key={blocks.length} style={{ margin: '6px 0', paddingLeft: 22, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {items.map((item, j) => (
+            <li key={j} style={{ fontSize: 12.5, color: 'var(--sb-ink-1)', lineHeight: 1.55 }}>{renderInline(item)}</li>
+          ))}
+        </ol>
+      )
+      continue
+    }
+
+    // Bullet list
+    if (/^[-*•]\s/.test(line)) {
+      const items: string[] = []
+      while (i < lines.length && /^[-*•]\s/.test(lines[i])) {
+        items.push(lines[i].replace(/^[-*•]\s+/, ''))
+        i++
+      }
+      blocks.push(
+        <ul key={blocks.length} style={{ margin: '6px 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, listStyleType: 'disc' }}>
+          {items.map((item, j) => (
+            <li key={j} style={{ fontSize: 12.5, color: 'var(--sb-ink-1)', lineHeight: 1.55 }}>{renderInline(item)}</li>
+          ))}
+        </ul>
+      )
+      continue
+    }
+
+    // Paragraph — collect consecutive non-special lines
+    const para: string[] = []
+    while (
+      i < lines.length && lines[i].trim() &&
+      !lines[i].startsWith('|') &&
+      !/^\d+\.\s/.test(lines[i]) &&
+      !/^[-*•]\s/.test(lines[i])
+    ) { para.push(lines[i]); i++ }
+
+    if (para.length) {
+      blocks.push(
+        <p key={blocks.length} style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.6, color: 'var(--sb-ink-1)' }}>
+          {renderInline(para.join(' '))}
+        </p>
+      )
+    }
+  }
+
+  return <>{blocks}</>
+}
+
 // ─── ChatPanel ────────────────────────────────────────────────────────────────
 
 function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onChange, onSend }: {
@@ -590,63 +712,101 @@ function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onCh
   onChange: (v: string) => void; onSend: () => void
 }) {
   return (
-    <>
-      <div style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--sb-field)' }}>
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px 8px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {messages.map(m => (
-          <div key={m.id} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+          <div key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+
+            {/* AI avatar */}
+            {m.role === 'assistant' && (
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                <Sparkles size={13} color="white" strokeWidth={1.8} />
+              </div>
+            )}
+
             <div style={{
-              maxWidth: '85%', padding: '9px 12px', borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+              maxWidth: '84%',
               background: m.role === 'user' ? 'var(--sb-ink-1)' : 'var(--sb-card)',
               color: m.role === 'user' ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-1)',
+              borderRadius: m.role === 'user' ? '18px 18px 4px 18px' : '4px 18px 18px 18px',
               border: m.role === 'assistant' ? '1px solid var(--sb-border)' : 'none',
-              fontSize: 12.5, lineHeight: 1.5,
+              boxShadow: m.role === 'assistant' ? '0 1px 4px rgba(25,23,18,0.07)' : 'none',
+              padding: m.role === 'user' ? '9px 13px' : '11px 14px 10px',
             }}>
-              {m.content}
+              {m.role === 'user'
+                ? <div style={{ fontSize: 12.5, lineHeight: 1.55 }}>{m.content}</div>
+                : <MarkdownContent text={m.content} />
+              }
               {m.actions && m.actions.length > 0 && (
-                <div style={{ marginTop: 6, fontSize: 11, color: m.role === 'user' ? 'rgba(255,255,255,0.6)' : 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Check size={10} /> {m.actions.length} action{m.actions.length !== 1 ? 's' : ''} applied
+                <div style={{
+                  marginTop: 8, paddingTop: 7, borderTop: '1px solid var(--sb-hairline)',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  fontSize: 10.5, color: 'var(--sb-positive)', fontWeight: 700, letterSpacing: '0.04em',
+                }}>
+                  <Check size={10} strokeWidth={3} />
+                  {m.actions.length} action{m.actions.length !== 1 ? 's' : ''} applied to canvas
                 </div>
               )}
             </div>
           </div>
         ))}
+
+        {/* Typing indicator */}
         {loading && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <div style={{ padding: '9px 12px', borderRadius: '14px 14px 14px 4px', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', display: 'flex', gap: 5, alignItems: 'center' }}>
-              {[0, 1, 2].map(i => <span key={i} style={{ width: 6, height: 6, borderRadius: 3, background: 'var(--sb-ink-3)', animation: 'typing-dot 1.2s infinite', animationDelay: `${i * 0.2}s`, display: 'inline-block' }} />)}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Sparkles size={13} color="white" strokeWidth={1.8} />
+            </div>
+            <div style={{ padding: '11px 14px', borderRadius: '4px 18px 18px 18px', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', display: 'flex', gap: 5, alignItems: 'center' }}>
+              {[0, 1, 2].map(i => (
+                <span key={i} style={{ width: 6, height: 6, borderRadius: 3, background: 'var(--sb-ink-3)', animation: 'typing-dot 1.2s infinite', animationDelay: `${i * 0.2}s`, display: 'inline-block' }} />
+              ))}
             </div>
           </div>
         )}
-        {error && <div style={{ fontSize: 11.5, color: 'var(--sb-negative)', padding: '6px 10px', borderRadius: 8, background: 'color-mix(in srgb, var(--sb-negative) 8%, var(--sb-card))' }}>{error}</div>}
+
+        {error && (
+          <div style={{ fontSize: 11.5, color: 'var(--sb-negative)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--sb-negative) 8%, var(--sb-card))', border: '1px solid color-mix(in srgb, var(--sb-negative) 18%, transparent)' }}>
+            {error}
+          </div>
+        )}
         <div ref={chatEndRef} />
       </div>
 
-      <div style={{ padding: '8px 12px', borderTop: '1px solid var(--sb-hairline)', flexShrink: 0, display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-        <textarea
-          ref={inputRef}
-          value={input}
-          onChange={e => onChange(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend() } }}
-          placeholder="Ask me anything about your ideal week…"
-          rows={1}
-          style={{
-            flex: 1, resize: 'none', padding: '8px 10px', borderRadius: 10,
-            border: '1px solid var(--sb-border)', background: 'var(--sb-field)',
-            fontSize: 12.5, color: 'var(--sb-ink-1)', fontFamily: 'inherit', lineHeight: 1.4,
-            maxHeight: 100, overflow: 'auto',
-          }}
-        />
-        <button
-          onClick={onSend}
-          disabled={!input.trim() || loading}
-          style={{
-            width: 36, height: 36, borderRadius: 10, border: 'none', flexShrink: 0,
-            background: input.trim() && !loading ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-            color: input.trim() && !loading ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
-            cursor: input.trim() && !loading ? 'pointer' : 'default',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s',
-          }}
-        ><Sparkles size={15} /></button>
+      {/* Input */}
+      <div style={{ padding: '10px 12px 12px', borderTop: '1px solid var(--sb-hairline)', background: 'var(--sb-overlay)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, background: 'var(--sb-card)', border: '1.5px solid var(--sb-border)', borderRadius: 14, padding: '7px 7px 7px 13px', boxShadow: '0 1px 4px rgba(25,23,18,0.06)', transition: 'border-color 0.15s' }}>
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={e => onChange(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend() } }}
+            placeholder="Describe your ideal week…"
+            rows={1}
+            style={{
+              flex: 1, resize: 'none', border: 'none', background: 'transparent', outline: 'none',
+              fontSize: 12.5, color: 'var(--sb-ink-1)', fontFamily: 'inherit', lineHeight: 1.5,
+              maxHeight: 100, overflow: 'auto', padding: '2px 0',
+            }}
+          />
+          <button
+            onClick={onSend}
+            disabled={!input.trim() || loading}
+            title="Send (Enter)"
+            style={{
+              width: 32, height: 32, borderRadius: 9, border: 'none', flexShrink: 0,
+              background: input.trim() && !loading ? 'var(--sb-ink-1)' : 'var(--sb-field)',
+              color: input.trim() && !loading ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+              cursor: input.trim() && !loading ? 'pointer' : 'default',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.15s, color 0.15s',
+            }}
+          ><Sparkles size={14} /></button>
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--sb-ink-4)', textAlign: 'center', marginTop: 5, letterSpacing: '0.02em' }}>
+          Enter to send · Shift+Enter for new line
+        </div>
       </div>
 
       <style>{`
@@ -654,7 +814,7 @@ function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onCh
           0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)}
         }
       `}</style>
-    </>
+    </div>
   )
 }
 
