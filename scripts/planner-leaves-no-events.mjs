@@ -1,10 +1,5 @@
-// node scripts/planner-leaves-no-events.mjs [remove|leftover|refuses]
-// Needs a dev server on 5199.
-//
-// Removing a task from the plan must take its calendar event with it, and an
-// event left behind by the old code must be removable from the grid. The
-// control is the same file before the fix: the block leaves the grid and NO
-// DELETE is sent, which is the orphan this exists to stop.
+// Removing a task from the plan must take its calendar event with it — and an
+// event left behind by the old code must be removable from the grid.
 import { chromium } from 'playwright-core'
 import { session, user } from './session.mjs'
 const MODE = process.argv[2] ?? 'remove'        // remove | leftover | refuses
@@ -61,6 +56,17 @@ await p.getByRole('button',{name:/Plan my day/i}).first().click(); await p.waitF
 const grid = () => p.evaluate(()=>document.body.innerText)
 ok('the planner opens', /Smart Day Planner/.test(await grid()))
 ok('the block is on the grid', /OWI Bulk Closure Fields/.test(await grid()))
+if (MODE === 'regen') {
+  // A plan already on the grid must survive Regenerate — and keep its ✕.
+  ok('the restored block is drawn', /OWI Bulk Closure Fields/.test(await grid()))
+  await p.getByRole('button',{name:/Generate Plan|Regenerate Plan/}).first().click()
+  await p.waitForTimeout(2500)
+  const after = await grid()
+  ok('it is still on the grid after Regenerate', /OWI Bulk Closure Fields/.test(after))
+  const keep = p.getByRole('button',{name:/Take ".*" off the plan/}).first()
+  ok('and still carries its remove control', await keep.count() > 0)
+  await b.close(); process.exit(process.exitCode ?? 0)
+}
 const chip = /left over/i.test(await grid())
 if (MODE === 'remove') {
   ok('a claimed event is NOT called left over', !chip)

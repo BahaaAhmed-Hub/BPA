@@ -287,7 +287,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
                 <>
                   <span style={{
                     flexShrink: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em',
-                    textTransform: 'uppercase', color, opacity: 0.75,
+                    textTransform: 'uppercase', color,
                   }}>left over</span>
                   <button
                     onClick={e => { e.stopPropagation(); onRemoveEvent(evt) }}
@@ -599,6 +599,13 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     return { startAt, continued }
   }, [todayEvents, claimedEventIds])
 
+  // Read through refs: `generatePlan` wants the *current* plan without taking
+  // it as a dependency, which would rebuild the callback on every block change.
+  const blocksRef   = useRef(blocks)
+  const allTasksRef = useRef(allTasks)
+  useEffect(() => { blocksRef.current = blocks }, [blocks])
+  useEffect(() => { allTasksRef.current = allTasks }, [allTasks])
+
   // ── Generate Plan ─────────────────────────────────────────────────────────
 
   const generatePlan = useCallback(async () => {
@@ -619,6 +626,19 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
           end:   parseInt(e.end!.dateTime!.slice(11, 13), 10) +
                  parseInt(e.end!.dateTime!.slice(14, 16), 10) / 60,
         }))
+
+      // **A plan you already have is not free time, and regenerating does not
+      // throw it away.** The fit deliberately skips tasks already planned for
+      // today, so `newBlocks` never contains them — and replacing the whole
+      // list with it wiped their blocks off the grid while the tasks stayed
+      // planned in the store, with their events still on the calendar and no
+      // ✕ left to take either off. Their hours are busy too, or the next task
+      // is dropped straight on top of one.
+      const keep = blocksRef.current.filter(b => {
+        const t = allTasksRef.current.find(x => x.id === b.taskId)
+        return !!t && t.dueDate === todayStr && t.boardStatus === 'planned' && !!t.plannedTime
+      })
+      for (const b of keep) busyIntervals.push({ start: b.startHour, end: b.startHour + b.durationHours })
 
       // 3. Add lunch break if enabled
       if (includeBreaks) busyIntervals.push({ start: 12, end: 13 })
@@ -647,10 +667,10 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
         }
       }
 
-      setBlocks(newBlocks)
+      setBlocks([...keep, ...newBlocks])
 
       // Scroll to first scheduled slot or 8 AM
-      const firstHour = newBlocks[0]?.startHour ?? 8
+      const firstHour = [...keep, ...newBlocks].map(b => b.startHour).sort((a, b) => a - b)[0] ?? 8
       setTimeout(() => {
         timelineRef.current?.scrollTo({ top: firstHour * HOUR_PX, behavior: 'smooth' })
       }, 100)
