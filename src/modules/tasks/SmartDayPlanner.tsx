@@ -11,14 +11,17 @@ import type { Task } from '@/types'
 import { isTaskHidden, loadDynamicCompanies } from '@/types'
 import {
   createCalendarEventWithToken,
+  deleteCalendarEventWithToken,
+  deleteCalendarEvent,
   type GCalEvent,
 } from '@/lib/googleCalendar'
 import { fetchVisibleEvents } from '@/lib/calendarEvents'
-import { taskEventTitle, taskEventDescription } from '@/lib/taskEvent'
+import { taskEventTitle, taskEventDescription, isTaskEvent } from '@/lib/taskEvent'
 import { resolveTaskCalendar } from '@/lib/taskCalendar'
 import { loadAccounts, getPrimaryToken, type ConnectedAccount } from '@/lib/multiAccount'
 import { ICON } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
+import { notify } from '@/lib/undo'
 
 const HOUR_PX = 56
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -208,16 +211,18 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
   )
 }
 
-function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyContinued, isPast, onOpenTask, onEventClick }: {
+function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyContinued, isPast, onOpenTask, onEventClick, onRemoveEvent }: {
   hour: number
   block?: ScheduledBlock
   taskTitle?: string
   onRemove?: () => void
-  busyEventsAtStart?: { event: GCalEvent; durationHours: number; color: string }[]
+  busyEventsAtStart?: { event: GCalEvent; durationHours: number; color: string; leftOver?: boolean }[]
   isBusyContinued?: boolean
   isPast?: boolean
   onOpenTask?: (taskId: string) => void
   onEventClick?: (event: GCalEvent, color: string) => void
+  /** Only for an event this planner made that no task claims any more. */
+  onRemoveEvent?: (event: GCalEvent) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `slot-${hour}`, disabled: isPast })
   const blocked = hour < 6 || hour >= 22
@@ -258,7 +263,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
           }} />
         )}
         {/* Calendar busy block — only render at the start hour, spans full duration */}
-        {hasBusyStart && !block && busyEventsAtStart!.map(({ event: evt, durationHours, color }) => (
+        {hasBusyStart && !block && busyEventsAtStart!.map(({ event: evt, durationHours, color, leftOver }) => (
           <div key={evt.id ?? evt.summary}
             onClick={() => onEventClick?.(evt, color)}
             style={{
@@ -271,9 +276,32 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
               display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '4px 7px',
               cursor: 'pointer', overflow: 'hidden',
             }}>
-            <span style={{ fontSize: 'var(--sb-t-meta)', color, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {evt.summary ?? 'Busy'}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+              <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {evt.summary ?? 'Busy'}
+              </span>
+              {/* **Says what it is before offering to remove it.** A block
+                  with a task's name, for work no longer on the plan, is not
+                  something to delete without saying why it is there. */}
+              {leftOver && onRemoveEvent && (
+                <>
+                  <span style={{
+                    flexShrink: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em',
+                    textTransform: 'uppercase', color, opacity: 0.75,
+                  }}>left over</span>
+                  <button
+                    onClick={e => { e.stopPropagation(); onRemoveEvent(evt) }}
+                    title="Not on the plan any more — remove it from your calendar"
+                    aria-label={`Remove "${evt.summary ?? 'this event'}" from your calendar`}
+                    style={{
+                      flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
+                      color, padding: 0, display: 'flex', opacity: 0.8,
+                    }}>
+                    <X size={ICON.sm} />
+                  </button>
+                </>
+              )}
+            </div>
             {evt.location && (
               <span style={{ fontSize: 'var(--sb-t-micro)', color, opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {evt.location}</span>
             )}
@@ -308,6 +336,8 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
             {onRemove && (
               <button
                 onClick={e => { e.stopPropagation(); onRemove() }}
+                title={`Take "${taskTitle ?? 'this task'}" off the plan and off your calendar`}
+                aria-label={`Take "${taskTitle ?? 'this task'}" off the plan`}
                 style={{ background: 'color-mix(in srgb, var(--sb-ink-on-fill) 20%, transparent)', border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-on-fill)', padding: '1px 4px', fontSize: 'var(--sb-t-micro)', flexShrink: 0 }}
               >
                 ×
@@ -536,8 +566,21 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   const [selectedCalEvent, setSelectedCalEvent] = useState<{ event: GCalEvent; color: string } | null>(null)
 
   // Build busy event map: startAt = events keyed by start hour (with duration + color), continued = set of continuation hours
+  // **An event this planner made, that no task still claims, is left over.**
+  // Every id a task holds — not just the ones on the plan — so a block moved
+  // to another hour, or a task planned yesterday, is never called an orphan.
+  // `isTaskEvent` is the app's own mark (the 📋 and the note header), so this
+  // can only ever point at an event this app wrote.
+  const claimedEventIds = useMemo(
+    () => new Set([
+      ...allTasks.map(t => t.gcalEventId),
+      ...blocks.map(b => b.gcalEventId),
+    ].filter(Boolean) as string[]),
+    [allTasks, blocks],
+  )
+
   const busyEventMap = useMemo(() => {
-    const startAt: Record<number, { event: GCalEvent; durationHours: number; color: string }[]> = {}
+    const startAt: Record<number, { event: GCalEvent; durationHours: number; color: string; leftOver: boolean }[]> = {}
     const continued = new Set<number>()
     for (const evt of todayEvents) {
       if (!evt.start?.dateTime) continue
@@ -547,11 +590,14 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
       const durationHours = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 3600000))
       const color = (evt as GCalEvent & { calendarColor?: string }).calendarColor ?? 'var(--sb-info)'
       if (!startAt[startH]) startAt[startH] = []
-      startAt[startH].push({ event: evt, durationHours, color })
+      startAt[startH].push({
+        event: evt, durationHours, color,
+        leftOver: isTaskEvent(evt.summary, evt.description) && !claimedEventIds.has(evt.id),
+      })
       for (let h = startH + 1; h < startH + durationHours; h++) continued.add(h)
     }
     return { startAt, continued }
-  }, [todayEvents])
+  }, [todayEvents, claimedEventIds])
 
   // ── Generate Plan ─────────────────────────────────────────────────────────
 
@@ -630,23 +676,30 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     } catch { return null }
   }
 
-  async function tryScheduleToCalendar(task: Task, block: ScheduledBlock) {
-    const companiesWithCal = loadCompaniesWithCal()
-    const co = task.companyId ? companiesWithCal.find(c => c.id === task.companyId) : null
-
+  /** Which token opens this task's calendar, and where the event lives.
+   *
+   *  Creating and removing an event are the same question asked twice, so
+   *  they read one answer: a second copy of this would delete from the wrong
+   *  calendar the day somebody changes how a company is linked. */
+  function calendarFor(task: Task): { calendarId: string; token: string | null; linkedAccount: boolean } {
+    const co = task.companyId
+      ? loadCompaniesWithCal().find(c => c.id === task.companyId)
+      : null
     // The company's calendar and the company's account are separate facts: a
     // company calendar can live on the ordinary account, and it used to be
     // ignored unless an account was linked too.
-    const target = resolveTaskCalendar(task)
-    const calendarId = target.calendarId
-
-    let token: string | null = null
-    if (co?.accountId) {
-      const acct = loadAccounts().find(a => a.id === co.accountId)
-      if (acct) token = acct.providerToken
+    const calendarId = resolveTaskCalendar(task).calendarId
+    const linked = co?.accountId ? loadAccounts().find(a => a.id === co.accountId) : undefined
+    return {
+      calendarId,
+      token: linked?.providerToken || getPrimaryToken() || null,
+      linkedAccount: !!co?.accountId,
     }
+  }
 
-    if (!token) token = getPrimaryToken() || null
+  async function tryScheduleToCalendar(task: Task, block: ScheduledBlock) {
+    const { calendarId, token, linkedAccount } = calendarFor(task)
+    const co = linkedAccount
 
     if (!token) {
       // No token at all — show account picker
@@ -655,7 +708,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     }
 
     // If no account is mapped to this company, show picker to let them choose & optionally save
-    if (task.companyId && !co?.accountId) {
+    if (task.companyId && !co) {
       setAccountPicker({ task, block })
       return
     }
@@ -700,10 +753,75 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     await tryScheduleToCalendar(task, block)
   }
 
-  function removeBlock(taskId: string) {
+  /**
+   * Take a task off the plan — **including the calendar event the plan made.**
+   *
+   * Dragging a task onto the grid writes a real Google Calendar event.
+   * Removing it used to drop the block, clear `gcalEventId` and stop there, so
+   * the event stayed in Google: the task came back to the list on the right
+   * while a block with its name was still drawn on the grid, out of
+   * `todayEvents` rather than out of `blocks`. Not a rendering glitch — a real
+   * event, on a real calendar, for work no longer planned.
+   *
+   * And clearing the id was the worse half: `gcalEventId` is the **only**
+   * handle to that event, so forgetting it made the orphan permanent. Nothing
+   * in the app could ever find it again.
+   */
+  async function removeBlock(taskId: string) {
+    const block   = blocks.find(b => b.taskId === taskId)
+    // **`allTasks`, never `tasks`.** The right-hand list deliberately excludes
+    // anything already planned for today — which is every task that has a
+    // block — so looking there for the task whose block this is always
+    // answered `undefined`, and the delete below was skipped for exactly the
+    // case it exists for: a plan restored after a refresh.
+    const task    = allTasks.find(t => t.id === taskId)
+    const eventId = block?.gcalEventId ?? task?.gcalEventId
+    const unplanned = { boardStatus: undefined, plannedTime: undefined, dueDate: undefined }
+
+    // The grid clears now. The gesture is finished; a round trip to Google is
+    // not something to make somebody watch.
     setBlocks(prev => prev.filter(b => b.taskId !== taskId))
-    // Revert the task back to unplanned
-    updateTask(taskId, { boardStatus: undefined, plannedTime: undefined, dueDate: undefined, gcalEventId: undefined })
+
+    if (!eventId || !task) { updateTask(taskId, unplanned); return }
+
+    const { calendarId, token } = calendarFor(task)
+    const gone = token ? await deleteCalendarEventWithToken(token, calendarId, eventId) : false
+
+    if (gone) {
+      // Drop it from the events layer too, or the grid keeps drawing it until
+      // the next fetch — which is exactly what this looked like.
+      setTodayEvents(prev => prev.filter(e => e.id !== eventId))
+      updateTask(taskId, { ...unplanned, gcalEventId: undefined })
+      return
+    }
+
+    // **Keep the id.** The event is still there and this is the only way back
+    // to it; a silent clear is how it became unfindable in the first place.
+    updateTask(taskId, unplanned)
+    notify(token
+      ? `"${task.title}" is off the plan, but its calendar event could not be removed — it is still on your calendar`
+      : `"${task.title}" is off the plan. Sign in to Google again to remove its calendar event`)
+  }
+
+  /**
+   * Take an event off the calendar that this planner made and nothing claims
+   * any more. Removing one **offers** rather than acts — the same posture a
+   * cancelled invitation takes — because a calendar delete cannot be undone
+   * and the event may be the only record that the work was ever planned.
+   */
+  async function removeLeftoverEvent(evt: GCalEvent) {
+    const name = evt.summary ?? 'this event'
+    if (!window.confirm(`Remove "${name}" from your calendar?\n\nIt was made by the planner and no task uses it any more. This cannot be undone.`)) return
+    const calendarId = (evt as GCalEvent & { calendarId?: string }).calendarId ?? 'primary'
+    const res = await deleteCalendarEvent(calendarId, evt.id)
+    if (res.success) {
+      setTodayEvents(prev => prev.filter(e => e.id !== evt.id))
+      notify(`"${name}" removed from your calendar`)
+      return
+    }
+    notify(res.noAuth
+      ? 'Sign in to Google again to remove that event'
+      : `Could not remove "${name}" — ${res.error ?? 'Google refused it'}`)
   }
 
   // ── Apply Plan ────────────────────────────────────────────────────────────
@@ -824,7 +942,9 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                 <div ref={timelineRef} onScroll={onTimelineScroll} style={{ flex: 1, overflowY: 'auto', background: 'var(--sb-header)' }}>
                   {HOURS.map(hour => {
                     const block   = blocks.find(b => b.startHour === hour)
-                    const task    = block ? tasks.find(t => t.id === block.taskId) : undefined
+                    // Same reason as `removeBlock`: a restored block's task is
+                    // not in the filtered list, so its own name went missing.
+                    const task    = block ? allTasks.find(t => t.id === block.taskId) : undefined
                     const isPast  = hour < new Date().getHours()
                     return (
                       <HourSlot
@@ -837,6 +957,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                         isPast={isPast}
                         onOpenTask={onOpenTask}
                         onEventClick={(ev, col) => setSelectedCalEvent({ event: ev, color: col })}
+                        onRemoveEvent={removeLeftoverEvent}
                       />
                     )
                   })}

@@ -2364,6 +2364,46 @@ scroll re-runs as blocks and events land, and stops for good the moment the
 person scrolls it themselves. Checked with the page clock fixed at 10:20 —
 nothing → 10 AM, a meeting running since 9 → 9 AM, a meeting at 2 PM → 10 AM.
 
+## Tasks — the planner's ✕ takes the calendar event with it
+Dragging a task onto the Smart Day Planner's grid writes a **real Google
+Calendar event**. Taking it off used to drop the block, clear `gcalEventId`
+and stop there — so the task came back to the list on the right while a block
+with its name was still drawn on the grid. Not a rendering glitch: a real
+event, on a real calendar, for work no longer planned. The grid draws two
+layers and only one of them had been cleared.
+- **Clearing the id was the worse half.** `gcalEventId` is the *only* handle
+  to that event, so forgetting it made the orphan permanent — nothing in the
+  app could find it again. `removeBlock` now deletes first and clears second,
+  and **keeps the id when Google refuses**, saying so rather than orphaning it
+  quietly.
+- **`allTasks`, never `tasks`.** The right-hand list deliberately excludes
+  anything already planned for today — which is every task that *has* a block
+  — so `tasks.find(t => t.id === taskId)` inside `removeBlock` answered
+  `undefined` for every restored plan, and the delete was skipped for exactly
+  the case it exists for: a plan reopened after a refresh. The grid's own
+  `taskTitle` read the same filtered list and lost a restored block's name
+  with it.
+- **`calendarFor(task)` is one answer to one question.** Creating and removing
+  an event ask the same thing — which token, which calendar — and a second copy
+  would delete from the wrong calendar the day a company's link changes.
+- **An orphan already on the calendar is named and offered, never swept.**
+  `isTaskEvent` (the 📋 and the note header) is the app's own mark, so a
+  leftover can only ever be an event this app wrote; an event no task's
+  `gcalEventId` still claims is drawn with a **LEFT OVER** chip and a ✕ that
+  removes it after a confirm. A calendar delete cannot be undone and the event
+  may be the only record the work was planned — the same posture a cancelled
+  invitation takes. `claimedEventIds` reads **every** task's id, not just the
+  planned ones, so a block moved to another hour is never called an orphan.
+- Both ✕ controls had no accessible name at all; each now says which task or
+  event it acts on.
+Verified in Chromium against the real bundle, with `www.googleapis.com`
+intercepted: removing a restored block sends exactly one `DELETE` for that
+event id and takes it off the grid; a leftover event is marked, offered and
+deleted; a **403 keeps the block on screen and says so** rather than claiming
+it is gone. The control — the same file before the fix — takes the block off
+the grid and sends **no DELETE at all**, which is the orphan on the calendar.
+21 assertions.
+
 ## Tasks — a date decides the quadrant
 A task with a `dueDate` and no quadrant goes into **schedule** — deciding when to do
 something is deciding about it, so it leaves the brain dump. `taskStore.updateTask`
