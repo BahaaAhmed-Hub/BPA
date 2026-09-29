@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { AVATAR_COLORS, ACCOUNT_COLORS } from '@/lib/palettes'
-import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, FolderInput, Send, FileEdit, Star, MailOpen, Sparkles, AlertTriangle, GitBranch, Info, UserPlus, Minus, Check, Trash2 } from 'lucide-react'
+import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, FolderInput, Send, FileEdit, Star, MailOpen, Sparkles, AlertTriangle, GitBranch, Info, UserPlus, Minus, Check, Trash2, AtSign, BellRing, Newspaper, CalendarCheck } from 'lucide-react'
 
 /** One glyph each, so the rail still says what it is when it is folded up. */
 const FOLDER_ICON: Record<MailFolder, typeof Mail> = {
@@ -105,6 +105,16 @@ const CLASS_META = {
   waiting:  { label: 'Waiting',         color: 'var(--sb-ink-3)',   bg: 'var(--sb-field)',       Icon: Clock },
   delegate: { label: 'Delegate',        color: 'var(--sb-positive)',           bg: 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)',  Icon: UserPlus },
 } as const
+
+/** Visual config for the instant header-based classification, shown on every
+ *  row without AI. 'other' is omitted — no badge for the catch-all. */
+const HEADER_CLASS_META: Partial<Record<MailClass, { label: string; color: string; bg: string; Icon: React.ElementType }>> = {
+  'needs-you':    { label: 'Needs you',    color: 'var(--sb-negative)', bg: 'color-mix(in srgb, var(--sb-negative) 10%, transparent)', Icon: AtSign },
+  'invitation':   { label: 'Invitation',   color: 'var(--sb-positive)', bg: 'color-mix(in srgb, var(--sb-positive) 10%, transparent)', Icon: CalendarCheck },
+  'copied':       { label: 'Copied',       color: 'var(--sb-ink-3)',    bg: 'var(--sb-field)',                                         Icon: Copy },
+  'notification': { label: 'Notification', color: 'var(--sb-info)',     bg: 'color-mix(in srgb, var(--sb-info) 10%, transparent)',     Icon: BellRing },
+  'newsletter':   { label: 'Newsletter',   color: 'var(--sb-ink-3)',    bg: 'var(--sb-field)',                                         Icon: Newspaper },
+}
 
 const URGENCY_META = {
   high:   { label: 'High',   color: 'var(--sb-negative)', Icon: AlertTriangle },
@@ -1172,7 +1182,10 @@ export function InboxModule() {
           const isSelected = selectedId === email.id
           const isRead     = readIds.has(email.id)
           const triage     = triageMap[email.id]
-          const classMeta  = triage?.result ? CLASS_META[triage.result.classification] : null
+          const headerClass = classOf.get(email.id)
+          const classMeta  = triage?.result
+            ? CLASS_META[triage.result.classification]
+            : headerClass ? (HEADER_CLASS_META[headerClass] ?? null) : null
           return (
             <SwipeRow
               key={email.id}
