@@ -20,8 +20,8 @@ import type { GCalEvent } from '../../lib/googleCalendar'
 
 // ─── Layout constants ──────────────────────────────────────────────────────────
 
-const HOURS_START = 6   // 6 AM
-const HOURS_END   = 22  // 10 PM
+const HOURS_START = 0   // midnight
+const HOURS_END   = 24  // midnight (full day)
 const HOUR_HEIGHT = 48  // px per hour
 const DAY_WIDTH_MIN = 72
 
@@ -175,8 +175,8 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
   // ─── Stats ─────────────────────────────────────────────────────────────────────
   const catHours = hoursPerCategory(blocks)
   const totalHours = Object.values(catHours).reduce((s, v) => s + v, 0)
-  const workdayHours = (HOURS_END - HOURS_START) * 5
-  const weekCapacity = (HOURS_END - HOURS_START) * 7
+  const workdayHours = 9 * 5   // M–F, 9 working hours each
+  const weekCapacity = 24 * 7  // full week
 
   // ─── JSX ──────────────────────────────────────────────────────────────────────
   return (
