@@ -35,8 +35,12 @@ function loadCalIntelCache(): CachedCal[] {
  * Fetch all visible calendar events for a date range using the same
  * multi-account approach as Cal Intel: fresh tokens per account via
  * tokenManager/Edge Function, hidden cal/account filters respected.
+ *
+ * Pass `primaryOnly: true` to exclude connected/extra accounts and show only
+ * calendars that belong to the primary Google account — used by the day planner
+ * so only the user's own events shape the available slots.
  */
-export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEvent[]> {
+export async function fetchVisibleEvents(start: Date, end: Date, opts?: { primaryOnly?: boolean }): Promise<GCalEvent[]> {
   await refreshPrimaryToken()
   const primaryToken = localStorage.getItem('google_provider_token') ?? ''
 
@@ -61,7 +65,12 @@ export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEv
 
   const extraEmails = new Set(extraAccounts.map(a => a.email))
 
-  const visible = cached.filter(c => !hiddenCals.has(c.id))
+  const extraEmailSet = new Set(extraAccounts.map(a => a.email))
+  const visible = cached.filter(c => {
+    if (hiddenCals.has(c.id)) return false
+    if (opts?.primaryOnly && c.accountEmail && extraEmailSet.has(c.accountEmail)) return false
+    return true
+  })
 
   if (!visible.length) {
     const { events } = await fetchWeekEvents(start, end)
