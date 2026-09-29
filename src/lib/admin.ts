@@ -124,3 +124,60 @@ export async function recentChanges(limit = 50): Promise<(Override & { by: strin
     .order('set_at', { ascending: false }).limit(limit)
   return (data ?? []).map(r => ({ ...r, by: (r.set_by as string | null) ?? null })) as (Override & { by: string | null })[]
 }
+
+// ─── User CRUD ────────────────────────────────────────────────────────────────
+
+async function callAdminFn(payload: Record<string, string>): Promise<{ error?: string; [k: string]: unknown }> {
+  const { data, error } = await supabase.functions.invoke('admin-user-management', { body: payload })
+  if (error) {
+    // supabase-js discards the body on non-2xx; try reading context
+    const detail = (error as unknown as { context?: { error?: string } }).context?.error
+    return { error: detail ?? error.message }
+  }
+  return (data ?? {}) as { [k: string]: unknown }
+}
+
+/** Create a new user. Returns the user's id and the temp password shown once. */
+export async function adminCreateUser(
+  email: string, fullName: string, plan: string, password?: string,
+): Promise<{ userId?: string; tempPassword?: string; error?: string }> {
+  const res = await callAdminFn({ action: 'create', email, full_name: fullName, plan, ...(password ? { password } : {}) })
+  return { userId: res.user_id as string | undefined, tempPassword: res.temp_password as string | undefined, error: res.error }
+}
+
+/** Update mutable profile fields and subscription. Does not touch auth email — use adminUpdateEmail for that. */
+export async function adminUpdateUser(
+  userId: string,
+  fields: { fullName?: string; plan?: string; status?: string },
+): Promise<string | null> {
+  if (fields.fullName !== undefined) {
+    const { error } = await supabase.from('users').update({ full_name: fields.fullName }).eq('id', userId)
+    if (error) return error.message
+  }
+  if (fields.plan !== undefined || fields.status !== undefined) {
+    const patch: Record<string, string> = { user_id: userId }
+    if (fields.plan   !== undefined) patch.plan   = fields.plan
+    if (fields.status !== undefined) patch.status = fields.status
+    const { error } = await supabase.from('subscriptions').upsert(patch, { onConflict: 'user_id' })
+    if (error) return error.message
+  }
+  return null
+}
+
+/** Update email in both auth.users and public.users (service role required). */
+export async function adminUpdateEmail(userId: string, email: string): Promise<string | null> {
+  const res = await callAdminFn({ action: 'update_email', user_id: userId, email })
+  return res.error ?? null
+}
+
+/** Delete the auth user; cascades to public.users and all child tables. */
+export async function adminDeleteUser(userId: string): Promise<string | null> {
+  const res = await callAdminFn({ action: 'delete', user_id: userId })
+  return res.error ?? null
+}
+
+/** Set a new password for any user (service role required). */
+export async function adminResetPassword(userId: string, password: string): Promise<string | null> {
+  const res = await callAdminFn({ action: 'reset_password', user_id: userId, password })
+  return res.error ?? null
+}
