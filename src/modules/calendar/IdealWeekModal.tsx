@@ -5,7 +5,7 @@
 // Secondary input: AI chat sidebar — natural language → structured actions.
 // Also: live stats, goals, rules, and variance analysis.
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { X, MessageSquare, BarChart2, Target, Settings2, GitCompare, Plus, Trash2, Check, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
 import {
   type IdealBlock, type IdealGoal, type IdealRule, type IdealChatMsg, type IdealVariance,
@@ -66,6 +66,19 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
 
   const chatEndRef  = useRef<HTMLDivElement>(null)
   const inputRef    = useRef<HTMLTextAreaElement>(null)
+
+  // Current-time indicator — updates every minute
+  const [nowMinutes, setNowMinutes] = useState(() => {
+    const n = new Date(); return n.getHours() * 60 + n.getMinutes()
+  })
+  useEffect(() => {
+    const id = setInterval(() => {
+      const n = new Date(); setNowMinutes(n.getHours() * 60 + n.getMinutes())
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [])
+  // 0=Mon … 6=Sun (matches DAY_LABELS)
+  const todayCol = useMemo(() => (new Date().getDay() + 6) % 7, [])
 
   // ── Persistence helpers ───────────────────────────────────────────────────────
   function setBlocks(fn: (prev: IdealBlock[]) => IdealBlock[]) {
@@ -251,6 +264,8 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
                   hoursStart={HOURS_START}
                   hoursEnd={HOURS_END}
                   hourHeight={HOUR_HEIGHT}
+                  isToday={day === todayCol}
+                  nowMinutes={nowMinutes}
                   onPointerDown={e => onCanvasPointerDown(e, day)}
                   onPointerMove={onCanvasPointerMove}
                   onPointerUp={onCanvasPointerUp}
@@ -422,7 +437,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
 
 // ─── DayColumn ────────────────────────────────────────────────────────────────
 
-function DayColumn({ day: _day, blocks, drawing, selected, hoursStart, hoursEnd, hourHeight, onPointerDown, onPointerMove, onPointerUp, onBlockClick, onBlockDelete }: {
+function DayColumn({ day: _day, blocks, drawing, selected, hoursStart, hoursEnd, hourHeight, isToday, nowMinutes, onPointerDown, onPointerMove, onPointerUp, onBlockClick, onBlockDelete }: {
   day: number
   blocks: IdealBlock[]
   drawing: DrawState | null
@@ -430,6 +445,8 @@ function DayColumn({ day: _day, blocks, drawing, selected, hoursStart, hoursEnd,
   hoursStart: number
   hoursEnd: number
   hourHeight: number
+  isToday: boolean
+  nowMinutes: number
   onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void
   onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void
   onPointerUp: () => void
@@ -437,6 +454,7 @@ function DayColumn({ day: _day, blocks, drawing, selected, hoursStart, hoursEnd,
   onBlockDelete: (id: string) => void
 }) {
   const totalH = (hoursEnd - hoursStart) * hourHeight
+  const nowTop = (nowMinutes / 60 - hoursStart) * hourHeight
   return (
     <div
       style={{ flex: 1, minWidth: DAY_WIDTH_MIN, position: 'relative', height: totalH, cursor: 'crosshair', borderRight: '1px solid var(--sb-hairline)', userSelect: 'none', touchAction: 'none' }}
@@ -448,6 +466,14 @@ function DayColumn({ day: _day, blocks, drawing, selected, hoursStart, hoursEnd,
       {Array.from({ length: hoursEnd - hoursStart }, (_, i) => (
         <div key={i} style={{ position: 'absolute', left: 0, right: 0, top: i * hourHeight, height: 1, background: 'var(--sb-hairline)', pointerEvents: 'none' }} />
       ))}
+
+      {/* Current time indicator */}
+      {isToday && nowTop >= 0 && nowTop <= totalH && (
+        <>
+          <div style={{ position: 'absolute', left: 0, right: 0, top: nowTop, height: 2, background: '#E74C3C', pointerEvents: 'none', zIndex: 4 }} />
+          <div style={{ position: 'absolute', left: -4, top: nowTop - 4, width: 10, height: 10, borderRadius: 5, background: '#E74C3C', pointerEvents: 'none', zIndex: 4 }} />
+        </>
+      )}
 
       {/* Existing blocks */}
       {blocks.map(b => (

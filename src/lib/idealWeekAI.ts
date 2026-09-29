@@ -27,6 +27,7 @@ RULES:
 - Never vague. If the user says "I want focus time", ask morning or afternoon, how long, every day or specific days? Then create the blocks
 - When adding goals, include reasonable targetHoursWeek based on what the user said
 - Category colors: Focus=#5B8DEF, Health=#0C8140, Learning=#9B59B6, Admin=#E67E22, Client=#E74C3C, Personal=#27AE60, Creative=#F39C12, Team=#2980B9, Other=#7F8C8D
+- IMPORTANT: Whenever you create blocks that span multiple days (e.g. Mon-Fri or every day), ALWAYS also emit an add_rule action to protect that time. Use ruleType "no-meetings" for focus/deep-work/health blocks (with days and startHour/endHour in config), "category-budget" for category limits, "time-preference" for preferred slots. The rule title should be short and action-oriented (e.g. "No meetings Mon-Fri 9-11 AM", "Reserve evenings for family"). This ensures the schedule is enforced, not just drawn.
 
 ACTION TYPES:
 add_block: {type, day:0-6, startHour:0-23, endHour:1-24, title, category, color, blockType:"hard"|"soft"}
