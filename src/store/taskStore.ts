@@ -567,8 +567,9 @@ export const useTaskStore = create<TaskState>()(
           )
           // The block this task made is the same hour: keep the two in step.
           if (task?.gcalEventId) syncEventToTask(task.gcalEventId, nowDone ? 'done' : 'open')
-          // Save immediately — debouncing risks losing the change if user refreshes
-          saveTasksToDB(next.map(toRow)).catch(console.warn)
+          // scheduleDbSync marks the local write so live sync does not pull the
+          // old row back over the completion before the DB write lands.
+          scheduleDbSync(next, [id])
           return {
             tasks: next,
             activities: [...s.activities, act(id, 'status_changed', nowDone ? 'Marked as done' : 'Reopened')],
@@ -590,8 +591,7 @@ export const useTaskStore = create<TaskState>()(
           )
           const t = s.tasks.find(x => x.id === id)
           if (t?.gcalEventId) syncEventToTask(t.gcalEventId, status === 'done' ? 'done' : status === 'cancelled' ? 'cancelled' : 'open')
-          // Save immediately for status changes so completion date persists through refresh
-          saveTasksToDB(next.map(toRow)).catch(console.warn)
+          scheduleDbSync(next, [id])
           return {
             tasks: next,
             activities: [...s.activities, act(id, 'status_changed', `Status → ${status}`)],
