@@ -23,6 +23,8 @@ import { ICON } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { notify } from '@/lib/undo'
 
+const MINE_KEY = 'planner-only-my-calendars'
+
 const HOUR_PX = 56
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
@@ -469,9 +471,17 @@ interface SmartDayPlannerProps {
 
 export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   const { tasks: allTasks, updateTask } = useTaskStore()
+  const signedInEmail = useAuthStore(s => s.user?.email) ?? undefined
   const [blocks, setBlocks] = useState<ScheduledBlock[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [includeBreaks, setIncludeBreaks] = useState(true)
+  // **Mine by default.** A colleague's meeting is not a reason you are busy,
+  // and their calendar being visible to you is a fact about access, not about
+  // your day. Kept per browser so the answer survives closing the planner.
+  const [onlyMine, setOnlyMine] = useState<boolean>(() => {
+    try { return localStorage.getItem(MINE_KEY) !== 'false' } catch { return true }
+  })
+  useEffect(() => { try { localStorage.setItem(MINE_KEY, String(onlyMine)) } catch { /* quota */ } }, [onlyMine])
   const [sortBy, setSortBy] = useState<'priority' | 'created'>('priority')
   const [generating, setGenerating] = useState(false)
   const [todayEvents, setTodayEvents] = useState<GCalEvent[]>([])
@@ -532,12 +542,17 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     if (restored.length > 0) setBlocks(restored)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load today's events from all visible calendars on mount
+  // Load today's events on mount, and again whenever the answer to *whose
+  // calendars* changes — a toggle that does not refetch is a toggle that only
+  // relabels the same list.
   useEffect(() => {
     const dayStart = new Date(todayStr + 'T00:00:00')
     const dayEnd   = new Date(todayStr + 'T23:59:59')
-    void fetchVisibleEvents(dayStart, dayEnd).then(setTodayEvents)
-  }, [todayStr])
+    let live = true
+    void fetchVisibleEvents(dayStart, dayEnd, { onlyMine, signedInEmail })
+      .then(evts => { if (live) setTodayEvents(evts) })
+    return () => { live = false }
+  }, [todayStr, onlyMine, signedInEmail])
   const dateLabel = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   const timeLabel = today.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 
@@ -614,7 +629,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
       // 1. Fetch today's calendar events from ALL visible calendars
       const dayStart = new Date(todayStr + 'T00:00:00')
       const dayEnd   = new Date(todayStr + 'T23:59:59')
-      const events = await fetchVisibleEvents(dayStart, dayEnd)
+      const events = await fetchVisibleEvents(dayStart, dayEnd, { onlyMine, signedInEmail })
       setTodayEvents(events)
 
       // 2. Build busy intervals (fractional hours)
@@ -677,7 +692,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     } finally {
       setGenerating(false)
     }
-  }, [sortedTasks, includeBreaks, todayStr])
+  }, [sortedTasks, includeBreaks, todayStr, onlyMine, signedInEmail])
 
   // ── GCal event creation ───────────────────────────────────────────────────
 
@@ -929,14 +944,28 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
             <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, background: 'var(--sb-info-tint)', color: 'var(--sb-ink-2)', borderRadius: 'var(--sb-r-card)', padding: '3px 10px' }}>
               {unscheduledCount} unscheduled
             </span>
-            {todayEvents.length > 0 && (
-              <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, background: 'var(--sb-info-tint)', color: 'var(--sb-info)', borderRadius: 'var(--sb-r-card)', padding: '3px 10px' }}>
-                {todayEvents.length} calendar event{todayEvents.length !== 1 ? 's' : ''} today
-              </span>
-            )}
+            {/* The count means nothing without the set it counted: the same
+                number is a different fact under each side of the toggle. */}
+            <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, background: 'var(--sb-info-tint)', color: 'var(--sb-info)', borderRadius: 'var(--sb-r-card)', padding: '3px 10px' }}>
+              {todayEvents.length} event{todayEvents.length !== 1 ? 's' : ''} ({onlyMine ? 'my calendars' : 'all calendars'})
+            </span>
             <div style={{ flex: 1 }} />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+              title="Your own main calendar on every connected account, plus calendars you own — not the ones other people have shared with you">
+              <div
+                role="switch" aria-checked={onlyMine} aria-label="Only my calendars" tabIndex={0}
+                onClick={() => setOnlyMine(v => !v)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOnlyMine(v => !v) } }}
+                style={{ width: 40, height: 22, borderRadius: 'var(--sb-r-nav)', background: onlyMine ? 'var(--sb-info)' : 'var(--sb-ink-4)', position: 'relative', cursor: 'pointer', transition: 'background 0.15s', flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: 3, left: onlyMine ? 21 : 3, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', transition: 'left 0.15s', boxShadow: 'var(--sb-shadow-control)' }} />
+              </div>
+              <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-2)', fontWeight: 500 }}>My calendars only</span>
+            </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <div onClick={() => setIncludeBreaks(b => !b)} style={{ width: 40, height: 22, borderRadius: 'var(--sb-r-nav)', background: includeBreaks ? 'var(--sb-warning)' : 'var(--sb-ink-4)', position: 'relative', cursor: 'pointer', transition: 'background 0.15s' }}>
+              <div
+                role="switch" aria-checked={includeBreaks} aria-label="Include breaks" tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIncludeBreaks(b => !b) } }}
+                onClick={() => setIncludeBreaks(b => !b)} style={{ width: 40, height: 22, borderRadius: 'var(--sb-r-nav)', background: includeBreaks ? 'var(--sb-warning)' : 'var(--sb-ink-4)', position: 'relative', cursor: 'pointer', transition: 'background 0.15s' }}>
                 <div style={{ position: 'absolute', top: 3, left: includeBreaks ? 21 : 3, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', transition: 'left 0.15s', boxShadow: 'var(--sb-shadow-control)' }} />
               </div>
               <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-2)', fontWeight: 500 }}>Include breaks</span>

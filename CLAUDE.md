@@ -2364,6 +2364,53 @@ scroll re-runs as blocks and events land, and stops for good the moment the
 person scrolls it themselves. Checked with the page clock fixed at 10:20 —
 nothing → 10 AM, a meeting running since 9 → 9 AM, a meeting at 2 PM → 10 AM.
 
+## Calendars — a colleague's calendar is not one of mine
+`isMyCalendar` + `myCalendarAddresses` in `lib/calendarEvents.ts`, behind the
+planner's **My calendars only** switch. A DX event appeared only with the
+filter *off*: DX's own main calendar was falling out along with the colleagues'
+shared ones, because nothing downstream could tell them apart.
+- **The data was cached and the reader threw it away.**
+  `CalendarIntelligence` has always written `primary` and `accessRole` into
+  `cal-intel-cals-cache`; `calendarEvents.ts` declared its own narrower
+  `CachedCal` — id, summary, colour, account — and dropped both. Everything
+  that reads calendars through it, the planner included, was therefore blind to
+  whose a calendar is.
+- **A person has one main calendar per account**, and inside an account may be
+  given other people's. Those are a fact about *access*, not about your day, so
+  "my calendars" is `primary` across **every connected account** — not the
+  signed-in one's alone, which is exactly the shape the bug had.
+- **`accessRole: 'owner'` is not a test for "mine".** Sharing a calendar with
+  *Make changes and manage sharing* grants `owner` on somebody else's, so the
+  role says what you may do and nothing about whose it is. The **id** is what
+  separates them: a person's calendar is their address. So — `primary` wins;
+  an id that is an address is that person's unless the address is one of mine;
+  a generated `…@group.calendar.google.com` id is mine only if I own it.
+- **The case Google cannot answer**: a team calendar *I* created is `owner` on
+  a generated id, indistinguishable from a personal one — there is no creator
+  field on a calendar. It counts as mine, which is the better default, and
+  `cal-intel-hidden` is the way out for the few that should not be.
+- **The fallback is already narrower than the filter, and refusing it emptied
+  the day.** `fetchVisibleEvents` answers an empty candidate list by calling
+  `fetchWeekEvents`, which asks for `primary` and nothing else — the signed-in
+  account's own main calendar, mine by definition. This first shipped guarding
+  against a leak that cannot happen, and the guard cost every person whose
+  `cal-intel-cals-cache` has not been built their whole grid: the filter would
+  have been the thing that emptied the day. Caught by the planner's other
+  suites dropping from 7 and 8 assertions to 2 — a fixture with no cache is
+  exactly that person.
+- **Not filtered after the fact — never requested.** The candidate list is
+  narrowed *before* the fetch, so nobody else's day is read to draw mine.
+- The chip says which set it counted (`3 events (my calendars)`): the same
+  number is a different fact on each side of the switch, and a count without
+  its set is not one. Both switches are now real `role="switch"` controls with
+  names and keyboard handling; neither had either.
+Verified in Chromium against a fixture built so the wrong rule cannot pass —
+two accounts' own calendars, a colleague's calendar **on which I hold owner**,
+a colleague's read-only one, a group calendar I own and a team one I do not:
+13 assertions. Mine shows three, and only those three are requested; off shows
+six and requests six. The control — the same files before the change — fails
+the default, both colleague cases and the team calendar.
+
 ## Tasks — the planner's ✕ takes the calendar event with it
 Dragging a task onto the Smart Day Planner's grid writes a **real Google
 Calendar event**. Taking it off used to drop the block, clear `gcalEventId`
