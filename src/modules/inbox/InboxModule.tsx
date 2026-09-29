@@ -20,6 +20,11 @@ import { forgetWaiting } from '@/lib/mailWaiting'
 import { mailAccounts, loadMailView, saveMailView, accountsFor, accountLabel, type MailView } from './mailAccounts'
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { SwipeRow } from './SwipeRow'
+import { SmartView } from './SmartView'
+import { SmartReader, type ReaderTarget } from './SmartReader'
+import { runSmartPass, type PassResult, type SmartThread } from '@/lib/mailSmartSync'
+import { markHandled, markThread } from '@/lib/mailSmartDb'
+import { canNeedAction } from '@/lib/mailKinds'
 import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -378,6 +383,19 @@ export function InboxModule() {
   /** Which kind of mail is on screen. `null` is all of it. */
   const [mailClass, setMailClass] = useState<MailClass | null>(null)
   const [bulkBusy, setBulkBusy] = useState<string | null>(null)
+
+  // ── Smart view state ──────────────────────────────────────────────────────
+  // The normal view answers "what is in my mail". The smart one answers "what
+  // is waiting on me", which is a different question and a different shape.
+  const [mode, setMode] = useState<'normal' | 'smart'>(() => {
+    try { return localStorage.getItem('mail-mode') === 'smart' ? 'smart' : 'normal' } catch { return 'normal' }
+  })
+  const [smart, setSmart] = useState<PassResult | null>(null)
+  const [smartLoading, setSmartLoading] = useState(false)
+  const [reading, setReading] = useState<ReaderTarget | null>(null)
+  const SMART_STALE_MS = 5 * 60_000
+  const lastSmartAt = useRef(0)
+  const smartRun = useRef<Promise<unknown> | null>(null)
   const [bulkOpen,   setBulkOpen]   = useState(false)
   const [bulkText,   setBulkText]   = useState('')
   const [bulkDone,   setBulkDone]   = useState(false)
@@ -556,6 +574,100 @@ export function InboxModule() {
   }, [view, folder, user?.email])
 
   useEffect(() => { void loadEmails() }, [loadEmails])
+
+  // ── Smart pass ──────────────────────────────────────────────────────────────
+  const runSmart = useCallback(async (full = false) => {
+    if (smartRun.current && !full) return
+    setSmartLoading(true)
+    const p = runSmartPass({
+      accounts,
+      user: buildMockUser(user),
+      companies: [],
+      onCached: threads => setSmart(prev => prev ?? {
+        threads, fetched: 0, analysed: 0, failed: [],
+      }),
+    })
+      .then(r => { setSmart(r); lastSmartAt.current = Date.now(); return r })
+      .catch(e => { console.warn('smart pass failed', e); return null })
+      .finally(() => { setSmartLoading(false); smartRun.current = null })
+    smartRun.current = p
+  }, [accounts, user])
+
+  useEffect(() => {
+    if (mode !== 'smart') return
+    if (noAuth) return
+    if (smart && Date.now() - lastSmartAt.current < SMART_STALE_MS) return
+    void runSmart(false)
+    const t = setInterval(() => void runSmart(false), 12 * 60 * 60 * 1000)
+    return () => clearInterval(t)
+  }, [mode, runSmart, smart, noAuth, SMART_STALE_MS])
+
+  // ── Smart view helpers ───────────────────────────────────────────────────────
+  function markSmart(ts: SmartThread[], patch: Partial<SmartThread>) {
+    setSmart(prev => prev && {
+      ...prev,
+      threads: prev.threads.map(t =>
+        ts.some(x => x.threadId === t.threadId && x.accountEmail === t.accountEmail) ? { ...t, ...patch } : t),
+    })
+  }
+
+  const readingThread = useMemo(
+    () => (reading ? smart?.threads.find(t => t.threadId === reading.threadId) ?? null : null),
+    [reading, smart])
+
+  function openSmartThread(t: SmartThread) {
+    setReading({ threadId: t.threadId, subject: t.subject, account: { email: t.accountEmail, isPrimary: t.accountEmail === user?.email } })
+  }
+
+  async function handleSmartDone(ts: SmartThread[], handled: boolean) {
+    markSmart(ts, { handled })
+    if (handled) {
+      await Promise.all(ts.map(t => markHandled(t.accountEmail, t.threadId, true)))
+    }
+  }
+
+  function handleSmartDraft(t: SmartThread) {
+    openSmartThread(t)
+  }
+
+  async function handleSmartSend(t: SmartThread) {
+    markSmart([t], { acted: `Replied to ${t.fromName}`, draft: '' })
+  }
+
+  function handleSmartDiscardDraft(t: SmartThread) {
+    markSmart([t], { draft: '' })
+  }
+
+  function handleSmartTasks(ts: SmartThread[]) {
+    const titles = ts.map(t => t.subject ? `Follow up: ${t.subject}` : `Follow up with ${t.fromName}`)
+    addTasksBatch(titles.map(title => ({ title, quadrant: null, company: 'personal', status: 'open' as const, completed: false })))
+    ts.forEach((t, i) => markSmart([t], { acted: `Task made — ${titles[i]}` }))
+  }
+
+  async function handleSmartArchive(ts: SmartThread[]) {
+    const at = Date.now()
+    markSmart(ts, { archivedAt: at })
+    await Promise.all(ts.map(t => markThread(t.accountEmail, t.threadId, { archived_at: new Date(at).toISOString() })))
+  }
+
+  function handleSmartDismiss(ts: SmartThread[]) {
+    void handleSmartDone(ts, true)
+  }
+
+  function handleSmartIgnore(ts: SmartThread[]) {
+    markSmart(ts, { muted: true })
+    ts.forEach(t => void markThread(t.accountEmail, t.threadId, { muted: true }))
+  }
+
+  function handleSmartAcknowledge(ts: SmartThread[]) {
+    markSmart(ts, { acknowledged: true })
+    ts.forEach(t => void markThread(t.accountEmail, t.threadId, { acknowledged_at: new Date().toISOString() }))
+  }
+
+  type Rsvp = 'accepted' | 'tentative' | 'declined'
+  async function handleSmartRsvp(t: SmartThread, _answer: Rsvp) {
+    markSmart([t], { handled: true })
+  }
 
   const handleTriage = useCallback(async (email: Email) => {
     setTriageMap(prev => ({
@@ -1811,6 +1923,25 @@ export function InboxModule() {
           </div>
         )}
 
+        {/* Normal / Smart toggle */}
+        {!noAuth && (
+          <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'flex-end' }}>
+            <Segmented
+              size="md"
+              aria-label="How to read the mail"
+              value={mode}
+              onChange={m => {
+                setMode(m); setSelectedId(null)
+                try { localStorage.setItem('mail-mode', m) } catch { /* quota */ }
+              }}
+              options={[
+                { value: 'normal', label: 'Mail',  title: 'Every message, newest first' },
+                { value: 'smart',  label: 'Smart', title: 'What is waiting on you, in four groups' },
+              ]}
+            />
+          </div>
+        )}
+
         {/* Compose panel */}
         {/* A new message uses the same panel as a reply, because it is the
             same act with fewer fields filled in. */}
@@ -1872,8 +2003,60 @@ export function InboxModule() {
           </div>
         )}
 
-        {/* Main grid — only show two-column layout when we have emails */}
-        {noAuth || fetchError ? (
+        {/* Main content — Smart view or Normal list */}
+        {mode === 'smart' && !noAuth && !fetchError ? (
+          <div className="mail-smart-split" style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SmartView
+                result={smart}
+                loading={smartLoading}
+                accounts={accounts}
+                openThreadId={reading?.threadId ?? null}
+                onRefresh={full => void runSmart(full)}
+                onReconnect={() => void signInWithGoogle()}
+                onOpen={openSmartThread}
+                onDraft={handleSmartDraft}
+                onSendDraft={t => void handleSmartSend(t)}
+                onDiscardDraft={handleSmartDiscardDraft}
+                onTask={handleSmartTasks}
+                onHandled={(ts, h) => void handleSmartDone(ts, h)}
+                onArchive={ts => void handleSmartArchive(ts)}
+                onIgnore={handleSmartIgnore}
+                onDismiss={handleSmartDismiss}
+                onAcknowledge={handleSmartAcknowledge}
+                onRsvp={(t, a) => void handleSmartRsvp(t, a)}
+              />
+            </div>
+            {reading && (
+              <SmartReader
+                target={reading}
+                width={420}
+                className="mail-smart-reader"
+                actions={{
+                  onClose: () => setReading(null),
+                  onReply: (to, subject, threadId, quoted, messageId) =>
+                    setCompose({ mode: 'reply', account: reading.account, to, subject, threadId, inReplyTo: messageId, quoted }),
+                  onReplyAll: (to, cc, subject, threadId, quoted, messageId) =>
+                    setCompose({ mode: 'replyAll', account: reading.account, to, cc, subject, threadId, inReplyTo: messageId, quoted }),
+                  onForward: (subject, quoted) =>
+                    setCompose({ mode: 'forward', account: reading.account, to: '', subject, quoted }),
+                  onArchive: () => { if (readingThread) void handleSmartArchive([readingThread]) },
+                  onDelete: () => { setReading(null) },
+                  onUnread: () => { setReading(null) },
+                  onTask: () => { if (readingThread) handleSmartTasks([readingThread]) },
+                  onDone: () => { if (readingThread) { void handleSmartDone([readingThread], true); setReading(null) } },
+                  onIgnoreThread: () => { if (readingThread) { handleSmartIgnore([readingThread]); setReading(null) } },
+                  onRsvp: readingThread?.kind === 'invitation'
+                    ? a => { void handleSmartRsvp(readingThread, a) }
+                    : undefined,
+                  onAcknowledge: readingThread && !canNeedAction(readingThread.kind) && !readingThread.acknowledged
+                    ? () => handleSmartAcknowledge([readingThread])
+                    : undefined,
+                }}
+              />
+            )}
+          </div>
+        ) : noAuth || fetchError ? (
           <div style={{ maxWidth: 520, margin: '40px auto' }}>{renderRight()}</div>
         ) : (
           <div style={{
