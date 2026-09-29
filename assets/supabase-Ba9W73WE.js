@@ -1,1 +1,0 @@
-import{t as e}from"./supabase-CekihSHs.js";export{e as supabase};

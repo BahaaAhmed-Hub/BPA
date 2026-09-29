@@ -1,0 +1,1 @@
+import{t as e}from"./supabase-BUTPnGlE.js";export{e as supabase};
