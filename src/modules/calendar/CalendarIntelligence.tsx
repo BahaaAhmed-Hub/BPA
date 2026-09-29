@@ -57,6 +57,7 @@ import {
   loadBlockingRules, applyBlockingRules, cleanupStaleBlocks,
   loadApplied, saveApplied, type AppliedBlocksMap, type SourceEvent,
 } from '@/lib/blockingRules'
+import IdealWeekModal from './IdealWeekModal'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const HOUR_PX  = 54     // pixels per hour (Sunlit Bento: 54px/hr)
@@ -1183,6 +1184,7 @@ export function CalendarIntelligence() {
   const [hiddenAccounts, setHiddenAccounts] = useState<Set<string>>(loadHiddenAccounts)
   // Start as not-loading if we have cached events so the grid renders immediately.
   const [loadingEvents,   setLoadingEvents]   = useState(() => loadEventsCache(getWeekStart(new Date())).length === 0)
+  const [showIdealWeek,   setShowIdealWeek]   = useState(false)
   const [noAuth,          setNoAuth]          = useState(false)
   const [fetchError,      setFetchError]      = useState<string | null>(null)
   const [refreshing,      setRefreshing]      = useState(false)
@@ -2436,6 +2438,21 @@ export function CalendarIntelligence() {
               })}
               style={CAL_DISC}><ChevronRight size={ICON.md} strokeWidth={STROKE.rest} /></button>
 
+            {/* Ideal Week designer — open the weekly template canvas */}
+            <button
+              className="cal-ctl"
+              onClick={() => setShowIdealWeek(true)}
+              title="Design your ideal week"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+                height: 'var(--sb-h-pill)', boxSizing: 'border-box', padding: '0 14px', borderRadius: 999,
+                background: 'var(--sb-card)', color: 'var(--sb-ink-1)',
+                border: 'var(--sb-border-width) solid var(--sb-border)',
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+              }}>
+              <Sparkles size={13} strokeWidth={STROKE.active} /> Ideal Week
+            </button>
+
             {/* The one deliberate way in, now that a bare click on the grid does
                 nothing. Drawing a span on the grid is the other; a finger cannot
                 draw, so on a touch screen this is the only one. */}
@@ -3142,6 +3159,14 @@ export function CalendarIntelligence() {
         }
         .cal-grid-creating, .cal-grid-creating * { cursor: crosshair !important; }
       `}</style>
+
+      {/* Ideal Week designer modal */}
+      {showIdealWeek && (
+        <IdealWeekModal
+          onClose={() => setShowIdealWeek(false)}
+          realEvents={events}
+        />
+      )}
     </div>
   )
 }
