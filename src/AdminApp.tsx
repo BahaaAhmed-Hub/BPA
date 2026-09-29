@@ -8,12 +8,24 @@ initAppearance()
 
 type Phase = 'login' | 'checking' | 'panel' | 'denied'
 
+// Admin auth uses a synthetic email derived from the username
+function usernameToEmail(username: string) {
+  return `${username.trim().toLowerCase()}@admin.local`
+}
+
 export default function AdminApp() {
   const [phase, setPhase] = useState<Phase>('login')
-  const [email, setEmail]       = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  const [changingPw, setChangingPw] = useState(false)
+  const [newPw, setNewPw]           = useState('')
+  const [confirmPw, setConfirmPw]   = useState('')
+  const [pwError, setPwError]       = useState('')
+  const [pwSuccess, setPwSuccess]   = useState('')
+  const [savingPw, setSavingPw]     = useState(false)
 
   // If already signed in as an admin, skip the login form
   useEffect(() => {
@@ -29,9 +41,10 @@ export default function AdminApp() {
     e.preventDefault()
     setError('')
     setSubmitting(true)
+    const email = usernameToEmail(username)
     const { error: authErr } = await supabase.auth.signInWithPassword({ email, password })
     if (authErr) {
-      setError(authErr.message)
+      setError('Invalid username or password')
       setSubmitting(false)
       return
     }
@@ -50,9 +63,26 @@ export default function AdminApp() {
     await supabase.auth.signOut()
     window.location.hash = '#admin'
     setPhase('login')
-    setEmail('')
+    setUsername('')
     setPassword('')
     setError('')
+    setChangingPw(false)
+  }
+
+  async function changePassword(e: React.FormEvent) {
+    e.preventDefault()
+    setPwError('')
+    setPwSuccess('')
+    if (newPw !== confirmPw) { setPwError('Passwords do not match'); return }
+    if (newPw.length < 6)   { setPwError('Password must be at least 6 characters'); return }
+    setSavingPw(true)
+    const { error } = await supabase.auth.updateUser({ password: newPw })
+    setSavingPw(false)
+    if (error) { setPwError(error.message); return }
+    setPwSuccess('Password updated.')
+    setNewPw('')
+    setConfirmPw('')
+    setTimeout(() => { setChangingPw(false); setPwSuccess('') }, 1500)
   }
 
   if (phase === 'checking') {
@@ -76,20 +106,57 @@ export default function AdminApp() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--sb-page)', padding: '24px 0' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, gap: 12 }}>
             <span style={{ fontSize: 18, fontWeight: 600, fontFamily: 'Outfit, system-ui, sans-serif', color: 'var(--sb-ink-1)' }}>
               Admin
             </span>
-            <button onClick={signOut} style={{ ...btnStyle, background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)' }}>
-              Sign out
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { setChangingPw(v => !v); setPwError(''); setPwSuccess('') }}
+                style={{ ...btnStyle, background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)' }}>
+                Change password
+              </button>
+              <button onClick={signOut}
+                style={{ ...btnStyle, background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)' }}>
+                Sign out
+              </button>
+            </div>
           </div>
+
+          {/* Inline password change */}
+          {changingPw && (
+            <form onSubmit={changePassword} style={{ ...cardStyle, marginBottom: 24, maxWidth: 380 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', textTransform: 'uppercase', marginBottom: 16 }}>
+                Change password
+              </div>
+              <label style={labelStyle}>New password</label>
+              <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)}
+                required style={inputStyle} placeholder="••••••••" autoFocus />
+              <label style={{ ...labelStyle, marginTop: 12 }}>Confirm password</label>
+              <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
+                required style={inputStyle} placeholder="••••••••" />
+              {pwError   && <p style={{ color: '#C62828', fontSize: 13, margin: '8px 0 0' }}>{pwError}</p>}
+              {pwSuccess && <p style={{ color: '#0C8140', fontSize: 13, margin: '8px 0 0' }}>{pwSuccess}</p>}
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <button type="submit" disabled={savingPw} style={{ ...btnStyle, flex: 1 }}>
+                  {savingPw ? 'Saving…' : 'Save'}
+                </button>
+                <button type="button" onClick={() => setChangingPw(false)}
+                  style={{ ...btnStyle, background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', flex: 1 }}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+
           <AdminPanel />
         </div>
       </div>
     )
   }
 
+  // Login form
   return (
     <div style={centreStyle}>
       <form onSubmit={signIn} style={cardStyle}>
@@ -97,15 +164,16 @@ export default function AdminApp() {
           Admin sign in
         </h1>
 
-        <label style={labelStyle}>Email</label>
+        <label style={labelStyle}>Username</label>
         <input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
+          type="text"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
           required
           autoFocus
+          autoComplete="username"
           style={inputStyle}
-          placeholder="admin@example.com"
+          placeholder="bahaa.ahmed"
         />
 
         <label style={{ ...labelStyle, marginTop: 14 }}>Password</label>
@@ -114,6 +182,7 @@ export default function AdminApp() {
           value={password}
           onChange={e => setPassword(e.target.value)}
           required
+          autoComplete="current-password"
           style={inputStyle}
           placeholder="••••••••"
         />

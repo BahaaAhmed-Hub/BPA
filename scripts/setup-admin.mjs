@@ -3,10 +3,10 @@
  * Creates (or resets) the static admin user in Supabase.
  *
  * Usage:
- *   ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=yourpassword node scripts/setup-admin.mjs
+ *   ADMIN_USERNAME=bahaa.ahmed ADMIN_PASSWORD=yourpassword node scripts/setup-admin.mjs
  *
- * Or add ADMIN_EMAIL and ADMIN_PASSWORD to .env.local (never commit that file).
- * Also reads SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from .env.local.
+ * Or add these to .env.local (never commit that file).
+ * Supabase requires an email; the username is stored as <username>@admin.local internally.
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -31,21 +31,20 @@ try {
 
 const SUPABASE_URL         = process.env.SUPABASE_URL         || envVars.SUPABASE_URL         || envVars.VITE_SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || envVars.SUPABASE_SERVICE_ROLE_KEY
-const ADMIN_EMAIL          = process.env.ADMIN_EMAIL          || envVars.ADMIN_EMAIL
+const ADMIN_USERNAME       = process.env.ADMIN_USERNAME       || envVars.ADMIN_USERNAME
 const ADMIN_PASSWORD       = process.env.ADMIN_PASSWORD       || envVars.ADMIN_PASSWORD
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
   process.exit(1)
 }
-if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
-  console.error('Set ADMIN_EMAIL and ADMIN_PASSWORD (in .env.local or as env vars)')
+if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
+  console.error('Set ADMIN_USERNAME and ADMIN_PASSWORD (in .env.local or as env vars)')
   process.exit(1)
 }
-if (ADMIN_PASSWORD.length < 12) {
-  console.error('ADMIN_PASSWORD must be at least 12 characters')
-  process.exit(1)
-}
+
+// Supabase auth requires an email address; we construct one from the username
+const ADMIN_EMAIL = `${ADMIN_USERNAME}@admin.local`
 
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -57,12 +56,12 @@ const found = existing?.users?.find(u => u.email === ADMIN_EMAIL)
 
 let userId
 if (found) {
-  console.log(`User ${ADMIN_EMAIL} already exists — updating password.`)
+  console.log(`User ${ADMIN_USERNAME} already exists — updating password.`)
   const { error } = await admin.auth.admin.updateUserById(found.id, { password: ADMIN_PASSWORD })
   if (error) { console.error('Failed to update password:', error.message); process.exit(1) }
   userId = found.id
 } else {
-  console.log(`Creating user ${ADMIN_EMAIL}…`)
+  console.log(`Creating user ${ADMIN_USERNAME}…`)
   const { data, error } = await admin.auth.admin.createUser({
     email: ADMIN_EMAIL,
     password: ADMIN_PASSWORD,
@@ -72,13 +71,13 @@ if (found) {
   userId = data.user.id
 }
 
-// Insert into public.admins (ignore if already there)
+// Insert into public.admins
 const { error: admErr } = await admin
   .from('admins')
   .upsert({ user_id: userId }, { onConflict: 'user_id' })
 if (admErr) { console.error('Failed to insert into public.admins:', admErr.message); process.exit(1) }
 
 console.log(`\n✓ Admin user ready`)
-console.log(`  Email:   ${ADMIN_EMAIL}`)
-console.log(`  User ID: ${userId}`)
+console.log(`  Username: ${ADMIN_USERNAME}`)
+console.log(`  User ID:  ${userId}`)
 console.log(`\nSign in at: <your-app-url>/#admin`)
