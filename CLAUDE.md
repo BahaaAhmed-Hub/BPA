@@ -2480,6 +2480,43 @@ board and draws the card in Brain dump, which is the report. The Owners board
 needed a company with a person on it to have a column that is not *Unassigned*;
 there, "no owner" is the correct answer and proves nothing.
 
+## Tasks — a deleted task came back, and the chart was the only place it showed
+`professor-tasks-deleted` in `taskStore.ts`. Deleting a task took it out of the
+store and left the push that deletes it on the server **1.5s behind**, and
+nothing anywhere recorded that it had been deleted. `loadFromDB`'s `dbOnly`
+pass appends **every** server row not present locally — so any reload inside
+that window handed the task straight back, and the hydration push then wrote
+the resurrection out again.
+- **A completed task is hidden from the board**, so the only thing on screen
+  that showed its return was `TaskBanner`'s six-day chart: *N closed* going
+  back up by one for a task you had deleted. That is the report.
+- **The ways it is lost are ordinary**: a refused push (offline, an expired
+  token, an RLS denial), a tab closed inside the window, or a second device
+  reloading before the push lands and pushing its own copy back. The last two
+  lose the delete for good.
+- **`dirty` cannot answer this.** It means "this row might not be on the
+  server", and a deleted row is not in the list being pushed at all — so a
+  third list is needed, of ids to **refuse** when the server offers them back.
+  Entries carry the moment of the delete and expire after 30 days: an id is a
+  uuid, so a tombstone can never block a task made later, and the expiry keeps
+  the list bounded without waiting on a push that may never succeed.
+- **A task in the list being written is, by definition, not deleted**, so
+  `markTasksDirty` lifts any tombstone it finds there. That is how ⌘Z lifts its
+  own: the undo snapshot carries the task back and pushes the whole list with
+  it. Without that, undo would restore a task only until the next reload killed
+  it again — worse than no undo.
+- **Refusing the row also repairs the server.** `joined` is then shorter than
+  `rows`, which makes `changed` true, so the hydration push runs and
+  `saveTasksToDB` finally deletes the row — the failed push retried.
+- **Not cleared by `clearUserData`**, and `clearAll` does **not** tombstone:
+  that path is the account switch, and those rows belong to whoever was signed
+  in before.
+`scripts/deleted-task-stays-deleted.mjs [refused|push|undo]` is the
+measurement, driven through the row's own trash in the list view and read off
+the banner. Control, on the code before the fix: the task is gone and the chart
+reads 0 closed, and nine seconds later it is back and the chart reads **1**
+again.
+
 ## Tasks — a task made on purpose is not a capture
 `placementForNew(task)` in `BrainDumpRail.tsx` is the one answer, and **both**
 ways of making a task go through it: the column's **+ Add task**

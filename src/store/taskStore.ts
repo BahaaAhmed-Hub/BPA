@@ -153,11 +153,66 @@ if (localStorage.getItem(DIRTY_KEY) == null) {
 // an untouched device overwrite everyone else.
 if (localStorage.getItem(EDITED_KEY) == null) saveEditedTasks(new Set())
 
+// ─── A third list: what was deleted here ─────────────────────────────────────
+//
+// Deleting a task takes it out of the store and leaves the push that would
+// delete it on the server 1.5s behind — and nothing anywhere recorded that it
+// had been deleted. `loadFromDB`'s `dbOnly` pass appends **every** server row
+// not present locally, so any reload before that push landed handed the task
+// straight back, and the hydration push then wrote the resurrection out again.
+// A refused push (offline, an expired token, RLS), a tab closed inside the
+// window, or a second device reloading first all land there, and in the last
+// two cases the task is back for good.
+//
+// A **completed** task is hidden from the board, so the only thing on screen
+// that showed it had returned was the Tasks banner: "N closed" over the last
+// six days going back up by one for a task you had deleted.
+//
+// `dirty` cannot answer this — it means "might not be on the server", and the
+// row is not in the list being pushed at all. So this is its own list, of ids
+// to **refuse** when the server offers them back. Entries carry the moment of
+// the delete and expire after thirty days: a task id is a uuid, so a tombstone
+// can never block a task made later, and an expiry keeps the list bounded
+// without needing the push to have succeeded.
+//
+// Deliberately NOT cleared by `clearUserData`: signing out inside the push
+// window is one of the ways the delete gets lost, and these ids are this
+// account's own.
+const GONE_KEY = 'professor-tasks-deleted'
+const GONE_TTL = 30 * 24 * 60 * 60 * 1000
+
+function loadGoneTasks(): Map<string, number> {
+  try {
+    const raw = localStorage.getItem(GONE_KEY)
+    const obj = raw ? (JSON.parse(raw) as Record<string, number>) : {}
+    const cut = Date.now() - GONE_TTL
+    return new Map(Object.entries(obj).filter(([, at]) => at > cut))
+  } catch { return new Map() }
+}
+
+function saveGoneTasks(m: Map<string, number>): void {
+  try { localStorage.setItem(GONE_KEY, JSON.stringify(Object.fromEntries(m))) } catch { /* quota */ }
+}
+
+/** This task was deleted here. Refuse it if the server offers it back. */
+function markTaskGone(id: string): void {
+  const gone = loadGoneTasks()
+  gone.set(id, Date.now())
+  saveGoneTasks(gone)
+}
+
 function markTasksDirty(tasks: Task[], edited: string[]): void {
   markLocalWrite('tasks')
   const dirty = loadDirtyTasks()
   for (const t of tasks) dirty.add(t.id)
   saveDirtyTasks(dirty)
+  // A task in the list being written is, by definition, not deleted. That is
+  // how ⌘Z lifts its own tombstone: the undo snapshot carries the task back
+  // and pushes the whole list, this one included.
+  const gone = loadGoneTasks()
+  let lifted = false
+  for (const t of tasks) if (gone.delete(t.id)) lifted = true
+  if (lifted) saveGoneTasks(gone)
   // Only what actually changed. The whole list is *written*, but the whole list
   // was not *edited*, and saying it was is what let one device speak for every
   // task it happened to be holding.
@@ -238,6 +293,7 @@ export const useTaskStore = create<TaskState>()(
           if (rows.length > 0) {
             const dirty = loadDirtyTasks()
             const edited = loadEditedTasks()
+            const gone = loadGoneTasks()
             let joined: Task[] = []
             set(s => {
               // Merge: the server wins on fields, local order is preserved —
@@ -254,9 +310,14 @@ export const useTaskStore = create<TaskState>()(
                   // Only a real unpushed edit made here outranks the server.
                   return edited.has(t.id) ? { ...fromDb, ...t } : { ...t, ...fromDb }
                 })
-              // Append tasks that exist in DB but not locally
+              // Append tasks that exist in DB but not locally — except the
+              // ones deleted here, which is the whole reason that list exists.
+              // Excluding them also makes `changed` true below, so the push
+              // that failed is retried and the server is finally corrected.
               const localIds = new Set(local.map(t => t.id))
-              const dbOnly = rows.filter(r => !localIds.has(r.id)).map(r => fromRow(r))
+              const dbOnly = rows
+                .filter(r => !localIds.has(r.id) && !gone.has(r.id))
+                .map(r => fromRow(r))
               joined = [...merged, ...dbOnly]
               return { tasks: joined }
             })
@@ -540,6 +601,7 @@ export const useTaskStore = create<TaskState>()(
         if (doomed?.gcalEventId) {
           void import('@/lib/taskCalendar').then(m => m.removeTaskEvent(doomed))
         }
+        markTaskGone(id)
         set(s => {
           const next = s.tasks.filter(t => t.id !== id)
           scheduleDbSync(next, [id])
