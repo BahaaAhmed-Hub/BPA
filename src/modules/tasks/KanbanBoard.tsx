@@ -137,16 +137,45 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
   const hiddenCount = column.tasks.length - visibleTasks.length
 
   function commitAdd() {
-    if (!newTitle.trim()) { setAdding(false); setNewTitle(''); return }
-    addTask({
-      title: newTitle.trim(),
-      quadrant: null,
+    const title = newTitle.trim()
+    if (!title) { setAdding(false); setNewTitle(''); return }
+
+    // **The column is the decision, and it means something different on each
+    // board.** This only ever wrote `boardStatus`, so on Companies, Owners,
+    // Task types or Scheduled a card typed into a column carried nothing that
+    // put it there. It is the same patch dropping a card into that column
+    // writes — one answer to one question.
+    const inColumn: Partial<Task> =
+      column.id === BRAIN_DUMP_ID ? {}
+      : boardType === 'status'    ? { boardStatus: column.id }
+      : boardType === 'company'   ? (column.id === 'personal'
+          ? { company: 'personal' as Task['company'], companyId: undefined }
+          : { company: column.id as Task['company'], companyId: column.id })
+      : boardType === 'owner'     ? { owner: column.id === 'unassigned' ? undefined : column.id }
+      : boardType === 'type'      ? { taskType: column.id as TaskType }
+      : boardType === 'scheduled' ? { dueDate: bucketToDate(column.id) }
+      : {}
+
+    const draft = {
+      title,
       company: (companies[0]?.id ?? 'teradix') as Task['company'],
       ...(companies[0] ? { companyId: companies[0].id } : {}),
-      status: 'open',
+      status: 'open' as Task['status'],
       completed: false,
-      // A card captured in the dump has no status yet — that is the point
-      ...(column.id === BRAIN_DUMP_ID ? {} : { boardStatus: column.id }),
+      ...inColumn,
+    }
+
+    addTask({
+      ...draft,
+      // **A card typed into a column has been placed.** `quadrant: null` is
+      // what the brain dump *is*, and the status board draws a dumped task in
+      // Brain dump whatever its `boardStatus` — so every task created in a
+      // column jumped straight back to the pile the moment it was made. The
+      // quadrant comes from the task's own fields, the same call a drop out of
+      // the dump makes; the dump column is the one place null is right.
+      quadrant: column.id === BRAIN_DUMP_ID
+        ? null
+        : suggestPlacement({ ...draft, id: '', createdAt: '' } as Task).quadrant,
     })
     setNewTitle('')
     setAdding(false)

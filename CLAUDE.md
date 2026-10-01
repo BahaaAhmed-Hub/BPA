@@ -2451,6 +2451,35 @@ it is gone. The control — the same file before the fix — takes the block off
 the grid and sends **no DELETE at all**, which is the orphan on the calendar.
 21 assertions.
 
+## Tasks — a card typed into a column belongs to that column
+`commitAdd` in `KanbanBoard.tsx` wrote the same two things whatever board you
+were on: `boardStatus: column.id` and **`quadrant: null`**. Both are wrong, and
+the second is the one you see.
+- **`quadrant: null` is what the brain dump *is*** (`isDumped`), and the status
+  board draws a dumped task in **Brain dump whatever its `boardStatus`** —
+  `dumpedIds` is tested first. So a task typed into a column appeared there for
+  one render and jumped straight back to the pile. It was never placed; it only
+  looked placed.
+- **The column means something different on each of the five boards** —
+  a status, a company, an owner, a task type, or a date bucket. Writing
+  `boardStatus` for a column that is a *company* files a company id in the
+  status field and leaves the card in no column at all on Companies, Owners,
+  Task types and Scheduled.
+- The fix is the patch **a drop into that column already writes**
+  (`handleDrop`), so there is one answer to one question: `boardStatus` /
+  `companyId`+`company` / `owner` / `taskType` / `dueDate: bucketToDate(id)`.
+  The quadrant comes from `suggestPlacement` on the task's own fields — the
+  same call a drop out of the dump makes — and the **brain-dump column is the
+  one place `null` is right**, because that is what capturing without deciding
+  means.
+Verified in Chromium on all five boards, reading the **store** rather than the
+pixels (where a card is drawn is not which column it is in): the task is
+created, carries the field its column stands for, and is not in the dump. The
+control — the same file before the fix — returns `quadrant: null` on every
+board and draws the card in Brain dump, which is the report. The Owners board
+needed a company with a person on it to have a column that is not *Unassigned*;
+there, "no owner" is the correct answer and proves nothing.
+
 ## Tasks — a date decides the quadrant
 A task with a `dueDate` and no quadrant goes into **schedule** — deciding when to do
 something is deciding about it, so it leaves the brain dump. `taskStore.updateTask`
