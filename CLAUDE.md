@@ -2064,6 +2064,30 @@ until the next load and vanished. `completed` now says which kind of day it is,
 and `loadHabitLogsFromDB` reads it back rather than ticking every row it finds.
 A `quantity` of 0 is not a day.
 
+## Habits — a deleted habit came back, and brought its history with it
+`professor-habits-deleted` in `habitsStore.ts` — the same hole as
+`professor-tasks-deleted`, one store along, and the same three-part fix.
+Deleting a habit takes it out of the list and leaves the push 1.5s behind;
+`dirty` cannot record it, because the habit is not in the list being pushed at
+all. Meanwhile `loadFromDB` builds its merge from **every** row the server
+sends, so any reload inside that window brings the habit back — **and its whole
+history with it**, since the logs are keyed by habit id. Every figure on the
+screen counts `habits`, so the habit is back in the stats.
+- `rows` is the server's answer minus what was deleted here, and it is what
+  `merged`, `dbIds`, `onServer` and the `changed` test all read. The guard stays
+  on the raw `dbHabits.length`: "the server replied with nothing" and
+  "everything it sent was deleted here" are different facts.
+- `scheduleHabitsSync` lifts a tombstone for every habit in the list it is
+  about to write — a habit being pushed is by definition not deleted — which is
+  also what would make an undo work if habits ever grew one.
+- Refusing the row makes `all.length !== rows.length`, so the push runs and
+  `saveHabitsToDB` finally deletes it server-side: the failed delete, retried.
+- `clearAll` does **not** tombstone — that path is the account switch.
+`scripts/deleted-habit-stays-deleted.mjs [refused|push]`: two habits, one
+logged today, so the headline reads 50% with both and 100% with one. Control,
+on the code before the fix: the habit comes back and the headline drops from
+**100% to 50%** — the deleted habit counting in the stats, as a number.
+
 ## Habits — one ✕ in a header, and it closes
 The habit record's header carried two: the panel's own Close, and the
 picture's Remove pinned to its top-right corner. Remove was the **stronger**

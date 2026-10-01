@@ -172,6 +172,55 @@ const saveDirty  = (ids: Set<string>) => saveIds(DIRTY_KEY, ids)
 const loadEdited = () => loadIds(EDITED_KEY)
 const saveEdited = (ids: Set<string>) => saveIds(EDITED_KEY, ids)
 
+// ─── A third list: what was deleted here ─────────────────────────────────────
+//
+// The same hole `professor-tasks-deleted` closes, one store along. Deleting a
+// habit takes it out of the list and leaves the push 1.5s behind, and `dirty`
+// cannot record it: the habit is not in the list being pushed at all. Meanwhile
+// `loadFromDB` builds `merged` from **every** row the server sends, so any
+// reload inside that window brings the habit back — and it brings its whole
+// history with it, because the logs are keyed by habit id and were never
+// touched. Every figure on the habits screen counts `habits`, so a resurrected
+// habit is a habit back in the stats.
+//
+// A refused push, a tab closed inside the window, or a second device reloading
+// first all land there, and the last two lose the delete for good.
+//
+// Entries carry the moment of the delete and expire after thirty days: an id is
+// a uuid, so a tombstone can never block a habit made later. Deliberately not
+// cleared by `clearUserData`/`clearAll` — that path is the account switch, and
+// those rows belong to whoever was signed in before.
+const GONE_KEY = 'professor-habits-deleted'
+const GONE_TTL = 30 * 24 * 60 * 60 * 1000
+
+function loadGone(): Map<string, number> {
+  try {
+    const raw = localStorage.getItem(GONE_KEY)
+    const obj = raw ? (JSON.parse(raw) as Record<string, number>) : {}
+    const cut = Date.now() - GONE_TTL
+    return new Map(Object.entries(obj).filter(([, at]) => at > cut))
+  } catch { return new Map() }
+}
+
+function saveGone(m: Map<string, number>): void {
+  try { localStorage.setItem(GONE_KEY, JSON.stringify(Object.fromEntries(m))) } catch { /* quota */ }
+}
+
+/** This habit was deleted here. Refuse it if the server offers it back. */
+function markHabitGone(id: string): void {
+  const gone = loadGone()
+  gone.set(id, Date.now())
+  saveGone(gone)
+}
+
+/** A habit in the list being written is, by definition, not deleted. */
+function liftGone(habits: Habit[]): void {
+  const gone = loadGone()
+  let lifted = false
+  for (const h of habits) if (gone.delete(h.id)) lifted = true
+  if (lifted) saveGone(gone)
+}
+
 function markDirty(...ids: string[]): void {
   const dirty = loadDirty(), edited = loadEdited()
   for (const id of ids) { dirty.add(id); edited.add(id) }
@@ -210,6 +259,7 @@ function syncedShape(h: {
 
 let dbSyncTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleHabitsSync(habits: Habit[], logs?: HabitLogs) {
+  liftGone(habits)
   if (dbSyncTimer) clearTimeout(dbSyncTimer)
   dbSyncTimer = setTimeout(() => {
     markLocalWrite('habits')
@@ -280,6 +330,7 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
   deleteHabit(id) {
     const next = get().habits.filter(h => h.id !== id)
     saveHabits(next)
+    markHabitGone(id)
     markDirty(id)
     scheduleHabitsSync(next)
     set({ habits: next })
@@ -305,6 +356,11 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
     try {
       const [dbHabits, logRes] = await Promise.all([loadHabitsFromDB(), loadHabitLogsFromDB()])
       const { logs, quantities } = logRes
+      // What the server sent, minus the habits deleted on this device. The
+      // guard below stays on the raw answer: "the server replied with nothing"
+      // and "everything it sent was deleted here" are different facts.
+      const gone = loadGone()
+      const rows = gone.size ? dbHabits.filter(h => !gone.has(h.id)) : dbHabits
       if (dbHabits.length > 0) {
         // The server wins, except for habits this device has changed and not
         // yet pushed.
@@ -326,7 +382,7 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
         // Only a real, unpushed edit made *here* outranks the server's copy.
         // Merely having a habit is not an opinion about it.
         const edited = loadEdited()
-        const merged: Habit[] = dbHabits.map((h, i) => {
+        const merged: Habit[] = rows.map((h, i) => {
           const localH = local.find(l => l.id === h.id)
           const mine = !!localH && edited.has(h.id)
 
@@ -363,7 +419,7 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
         // server can change under an open app: deleted on another device. The
         // dirty list separates them. Keeping both would make a habit deleted on
         // the laptop reappear on the iPad and then get pushed back up.
-        const dbIds = new Set(dbHabits.map(h => h.id))
+        const dbIds = new Set(rows.map(h => h.id))
         const localOnly = local.filter(l => !dbIds.has(l.id) && dirty.has(l.id))
 
         // Order is the one thing the server cannot answer for: there is no
@@ -407,9 +463,9 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
         // Only when it would actually say something new, though — see
         // syncedShape. The logs are not pushed at all: they came from the
         // server a moment ago.
-        const onServer = new Map(dbHabits.map(h => [h.id, syncedShape(h)]))
+        const onServer = new Map(rows.map(h => [h.id, syncedShape(h)]))
         const changed =
-          all.length !== dbHabits.length ||
+          all.length !== rows.length ||
           all.some(h => onServer.get(h.id) !== syncedShape(h))
         if (changed) scheduleHabitsSync(all)
       } else {
