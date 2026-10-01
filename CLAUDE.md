@@ -2730,6 +2730,33 @@ it. Nobody at that address is waiting. The order is the other way round now:
   RSVP or Acknowledge where the kind calls for them. Reading a message is when
   you decide what to do about it.
 
+## Mail — a bulk action you cannot see is one that did not happen
+Select all in **Internal FYI**, click an action, and seventy-eight rows sat
+exactly where they were. Two faults, and either on its own was enough.
+- **An FYI row had no checkbox.** A quiet row is drawn as a compact one-liner
+  — it was a single `<button>`, and a checkbox cannot live inside a button, so
+  it simply had none. `Select all` added all 78 keys, the bar said *78
+  selected*, and **not one row on screen showed any sign of it** (measured: 0
+  of 78 ticked). A selection you cannot see is one you cannot trust. The row is
+  a `div` with the text as the button now, exactly as `Row` is built, and it
+  carries the same checkbox and the same picked tint.
+- **FYI is where "done" goes.** `grouped` files a handled thread under `fyi`
+  whatever its own section, and a thread filed there in the first place is
+  there because nothing is wanted of it — so **Mark done** moved a row from fyi
+  to fyi, and **Dismiss**, which *is* Mark done under the name that says what
+  it promises, did the same. Seventy-eight server writes, no change on screen.
+  Neither is offered in that view any more.
+- **Put back is the move only this view has**, and it had no button at all.
+  `onHandled(sel.filter(t => t.handled), false)` — and the count on the button
+  is of those rows only, because "Put 78 back" about rows that were never taken
+  away is a lie about what the click will do. A row put back leaves FYI for the
+  group it came from; one that was always FYI stays, which is correct.
+Archive and Mute were right all along: both write `markSmart` fields that
+`visibleThreads` filters on, so the rows leave.
+`scripts/smart-bulk-applies.mjs` is the measurement — 78 stored threads, half
+of them handled-out-of-`action`, half natively FYI. 10/10 after; the control on
+the old code fails 5, the first being the 0 ticked checkboxes.
+
 ## Mail — the four are views, not sections
 Four collapsible sections stacked down the page meant scrolling past the three
 you were not working on to reach the one you were; folding them away traded that

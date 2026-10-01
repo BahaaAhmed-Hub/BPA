@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, EyeOff, X as XIcon, HelpCircle, Send, Trash2, LogIn } from 'lucide-react'
+import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, EyeOff, X as XIcon, HelpCircle, Send, Trash2, LogIn, Undo2 } from 'lucide-react'
 import { Button, Card, Pill } from '@/components/ui'
 import { ICON, STROKE } from '@/lib/type'
 import type { MailAccount } from '@/lib/gmail'
@@ -233,6 +233,12 @@ export function SmartView({
   const here = view === 'all' ? META.action : META[view]
   const shown = view === 'all' ? threads : grouped[view]
   const sel = pickedIn(shown)
+  // Of the selection, how many are in FYI *because somebody marked them done*
+  // rather than because nothing was ever wanted of them. Only those have
+  // anywhere to be put back to, so only they are counted on the button —
+  // "Put 78 back" about rows that were never taken away is a lie about what
+  // the click will do.
+  const undone = sel.filter(t => t.handled).length
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -360,17 +366,41 @@ export function SmartView({
               {view === 'action' ? `Make ${sel.length} task${sel.length === 1 ? '' : 's'}`
                 : `Follow up on ${sel.length}`}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => { onHandled(sel, true); setPicked(new Set()) }}>
-              <Check size={ICON.sm} strokeWidth={STROKE.active} /> Mark done
-            </Button>
+            {/* ── Only what can change something here ────────────────────
+                **FYI is where "done" goes.** `grouped` files a handled thread
+                under fyi whatever its own section, and a thread filed there in
+                the first place is there because nothing is wanted of it — so
+                in this view Mark done moved a row from fyi to fyi, and Dismiss
+                (which *is* Mark done, under the name that says what it
+                promises) did the same. Select all, click, seventy-eight server
+                writes, and seventy-eight rows sitting exactly where they were:
+                a bulk action that read as having been ignored.
+                What a row in here can still do is leave — Archive or Mute —
+                become a task, or be **put back**, which is the one thing only
+                this view can offer and had no button at all. */}
+            {view === 'fyi' ? (
+              undone > 0 && (
+                <Button size="sm" variant="ghost"
+                  onClick={() => { onHandled(sel.filter(t => t.handled), false); setPicked(new Set()) }}
+                  title="Un-mark these — each goes back to the group it came from">
+                  <Undo2 size={ICON.sm} strokeWidth={STROKE.active} /> Put {undone} back
+                </Button>
+              )
+            ) : (
+              <Button size="sm" variant="ghost" onClick={() => { onHandled(sel, true); setPicked(new Set()) }}>
+                <Check size={ICON.sm} strokeWidth={STROKE.active} /> Mark done
+              </Button>
+            )}
             <Button size="sm" variant="ghost" onClick={() => { onArchive(sel); setPicked(new Set()) }}
               title="Out of the inbox in Gmail, and out of this list">
               <Archive size={ICON.sm} strokeWidth={STROKE.rest} /> Archive
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => { onDismiss(sel); setPicked(new Set()) }}
-              title="Take these out of the list — a new message on any of them brings it back">
-              <EyeOff size={ICON.sm} strokeWidth={STROKE.rest} /> Dismiss
-            </Button>
+            {view !== 'fyi' && (
+              <Button size="sm" variant="ghost" onClick={() => { onDismiss(sel); setPicked(new Set()) }}
+                title="Take these out of the list — a new message on any of them brings it back">
+                <EyeOff size={ICON.sm} strokeWidth={STROKE.rest} /> Dismiss
+              </Button>
+            )}
             <Button size="sm" variant="ghost" onClick={() => { onIgnore(sel); setPicked(new Set()) }}
               title="Mute these threads — new messages on them never come back either">
               <BellOff size={ICON.sm} strokeWidth={STROKE.rest} /> Mute
@@ -406,26 +436,44 @@ export function SmartView({
               // you are looking at FYI or at everything at once.
               const where = t.handled ? 'fyi' : t.section
               return where === 'fyi' ? (
-                <button key={key(t)} onClick={() => onOpen(t)}
-                  style={{
-                    display: 'flex', alignItems: 'baseline', gap: 10, textAlign: 'left',
-                    padding: '8px 16px', background: 'transparent', border: 'none',
-                    borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
-                    cursor: 'pointer', fontFamily: 'inherit', width: '100%',
-                  }}>
+                /* ── A quiet row is still a row you can pick ────────────────
+                   This was one `<button>` and nothing else, so an FYI row had
+                   no checkbox: **Select all** added all seventy-eight of them
+                   to the selection, the bar said "78 selected", and not one
+                   row on screen showed the faintest sign of it. A selection
+                   you cannot see is one you cannot trust, and a bulk action
+                   taken on it reads as having done nothing whatever it did.
+                   A checkbox cannot live inside a button, so the row is a div
+                   with the text as the button, exactly as `Row` is built. */
+                <div key={key(t)} style={{
+                  display: 'flex', alignItems: 'baseline', gap: 10,
+                  padding: '8px 16px',
+                  borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
+                  background: picked.has(key(t)) ? 'var(--sb-accent-tint)' : 'transparent',
+                }}>
+                  <input type="checkbox" checked={picked.has(key(t))} onChange={() => toggle(t)}
+                    aria-label={`Select "${t.subject}"`}
+                    style={{ flexShrink: 0, accentColor: 'var(--sb-ink-1)', cursor: 'pointer' }} />
                   {view === 'all' && <SectionDot id={where} />}
-                  <span style={{
-                    fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', fontWeight: 500,
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '42%',
-                  }}>{t.subject}</span>
-                  <span style={{
-                    flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                  }}>{t.awaitingCustomer ? 'Awaiting customer — no follow-up needed' : (t.need || t.fromName)}</span>
-                  <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
-                    {when(t.lastAt)}
-                  </span>
-                </button>
+                  <button onClick={() => onOpen(t)} title="Open the thread"
+                    style={{
+                      display: 'flex', alignItems: 'baseline', gap: 10, textAlign: 'left',
+                      flex: 1, minWidth: 0, padding: 0, border: 'none', background: 'transparent',
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}>
+                    <span style={{
+                      fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', fontWeight: 500,
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '42%',
+                    }}>{t.subject}</span>
+                    <span style={{
+                      flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>{t.awaitingCustomer ? 'Awaiting customer — no follow-up needed' : (t.need || t.fromName)}</span>
+                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
+                      {when(t.lastAt)}
+                    </span>
+                  </button>
+                </div>
               ) : (
                 <Row key={key(t)} t={t} picked={picked.has(key(t))} onToggle={() => toggle(t)}
                   manyAccounts={accounts.length > 1}
