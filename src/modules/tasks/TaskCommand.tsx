@@ -7,7 +7,7 @@ import {
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { EisenhowerBoard } from './EisenhowerBoard'
-import { BrainDumpRail } from './BrainDumpRail'
+import { BrainDumpRail, placementForNew } from './BrainDumpRail'
 import { KanbanBoard } from './KanbanBoard'
 import { TaskDetailPanel } from './TaskDetailPanel'
 import { TaskCard } from './TaskCard'
@@ -160,13 +160,23 @@ export function TaskCommand() {
   function handleNewTask() {
     const firstCompany = loadVisibleCompanies()[0]
     openNewestRef.current = true
-    addTask({
+    const draft = {
       title: '',
-      quadrant: null,
       company: (firstCompany?.id ?? 'personal') as Task['company'],
       companyId: firstCompany?.id,
-      status: 'open',
+      status: 'open' as Task['status'],
       completed: false,
+    }
+    addTask({
+      ...draft,
+      // **New task is not a brain dump capture.** It wrote `quadrant: null`,
+      // which is what the dump *is*, and then opened the detail panel on it —
+      // so the one gesture that says "I am deciding about this right now"
+      // filed it with the things not yet thought about, and nothing but a due
+      // date ever took it back out. Naming it, giving it a company, a priority
+      // or an owner all left it sitting in Brain dump. Capture still has its
+      // own way in: the rail's multi-line box, voice, mail.
+      quadrant: placementForNew({ ...draft, id: '', createdAt: '' } as Task),
     } as Omit<Task, 'id' | 'createdAt'>)
   }
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)

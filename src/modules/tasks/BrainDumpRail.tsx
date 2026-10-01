@@ -66,6 +66,22 @@ export function suggestPlacement(task: Task): Suggestion {
   return { quadrant, bucket, inferred: !hasDate || !hasPriority }
 }
 
+/** Where a task **made on purpose** goes — typed into a board column, or made
+ *  with New task and opened in the panel there and then.
+ *
+ *  `suggestPlacement` answers out of the task's own fields, so a task that has
+ *  none of them yet lands in Eliminate — which is a decision ("do not do
+ *  this") nobody made, about a task somebody has just this second chosen to
+ *  write down. With nothing to read it joins **Schedule**, the quadrant for
+ *  the important things that are not urgent yet, which is also where
+ *  `updateTask` puts a dumped task the moment it is given a date. What it must
+ *  never be is `null`: null is what the brain dump *is*, and a task created in
+ *  a column and filed in the dump is the gesture being ignored. */
+export function placementForNew(task: Task): Quadrant {
+  if (task.dueDate || task.priority || task.companyId) return suggestPlacement(task).quadrant
+  return 'schedule'
+}
+
 /** Which board column the same fields imply. */
 export function suggestColumn(task: Task): string {
   if (task.completed) return 'done'

@@ -17,7 +17,7 @@ import { loadCustomStatuses, sortCustomStatuses, saveCustomStatuses, moveStatus 
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { TaskCard } from './TaskCard'
 import { sortUrgentFirst } from './taskVisuals'
-import { suggestPlacement } from './BrainDumpRail'
+import { placementForNew, suggestPlacement } from './BrainDumpRail'
 import { CountBadge } from './controls'
 import { ICON, STROKE } from '@/lib/type'
 
@@ -175,7 +175,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
       // the dump makes; the dump column is the one place null is right.
       quadrant: column.id === BRAIN_DUMP_ID
         ? null
-        : suggestPlacement({ ...draft, id: '', createdAt: '' } as Task).quadrant,
+        : placementForNew({ ...draft, id: '', createdAt: '' } as Task),
     })
     setNewTitle('')
     setAdding(false)

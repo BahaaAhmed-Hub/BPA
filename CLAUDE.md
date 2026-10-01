@@ -2480,6 +2480,27 @@ board and draws the card in Brain dump, which is the report. The Owners board
 needed a company with a person on it to have a column that is not *Unassigned*;
 there, "no owner" is the correct answer and proves nothing.
 
+## Tasks — a task made on purpose is not a capture
+`placementForNew(task)` in `BrainDumpRail.tsx` is the one answer, and **both**
+ways of making a task go through it: the column's **+ Add task**
+(`KanbanBoard.commitAdd`) and **New task** in the Tasks header
+(`TaskCommand.handleNewTask`). The second wrote `quadrant: null` — which is
+what the brain dump *is* — and then opened the detail panel on it, so the one
+gesture that says *I am deciding about this right now* filed it with the things
+not yet thought about. Naming it, giving it a company, a priority or an owner
+all left it in Brain dump; only a due date ever took it back out
+(`updateTask`'s own rule).
+- **`suggestPlacement` is not enough on its own.** It answers out of the task's
+  fields, so a task with none of them yet lands in **Eliminate** — "do not do
+  this", a decision nobody made about a task somebody has just chosen to write
+  down. With nothing to read, `placementForNew` returns **schedule**: the same
+  quadrant a date puts a dumped task in.
+- Capture still has its own ways in — the rail's multi-line box, voice, mail —
+  and the dump column itself is the one place `null` is right.
+Measured with `scripts/new-task-is-placed.mjs` (header button, 5 checks) and
+`scripts/kanban-add-stays-put.mjs <board>` (5 boards × 7). Control: before the
+fix the header's new task read `quadrant=null` and stayed there after naming.
+
 ## Tasks — a date decides the quadrant
 A task with a `dueDate` and no quadrant goes into **schedule** — deciding when to do
 something is deciding about it, so it leaves the brain dump. `taskStore.updateTask`
