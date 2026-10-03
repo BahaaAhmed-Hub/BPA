@@ -22,6 +22,18 @@ export interface CalendarTarget {
   /** Why this calendar — for a message that explains itself. */
   source: 'task' | 'company' | 'default'
   companyName?: string
+  /** **The company names an account, and it could not be found.**
+   *
+   *  Without this the answer was an unqualified `calendarId: 'primary'`, and
+   *  `'primary'` written with the signed-in account's token is *your own*
+   *  calendar — so a company whose account had been disconnected, or whose
+   *  cache sign-out had cleared, had its work filed silently in your diary.
+   *  A caller that cannot open the named account must refuse, not fall back.
+   *  `accountId: 'primary'` is the documented sentinel for "use the primary
+   *  token" and is deliberately not this. */
+  accountUnresolved?: boolean
+  /** The account the company asked for, resolvable or not. */
+  wantedAccountId?: string
 }
 
 /** In order: what the task itself says, then what its company says, then the
@@ -38,11 +50,18 @@ export function resolveTaskCalendar(
 
   const account = co?.accountId ? loadAccounts().find(a => a.id === co.accountId) : undefined
   const onOtherAccount = account && !account.isPrimary
+  // `primary` is the id the app uses for "the account you signed in with", and
+  // it is deliberately absent from `professor-connected-accounts`. Anything
+  // else the company names and we cannot find is a question nobody can answer.
+  const unresolved = !!co?.accountId && co.accountId !== 'primary' && !account
+  const wanted = co?.accountId ? { wantedAccountId: co.accountId } : {}
 
   if (task.calendarId) {
     return {
       calendarId: task.calendarId,
       ...(onOtherAccount ? { accountId: account.id, accountEmail: account.email } : {}),
+      ...(unresolved ? { accountUnresolved: true } : {}),
+      ...wanted,
       source: 'task',
       companyName: co?.name,
     }
@@ -52,6 +71,8 @@ export function resolveTaskCalendar(
     return {
       calendarId: co.calendarId,
       ...(onOtherAccount ? { accountId: account.id, accountEmail: account.email } : {}),
+      ...(unresolved ? { accountUnresolved: true } : {}),
+      ...wanted,
       source: 'company',
       companyName: co.name,
     }
@@ -62,8 +83,10 @@ export function resolveTaskCalendar(
   return {
     calendarId: 'primary',
     ...(onOtherAccount ? { accountId: account.id, accountEmail: account.email } : {}),
-    source: onOtherAccount ? 'company' : 'default',
-    companyName: onOtherAccount ? co?.name : undefined,
+    ...(unresolved ? { accountUnresolved: true } : {}),
+    ...wanted,
+    source: onOtherAccount || unresolved ? 'company' : 'default',
+    companyName: onOtherAccount || unresolved ? co?.name : undefined,
   }
 }
 

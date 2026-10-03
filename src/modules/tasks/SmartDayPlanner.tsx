@@ -19,6 +19,7 @@ import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import { taskEventTitle, taskEventDescription, isTaskEvent } from '@/lib/taskEvent'
 import { resolveTaskCalendar } from '@/lib/taskCalendar'
 import { loadAccounts, getPrimaryToken, type ConnectedAccount } from '@/lib/multiAccount'
+import { getGoogleToken } from '@/lib/tokenManager'
 import { ICON } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { notify } from '@/lib/undo'
@@ -716,25 +717,60 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
    *  Creating and removing an event are the same question asked twice, so
    *  they read one answer: a second copy of this would delete from the wrong
    *  calendar the day somebody changes how a company is linked. */
-  function calendarFor(task: Task): { calendarId: string; token: string | null; linkedAccount: boolean } {
+  async function calendarFor(task: Task): Promise<{
+    calendarId: string; token: string | null; linkedAccount: boolean; refusal?: string
+  }> {
     const co = task.companyId
       ? loadCompaniesWithCal().find(c => c.id === task.companyId)
       : null
     // The company's calendar and the company's account are separate facts: a
     // company calendar can live on the ordinary account, and it used to be
     // ignored unless an account was linked too.
-    const calendarId = resolveTaskCalendar(task).calendarId
-    const linked = co?.accountId ? loadAccounts().find(a => a.id === co.accountId) : undefined
+    const target = resolveTaskCalendar(task)
+    const calendarId = target.calendarId
+
+    // ── Never the primary token for somebody else's account ────────────────
+    //
+    // This used to read `linked?.providerToken || getPrimaryToken()`, which is
+    // three mistakes in one expression. It took the stored token **raw**, with
+    // no freshness check and without the edge function that is the only route
+    // to a connected account's token; and when that token was empty or an hour
+    // old it fell through to the account you signed in with. Written against
+    // `calendarId: 'primary'` — which is what a company with an account but no
+    // calendar of its own resolves to — that is **your own diary**, and it
+    // failed silently: no error, no picker, a block with a client's name on
+    // your personal calendar. Measured: a POST to `primary` bearing the
+    // signed-in token for a Teradix task.
+    //
+    // `getGoogleToken` is the same door `scheduleTaskToCalendar` uses, so the
+    // panel, the auto-push and this drag now agree.
+    if (target.accountUnresolved) {
+      return {
+        calendarId, token: null, linkedAccount: true,
+        refusal: `${target.companyName ?? 'That company'} is linked to a Google account this browser cannot find — reconnect it in Settings.`,
+      }
+    }
+    if (target.accountEmail) {
+      const token = await getGoogleToken(target.accountEmail)
+      return {
+        calendarId, token, linkedAccount: true,
+        ...(token ? {} : { refusal: `${target.accountEmail} needs reconnecting before its calendar can be used.` }),
+      }
+    }
     return {
       calendarId,
-      token: linked?.providerToken || getPrimaryToken() || null,
+      token: getPrimaryToken() || null,
       linkedAccount: !!co?.accountId,
     }
   }
 
   async function tryScheduleToCalendar(task: Task, block: ScheduledBlock) {
-    const { calendarId, token, linkedAccount } = calendarFor(task)
+    const { calendarId, token, linkedAccount, refusal } = await calendarFor(task)
     const co = linkedAccount
+
+    // A company whose account cannot be opened is said out loud. Silence here
+    // is what let the block land on the wrong calendar.
+    if (refusal) { notify(refusal); return }
 
     if (!token) {
       // No token at all — show account picker
@@ -819,8 +855,13 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
 
     if (!eventId || !task) { updateTask(taskId, unplanned); return }
 
-    const { calendarId, token } = calendarFor(task)
-    const gone = token ? await deleteCalendarEventWithToken(token, calendarId, eventId) : false
+    // Creating and removing are the same question, so they read the same
+    // answer — including its refusal: deleting with the wrong account's token
+    // reaches a different calendar, where this id means nothing.
+    const { calendarId, token, refusal } = await calendarFor(task)
+    const gone = token && !refusal
+      ? await deleteCalendarEventWithToken(token, calendarId, eventId)
+      : false
 
     if (gone) {
       // Drop it from the events layer too, or the grid keeps drawing it until
@@ -833,9 +874,11 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     // **Keep the id.** The event is still there and this is the only way back
     // to it; a silent clear is how it became unfindable in the first place.
     updateTask(taskId, unplanned)
-    notify(token
-      ? `"${task.title}" is off the plan, but its calendar event could not be removed — it is still on your calendar`
-      : `"${task.title}" is off the plan. Sign in to Google again to remove its calendar event`)
+    notify(refusal
+      ? `"${task.title}" is off the plan. ${refusal}`
+      : token
+        ? `"${task.title}" is off the plan, but its calendar event could not be removed — it is still on your calendar`
+        : `"${task.title}" is off the plan. Sign in to Google again to remove its calendar event`)
   }
 
   /**

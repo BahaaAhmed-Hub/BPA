@@ -2435,6 +2435,47 @@ a colleague's read-only one, a group calendar I own and a team one I do not:
 six and requests six. The control — the same files before the change — fails
 the default, both colleague cases and the team calendar.
 
+## Tasks — the planner wrote a client's block on your own calendar
+Asked whether a scheduled task always lands on the right account's calendar,
+the answer was **no, on one of the two doors**. `resolveTaskCalendar` was right
+and `scheduleTaskToCalendar` honoured it — the detail panel and App's auto-push
+refuse a company whose account cannot be opened. The planner's **drag** had its
+own answer and it was this:
+
+```ts
+token: linked?.providerToken || getPrimaryToken() || null
+```
+
+Three mistakes in one expression. It read the stored token **raw** — no
+freshness check, and not through the edge function that is the only route to a
+connected account's token — and when that token was empty or an hour old it
+**fell through to the account you signed in with**. A company bound to an
+account but with *no calendar of its own* resolves to `calendarId: 'primary'`,
+and `'primary'` written with the signed-in token is **your own diary**. So the
+Teradix block landed on the personal calendar, with no error and no picker.
+- **Measured, not read**: a real dnd-kit drag (PointerSensor, distance 5) with
+  `www.googleapis.com` intercepted. Control, on the old code: `POST
+  calendars/primary/events` bearing the signed-in token for a Teradix task.
+  After: no POST at all, the block still planned locally, and the reason said
+  out loud. A third case drags a task whose account *can* be opened and asserts
+  the POST goes to `dx-cal@…` with DX's token — otherwise the fix would only
+  have proved it stopped writing.
+- **The control passes for the healthy account**, which is exactly why this was
+  intermittent: the OR picks the right branch while the stored token is fresh,
+  and only misfiles once it has aged out or sign-out cleared the cache.
+- **`accountUnresolved` is the new half of `CalendarTarget`.** A company naming
+  an account that `loadAccounts()` cannot find used to come back as an
+  unqualified `'primary'` — indistinguishable from "no company at all". A
+  caller that cannot open the named account must refuse, not fall back.
+  `accountId: 'primary'` stays the sentinel for "use the primary token" and is
+  deliberately not this.
+- `calendarFor` is now async and goes through `getGoogleToken(accountEmail)` —
+  the same door `scheduleTaskToCalendar` uses — so the panel, the auto-push and
+  the drag give one answer. `removeBlock` reads the same refusal: deleting with
+  the wrong account's token reaches a calendar where that event id means
+  nothing, and it keeps the id and says so.
+`scripts/task-lands-on-right-calendar.mjs [panel|planner|planner-ok]`.
+
 ## Tasks — the planner's ✕ takes the calendar event with it
 Dragging a task onto the Smart Day Planner's grid writes a **real Google
 Calendar event**. Taking it off used to drop the block, clear `gcalEventId`
