@@ -6,7 +6,7 @@ import { Check, Paperclip, CalendarDays, Flame, Trash2, User } from 'lucide-reac
 import { useDraggable } from '@dnd-kit/core'
 import type { Task, TaskType, Priority } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META } from '@/types'
-import { getVisibleUsers, loadVisibleCompanies } from '@/types'
+import { getVisibleUsers, loadVisibleCompanies, isOnFire } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { useDeliverableGate } from './DeliverablePrompt'
 import { openLabel, resolveTaskVisuals, TASK_TYPE_ORDER } from './taskVisuals'
@@ -28,6 +28,10 @@ export function TaskRow({ task, onOpen, dense }: {
   const owners = getVisibleUsers().filter(u => (task.companyId ? u.companyId === task.companyId : true))
   const companies = loadVisibleCompanies()
   const v = resolveTaskVisuals(task)
+  // A flame is lit only while the task is actually on fire: a done or
+  // cancelled task still carrying `urgent` is history, and drawing it as
+  // burning put a count on the page that nothing agreed with.
+  const flaming = isOnFire(task)
   const { TypeIcon } = v
   const attachmentCount = task.attachments?.length ?? 0
 
@@ -109,12 +113,14 @@ export function TaskRow({ task, onOpen, dense }: {
         <button
           data-nm
           onClick={e => { e.stopPropagation(); toggleUrgent(task.id) }}
-          title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}
+          title={flaming ? 'On fire — click to clear'
+            : task.urgent ? 'Was on fire — this task is no longer open'
+            : 'Mark as on fire'}
           style={{
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
-            color: task.urgent ? 'var(--sb-negative)' : 'var(--sb-border)',
+            color: flaming ? 'var(--sb-negative)' : 'var(--sb-border)',
           }}>
-          <Flame size={ICON.sm} strokeWidth={STROKE.rest} fill={task.urgent ? 'var(--sb-negative)' : 'none'} />
+          <Flame size={ICON.sm} strokeWidth={STROKE.rest} fill={flaming ? 'var(--sb-negative)' : 'none'} />
         </button>
 
         <ControlSlot size={14}>

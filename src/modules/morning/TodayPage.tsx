@@ -34,6 +34,7 @@ import {
 } from '@/lib/invitations'
 import { notify } from '@/lib/undo'
 import { TASK_TYPE_META, inferTaskType, isTaskHidden, loadDynamicCompanies } from '@/types'
+import { isOnFire, isOpenTask } from '@/types'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { TASK_TYPE_ICON } from '@/modules/tasks/taskVisuals'
 import type { Task } from '@/types'
@@ -158,8 +159,8 @@ function composeBrief(args: {
   today: string
 }): Brief {
   const { tasks, events, habits, logs, score, today } = args
-  const open = tasks.filter(t => !t.completed && t.status !== 'cancelled')
-  const urgent = open.filter(t => t.urgent)
+  const open = tasks.filter(isOpenTask)
+  const urgent = open.filter(isOnFire)
   const meetings = events.filter(e => !!e.start.dateTime)
   const weekAgo = offsetDays(today, -7)
   const closedThisWeek = tasks.filter(t => t.completed && t.completedAt && t.completedAt >= weekAgo).length
@@ -1894,10 +1895,10 @@ export function TodayPage() {
   )
 
   const openTasks = useMemo(
-    () => tasks.filter(t => !t.completed && t.status !== 'cancelled' && t.status !== 'done'),
+    () => tasks.filter(isOpenTask),
     [tasks],
   )
-  const urgentCount = openTasks.filter(t => t.urgent).length
+  const urgentCount = openTasks.filter(isOnFire).length
   // Carried over means its day has passed and it is still open. This counted
   // any task older than a day that had a time on it, so something planned for
   // next week was reported as carried over from the past.

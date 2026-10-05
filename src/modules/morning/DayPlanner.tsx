@@ -19,7 +19,7 @@ import {
   type PlanSlot, type BlockType, type SlotPlanPrefs, type SlotPlanPriorityTask,
 } from '@/lib/professor'
 import type { DbCalendarEvent, DbTask } from '@/types/database'
-import { loadVisibleCompanies } from '@/types'
+import { isOpenTask, loadVisibleCompanies } from '@/types'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 
@@ -423,7 +423,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         {(() => {
           const dynCompanies = loadVisibleCompanies()
           const today        = todayISO()
-          const pending      = tasks.filter(t => !t.completed && t.status !== 'done')
+          const pending      = tasks.filter(isOpenTask)
           if (pending.length === 0) return null
 
           // Group by company; tasks with no company go under 'other'

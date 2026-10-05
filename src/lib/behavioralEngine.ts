@@ -6,6 +6,7 @@
  */
 
 import type { Task } from '@/types'
+import { isOpenTask } from '@/types'
 import type { Habit, HabitLogs } from '@/store/habitsStore'
 import { loadQuantityLogs } from '@/store/habitsStore'
 import { dayProgress } from '@/lib/habitProgress'
@@ -283,7 +284,7 @@ export function generateInsights(rank: RankResult, identities: IdentityResult[])
 // ─── Decisive Objectives ─────────────────────────────────────────────────────
 
 export function getDecisiveObjectives(tasks: Task[]): Task[] {
-  const open = tasks.filter(t => !t.completed && t.status !== 'done')
+  const open = tasks.filter(isOpenTask)
 
   // Priority order: do (urgent+important) → schedule (important) → delegate → has due date → urgent flag
   const score = (t: Task): number => {

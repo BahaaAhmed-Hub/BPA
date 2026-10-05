@@ -1,4 +1,5 @@
 import { useTaskStore } from '@/store/taskStore'
+import { isOpenTask } from '@/types'
 import { loadEventStatuses, saveEventStatuses } from '@/lib/eventStatus'
 import type { EventStatus } from '@/lib/eventMetadata'
 
@@ -47,7 +48,7 @@ export function syncTaskToEvent(eventId: string, status: EventStatus | null): vo
     if (task.status === 'cancelled') return
     store.updateTask(task.id, { status: 'cancelled', completed: false, completedAt: undefined })
   } else {
-    if (!task.completed && task.status !== 'cancelled') return
+    if (isOpenTask(task)) return
     store.updateTask(task.id, { status: 'open', completed: false, completedAt: undefined })
   }
 }

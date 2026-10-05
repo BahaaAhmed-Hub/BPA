@@ -8,7 +8,7 @@ import { X, RefreshCw, Check, CalendarPlus } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
 import type { Task } from '@/types'
-import { isTaskHidden, loadDynamicCompanies } from '@/types'
+import { isTaskHidden, isOpenTask, loadDynamicCompanies } from '@/types'
 import {
   createCalendarEventWithToken,
   deleteCalendarEventWithToken,
@@ -558,7 +558,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   const timeLabel = today.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 
   const tasks = allTasks.filter(t =>
-    !isTaskHidden(t) && !t.completed && t.status !== 'done' &&
+    !isTaskHidden(t) && isOpenTask(t) &&
     // exclude tasks already planned for today — they'll show on the timeline
     !(t.dueDate === todayStr && t.boardStatus === 'planned' && t.plannedTime)
   )

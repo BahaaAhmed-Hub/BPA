@@ -8,7 +8,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { useTaskStore } from '@/store/taskStore'
 import { suppressUndo } from '@/lib/undo'
 import type { Quadrant, Task } from '@/types'
-import { isTaskHidden, loadVisibleCompanies } from '@/types'
+import { isTaskHidden, isOpenTask, loadVisibleCompanies } from '@/types'
 import { TaskRow } from './TaskRow'
 import { buildTaskGroups, sortUrgentFirst, type TaskGroupBy } from './taskVisuals'
 import { CountBadge } from './controls'
@@ -212,7 +212,7 @@ export function EisenhowerBoard({
       if (target) onOpen(target.id)
       return
     }
-    const open = qTasks.filter(t => !t.completed && t.status !== 'cancelled')
+    const open = qTasks.filter(isOpenTask)
     if (open.length === 0) return
     if (!window.confirm(`Archive ${open.length} task${open.length === 1 ? '' : 's'}?`)) return
     // One entry for the lot — forty ⌘Zs to undo an archive is not an undo.

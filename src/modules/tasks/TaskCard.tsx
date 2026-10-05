@@ -3,7 +3,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Trash2, Check, Clock, CalendarDays, Paperclip, Flame, User } from 'lucide-react'
 import type { Task, TaskType, Priority } from '@/types'
-import { TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies } from '@/types'
+import { TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies, isOnFire } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { useDeliverableGate } from './DeliverablePrompt'
 import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
@@ -62,6 +62,10 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   // Work that leaves something behind is asked for it before it closes.
   const { requestComplete, prompt: deliverablePrompt } = useDeliverableGate()
   const [hovered, setHovered] = useState(false)
+  // A flame is lit only while the task is actually on fire: a done or
+  // cancelled task still carrying `urgent` is history, and drawing it as
+  // burning put a count on the page that nothing agreed with.
+  const flaming = isOnFire(task)
   const [showMeetingPopup, setShowMeetingPopup] = useState(false)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const scheduleRef = useRef<HTMLDivElement>(null)
@@ -164,13 +168,15 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
           >{task.title.trim() || 'Untitled'}</p>
 
           <button data-nm onClick={() => toggleUrgent(task.id)}
-            title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}
+            title={flaming ? 'On fire — click to clear'
+              : task.urgent ? 'Was on fire — this task is no longer open'
+              : 'Mark as on fire'}
             style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
               flexShrink: 0, marginTop: 2,
-              color: task.urgent ? 'var(--sb-negative)' : hovered ? 'var(--sb-ink-4)' : 'var(--sb-border)',
+              color: flaming ? 'var(--sb-negative)' : hovered ? 'var(--sb-ink-4)' : 'var(--sb-border)',
             }}>
-            <Flame size={ICON.sm} strokeWidth={STROKE.rest} fill={task.urgent ? 'var(--sb-negative)' : 'none'} />
+            <Flame size={ICON.sm} strokeWidth={STROKE.rest} fill={flaming ? 'var(--sb-negative)' : 'none'} />
           </button>
         </div>
 

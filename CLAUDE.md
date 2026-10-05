@@ -2516,6 +2516,39 @@ it is gone. The control — the same file before the fix — takes the block off
 the grid and sends **no DELETE at all**, which is the orphan on the calendar.
 21 assertions.
 
+## Tasks — "ON FIRE 1" beside two burning cards
+`isOpenTask` / `isOnFire` in `types/index.ts`. The banner counted and the card
+drew, and they were answering two different questions with one field.
+- **The flame was lit from `task.urgent` alone**, in `TaskCard` and `TaskRow`
+  both, while the matrix draws **every** task in a quadrant unless you ask it
+  not to (`hideCompleted` is false by default) and `TaskCard` dims only
+  `completed`. So a task marked **done** or **cancelled** that still carried
+  the flag sat there at full strength, burning, in no count on the page. The
+  number was the half that was right.
+- **"Open" had five spellings and three of them were wrong.** `TaskBanner` and
+  Today's headline said `!completed && status !== 'cancelled'` — which misses
+  `status === 'done'`, the state the detail panel's tick writes without
+  touching `completed`, so a finished task counted as live work. Today's own
+  `openTasks`, twelve hundred lines further down the same file, had the right
+  one. `behavioralEngine` said `!completed && status !== 'done'` and therefore
+  **scored cancelled tasks as the next thing to do**; Archive-all would have
+  overwritten a `done` task's status with `cancelled`, losing the fact that it
+  was finished rather than abandoned; the day planner offered abandoned tasks
+  to plan; and `taskEventLink`'s reopen branch read a `done` task as already
+  open and did nothing for it.
+- One definition each, and `isOnFire` is `urgent && isOpenTask` — so the flame
+  and the count cannot disagree again, because they read the same function.
+  The flame stays a live control on a finished task (you can still clear the
+  flag); it is simply not drawn as burning, and its tooltip says why.
+Verified in Chromium on a fixture built so every wrong rule shows: four urgent
+tasks — open, cancelled, done, completed — and one calm. Banner **1**, flames
+drawn **1**, and it is the open one. The control, on the same fixture before the
+fix: banner **2**, **four** flames, three of them on finished work — the user's
+report with one more case in it. The first probe for *whose* flame walked up the
+DOM for the first long line of text and answered `Meeting / Schedule` for every
+one — the quadrant's own header — so the control passed three assertions
+vacuously; it reads `[data-task-node]` and matches the fixture's own titles now.
+
 ## Tasks — a card typed into a column belongs to that column
 `commitAdd` in `KanbanBoard.tsx` wrote the same two things whatever board you
 were on: `boardStatus: column.id` and **`quadrant: null`**. Both are wrong, and

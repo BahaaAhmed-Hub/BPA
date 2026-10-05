@@ -245,3 +245,20 @@ export interface User {
   name?: string
   avatarUrl?: string
 }
+
+/** Open means open: not finished, not abandoned. Three screens each had their
+ *  own spelling of this and two of them forgot `status === 'done'`, so a task
+ *  marked done from the detail panel (which leaves `completed` false) still
+ *  counted as live work. One definition, read by everything that counts it. */
+export function isOpenTask(task: Pick<Task, 'completed' | 'status'>): boolean {
+  return !task.completed && task.status !== 'done' && task.status !== 'cancelled'
+}
+
+/** On fire is urgent **and** still open. The flame is drawn from `task.urgent`
+ *  alone wherever a card is, and the matrix draws finished tasks at full
+ *  strength unless you ask it not to — so a done or cancelled task sat there
+ *  with a lit flame that no count on the page included. "ON FIRE 1" beside two
+ *  flaming cards is that disagreement, and it is the count that was right. */
+export function isOnFire(task: Pick<Task, 'completed' | 'status' | 'urgent'>): boolean {
+  return task.urgent === true && isOpenTask(task)
+}

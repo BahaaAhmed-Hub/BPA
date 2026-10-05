@@ -5,6 +5,7 @@
 import { useMemo } from 'react'
 import { Flame } from 'lucide-react'
 import type { Task } from '@/types'
+import { isOnFire, isOpenTask } from '@/types'
 import { isCarriedOver } from './taskVisuals'
 
 // The banner is an inverted panel: it is drawn on an --sb-ink-1 fill, so
@@ -82,7 +83,7 @@ function Bar({ value, peak, color, title }: { value: number; peak: number; color
 export function TaskBanner({ tasks }: { tasks: Task[] }) {
   const model = useMemo(() => {
     const today = startOfDay(new Date())
-    const open = tasks.filter(t => !t.completed && t.status !== 'cancelled')
+    const open = tasks.filter(isOpenTask)
 
     // Next deadline
     const dated = open
@@ -115,7 +116,7 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
 
     return {
       next, sameDay, days, peak, added, closed,
-      onFire: open.filter(t => t.urgent).length,
+      onFire: tasks.filter(isOnFire).length,
       carried: open.filter(isCarriedOver).length,
     }
   }, [tasks])

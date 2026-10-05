@@ -49,16 +49,16 @@ const banner = await p.evaluate(() => {
 // What the screen actually draws: a flame whose own title says it is burning.
 const lit = await p.evaluate(() =>
   document.querySelectorAll('[title="On fire — click to clear"]').length)
-// …and which tasks those flames belong to.
-const whose = await p.evaluate(() =>
+// …and which tasks those flames belong to. Walking up and taking the first
+// long line of innerText answered 'Meeting / Schedule' for every flame — the
+// quadrant's own header. The card is `[data-task-node]`, and the only
+// unambiguous read is which of the fixture's titles its text contains.
+const whose = await p.evaluate(titles =>
   [...document.querySelectorAll('[title="On fire — click to clear"]')].map(el => {
-    let n = el
-    for (let i = 0; i < 8 && n; i++, n = n.parentElement) {
-      const t = (n.innerText||'').split('\n')[0]?.trim()
-      if (t && t.length > 8) return t
-    }
-    return '?'
-  }))
+    const card = el.closest('[data-task-node]')
+    const text = card ? (card.innerText || '') : ''
+    return titles.find(t => text.includes(t)) || `?(${text.split('\n')[0] || 'no card'})`
+  }), tasks.map(t => t.title))
 
 console.log('  banner says', banner, '· flames drawn', lit)
 console.log('  flames on:', whose.join(' · '))
