@@ -2832,6 +2832,55 @@ it. Nobody at that address is waiting. The order is the other way round now:
   RSVP or Acknowledge where the kind calls for them. Reading a message is when
   you decide what to do about it.
 
+## An action that reverts a minute later — one shape, two modules
+"I mark a task done and it comes back", "I act on mail and it reverts after
+30–60 seconds". The same shape both times: **a local change with no claim on
+it, overwritten by a reload that replaces wholesale.** Neither needed a failed
+write — both were measured with the server accepting everything.
+
+**Tasks.** `toggleComplete` and `setStatus` called `saveTasksToDB` *directly*
+rather than through `scheduleDbSync`. Writing at once is right — the comment
+says so, and a 1.5s debounce really can lose the change to a refresh — but
+`scheduleDbSync` was quietly doing two other things on every caller's behalf:
+- **`markTasksDirty(next, [id])`** puts the id in `professor-tasks-edited`, and
+  that list is the only thing `loadFromDB`'s merge consults —
+  `edited.has(id) ? {...fromDb, ...t} : {...t, ...fromDb}`. Without it the
+  **server wins every field**, `completed` included.
+- **`markLocalWrite('tasks')`** arms liveSync's 3s quiet window. Without it a
+  poll, the pull when you come back to the tab, or another device's Realtime
+  event (~1s) reloads *while the write is still in flight*.
+`pushTasks` now holds the push and its bookkeeping, `pushDbSyncNow` writes
+immediately with the edit claimed first, and `scheduleDbSync` keeps the
+debounce over the same push. `scripts/completion-sticks.mjs` — the server
+stores what is upserted but takes a realistic moment to accept it, and the
+reload lands in that window. Control: the tick reads as done,
+`professor-tasks-edited` is `[]`, and the reload puts `completed` back to false.
+
+**Mail.** `runSmart` resolves with `setSmart(r)`, which **replaces** the whole
+result, and `markSmart` only ever patched React state. So every mark made while
+a pass was in flight was discarded when that pass landed — and on a real inbox
+a pass takes tens of seconds: every mailbox listed, every changed thread
+fetched, the model asked. Open Mail, start clearing rows, and half a minute
+later they are all back, because the pass was built from rows read before you
+touched anything. **That is the 30–60 seconds.**
+- `localMarks` is the claim, keyed `accountEmail|threadId`, and `withLocalMarks`
+  re-applies it over whatever a pass brings back — the mail analogue of
+  `professor-tasks-edited`.
+- **A mark is dropped only when the server's row already agrees with it.** That
+  is what "pushed" means, and it self-clears. A write that landed answers for
+  itself on the next pass; one that silently failed — every outcome but `42P01`
+  is swallowed in `mailSmartDb`, and mail reports no sync gap at all — keeps
+  your decision on screen rather than snapping the row back with no
+  explanation.
+- **It cannot pin a row hidden for ever.** The re-applied marks go through the
+  same test `visibleThreads` uses, so an archive is still compared against the
+  thread's newest message rather than treated as a flag: a reply brings it
+  back. Asserted, because that is the way this fix could over-reach.
+- Session-only, deliberately: a reload reads the server afresh.
+`scripts/mail-action-sticks.mjs` — stored rows drawn, a slow pass, a row
+archived *during* it. Control: 3 shown → archive → 2 shown → the pass lands →
+**3 shown**, the action undone.
+
 ## Mail — a bulk action you cannot see is one that did not happen
 Select all in **Internal FYI**, click an action, and seventy-eight rows sat
 exactly where they were. Two faults, and either on its own was enough.

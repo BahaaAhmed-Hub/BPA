@@ -581,11 +581,15 @@ export function InboxModule() {
       //  spinner for several seconds and then exactly the rows that had been
       //  sitting there all along. They go up first; the pass then adds to
       //  them, and the header says what it is doing meanwhile.
-      onCached: threads => setSmart(prev => prev ?? {
+      onCached: threads => setSmart(prev => prev ?? withLocalMarks({
         threads, fetched: 0, analysed: 0, failed: [],
-      }),
+      })),
     })
-      .then(r => { setSmart(r); lastSmartAt.current = Date.now(); return r })
+      .then(r => {
+        // Never over what you did while this was running.
+        const merged = withLocalMarks(r)
+        setSmart(merged); lastSmartAt.current = Date.now(); return merged
+      })
       .catch(e => { notify(e instanceof Error ? e.message : 'The mail could not be read'); return null })
       .finally(() => { setSmartLoading(false); smartRun.current = null })
     smartRun.current = p
@@ -675,9 +679,61 @@ export function InboxModule() {
     }
   }
 
+  /** ── What you did, until the server is known to have it ──────────────────
+   *
+   *  A pass resolves with `setSmart(r)`, which **replaces** the whole result —
+   *  and `markSmart` only ever patched React state. So every mark made while a
+   *  pass was in flight was discarded when that pass landed, and on a real
+   *  inbox a pass takes tens of seconds: every mailbox listed, every changed
+   *  thread fetched, the model asked. Open Mail, start clearing rows, and
+   *  half a minute later they are all back, because the pass was built from
+   *  rows read before you touched anything.
+   *
+   *  Nothing has to fail for that. It is the same hole `professor-tasks-edited`
+   *  fills for tasks: a local change with no claim on it, overwritten by a
+   *  reload that replaces wholesale. So this is that claim — the marks made
+   *  here, re-applied over whatever a pass brings back.
+   *
+   *  A mark is dropped only when the server's own row **already agrees** with
+   *  it. That is what "pushed" means, and it is self-clearing: a write that
+   *  landed answers for itself on the next pass, and one that silently failed
+   *  (every outcome but 42P01 is swallowed in `mailSmartDb`) keeps your
+   *  decision on screen rather than snapping the row back with no explanation.
+   *  Session-only, deliberately: a reload reads the server afresh. */
+  const localMarks = useRef(new Map<string, Partial<SmartThread>>())
+  const markKey = (t: Pick<SmartThread, 'accountEmail' | 'threadId'>) =>
+    `${t.accountEmail}|${t.threadId}`
+
+  /** Re-apply what this session marked over what the pass fetched, and drop
+   *  any mark the server has caught up with. */
+  function withLocalMarks(r: PassResult): PassResult {
+    if (localMarks.current.size === 0) return r
+    for (const t of r.threads) {
+      const m = localMarks.current.get(markKey(t))
+      if (!m) continue
+      const agreed = (Object.keys(m) as (keyof SmartThread)[])
+        .every(k => t[k] === m[k])
+      if (agreed) localMarks.current.delete(markKey(t))
+    }
+    if (localMarks.current.size === 0) return r
+    const threads = r.threads
+      .map(t => {
+        const m = localMarks.current.get(markKey(t))
+        return m ? { ...t, ...m } : t
+      })
+      // The same test `markSmart` applies, or an archived row comes back for
+      // the length of one render before leaving again.
+      .filter(t => !t.muted && !(t.archivedAt !== null && t.archivedAt >= t.lastAt))
+    return { ...r, threads }
+  }
+
   /** Patch the copy on screen. The server write is separate and may fail; the
    *  row moving is what the click promised, so it happens either way. */
   function markSmart(ts: SmartThread[], patch: Partial<SmartThread>) {
+    for (const t of ts) {
+      const k = markKey(t)
+      localMarks.current.set(k, { ...(localMarks.current.get(k) ?? {}), ...patch })
+    }
     const hit = new Set(ts.map(t => `${t.accountEmail}|${t.threadId}`))
     setSmart(prev => prev && {
       ...prev,
