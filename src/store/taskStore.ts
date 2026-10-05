@@ -228,23 +228,53 @@ function markTasksDirty(tasks: Task[], edited: string[]): void {
 // an edit at all (hydration, a reorder — order is not a column, so nothing
 // about a task travels when it moves).
 let dbTimer: ReturnType<typeof setTimeout> | null = null
+
+/** The push itself, and the bookkeeping that has to go with it.
+ *
+ *  Separated out because **two call sites write immediately rather than on the
+ *  debounce** — ticking a task done and setting its status — and they used to
+ *  call `saveTasksToDB` straight, which skipped all of this. Writing at once is
+ *  right: a 1.5s debounce really can lose the change to a refresh. Skipping the
+ *  bookkeeping is what broke it, because `scheduleDbSync` was quietly doing two
+ *  other things on every caller's behalf:
+ *
+ *  · **`markTasksDirty(next, [id])`** puts the id in `professor-tasks-edited`,
+ *    and that list is the only thing `loadFromDB`'s merge consults —
+ *    `edited.has(id) ? {...fromDb, ...t} : {...t, ...fromDb}`. Without it the
+ *    **server wins every field**, `completed` included.
+ *  · **`markLocalWrite('tasks')`** arms liveSync's 3s quiet window. Without it
+ *    a poll, the pull when you come back to the tab, or another device's
+ *    Realtime event (~1s) reloads *while the write is still in flight*.
+ *
+ *  Together: tick a task, have a reload land before the write commits, and the
+ *  tick is undone on screen. Measured — `scripts/completion-sticks.mjs`. */
+function pushTasks(tasks: Task[]): void {
+  markLocalWrite('tasks')
+  const pushing = loadDirtyTasks()
+  const pushingEdits = loadEditedTasks()
+  saveTasksToDB(tasks.map(toRow))
+    .then(() => {
+      const still = loadDirtyTasks(), edits = loadEditedTasks()
+      for (const id of pushing) still.delete(id)
+      for (const id of pushingEdits) edits.delete(id)
+      saveDirtyTasks(still)
+      saveEditedTasks(edits)
+    })
+    .catch(console.warn)
+}
+
+/** Write now, not in 1.5s — for a change that must survive an immediate
+ *  refresh — but claim the edit first, exactly as the debounced path does. */
+function pushDbSyncNow(tasks: Task[], edited: string[]): void {
+  markTasksDirty(tasks, edited)
+  if (dbTimer) { clearTimeout(dbTimer); dbTimer = null }
+  pushTasks(tasks)
+}
+
 function scheduleDbSync(tasks: Task[], edited: string[] = []) {
   markTasksDirty(tasks, edited)
   if (dbTimer) clearTimeout(dbTimer)
-  dbTimer = setTimeout(() => {
-    markLocalWrite('tasks')
-    const pushing = loadDirtyTasks()
-    const pushingEdits = loadEditedTasks()
-    saveTasksToDB(tasks.map(toRow))
-      .then(() => {
-        const still = loadDirtyTasks(), edits = loadEditedTasks()
-        for (const id of pushing) still.delete(id)
-        for (const id of pushingEdits) edits.delete(id)
-        saveDirtyTasks(still)
-        saveEditedTasks(edits)
-      })
-      .catch(console.warn)
-  }, 1500)
+  dbTimer = setTimeout(() => pushTasks(tasks), 1500)
 }
 
 interface TaskState {
@@ -629,8 +659,10 @@ export const useTaskStore = create<TaskState>()(
           )
           // The block this task made is the same hour: keep the two in step.
           if (task?.gcalEventId) syncEventToTask(task.gcalEventId, nowDone ? 'done' : 'open')
-          // Save immediately — debouncing risks losing the change if user refreshes
-          saveTasksToDB(next.map(toRow)).catch(console.warn)
+          // Save immediately — debouncing risks losing the change if user
+          // refreshes — but claim the edit, or a reload landing while the write
+          // is in flight puts the tick straight back.
+          pushDbSyncNow(next, [id])
           return {
             tasks: next,
             activities: [...s.activities, act(id, 'status_changed', nowDone ? 'Marked as done' : 'Reopened')],
@@ -652,8 +684,9 @@ export const useTaskStore = create<TaskState>()(
           )
           const t = s.tasks.find(x => x.id === id)
           if (t?.gcalEventId) syncEventToTask(t.gcalEventId, status === 'done' ? 'done' : status === 'cancelled' ? 'cancelled' : 'open')
-          // Save immediately for status changes so completion date persists through refresh
-          saveTasksToDB(next.map(toRow)).catch(console.warn)
+          // Save immediately for status changes so the completion date persists
+          // through a refresh — claiming the edit for the same reason as above.
+          pushDbSyncNow(next, [id])
           return {
             tasks: next,
             activities: [...s.activities, act(id, 'status_changed', `Status → ${status}`)],
