@@ -98,6 +98,24 @@ globalThis.localStorage = fresh
 await mod.pullSharedPrefs(); await mod.pushSharedPrefs()
 ok('a fresh account still gets its prefs uploaded', keyOnServer() === 'sk-ant-FRESH', String(keyOnServer()))
 
+// ── THE UPGRADE CASE, and the one that actually bit. Before this fix no device
+//    had a `seen` record at all, so the laptop's FIRST boot on the new code has
+//    an empty one — and "no record" was read as "an unexplained local value,
+//    keep it and push it". So the very first boot after the deploy still wrote
+//    the revoked key back, which is exactly "I have a valid key in Settings and
+//    it still does not work". The earlier cases missed it by syncing both
+//    devices on the new code before the edit, which seeds `seen`.
+server = { shared_prefs: { [KEY]: NEWK } }           // phone already set the good key
+const cold = device({ [KEY]: OLDK })                 // laptop: stale local, NO seen record
+globalThis.localStorage = cold
+await mod.pullSharedPrefs()
+await mod.pushSharedPrefs()
+ok('a device syncing for the FIRST time does not push its stale copy',
+   keyOnServer() === 'sk-ant-FRESH', `server now holds ${keyOnServer()}`)
+ok('…and takes the good key for itself',
+   JSON.parse(cold.getItem(KEY)).anthropicKey === 'sk-ant-FRESH',
+   JSON.parse(cold.getItem(KEY)).anthropicKey)
+
 // ── A refused write must not be remembered as synced, or the change is lost.
 server = { shared_prefs: { [KEY]: OLDK } }
 const d2 = device({ [KEY]: OLDK })

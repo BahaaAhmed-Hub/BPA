@@ -1334,6 +1334,19 @@ the pull, and again every five minutes.
   device has **not** changed the key since its last sync, keeps the local one
   when it has, and keeps an unexplained local value (no `seen` entry) so a
   fresh device still uploads what it has.
+- **"No record at all" is not "no record for this key", and reading them as
+  the same thing meant the fix's own first boot re-broke it.** Before `seen`
+  existed no device had one, so the laptop's first sync on the new code saw an
+  empty map, called its stale key an unexplained local value, kept it **and
+  pushed it** — the revoked key back over the good one, one more time. That is
+  what "I have a valid key in Settings and it still does not work" was.
+  `everSynced()` separates the two: on a browser that has **never** synced the
+  server's value is adopted, because before this every local copy either came
+  *from* a pull or had been pushed, so the server's is at least as new and
+  adopting it loses nothing. A key with no entry on a browser that *has* synced
+  is genuinely new here and still pushes. The first harness missed this by
+  syncing both devices on the new code before the edit, which seeds `seen` —
+  a fixture has to start where the real device starts.
 - **Only a write that landed is remembered as synced.** `update` returns an
   error rather than throwing, so the old code could not have noticed; recording
   a refused push would strand the change on that device for good.

@@ -89,6 +89,17 @@ const FIELD = 'shared_prefs'
  *  tell "I changed this" from "I have a copy of this". */
 const SEEN = 'professor-prefs-seen'
 
+/** Has this browser ever synced under the new scheme? "No record for this
+ *  key" and "no record at all" are different facts: before `seen` existed,
+ *  every local copy of a shared key either came FROM a pull or was pushed, so
+ *  on a first sync the server's value is at least as new and adopting it loses
+ *  nothing. Reading the absence as a local edit is what made the first boot
+ *  after this shipped write the old key back — the bug this file is about,
+ *  one layer down. */
+function everSynced(): boolean {
+  try { return localStorage.getItem(SEEN) != null } catch { return false }
+}
+
 function loadSeen(): Record<string, string> {
   try { return JSON.parse(localStorage.getItem(SEEN) ?? '{}') as Record<string, string> }
   catch { return {} }
@@ -188,6 +199,10 @@ export async function pullSharedPrefs(): Promise<string[]> {
 
   const restored: string[] = []
   const seen = loadSeen()
+  const first = !everSynced()
+  const take = (key: string, v: string) => {
+    try { localStorage.setItem(key, v); restored.push(key); seen[key] = v } catch { /* full */ }
+  }
   for (const key of SHARED_KEYS) {
     const v = bag[key]
     if (typeof v !== 'string') continue
@@ -198,15 +213,16 @@ export async function pullSharedPrefs(): Promise<string[]> {
       if (!join) {
         // "This device knows better" was the old rule, and it is only true
         // where this device actually changed something. With a record of what
-        // it last synced, the three cases separate:
-        if (seen[key] === undefined) continue      // unexplained local value — keep it, and push it
+        // it last synced, the cases separate:
+        if (first)                   { take(key, v); continue }  // never synced — the server is at least as new
+        if (seen[key] === undefined) continue      // new here since the last sync — keep it, and push it
         if (seen[key] !== mine)      continue      // a real local edit — it wins, and still needs pushing
         // Untouched here since the last sync, so there is nothing of yours to
         // protect and the server's copy is the newer one. Taking it is what
         // lets a key pasted on your phone actually arrive on the laptop,
         // instead of the laptop going on using a revoked one for ever.
-        if (v === mine) continue
-        try { localStorage.setItem(key, v); restored.push(key); seen[key] = v } catch { /* full */ }
+        if (v === mine) { seen[key] = mine; continue }
+        take(key, v)
         continue
       }
       const joined = join(mine, v)
