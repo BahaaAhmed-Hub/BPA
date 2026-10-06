@@ -1310,6 +1310,36 @@ carrying a space, a `$` and a `*` survives intact; no value is echoed to the
 log. The control is the old step with a secret absent, which really does emit
 `GOOGLE_CLIENT_ID= GOOGLE_CLIENT_SECRET=`.
 
+## Bots — a 401 is not an empty wallet, and the message has to name the key
+"My API ran out of credit, I paid again, and Telegram still gives me 401."
+Those are two different failures and the bot was describing neither.
+- **401 is `authentication_error`** — the key is missing, malformed, **revoked
+  or deleted**. Credit has nothing to do with it, so topping up can never clear
+  one; a key that was replaced after the account lapsed will 401 for ever. The
+  old message said "rotated or revoked" and was right, and then sent you to
+  Settings → AI without saying that the key it had just presented *was* the one
+  in Settings. Two places hold a key, only one is ever in play, and the sentence
+  named neither — so the advice read as "do the thing you have already done".
+  It now names the one that was refused (`keyFrom`, threaded out of
+  `anthropicKeyFor`), and says in so many words that adding credit will not fix
+  it. When the fallback is in play it says the function secret is being used
+  **and that nothing is saved under Settings → AI**, which is the fact that
+  tells you where to put the key.
+- **Out of credit is a 400**, and it fell through to *"Sorry, I could not reach
+  the AI service (400)"* — which points at the network, for a billing problem.
+  Anthropic's own body names it ("Your credit balance is too low…"), so the 400
+  branch **quotes that message** rather than pattern-matching text we would have
+  to guess at: a body we cannot parse still says the request was refused instead
+  of blaming the connection.
+- `anthropicKeyFor` returns `{ key, from }` in both bots. The precedence is
+  unchanged and deliberate (Settings beats the secret) — this only makes it
+  legible from the message.
+`scripts/bot-key-errors-say-which.mjs` lifts the branch out of **each** real
+file and de-types it with `tsc`, since there is no Deno here: 18 assertions,
+the first being that each file still parses. Control, on the code before the
+fix: **10 failing**, among them the out-of-credit 400 answered with "could not
+reach the AI service" — the sentence that sent this question to the network.
+
 ## Bots — Telegram's Markdown ate the variable name
 The 401 message above arrived in Telegram as **`ANTHROPICAPIKEY`**. Every reply
 goes out as legacy `Markdown`, where `_` is an italic marker, so

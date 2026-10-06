@@ -1109,7 +1109,7 @@ type ContentBlock = {
  *
  * It reads only the row of the user the caller already resolved.
  */
-async function anthropicKeyFor(userId: string): Promise<string> {
+async function anthropicKeyFor(userId: string): Promise<{ key: string; from: string }> {
   try {
     const { data } = await sb
       .from('users').select('schedule_rules').eq('id', userId).maybeSingle()
@@ -1118,16 +1118,16 @@ async function anthropicKeyFor(userId: string): Promise<string> {
     const raw = bag?.['professor-ai-config']
     if (typeof raw === 'string') {
       const key = (JSON.parse(raw) as { anthropicKey?: string }).anthropicKey
-      if (key && key.trim()) return key.trim()
+      if (key && key.trim()) return { key: key.trim(), from: 'settings' }
     }
   } catch (e) {
     console.error('could not read the saved AI key:', e)
   }
-  return ANTHROPIC_KEY
+  return { key: ANTHROPIC_KEY, from: 'secret' }
 }
 
 async function runAgent(userId: string, userMessage: string): Promise<string> {
-  const anthropicKey = await anthropicKeyFor(userId)
+  const { key: anthropicKey, from: keyFrom } = await anthropicKeyFor(userId)
   if (!anthropicKey) return fallbackProcess(userId, userMessage)
 
   const today     = todayISO()
@@ -1235,9 +1235,30 @@ Reply style: short, warm, direct. No markdown. Use plain bullets with •. After
       // secret in a different place from the one the web app uses, so rotating
       // the app's key leaves this one holding the revoked value. Name it.
       if (res.status === 401 || res.status === 403) {
-        return 'My Anthropic key was refused (' + res.status + '). It has most likely been '
-          + 'rotated or revoked. Put the current key in the app under Settings → AI and I will '
-          + 'use it. Trying again will not help until then.'
+        // Two places can hold a key and only one is ever in play, so the
+        // message has to name the one that was actually presented — "put the
+        // key in Settings" is useless advice when the Settings key is the one
+        // being refused. A 401 is `authentication_error`: missing, malformed,
+        // revoked or deleted. **Topping up credit cannot clear it** — that is
+        // a 400, handled below — so say so, or the next hour goes on billing.
+        const where = keyFrom === 'settings'
+          ? 'the key saved in the app under Settings → AI'
+          : 'the `ANTHROPIC_API_KEY` function secret — nothing is saved under Settings → AI'
+        return 'My Anthropic key was refused (' + res.status + '), and the key I used is '
+          + where + '. A ' + res.status + ' means that key is invalid, revoked or deleted — '
+          + 'adding credit does not fix it, and nor does trying again. If you made a new key, '
+          + 'paste it into Settings → AI: that one wins over the function secret.'
+      }
+      // Out of credit is a **400**, not a 401, and Anthropic's own body says
+      // which 400 it is ("your credit balance is too low…"). Guessing from the
+      // status alone sent you to the network; quoting the body cannot be wrong.
+      if (res.status === 400) {
+        let said = ''
+        try { said = (JSON.parse(err) as { error?: { message?: string } })?.error?.message ?? '' }
+        catch { said = '' }
+        return said
+          ? 'Anthropic refused the request: ' + said
+          : `Anthropic refused the request (400) and gave no reason I can read.`
       }
       return `Sorry, I could not reach the AI service (${res.status}). Try again in a moment.`
     }
