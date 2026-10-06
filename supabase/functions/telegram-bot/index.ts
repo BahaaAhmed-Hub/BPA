@@ -1562,6 +1562,26 @@ Deno.serve(async (req) => {
     return new Response('ok')
   }
 
+  // `/key` — what key am I actually presenting, and from where? Three rounds
+  // of this went on guessing at the sync layer because nothing could answer
+  // that from the outside. It prints the SOURCE, the row it read, and the key
+  // **masked** (first 11 and last 4 of an `sk-ant-…` is enough to tell two
+  // keys apart and not enough to use), plus its length — a trailing newline or
+  // a truncated paste is otherwise invisible. It never prints the whole key.
+  if (text === '/key') {
+    const { key, from } = await anthropicKeyFor(auth.userId)
+    const shown = key
+      ? '`' + key.slice(0, 11) + '…' + key.slice(-4) + '` (' + key.length + ' chars)'
+      : '_nothing at all_'
+    await reply(chatId,
+      'I present ' + shown + ', taken from '
+      + (from === 'settings' ? 'the key saved under Settings → AI' : 'the `ANTHROPIC_API_KEY` function secret')
+      + '.\nThe account I read is `' + auth.userId + '`.\n'
+      + 'If those first characters are not the key you pasted, the paste has not '
+      + 'reached this account — check you are signed in to the same one.')
+    return new Response('ok')
+  }
+
   // Show typing indicator while we work
   await sendChatAction(chatId)
 

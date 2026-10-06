@@ -1310,6 +1310,46 @@ carrying a space, a `$` and a `*` survives intact; no value is echoed to the
 log. The control is the old step with a secret absent, which really does emit
 `GOOGLE_CLIENT_ID= GOOGLE_CLIENT_SECRET=`.
 
+## Settings — the Model picker chose a *provider* and named a model
+"I have a valid Anthropic key in Settings → AI and the bot still answers 401."
+Three rounds of this went into the sync layer before anyone looked at the
+control above the key field. `ProfessorSection`'s Model picker offered
+**`Sonnet 4.5` / `Opus 4.1` / `Haiku`** — and the values behind those labels
+are `anthropic` / `groq` / `haiku`. The value is not cosmetic: it decides
+which field the key box underneath **edits and displays**
+(`ai.provider === 'groq' ? groqKey : anthropicKey`). So picking the
+best-sounding Claude selected **Groq**, the Anthropic key typed next was saved
+as `groqKey`, and nothing in the app or either bot reads it there — they read
+`anthropicKey`, which still held the revoked one. The field showed the good key
+back to you the whole time, because it was showing `groqKey`.
+- **A label must not name something its value cannot deliver.** Groq does not
+  serve Claude at all, so "Opus 4.1" on the Groq option was not a loose label,
+  it was a wrong one — and the one that decides where a credential lands. The
+  options are the two providers that exist, `Claude` and `Groq`; which model is
+  a separate question (`groqModel` already asks it on that side).
+- **`haiku` was never in `AIConfig['provider']`.** It survived only the
+  `v as AIConfig['provider']` cast on that handler, so TypeScript never saw it;
+  `professor.ts` branches on `=== 'groq'` and treated it as Anthropic. A third
+  option that is not in the union is a value nothing downstream can mean.
+- **The misfiled key is named, never moved silently.** `misplacedAnthropicKey`
+  reports an `sk-ant-…` sitting in the Groq field — unambiguous, since Groq's
+  own keys begin `gsk_` — and the section says so where it happened with one
+  button that sets `provider`, moves the key to `anthropicKey`, clears the Groq
+  field and `notify`s what it did. A credential that relocates on its own is one
+  nobody can account for.
+- **`/key` in Telegram is the instrument this needed from the start.** It
+  answers what the bot actually presents: the source (Settings or the function
+  secret), the account row it read, the key **masked** to its first 11 and last
+  4 characters, and its **length** — a trailing newline or a truncated paste is
+  invisible otherwise. It never prints the whole key. Three rounds were spent
+  guessing because nothing could answer that from outside the function.
+`scripts/ai-key-field-is-the-right-one.mjs` — 17 assertions over the real
+files: no option labelled with a model its provider cannot serve, every offered
+value inside the union, the detector right on `sk-ant-` / `gsk_` / empty, the
+repair setting all three fields and saying so, and `/key` naming its source and
+masking. Control, on the code before the fix: **14 failing**, the first being
+`value: 'groq', label: 'Opus 4.1'`.
+
 ## Prefs — the pull was timid and the push was not
 `prefSync.ts`. The file's own header says the merge "fills in a key this device
 has never had, and otherwise leaves it alone" — and that was true of

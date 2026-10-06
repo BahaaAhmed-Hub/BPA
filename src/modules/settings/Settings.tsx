@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { pushSharedPrefs } from '@/lib/prefSync'
+import { notify } from '@/lib/undo'
 import { paidAtSupported } from '../finance/unpaid'
 import { todayISO } from '../finance/dates'
 import { stepFor, setHabitStep, loadHabitSteps } from '@/lib/habitSteps'
@@ -200,6 +201,18 @@ export interface AIConfig {
 const AI_CONFIG_DEFAULTS: AIConfig = {
   provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile',
 }
+/** An `sk-ant-…` key sitting in the Groq field is not ambiguous: Groq's own
+ *  keys begin `gsk_`, so this is an Anthropic key that was typed while the
+ *  provider picker said Groq — which the old labels made easy, since the Groq
+ *  option was labelled "Opus 4.1". Nothing reads it there: the bots and
+ *  `professor.ts` read `anthropicKey`. It is **named and offered**, never
+ *  moved silently — it is the person's credential, and a key that moves on its
+ *  own is one nobody can account for. */
+export function misplacedAnthropicKey(c: AIConfig): string {
+  const stray = (c.groqKey ?? '').trim()
+  return stray.startsWith('sk-ant-') ? stray : ''
+}
+
 export function loadAIConfig(): AIConfig {
   return { ...AI_CONFIG_DEFAULTS, ...ls<Partial<AIConfig>>('professor-ai-config', {}) }
 }
@@ -2176,12 +2189,44 @@ function ProfessorSection() {
           value={ai.provider}
           onChange={v => setAI({ provider: v as AIConfig['provider'] })}
           options={[
-            { value: 'anthropic', label: 'Sonnet 4.5' },
-            { value: 'groq',      label: 'Opus 4.1' },
-            { value: 'haiku',     label: 'Haiku' },
+            // These are PROVIDERS, not models, and the label has to say so:
+            // the value decides which key field the box below edits. The old
+            // labels read "Sonnet 4.5 / Opus 4.1 / Haiku", so choosing a
+            // better-sounding Claude picked **Groq** — and the Anthropic key
+            // you then typed was saved as `groqKey`, where the bots (which
+            // read `anthropicKey` and nothing else) could never see it. The
+            // field still showed it back to you, because it was showing
+            // `groqKey`. `haiku` was not in `AIConfig['provider']` at all and
+            // only survived the `as` cast on this very handler.
+            { value: 'anthropic', label: 'Claude' },
+            { value: 'groq',      label: 'Groq' },
           ]}
         />
       </FieldRow>
+
+      {/* An Anthropic key typed into the Groq box reaches nothing — say so
+          where it happened, and offer the one move that fixes it. */}
+      {misplacedAnthropicKey(ai) && (
+        <div style={{
+          background: 'var(--sb-negative-tint)', border: 'var(--sb-border-width) solid var(--sb-negative)',
+          borderRadius: 'var(--sb-r-nav)', padding: '10px 12px', marginBottom: 10,
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', flex: 1, minWidth: 220 }}>
+            An Anthropic key (<code>sk-ant-…</code>) is saved in the <b>Groq</b> field, where
+            nothing reads it — the app and the bots only ever read the Anthropic one.
+          </span>
+          <button
+            onClick={() => {
+              const key = misplacedAnthropicKey(ai)
+              setAI({ provider: 'anthropic', anthropicKey: key, groqKey: '' })
+              notify('Moved your Anthropic key into the Anthropic field')
+            }}
+            style={{ ...PILL_BASE, borderColor: 'var(--sb-negative)', color: 'var(--sb-negative)', cursor: 'pointer', flexShrink: 0 }}>
+            Move it to Anthropic
+          </button>
+        </div>
+      )}
 
       {/* ── API key ── */}
       <FieldRow label={keyLabel} sub={keyHint}>
