@@ -11,6 +11,22 @@
 // never had, and otherwise leaves it alone. Two devices editing the same
 // preference would need real conflict resolution, and quietly overwriting the
 // one in front of you is worse than being slightly out of date.
+//
+// **That timidity was the pull's alone, and the push undid it.** `pushSharedPrefs`
+// wrote `shared_prefs: bag` — every shared key as this browser holds it,
+// replacing the lot. So a second device that had never touched a key still
+// asserted its own stale copy of it, within seconds of boot and every five
+// minutes after. Paste a new Anthropic key into Settings → AI on your phone,
+// open the app on the laptop, and the laptop puts the revoked one back — which
+// reads as the key never saving, and leaves the bots holding a key that 401s.
+// Last-writer-wins between devices, with no record of who actually changed
+// anything.
+//
+// So a push now carries **only the keys this device changed** — measured
+// against `professor-prefs-seen`, what it last pulled or pushed — and merges
+// them onto the server's bag rather than replacing it. Absence of an edit is
+// not evidence of one; it is the rule `professor-habits-edited` already states
+// one store along. A device that has merely *read* a key says nothing about it.
 
 import { supabase } from '@/lib/supabase'
 
@@ -69,6 +85,17 @@ const SHARED_KEYS = [
 // element, and its id is meaningless on any other.
 
 const FIELD = 'shared_prefs'
+/** What this device last pulled or pushed, per key. The only thing that can
+ *  tell "I changed this" from "I have a copy of this". */
+const SEEN = 'professor-prefs-seen'
+
+function loadSeen(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(SEEN) ?? '{}') as Record<string, string> }
+  catch { return {} }
+}
+function saveSeen(seen: Record<string, string>): void {
+  try { localStorage.setItem(SEEN, JSON.stringify(seen)) } catch { /* full */ }
+}
 
 /** Fill-if-missing is right for a preference — one value, and the device in
  *  front of you knows it best. It is wrong for a *log*: the moment a device
@@ -119,20 +146,31 @@ export async function pushSharedPrefs(): Promise<void> {
   const id = await userId()
   if (!id) return
 
-  const bag: Record<string, string> = {}
+  const seen = loadSeen()
+  const mine: Record<string, string> = {}
   for (const key of SHARED_KEYS) {
     const v = localStorage.getItem(key)
-    if (v != null) bag[key] = v
+    if (v == null) continue
+    // Unchanged since the last sync means this device has nothing to say about
+    // it — not that its copy is the right one.
+    if (seen[key] === v) continue
+    mine[key] = v
   }
-  if (Object.keys(bag).length === 0) return
+  if (Object.keys(mine).length === 0) return
 
   const { data: existing } = await supabase
     .from('users').select('schedule_rules').eq('id', id).maybeSingle()
 
   const rules = (existing?.schedule_rules as Record<string, unknown>) ?? {}
-  await supabase.from('users')
-    .update({ schedule_rules: { ...rules, [FIELD]: bag } })
+  const bag   = (rules[FIELD] as Record<string, string> | undefined) ?? {}
+
+  const { error } = await supabase.from('users')
+    .update({ schedule_rules: { ...rules, [FIELD]: { ...bag, ...mine } } })
     .eq('id', id)
+  // Only a write that landed may be remembered as synced, or a refused push
+  // is never retried and the change is lost on this device for good.
+  if (error) { console.warn('shared prefs did not save:', error.message); return }
+  saveSeen({ ...seen, ...mine })
 }
 
 /** Fill in whatever this device has never had. Returns the keys it restored,
@@ -149,6 +187,7 @@ export async function pullSharedPrefs(): Promise<string[]> {
   if (!bag) return []
 
   const restored: string[] = []
+  const seen = loadSeen()
   for (const key of SHARED_KEYS) {
     const v = bag[key]
     if (typeof v !== 'string') continue
@@ -156,15 +195,29 @@ export async function pullSharedPrefs(): Promise<string[]> {
     const mine = localStorage.getItem(key)
     if (mine != null) {
       const join = MERGEABLE[key]
-      if (!join) continue                             // this device knows better
+      if (!join) {
+        // "This device knows better" was the old rule, and it is only true
+        // where this device actually changed something. With a record of what
+        // it last synced, the three cases separate:
+        if (seen[key] === undefined) continue      // unexplained local value — keep it, and push it
+        if (seen[key] !== mine)      continue      // a real local edit — it wins, and still needs pushing
+        // Untouched here since the last sync, so there is nothing of yours to
+        // protect and the server's copy is the newer one. Taking it is what
+        // lets a key pasted on your phone actually arrive on the laptop,
+        // instead of the laptop going on using a revoked one for ever.
+        if (v === mine) continue
+        try { localStorage.setItem(key, v); restored.push(key); seen[key] = v } catch { /* full */ }
+        continue
+      }
       const joined = join(mine, v)
-      if (joined === mine) continue                   // nothing new arrived
+      if (joined === mine) { seen[key] = mine; continue }   // nothing new arrived
       try { localStorage.setItem(key, joined); restored.push(key) } catch { /* full */ }
       continue
     }
 
-    try { localStorage.setItem(key, v); restored.push(key) } catch { /* full */ }
+    try { localStorage.setItem(key, v); restored.push(key); seen[key] = v } catch { /* full */ }
   }
+  saveSeen(seen)
   return restored
 }
 

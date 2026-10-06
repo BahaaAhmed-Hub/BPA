@@ -1310,6 +1310,47 @@ carrying a space, a `$` and a `*` survives intact; no value is echoed to the
 log. The control is the old step with a secret absent, which really does emit
 `GOOGLE_CLIENT_ID= GOOGLE_CLIENT_SECRET=`.
 
+## Prefs — the pull was timid and the push was not
+`prefSync.ts`. The file's own header says the merge "fills in a key this device
+has never had, and otherwise leaves it alone" — and that was true of
+`pullSharedPrefs` only. `pushSharedPrefs` wrote `shared_prefs: bag`: **every**
+shared key as that browser happened to hold it, replacing the lot. So the
+politeness of the pull was undone by the push, and a device that had never
+touched a key still asserted its own stale copy of it — on boot, seconds after
+the pull, and again every five minutes.
+- **That is why a new Anthropic key would not stay.** Paste it into Settings →
+  AI on the phone; open the app on the laptop, which still has the revoked one
+  in its localStorage; the laptop writes the revoked key back over it. The bots
+  read that row, so Telegram went on answering `401` with a key you had already
+  replaced — twice over, because the pull then refused the server's newer value
+  on the grounds that "this device knows better".
+- **`professor-prefs-seen`** is the missing claim: what this browser last
+  pulled or pushed, per key. It is the same split as `professor-habits-edited`
+  one store along — *absence of an edit is not evidence of one* — and it makes
+  three cases out of what used to be one. A push now carries **only the keys
+  whose local value differs from what was last synced**, and **merges** them
+  onto the server's bag rather than replacing it, so a key this device has
+  merely read is left alone. A pull now takes the server's value when this
+  device has **not** changed the key since its last sync, keeps the local one
+  when it has, and keeps an unexplained local value (no `seen` entry) so a
+  fresh device still uploads what it has.
+- **Only a write that landed is remembered as synced.** `update` returns an
+  error rather than throwing, so the old code could not have noticed; recording
+  a refused push would strand the change on that device for good.
+- **Settings → AI pushes the moment it saves.** The ordinary push is a
+  five-minute timer, so typing a key and messaging the bot straight away asked
+  it with the old one — indistinguishable from the new key being wrong.
+- `professor-prefs-seen` is cleared by `clearUserData`: it is a claim about one
+  account's prefs and a stale entry that happened to match would suppress a
+  push the next user needs.
+`scripts/prefs-key-survives-another-device.mjs` runs the real module against two
+localStorages and one shared bag: 10 assertions. The laptop no longer puts the
+revoked key back, on boot or on the tick, and takes the new one for itself; a
+real edit on the laptop still travels; a fresh account still uploads; a refused
+push is retried. Control, on the code before the fix: **4 failing**, the first
+being the server holding `sk-ant-REVOKED` again seconds after the phone set the
+new key.
+
 ## Bots — a 401 is not an empty wallet, and the message has to name the key
 "My API ran out of credit, I paid again, and Telegram still gives me 401."
 Those are two different failures and the bot was describing neither.

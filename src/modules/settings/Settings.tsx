@@ -14,6 +14,7 @@ import {
   ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed, Check,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { pushSharedPrefs } from '@/lib/prefSync'
 import { paidAtSupported } from '../finance/unpaid'
 import { todayISO } from '../finance/dates'
 import { stepFor, setHabitStep, loadHabitSteps } from '@/lib/habitSteps'
@@ -202,7 +203,14 @@ const AI_CONFIG_DEFAULTS: AIConfig = {
 export function loadAIConfig(): AIConfig {
   return { ...AI_CONFIG_DEFAULTS, ...ls<Partial<AIConfig>>('professor-ai-config', {}) }
 }
-function saveAIConfig(c: AIConfig) { lsSet('professor-ai-config', c) }
+function saveAIConfig(c: AIConfig) {
+  lsSet('professor-ai-config', c)
+  // The bots read this key out of Postgres, not out of this browser, and the
+  // ordinary push is a five-minute timer. Typing a new key and messaging the
+  // bot straight away therefore asked it with the old one — which is
+  // indistinguishable from the new key being wrong.
+  void pushSharedPrefs()
+}
 function saveSettings(s:   AppSettings)  { lsSet('professor-settings', s) }
 function loadCompanies():  CompanyRow[]  { return ls('professor-companies', []) }
 function saveCompanies(c:  CompanyRow[]) {

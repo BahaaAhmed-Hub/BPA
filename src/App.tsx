@@ -945,6 +945,10 @@ function clearUserData(clearTasks: () => void, clearHabits: () => void) {
     'professor-review-hours', 'professor-section-order',
     'cal-view-mode', 'cal-hidden-calendars', 'cal-intel-hidden', 'cal-list-cache',
     'google_provider_token', 'google_provider_token_saved_at',
+    // What this browser last synced, per shared pref. It is a claim about one
+    // account's prefs, so it must not be read as the next account's: a stale
+    // entry that happened to match would suppress a push the new user needs.
+    'professor-prefs-seen',
   ]
   userKeys.forEach(k => localStorage.removeItem(k))
   // Keyed by user id as well, so it cannot be read as the next account's —
