@@ -9,15 +9,24 @@ import { Button, Card } from '@/components/ui'
 import { createPortal } from 'react-dom'
 import { X, Link2, Paperclip, Plus, Check, FileText } from 'lucide-react'
 import type { Task, TaskAttachment, TaskType } from '@/types'
-import { inferTaskType } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { notify } from '@/lib/undo'
 import { ICON, STROKE } from '@/lib/type'
 
 /** The kinds of task that produce something you would want to keep. */
 const DELIVERS: TaskType[] = ['do', 'deepwork']
 
+// **An inferred type is a guess, and a guess must not block a tick.**
+// `inferTaskType` falls through to `do` for any title matching none of its
+// eight patterns — "Water the office plants" included — and `do` is in
+// DELIVERS. So ticking almost any untyped task opened this dialog, and
+// dismissing it (Cancel, Escape, or a tap on the backdrop) left the task
+// open with nothing on screen to say the gesture had been abandoned: "I
+// marked it completed and it appears as incomplete".
+// The gate now fires only where somebody actually said this task produces
+// something, which is the only case it was ever about.
 export function producesDeliverable(task: Task): boolean {
-  return DELIVERS.includes(task.taskType ?? inferTaskType(task.title))
+  return task.taskType != null && DELIVERS.includes(task.taskType)
 }
 
 function formatBytes(n: number): string {
@@ -208,7 +217,12 @@ export function useDeliverableGate() {
   const prompt = pending ? (
     <DeliverablePrompt
       task={pending}
-      onCancel={() => setPending(null)}
+      onCancel={() => {
+        // Dismissal is a decision, so it is said out loud. A tick that
+        // silently does nothing is indistinguishable from a broken one.
+        notify(`Left "${pending.title.trim() || 'the task'}" open`)
+        setPending(null)
+      }}
       onComplete={({ links, attachments }) => {
         const task = pending
         setPending(null)

@@ -2516,6 +2516,34 @@ it is gone. The control — the same file before the fix — takes the block off
 the grid and sends **no DELETE at all**, which is the orphan on the calendar.
 21 assertions.
 
+## Tasks — the tick that asked a question and then forgot the tick
+"I mark a task completed and it appears as incomplete." Not the revert above —
+this one **never completed at all**. `useDeliverableGate.requestComplete`
+opens `DeliverablePrompt` for a task whose type is in `DELIVERS` (`do`,
+`deepwork`), and the gate asked `inferTaskType` when the task had no type of
+its own. **`inferTaskType` falls through to `do`** — a title matching none of
+its eight keyword patterns, "Water the office plants" included — and `do` is in
+DELIVERS. So ticking almost any untyped task opened a dialog asking what it
+produced, and Cancel, Escape **or a tap on the backdrop** left the task open
+with nothing anywhere saying the gesture had been dropped. On a touch screen a
+stray tap outside the dialog is how that happens without you knowing you did it.
+- **An inferred type is a guess, and a guess must not block a tick.**
+  `producesDeliverable` reads `task.taskType` only; absent means nobody said
+  this task produces anything, which is not grounds for standing between the
+  person and the thing they just ticked. An explicitly typed `do` or `deepwork`
+  task is still asked — that is the whole feature and it is untouched.
+- **Dismissal is a decision, so it is said out loud** — `notify('Left "X"
+  open')`. Cancel meaning "leave it open" is correct; Cancel meaning *nothing
+  visible* is indistinguishable from a broken tick, which is exactly how it was
+  reported.
+`scripts/tick-completes-the-task.mjs [dismiss|cancel|typed|typed-complete]`.
+A plain-titled task ticks straight through with no dialog; an explicitly typed
+one still opens it, Complete finishes it, and Cancel leaves it open **and says
+so**. Control, on the code before the fix: the untyped task is still
+`completed:false` after the dialog is dismissed and the screen says nothing,
+while the two typed cases pass — they were always right, which is why this
+looked intermittent and depended entirely on the task's title.
+
 ## Tasks — "ON FIRE 1" beside two burning cards
 `isOpenTask` / `isOnFire` in `types/index.ts`. The banner counted and the card
 drew, and they were answering two different questions with one field.
