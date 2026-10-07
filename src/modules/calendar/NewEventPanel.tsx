@@ -26,6 +26,7 @@ import {
 import { ICON, STROKE } from '@/lib/type'
 import { openPicker } from '@/lib/nativePicker'
 import { loadDynamicCompanies } from '@/types'
+import { isMyCalendar, myCalendarAddresses } from '@/lib/calendarEvents'
 import { toRecurrence, presetRecur, type Recur } from './recurrence'
 import { useInkOn } from '@/lib/ink'
 
@@ -399,7 +400,10 @@ export function NewEventPanel({
    *  that ever sent `status` was the Create call an existing event never makes. */
   onStatus?: (s: 'done' | 'cancelled' | null) => void
 }) {
-  const writable = calendars.filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
+  const myAddrs = myCalendarAddresses(organiser)
+  const writable = calendars.filter(c =>
+    (c.accessRole === 'owner' || c.accessRole === 'writer') && isMyCalendar(c, myAddrs)
+  )
   const memory = useMemo(loadMemory, [])
   const editing = !!existing
 

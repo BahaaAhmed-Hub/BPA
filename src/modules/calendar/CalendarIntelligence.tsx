@@ -44,6 +44,7 @@ import { T, SANS, DISPLAY, MONO, ICON, STROKE } from '@/lib/type'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
+import { useTaskStore } from '@/store/taskStore'
 import { NewEventPanel, type ExistingEvent } from './NewEventPanel'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
 import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
@@ -1157,6 +1158,7 @@ function EventContextMenu({
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function CalendarIntelligence() {
   const user = useAuthStore(s => s.user)
+  const allTasks = useTaskStore(s => s.tasks)
 
   // ── Calendar + event state ──────────────────────────────────────────────────
   // The focused day. Week and day views both hang off it; the grid loads by week.
@@ -3124,6 +3126,33 @@ export function CalendarIntelligence() {
                   Open in Google Calendar <ExternalLink size={ICON.sm} />
                 </a>
               )}
+              {(() => {
+                const linked = allTasks.filter(t => t.links?.includes(`cal-event:${ev.id}`))
+                if (!linked.length) return null
+                return (
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 6 }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.10em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>
+                      Action items
+                    </span>
+                    {linked.map(t => (
+                      <span
+                        key={t.id}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 7,
+                          fontSize: 'var(--sb-t-meta)', color: t.completed || t.status === 'done' ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)',
+                          textDecoration: t.completed || t.status === 'done' ? 'line-through' : 'none',
+                        }}
+                      >
+                        <span style={{
+                          width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
+                          background: t.completed || t.status === 'done' ? 'var(--sb-ink-4)' : 'var(--sb-positive)',
+                        }} />
+                        {t.title}
+                      </span>
+                    ))}
+                  </span>
+                )
+              })()}
             </>}
           />
         )

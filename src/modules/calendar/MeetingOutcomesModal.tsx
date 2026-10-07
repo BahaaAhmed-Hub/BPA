@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { X, Plus, Trash2, CheckSquare, CalendarPlus } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import type { Priority } from '@/types'
+import { loadDynamicCompanies } from '@/types'
 
 // ─── Public contract ──────────────────────────────────────────────────────────
 export interface MeetingEventContext {
@@ -120,12 +121,17 @@ export default function MeetingOutcomesModal({ event, onClose, onCreateFollowUp 
 
   async function handleSave() {
     setSaving(true)
+    // Derive the company from the event's calendar so tasks land in the right workspace.
+    const co = event.calendarId
+      ? loadDynamicCompanies().find(c => c.calendarId && c.calendarId === event.calendarId)
+      : undefined
     try {
       for (const t of tasks.filter(t => t.title.trim())) {
         addTask({
           title:     t.title.trim(),
-          quadrant:  null,
+          quadrant:  'schedule',
           company:   'personal',
+          companyId: co?.id,
           status:    'open',
           completed: false,
           dueDate:   t.dueDate || undefined,
@@ -326,7 +332,7 @@ export default function MeetingOutcomesModal({ event, onClose, onCreateFollowUp 
                 style={{
                   border: '1px solid var(--sb-border)', borderRadius: 20,
                   background: showFollowUp ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-                  color: showFollowUp ? 'var(--sb-bg)' : 'var(--sb-ink-3)',
+                  color: showFollowUp ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                   padding: '2px 11px', fontSize: 11.5, cursor: 'pointer',
                   fontFamily: 'inherit', lineHeight: 1.6,
                 }}
@@ -414,7 +420,7 @@ export default function MeetingOutcomesModal({ event, onClose, onCreateFollowUp 
             style={{
               border: 'none', borderRadius: 10,
               background: 'var(--sb-ink-1)', padding: '7px 18px',
-              fontSize: 13.5, color: 'var(--sb-bg)', cursor: saving ? 'not-allowed' : 'pointer',
+              fontSize: 13.5, color: 'var(--sb-ink-on-dark)', cursor: saving ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit', fontWeight: 600, opacity: saving ? 0.7 : 1,
             }}
           >
