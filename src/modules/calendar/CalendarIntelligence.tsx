@@ -58,6 +58,7 @@ import {
   loadApplied, saveApplied, type AppliedBlocksMap, type SourceEvent,
 } from '@/lib/blockingRules'
 import IdealWeekModal from './IdealWeekModal'
+import MeetingOutcomesModal, { type MeetingEventContext } from './MeetingOutcomesModal'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const HOUR_PX  = 54     // pixels per hour (Sunlit Bento: 54px/hr)
@@ -1202,6 +1203,7 @@ export function CalendarIntelligence() {
   const [prepLoading,   setPrepLoading]   = useState(false)
   const [prepError,     setPrepError]     = useState<string | null>(null)
   const [eventStatuses, setEventStatuses] = useState<Record<string, EventStatus>>(loadEventStatuses)
+  const [outcomesEvent, setOutcomesEvent] = useState<MeetingEventContext | null>(null)
   const [calColors,     setCalColorsMap]  = useState<Record<string, string>>(loadCalColors)
   const [pickerOpenId,  setPickerOpenId]  = useState<string | null>(null)
   const [ctxMenu, setCtxMenu] = useState<{ event: GCalEventExt; x: number; y: number } | null>(null)
@@ -2924,7 +2926,20 @@ export function CalendarIntelligence() {
                           isSelected={selectedEvent?.id === ev.id}
                           isDragSrc={draggingEvt?.id === ev.id && dragMode === 'move'}
                           colorOverride={cal ? calEffectiveColor(cal) : undefined}
-                          onStatusToggle={s => toggleStatus(ev.id, s)}
+                          onStatusToggle={s => {
+                            // Show outcomes modal when marking as done (not when un-marking)
+                            if (s === 'done' && eventStatuses[ev.id] !== 'done') {
+                              setOutcomesEvent({
+                                id: ev.id ?? '',
+                                title: ev.summary ?? '(No title)',
+                                startIso: ev.start?.dateTime ?? ev.start?.date,
+                                endIso:   ev.end?.dateTime   ?? ev.end?.date,
+                                calendarId: ev.calendarId,
+                                attendees:  ev.attendees,
+                              })
+                            }
+                            toggleStatus(ev.id, s)
+                          }}
                           onClick={e => handleEventClick(ev, e)}
                           onContextMenu={e => handleEventContextMenu(ev, e)}
                         />
@@ -3053,6 +3068,16 @@ export function CalendarIntelligence() {
               if (now === next) return
               if (now) toggleStatus(ev.id, now)
               if (next) toggleStatus(ev.id, next)
+              if (next === 'done' && now !== 'done') {
+                setOutcomesEvent({
+                  id: ev.id ?? '',
+                  title: ev.summary ?? '(No title)',
+                  startIso: ev.start?.dateTime ?? ev.start?.date,
+                  endIso:   ev.end?.dateTime   ?? ev.end?.date,
+                  calendarId: ev.calendarId,
+                  attendees:  ev.attendees,
+                })
+              }
             }}
             alertMinutes={ev.reminders?.useDefault === false ? (ev.reminders.overrides?.[0]?.minutes ?? -1) : undefined}
             onAlert={v => {
@@ -3144,7 +3169,20 @@ export function CalendarIntelligence() {
             setSelectedEvent(ctxMenu.event)
             setPrep(null); setPrepError(null)
           }}
-          onStatusToggle={s => { toggleStatus(ctxMenu.event.id, s); setCtxMenu(null) }}
+          onStatusToggle={s => {
+            if (s === 'done' && eventStatuses[ctxMenu.event.id] !== 'done') {
+              setOutcomesEvent({
+                id: ctxMenu.event.id ?? '',
+                title: ctxMenu.event.summary ?? '(No title)',
+                startIso: ctxMenu.event.start?.dateTime ?? ctxMenu.event.start?.date,
+                endIso:   ctxMenu.event.end?.dateTime   ?? ctxMenu.event.end?.date,
+                calendarId: ctxMenu.event.calendarId,
+                attendees:  ctxMenu.event.attendees,
+              })
+            }
+            toggleStatus(ctxMenu.event.id, s)
+            setCtxMenu(null)
+          }}
           onDelete={() => void handleDeleteEvent(ctxMenu.event)}
         />
       )}
@@ -3165,6 +3203,22 @@ export function CalendarIntelligence() {
         <IdealWeekModal
           onClose={() => setShowIdealWeek(false)}
           realEvents={events}
+        />
+      )}
+
+      {/* Meeting outcomes — shown after marking an event done */}
+      {outcomesEvent && (
+        <MeetingOutcomesModal
+          event={outcomesEvent}
+          onClose={() => setOutcomesEvent(null)}
+          onCreateFollowUp={(title, calId, date, startTime, endTime) => {
+            void handleCreateEvent({
+              title, calId,
+              startDate: date, startTime,
+              endDate: date,   endTime,
+              allDay: false, invitees: [], addMeet: false,
+            })
+          }}
         />
       )}
     </div>

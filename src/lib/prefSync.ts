@@ -115,6 +115,17 @@ function saveSeen(seen: Record<string, string>): void {
  *  that can simply be joined, so join them. Where both sides have the same
  *  entry this device's wins; where only the server has one, it arrives. */
 const MERGEABLE: Partial<Record<typeof SHARED_KEYS[number], (mine: string, theirs: string) => string>> = {
+  // A map of eventId → status. Entries marked done on the laptop reach the
+  // iPad; fill-if-missing would have stopped the moment either device had any.
+  // Local wins for the same eventId so a deliberate un-marking is respected.
+  'cal-event-statuses': (mine, theirs) => {
+    try {
+      const a = JSON.parse(mine)   as Record<string, string>
+      const b = JSON.parse(theirs) as Record<string, string>
+      return JSON.stringify({ ...b, ...a })
+    } catch { return mine }
+  },
+
   // A list of names. Joining keeps a payee typed on the laptop reaching the
   // iPad; fill-if-missing would have stopped the moment either device saved one.
   'finance-payees': (mine, theirs) => {
