@@ -1367,6 +1367,7 @@ export function CalendarIntelligence() {
   // it as soon as that week's events are in.
   const focus = useUIStore(s => s.focus)
   const clearFocus = useUIStore(s => s.clearFocus)
+  const focusOn = useUIStore(s => s.focusOn)
   const pendingFocusId = useRef<string | null>(null)
   useEffect(() => {
     if (focus?.module !== 'calendar') return
@@ -3135,12 +3136,14 @@ export function CalendarIntelligence() {
                       Action items
                     </span>
                     {linked.map(t => (
-                      <span
+                      <button
                         key={t.id}
+                        onClick={() => focusOn({ module: 'tasks', id: t.id })}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 7,
                           fontSize: 'var(--sb-t-meta)', color: t.completed || t.status === 'done' ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)',
                           textDecoration: t.completed || t.status === 'done' ? 'line-through' : 'none',
+                          background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
                         }}
                       >
                         <span style={{
@@ -3148,7 +3151,7 @@ export function CalendarIntelligence() {
                           background: t.completed || t.status === 'done' ? 'var(--sb-ink-4)' : 'var(--sb-positive)',
                         }} />
                         {t.title}
-                      </span>
+                      </button>
                     ))}
                   </span>
                 )

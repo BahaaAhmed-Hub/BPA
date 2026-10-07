@@ -559,10 +559,14 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                       border: 'var(--sb-border-width) solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
                     }}><Link2 size={ICON.sm} /></span>
                     {isCalEvent ? (
-                      <span style={{
-                        flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>Action item from meeting</span>
+                      <button
+                        onClick={() => focusOn({ module: 'calendar', id: url.replace('cal-event:', '') })}
+                        style={{
+                          flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
+                          textDecoration: 'underline',
+                        }}>Action item from meeting</button>
                     ) : (
                       <a href={url} target="_blank" rel="noreferrer" style={{
                         flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)',

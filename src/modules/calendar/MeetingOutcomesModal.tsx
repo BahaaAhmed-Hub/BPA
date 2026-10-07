@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { X, Plus, Trash2, CheckSquare, CalendarPlus } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
-import type { Priority } from '@/types'
+import type { Priority, Task } from '@/types'
 import { loadDynamicCompanies } from '@/types'
 
 // ─── Public contract ──────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ export default function MeetingOutcomesModal({ event, onClose, onCreateFollowUp 
         addTask({
           title:     t.title.trim(),
           quadrant:  'schedule',
-          company:   'personal',
+          company:   (co?.id ?? 'personal') as Task['company'],
           companyId: co?.id,
           status:    'open',
           completed: false,
