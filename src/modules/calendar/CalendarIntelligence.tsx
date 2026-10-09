@@ -562,8 +562,10 @@ function minToIso(dateStr: string, totalMinutes: number): string {
 }
 
 // ─── Overlap layout calculation (lanes algorithm — Calendar 1.6) ──────────────
-// Groups: events starting < 30min apart go side-by-side (same group).
-// Others cascade with 14px indent per level.
+// Rule:
+//   • Events with the same start time (≤5 min apart) → side-by-side in one group.
+//     2 events: 50/50 horizontal.  3+: equal columns with vertical text.
+//   • Events that overlap but start at a different time → cascade (indent 14px per level).
 function computeOverlaps(dayEvents: GCalEventExt[]): Map<string, EventLayout> {
   const layout = new Map<string, EventLayout>()
   const timed  = dayEvents.filter(e => !!e.start.dateTime)
@@ -572,89 +574,59 @@ function computeOverlaps(dayEvents: GCalEventExt[]): Map<string, EventLayout> {
     return layout
   }
 
-  // 14px indent per cascade level — drives the boxShadow offset on cascaded events
+  const SAME_START = 5 * 60 * 1000  // ≤5 min difference → treated as same start
+  const IND_PCT    = 5               // ~14px expressed as % of a typical column
 
   const sorted = [...timed].sort((a, b) => {
     const as = new Date(a.start.dateTime!).getTime()
     const bs = new Date(b.start.dateTime!).getTime()
     if (as !== bs) return as - bs
-    // end desc for same start
-    return new Date(b.end.dateTime ?? b.start.dateTime!).getTime() - new Date(a.end.dateTime ?? a.start.dateTime!).getTime()
+    return new Date(b.end.dateTime ?? b.start.dateTime!).getTime()
+         - new Date(a.end.dateTime ?? a.start.dateTime!).getTime()
   })
 
-  // Each group: { events, level }
-  interface Group { evs: GCalEventExt[]; level: number }
+  interface Group { evs: GCalEventExt[]; level: number; startMs: number }
   const groups: Group[] = []
-  // track active groups that still overlap the current event
-  const activeGroups: Group[] = []
 
   for (const ev of sorted) {
     const s = new Date(ev.start.dateTime!).getTime()
     const e = new Date(ev.end.dateTime ?? ev.start.dateTime!).getTime()
-    const THIRTY_MIN = 30 * 60 * 1000
 
-    // Prune groups whose last event ended before s
-    for (let i = activeGroups.length - 1; i >= 0; i--) {
-      const g = activeGroups[i]
-      const lastEv = g.evs[g.evs.length - 1]
-      const lastEnd = new Date(lastEv.end.dateTime ?? lastEv.start.dateTime!).getTime()
-      if (lastEnd <= s) activeGroups.splice(i, 1)
-    }
+    // All groups whose time range overlaps this event
+    const overlapping = groups.filter(g =>
+      g.evs.some(o => {
+        const os = new Date(o.start.dateTime!).getTime()
+        const oe = new Date(o.end.dateTime ?? o.start.dateTime!).getTime()
+        return os < e && oe > s
+      })
+    )
 
-    // Find groups that truly overlap this event
-    const overlapping = activeGroups.filter(g => {
-      const lastEv = g.evs[g.evs.length - 1]
-      const lastStart = new Date(lastEv.start.dateTime!).getTime()
-      const lastEnd   = new Date(lastEv.end.dateTime ?? lastEv.start.dateTime!).getTime()
-      return lastEnd > s && lastStart < e
-    })
+    // Join a group only when this event starts at essentially the same time
+    const sameStart = overlapping.find(g => Math.abs(g.startMs - s) <= SAME_START)
 
-    // Can we join an existing group (started < 30min ago, side-by-side)?
-    const nearGroup = overlapping.find(g => {
-      const lastEv = g.evs[g.evs.length - 1]
-      const lastStart = new Date(lastEv.start.dateTime!).getTime()
-      return s - lastStart < THIRTY_MIN
-    })
-
-    if (nearGroup) {
-      nearGroup.evs.push(ev)
-      if (!activeGroups.includes(nearGroup)) activeGroups.push(nearGroup)
+    if (sameStart) {
+      sameStart.evs.push(ev)
     } else {
-      // Cascade: new group at level = max overlapping level + 1
       const maxLevel = overlapping.reduce((m, g) => Math.max(m, g.level), -1)
-      const newGroup: Group = { evs: [ev], level: maxLevel + 1 }
-      groups.push(newGroup)
-      activeGroups.push(newGroup)
+      groups.push({ evs: [ev], level: maxLevel + 1, startMs: s })
     }
   }
 
-  // Assign geometry
   sorted.forEach(ev => {
     const grp = groups.find(g => g.evs.includes(ev))
     if (!grp) return
     const lane  = grp.evs.indexOf(ev)
     const lanes = grp.evs.length
     const level = grp.level
+    const ind   = level * IND_PCT   // left offset from cascade indent
 
-    let leftPct: number, widthPct: number
-    if (lanes === 2) {
-      leftPct  = lane * 50
-      widthPct = 50
-    } else {
-      leftPct  = lane * (100 / lanes)
-      widthPct = 100 / lanes
-    }
+    const available = 100 - ind
+    const leftPct   = ind + available * (lane / lanes)
+    const widthPct  = available / lanes - 0.5
 
-    layout.set(ev.id, {
-      left:  leftPct,
-      width: widthPct - (lanes > 1 ? 0.5 : 0.5),
-      lane,
-      lanes,
-      level,
-    })
+    layout.set(ev.id, { left: leftPct, width: widthPct, lane, lanes, level })
   })
 
-  // All-day events get full width
   dayEvents.filter(e => !e.start.dateTime).forEach(e => {
     layout.set(e.id, { left: 0, width: 99 })
   })
@@ -850,12 +822,14 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 
   const w = isDragOverlay ? 130 : cardW || 999
   const tiny     = height < 28
-  // Wrapping needs enough width for a line to be a line. Under that, three
-  // letters and an ellipsis say less than two short wrapped lines do, so the
-  // floor is where a word stops fitting rather than where a card looks tidy.
-  const canWrap  = w >= 52 && height >= 34
-  const showTime = w >= 104 && height >= 38
-  const showHost = w >= 104 && height >= 56
+  const lanes    = layout.lanes ?? 1
+  // 2-lane: side-by-side pair — horizontal word-wrap, no time row
+  const isTwoLane   = lanes === 2
+  // 3+-lane: three or more simultaneous — vertical writing-mode, only if tall enough
+  const isMultiLane = lanes >= 3
+  const canWrap  = !isTwoLane && !isMultiLane && w >= 52 && height >= 34
+  const showTime = !isTwoLane && !isMultiLane && w >= 104 && height >= 38
+  const showHost = !isTwoLane && !isMultiLane && w >= 104 && height >= 56
 
   const padV = tiny ? 6 : 13                       // the card's own 5px + 8px
   const room = height - padV - footH
@@ -882,7 +856,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         background: evBg,
         borderRadius: 12,
         border: evBorder,
-        padding: tiny ? '5px 8px 5px 10px' : '7px 9px 7px 12px',
+        padding: isMultiLane ? '6px 2px 7px' : isTwoLane ? '5px 3px' : tiny ? '5px 8px 5px 10px' : '7px 9px 7px 12px',
         overflow: 'hidden',
         cursor: isDragOverlay ? 'grabbing' : 'pointer',
         touchAction: 'none',
@@ -907,6 +881,34 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
       {/* Done is a tick in front of the name; cancelled strikes the name
           through. Neither touches the card's colour — that belongs to the
           calendar the event is on, not to what happened to it. */}
+      {/* 3+ simultaneous events: vertical writing-mode column */}
+      {isMultiLane && height >= 44 ? (
+        <div title={displayTitle(event.summary)} style={{
+          writingMode: 'vertical-rl' as const,
+          textOrientation: 'mixed' as const,
+          fontFamily: SANS, fontSize: 11.5, fontWeight: 600,
+          color: evInk, lineHeight: 1.2,
+          overflow: 'hidden', textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap' as const,
+          height: '100%', display: 'flex', alignItems: 'center',
+          paddingLeft: 2,
+        }}>
+          {displayTitle(event.summary)}
+        </div>
+      ) : isTwoLane ? (
+        /* 2 simultaneous events: word-wrap, no time row, no icons */
+        <div style={{
+          fontFamily: SANS, fontSize: 10.5, fontWeight: 600,
+          color: evInk, lineHeight: 1.3,
+          overflowWrap: 'anywhere' as const, wordBreak: 'break-word' as const,
+          overflow: 'hidden',
+          display: '-webkit-box', WebkitLineClamp: Math.max(1, Math.floor((height - 12) / 15)),
+          WebkitBoxOrient: 'vertical' as const,
+          paddingLeft: 8,
+        }}>
+          {displayTitle(event.summary)}
+        </div>
+      ) : (
       <div ref={titleRef} style={{
         // The micro *size*, not the micro level: a card's title is not a capsed
         // caption, and spreading T.micro would put it in capitals.
@@ -952,6 +954,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           textDecorationThickness: 1.5,
         }}>{displayTitle(fromTask ? stripTaskMark(event.summary) : event.summary)}</span>
       </div>
+      )}
       {/* Everything the title must leave room for, in one box so its height can
           be measured rather than assumed. `flow-root` keeps the children's top
           margins inside it — collapsed through, the measurement would be short
