@@ -569,9 +569,16 @@ function minToIso(dateStr: string, totalMinutes: number): string {
   return new Date(y, m - 1, d, Math.floor(totalMinutes / 60), totalMinutes % 60).toISOString()
 }
 
-// ─── Overlap layout calculation (lanes algorithm — Calendar 1.6) ──────────────
-// Groups: events starting < 30min apart go side-by-side (same group).
-// Others cascade with 14px indent per level.
+// ─── Overlap layout calculation ───────────────────────────────────────────────
+// Rules (matching the design spec):
+//   • Events starting within ≤5 min of each other → same-start cluster.
+//     All events in the cluster are equal-width columns, side-by-side.
+//       2 in cluster  → 50/50, normal horizontal text.
+//       3+ in cluster → equal thirds (etc.), vertical writing-mode text.
+//   • An event that overlaps a cluster but starts >5 min later →
+//     cascade: appears in front (higher z-index) with a small left indent.
+//     The cluster behind it keeps its side-by-side layout unchanged.
+// `lanes` = cluster size, `level` = cascade depth (0 = no cascade).
 function computeOverlaps(dayEvents: GCalEventExt[]): Map<string, EventLayout> {
   const layout = new Map<string, EventLayout>()
   const timed  = dayEvents.filter(e => !!e.start.dateTime)
@@ -580,89 +587,80 @@ function computeOverlaps(dayEvents: GCalEventExt[]): Map<string, EventLayout> {
     return layout
   }
 
-  // 14px indent per cascade level — drives the boxShadow offset on cascaded events
+  const SAME_START = 5 * 60 * 1000   // ≤5 min → same-start cluster
+  const IND_PCT    = 5                // indent per cascade level (~14px in a 280px column)
 
   const sorted = [...timed].sort((a, b) => {
     const as = new Date(a.start.dateTime!).getTime()
     const bs = new Date(b.start.dateTime!).getTime()
     if (as !== bs) return as - bs
-    // end desc for same start
-    return new Date(b.end.dateTime ?? b.start.dateTime!).getTime() - new Date(a.end.dateTime ?? a.start.dateTime!).getTime()
+    return new Date(b.end.dateTime ?? b.start.dateTime!).getTime()
+         - new Date(a.end.dateTime ?? a.start.dateTime!).getTime()
   })
 
-  // Each group: { events, level }
-  interface Group { evs: GCalEventExt[]; level: number }
-  const groups: Group[] = []
-  // track active groups that still overlap the current event
-  const activeGroups: Group[] = []
+  interface Cluster { evs: GCalEventExt[]; startMs: number }
+  const clusters: Cluster[] = []
 
+  // Build same-start clusters
   for (const ev of sorted) {
     const s = new Date(ev.start.dateTime!).getTime()
     const e = new Date(ev.end.dateTime ?? ev.start.dateTime!).getTime()
-    const THIRTY_MIN = 30 * 60 * 1000
 
-    // Prune groups whose last event ended before s
-    for (let i = activeGroups.length - 1; i >= 0; i--) {
-      const g = activeGroups[i]
-      const lastEv = g.evs[g.evs.length - 1]
-      const lastEnd = new Date(lastEv.end.dateTime ?? lastEv.start.dateTime!).getTime()
-      if (lastEnd <= s) activeGroups.splice(i, 1)
-    }
+    // All clusters this event overlaps in time
+    const overlapping = clusters.filter(c =>
+      c.evs.some(o => {
+        const os = new Date(o.start.dateTime!).getTime()
+        const oe = new Date(o.end.dateTime ?? o.start.dateTime!).getTime()
+        return os < e && oe > s
+      })
+    )
 
-    // Find groups that truly overlap this event
-    const overlapping = activeGroups.filter(g => {
-      const lastEv = g.evs[g.evs.length - 1]
-      const lastStart = new Date(lastEv.start.dateTime!).getTime()
-      const lastEnd   = new Date(lastEv.end.dateTime ?? lastEv.start.dateTime!).getTime()
-      return lastEnd > s && lastStart < e
-    })
-
-    // Can we join an existing group (started < 30min ago, side-by-side)?
-    const nearGroup = overlapping.find(g => {
-      const lastEv = g.evs[g.evs.length - 1]
-      const lastStart = new Date(lastEv.start.dateTime!).getTime()
-      return s - lastStart < THIRTY_MIN
-    })
-
-    if (nearGroup) {
-      nearGroup.evs.push(ev)
-      if (!activeGroups.includes(nearGroup)) activeGroups.push(nearGroup)
+    // Join a cluster only when this event starts at essentially the same time
+    const sameStart = overlapping.find(c => Math.abs(c.startMs - s) <= SAME_START)
+    if (sameStart) {
+      sameStart.evs.push(ev)
     } else {
-      // Cascade: new group at level = max overlapping level + 1
-      const maxLevel = overlapping.reduce((m, g) => Math.max(m, g.level), -1)
-      const newGroup: Group = { evs: [ev], level: maxLevel + 1 }
-      groups.push(newGroup)
-      activeGroups.push(newGroup)
+      clusters.push({ evs: [ev], startMs: s })
     }
   }
 
-  // Assign geometry
-  sorted.forEach(ev => {
-    const grp = groups.find(g => g.evs.includes(ev))
-    if (!grp) return
-    const lane  = grp.evs.indexOf(ev)
-    const lanes = grp.evs.length
-    const level = grp.level
-
-    let leftPct: number, widthPct: number
-    if (lanes === 2) {
-      leftPct  = lane * 50
-      widthPct = 50
-    } else {
-      leftPct  = lane * (100 / lanes)
-      widthPct = 100 / lanes
+  // Determine cascade level for each cluster (how many earlier overlapping clusters sit below it)
+  const clusterLevel = new Map<Cluster, number>()
+  for (let i = 0; i < clusters.length; i++) {
+    const c = clusters[i]
+    let maxLvl = -1
+    for (let j = 0; j < i; j++) {
+      const prev = clusters[j]
+      const hasOverlap = c.evs.some(ev =>
+        prev.evs.some(o => {
+          const as = new Date(ev.start.dateTime!).getTime()
+          const ae = new Date(ev.end.dateTime ?? ev.start.dateTime!).getTime()
+          const bs = new Date(o.start.dateTime!).getTime()
+          const be = new Date(o.end.dateTime ?? o.start.dateTime!).getTime()
+          return as < be && ae > bs
+        })
+      )
+      if (hasOverlap) maxLvl = Math.max(maxLvl, clusterLevel.get(prev) ?? 0)
     }
+    clusterLevel.set(c, maxLvl + 1)
+  }
 
-    layout.set(ev.id, {
-      left:  leftPct,
-      width: widthPct - (lanes > 1 ? 0.5 : 0.5),
-      lane,
-      lanes,
-      level,
+  // Assign layout coordinates
+  for (const cluster of clusters) {
+    const level = clusterLevel.get(cluster) ?? 0
+    const lanes = cluster.evs.length
+    const ind   = level * IND_PCT
+    const avail = 100 - ind
+
+    cluster.evs.forEach((ev, lane) => {
+      layout.set(ev.id, {
+        left:  ind + avail * (lane / lanes),
+        width: avail / lanes - 0.5,
+        lane, lanes, level,
+      })
     })
-  })
+  }
 
-  // All-day events get full width
   dayEvents.filter(e => !e.start.dateTime).forEach(e => {
     layout.set(e.id, { left: 0, width: 99 })
   })
@@ -890,12 +888,12 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 
   const w = isDragOverlay ? 130 : cardW || 999
   const tiny     = height < 28
-  // Wrapping needs enough width for a line to be a line. Under that, three
-  // letters and an ellipsis say less than two short wrapped lines do, so the
-  // floor is where a word stops fitting rather than where a card looks tidy.
-  const canWrap  = w >= 52 && height >= 34
-  const showTime = w >= 104 && height >= 38
-  const showHost = w >= 104 && height >= 56
+  const lanes    = layout.lanes ?? 1
+  // 3+ events starting at the same time → vertical writing-mode columns
+  const isMultiLane = lanes >= 3 && (layout.level ?? 0) === 0
+  const canWrap  = !isMultiLane && w >= 52 && height >= 34
+  const showTime = !isMultiLane && w >= 104 && height >= 38
+  const showHost = !isMultiLane && w >= 104 && height >= 56
 
   const padV = tiny ? 6 : 13                       // the card's own 5px + 8px
   const room = height - padV - footH
@@ -922,14 +920,14 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         background: evBg,
         borderRadius: 12,
         border: evBorder,
-        padding: tiny ? '5px 8px 5px 10px' : '7px 9px 7px 12px',
+        padding: isMultiLane ? '6px 2px 7px' : tiny ? '5px 8px 5px 10px' : '7px 9px 7px 12px',
         overflow: 'hidden',
         cursor: isDragOverlay ? 'grabbing' : 'pointer',
         touchAction: 'none',
         opacity: isDragSrc ? 0.35 : 1,
         transition: isDragging ? 'none' : 'box-shadow 0.12s, opacity 0.12s, filter 0.12s',
         boxSizing: 'border-box',
-        zIndex: isSelected ? 4 : (layout.lane ?? 0) + 2,
+        zIndex: isSelected ? 10 : (layout.level ?? 0) * 3 + (layout.lane ?? 0) + 2,
         boxShadow: layout.level && layout.level > 0 ? '-3px 0 0 var(--sb-card), 0 8px 16px -8px rgba(25,23,18,.35)' : 'none',
         filter: isPast && !isSelected ? 'saturate(.55) brightness(1.03)' : 'none',
         userSelect: 'none',
@@ -947,6 +945,26 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
       {/* Done is a tick in front of the name; cancelled strikes the name
           through. Neither touches the card's colour — that belongs to the
           calendar the event is on, not to what happened to it. */}
+      {/* 3+ events starting at the same time: vertical writing-mode, centered */}
+      {isMultiLane && height >= 44 ? (
+        <div style={{
+          position: 'absolute', top: 0, left: 8, right: 0, bottom: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden',
+        }}>
+          <span title={displayTitle(event.summary)} style={{
+            writingMode: 'vertical-rl' as const,
+            textOrientation: 'mixed' as const,
+            fontFamily: SANS, fontSize: 11.5, fontWeight: 600,
+            color: evInk, lineHeight: 1.2,
+            overflow: 'hidden', textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap' as const,
+            maxHeight: '100%',
+          }}>
+            {displayTitle(event.summary)}
+          </span>
+        </div>
+      ) : (
       <div ref={titleRef} style={{
         // The micro *size*, not the micro level: a card's title is not a capsed
         // caption, and spreading T.micro would put it in capitals.
@@ -992,6 +1010,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           textDecorationThickness: 1.5,
         }}>{displayTitle(fromTask ? stripTaskMark(event.summary) : event.summary)}</span>
       </div>
+      )}
       {/* Everything the title must leave room for, in one box so its height can
           be measured rather than assumed. `flow-root` keeps the children's top
           margins inside it — collapsed through, the measurement would be short
@@ -1313,6 +1332,31 @@ export function CalendarIntelligence() {
   const [dragMode,     setDragMode]     = useState<DragMode | null>(null)
   const [draggingEvt,  setDraggingEvt]  = useState<GCalEventExt | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
+  // ── Resizable rail width ────────────────────────────────────────────────────
+  const [railWidth, setRailWidth] = useState<number>(() => {
+    try { return Number(localStorage.getItem('cal-split-width')) || 324 } catch { return 324 }
+  })
+  const railWidthRef = useRef(railWidth)
+  const dividerDrag  = useRef<{ startX: number; startW: number } | null>(null)
+
+  function onDividerPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dividerDrag.current = { startX: e.clientX, startW: railWidthRef.current }
+  }
+  function onDividerPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dividerDrag.current) return
+    const delta = dividerDrag.current.startX - e.clientX
+    const next = Math.max(240, Math.min(560, dividerDrag.current.startW + delta))
+    railWidthRef.current = next
+    setRailWidth(next)
+  }
+  function onDividerPointerUp() {
+    if (!dividerDrag.current) return
+    dividerDrag.current = null
+    try { localStorage.setItem('cal-split-width', String(railWidthRef.current)) } catch { /* noop */ }
+  }
 
   // ── Drag-to-create state ────────────────────────────────────────────────────
   const [creatingEvt,   setCreatingEvt]   = useState<CreatingEvt | null>(null)
@@ -2846,7 +2890,8 @@ export function CalendarIntelligence() {
           takes the rail's column rather than covering the grid — the same
           spatial contract the task panel has beside its board, and the reason
           the rail is 324px rather than something the panel has to match. */}
-      <div className="cal-body" data-panel={(selectedEvent || newEventDraft || showBooking) ? '1' : undefined}>
+      <div className="cal-body" data-panel={(selectedEvent || newEventDraft || showBooking) ? '1' : undefined}
+        style={{ '--cal-rail-w': `${railWidth}px` } as React.CSSProperties}>
 
       {/* The calendar itself. In month view it is the panel's own ground
           showing between tiles, so it carries no surface of its own; in the
@@ -3316,6 +3361,26 @@ export function CalendarIntelligence() {
 
       </div>
 
+      {/* ── Resize divider ─────────────────────────────────────────────────────
+          14px hit area (column 2 of the 3-column grid) with a 1px visual line.
+          The divider is non-interactive when an event panel is open because the
+          panel carries its own width. */}
+      <div
+        className="cal-divider"
+        style={(selectedEvent || newEventDraft) ? { cursor: 'default', pointerEvents: 'none' } : undefined}
+        onPointerDown={(selectedEvent || newEventDraft) ? undefined : onDividerPointerDown}
+        onPointerMove={(selectedEvent || newEventDraft) ? undefined : onDividerPointerMove}
+        onPointerUp={(selectedEvent || newEventDraft) ? undefined : onDividerPointerUp}
+        aria-hidden
+      >
+        <div className="cal-divider-handle" />
+      </div>
+
+      {/* ── Right column ────────────────────────────────────────────────────────
+          Event panel, composer or day rail — whichever is active — wrapped so
+          all three share one grid cell (column 3). */}
+      <div className="cal-right">
+
       {/* Event panel — a column of its own, beside the grid */}
       {selectedEvent && (() => {
         const ev = selectedEvent as GCalEventExt
@@ -3506,6 +3571,8 @@ export function CalendarIntelligence() {
           onOpen={e => { setSelectedEvent(e as GCalEventExt); setPrep(null); setPrepError(null) }}
         />
       )}
+
+      </div>{/* end .cal-right */}
 
       </div>
      </div>
