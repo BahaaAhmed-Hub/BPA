@@ -1292,6 +1292,31 @@ export function CalendarIntelligence() {
   const [draggingEvt,  setDraggingEvt]  = useState<GCalEventExt | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
+  // ── Resizable rail width ────────────────────────────────────────────────────
+  const [railWidth, setRailWidth] = useState<number>(() => {
+    try { return Number(localStorage.getItem('cal-split-width')) || 324 } catch { return 324 }
+  })
+  const railWidthRef = useRef(railWidth)
+  const dividerDrag  = useRef<{ startX: number; startW: number } | null>(null)
+
+  function onDividerPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dividerDrag.current = { startX: e.clientX, startW: railWidthRef.current }
+  }
+  function onDividerPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dividerDrag.current) return
+    const delta = dividerDrag.current.startX - e.clientX
+    const next = Math.max(240, Math.min(560, dividerDrag.current.startW + delta))
+    railWidthRef.current = next
+    setRailWidth(next)
+  }
+  function onDividerPointerUp() {
+    if (!dividerDrag.current) return
+    dividerDrag.current = null
+    try { localStorage.setItem('cal-split-width', String(railWidthRef.current)) } catch { /* noop */ }
+  }
+
   // ── Drag-to-create state ────────────────────────────────────────────────────
   const [creatingEvt,   setCreatingEvt]   = useState<CreatingEvt | null>(null)
   const [newEventDraft, setNewEventDraft] = useState<NewEventDraft | null>(null)
@@ -2672,7 +2697,8 @@ export function CalendarIntelligence() {
           takes the rail's column rather than covering the grid — the same
           spatial contract the task panel has beside its board, and the reason
           the rail is 324px rather than something the panel has to match. */}
-      <div className="cal-body" data-panel={(selectedEvent || newEventDraft) ? '1' : undefined}>
+      <div className="cal-body" data-panel={(selectedEvent || newEventDraft) ? '1' : undefined}
+        style={{ '--cal-rail-w': `${railWidth}px` } as React.CSSProperties}>
 
       {/* The calendar itself. In month view it is the panel's own ground
           showing between tiles, so it carries no surface of its own; in the
@@ -3081,6 +3107,26 @@ export function CalendarIntelligence() {
 
       </div>
 
+      {/* ── Resize divider ─────────────────────────────────────────────────────
+          14px hit area (column 2 of the 3-column grid) with a 1px visual line.
+          The divider is non-interactive when an event panel is open because the
+          panel carries its own width. */}
+      <div
+        className="cal-divider"
+        style={(selectedEvent || newEventDraft) ? { cursor: 'default', pointerEvents: 'none' } : undefined}
+        onPointerDown={(selectedEvent || newEventDraft) ? undefined : onDividerPointerDown}
+        onPointerMove={(selectedEvent || newEventDraft) ? undefined : onDividerPointerMove}
+        onPointerUp={(selectedEvent || newEventDraft) ? undefined : onDividerPointerUp}
+        aria-hidden
+      >
+        <div className="cal-divider-handle" />
+      </div>
+
+      {/* ── Right column ────────────────────────────────────────────────────────
+          Event panel, composer or day rail — whichever is active — wrapped so
+          all three share one grid cell (column 3). */}
+      <div className="cal-right">
+
       {/* Event panel — a column of its own, beside the grid */}
       {selectedEvent && (() => {
         const ev = selectedEvent as GCalEventExt
@@ -3267,6 +3313,8 @@ export function CalendarIntelligence() {
           onOpen={e => { setSelectedEvent(e as GCalEventExt); setPrep(null); setPrepError(null) }}
         />
       )}
+
+      </div>{/* end .cal-right */}
 
       </div>
      </div>
