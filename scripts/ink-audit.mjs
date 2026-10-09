@@ -60,6 +60,27 @@ const msg = id => ({
 })
 
 // ─── The measurement, run inside the page ────────────────────────────────────
+// What a stranger sees: a page, two calls, and three half hours tomorrow.
+const BOOKING_PAGE = {
+  handle: 'bahaa', name: 'Bahaa', blurb: 'Half an hour, whenever suits.',
+  timezone: 'Africa/Cairo',
+  plans: [
+    { slug: 'intro', title: 'Intro call', blurb: 'A first conversation.', duration_minutes: 30, location_mode: 'meet', requires_approval: false },
+    { slug: 'demo', title: 'Teradix demo', blurb: null, duration_minutes: 45, location_mode: 'place', requires_approval: true },
+  ],
+}
+const BOOKING_SLOTS = (() => {
+  const d = new Date(Date.now() + 86400000)
+  const date = d.toISOString().slice(0, 10)
+  return {
+    slots: [9, 10, 11].map(h => `${date}T${String(h).padStart(2, '0')}:00:00.000Z`),
+    from: new Date().toISOString().slice(0, 10),
+    to: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+    timezone: 'Africa/Cairo', duration: 30, title: 'Intro call',
+    blurb: 'A first conversation.', location_mode: 'meet', requires_approval: false,
+  }
+})()
+
 const AUDIT = () => {
   // Chrome computes color-mix() to `color(srgb 0.9 0.8 0.7)` — 0..1, not
   // 0..255. Read as 0..255 every mix audits as near-black.
@@ -228,6 +249,14 @@ for (const theme of THEMES) {
     const u = r.request().url()
     if (u.includes('/auth/v1/user')) return r.fulfill({ json: session.user })
     if (u.includes('/auth/v1/token')) return r.fulfill({ json: session })
+    // The stranger's booking page talks only to this function, so it is the
+    // whole of what has to be stood up to measure that page's ink.
+    if (u.includes('/functions/v1/book-me')) {
+      const action = new URL(u).searchParams.get('action')
+      if (action === 'profile') return r.fulfill({ json: BOOKING_PAGE })
+      if (action === 'slots') return r.fulfill({ json: BOOKING_SLOTS })
+      return r.fulfill({ json: {} })
+    }
     const t = /\/rest\/v1\/([a-z_]+)/.exec(u)?.[1]
     const GET = r.request().method() === 'GET'
     if (t && SHOPPING[t] && GET) return r.fulfill({ json: SHOPPING[t] })
@@ -280,7 +309,11 @@ for (const theme of THEMES) {
 
   const found = []
   const seen = []
-  const visit = async (label, go) => {
+  // `floor` is the number of elements below which a screen is called blind. 40
+  // suits the app's own screens, every one of which is dense; a deliberately
+  // lean page — the stranger's booking page is 32 elements and all of them
+  // real — says its own floor rather than being reported as never opened.
+  const visit = async (label, go, floor = 40) => {
     let opened = true
     try { await go() } catch (e) { opened = false; seen.push({ label, pairs: 0, why: String(e).split('\n')[0].slice(0, 70) }) }
     if (!opened) return
@@ -291,7 +324,7 @@ for (const theme of THEMES) {
     // screen that never opened reports 0 failures over 0 nodes, which reads
     // identically to a clean one and is how a whole module can slip the gate.
     const measured = await page.evaluate(() => document.querySelectorAll('body *').length)
-    seen.push({ label, pairs: rows.length, nodes: measured })
+    seen.push({ label, pairs: rows.length, nodes: measured, floor })
     for (const f of rows) found.push({ ...f, screen: label })
   }
 
@@ -300,6 +333,20 @@ for (const theme of THEMES) {
     await page.locator('header nav button', { hasText: /^Calendar$/ }).first().click()
     await page.waitForTimeout(1600)
     await page.locator('.event-card').first().click()
+  })
+  // Booking: the owner's panel, and the same week with the open-hours bands on
+  // it. The public page is a different document entirely — it renders above
+  // the sign-in gate, with no session — so it is audited by its own file
+  // rather than from in here.
+  await visit('Calendar · booking panel', async () => {
+    await page.locator('header nav button', { hasText: /^Calendar$/ }).first().click()
+    await page.waitForTimeout(1400)
+    await page.getByRole('button', { name: /^Booking$/ }).click()
+    await page.waitForTimeout(900)
+  })
+  await visit('Calendar · marking open hours', async () => {
+    const mark = page.getByRole('button', { name: /Mark hours on the week/i })
+    if (await mark.count()) { await mark.click(); await page.waitForTimeout(800) }
   })
   await visit('Mail', async () => { await page.locator('header nav button', { hasText: /^Mail$/ }).first().click() })
   await visit('Tasks', async () => { await page.locator('header nav button', { hasText: /^Tasks$/ }).first().click() })
@@ -387,6 +434,24 @@ for (const theme of THEMES) {
     await page.waitForTimeout(700)
   })
 
+  // ── The page a stranger sees ───────────────────────────────────────────────
+  // Its own document: `?book=` renders above the sign-in gate, so this is a
+  // navigation rather than a click. It is measured last, because it leaves the
+  // app behind — there is nothing to click afterwards.
+  await visit('Booking · the public page', async () => {
+    await page.goto(`http://localhost:${process.argv[2]}/BPA/?book=bahaa`, { waitUntil: 'domcontentloaded' })
+    // Wait for what the page is *for*, not for a guess at how long it takes:
+    // the first measurement landed on an empty document and said so.
+    await page.getByRole('button', { name: /Intro call/ }).first().waitFor({ timeout: 15000 })
+    await page.waitForTimeout(500)
+  }, 20)
+  await visit('Booking · picking a time', async () => {
+    await page.getByRole('button', { name: /Intro call/ }).first().click({ timeout: 5000 })
+    await page.waitForTimeout(1400)
+    const t = page.locator('button[aria-pressed]').filter({ hasText: /:/ }).first()
+    if (await t.count()) { await t.click(); await page.waitForTimeout(700) }
+  })
+
 
   // One row per distinct colour pair across the whole theme.
   const uniq = new Map()
@@ -395,11 +460,11 @@ for (const theme of THEMES) {
     if (!uniq.has(k)) uniq.set(k, f)
   }
   const rows = [...uniq.values()].sort((a, b) => a.ratio - b.ratio)
-  const blind = seen.filter(v => v.why || (v.nodes ?? 0) < 40)
+  const blind = seen.filter(v => v.why || (v.nodes ?? 0) < (v.floor ?? 40))
   console.log(`\n━━ ${theme} — ${rows.length} failing pair${rows.length === 1 ? '' : 's'} over ${seen.length} screens`)
   if (blind.length) {
     console.log(`   ⚠ ${blind.length} screen(s) measured nothing — a clean result over nothing is not a clean result:`)
-    for (const v of blind) console.log(`     ${v.label}${v.why ? ` — ${v.why}` : ' — opened but empty'}`)
+    for (const v of blind) console.log(`     ${v.label}${v.why ? ` — ${v.why}` : ` — opened but only ${v.nodes ?? 0} elements on it`}`)
   }
   for (const f of rows.slice(0, 14)) {
     console.log(`   ${String(f.ratio).padStart(5)} (need ${f.need})  ${f.fg.padEnd(18)} on ${f.bg.padEnd(18)} ${String(f.size).padStart(5)}px  ${f.screen} · ${JSON.stringify(f.text)}`)

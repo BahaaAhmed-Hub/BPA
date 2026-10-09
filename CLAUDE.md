@@ -232,6 +232,122 @@ its own column. The card stays where the event is, dimmed to 0.35, and the overl
 does the moving. Resizing needs no live transform either: it is worked out from
 `delta` in `handleDragEnd`.
 
+## Calendar — a meeting that is done asks what came out of it
+`MeetingOutcome.tsx`, opened by `toggleStatus` — the one funnel every door to
+"done" already went through (the tick on the block, the context menu, the
+panel's own glyph). Marking an event done recorded nothing about what was
+agreed in it.
+- **The event is done before anything is asked.** Not a gate: the status is
+  written first and the prompt opens after, so closing it costs the outputs
+  nobody typed and never the tick. `DeliverablePrompt` made the other mistake
+  once already.
+- **A line is a task, with no model involved.** `MeetingFollowUpPopup` — the
+  one popup that already asked this, for a *task* of a meeting kind — could
+  only reach its editable rows through `breakdownMeetingNotes`, so with no AI
+  key there was no way to write down a single follow-up: the extractor was the
+  only door to the form. Here the lines you type **are** the tasks, and reading
+  prose is an accelerator beside that which can fail without taking the form.
+- **An unanswered box is `placementForNew`'s answer**, and moves as the row is
+  filled in — a P0 due tomorrow lands in Do — so the pill always shows where
+  the task will go. `suggestPlacement`/`placementForNew` were widened to a
+  `Placeable` of the four fields they read, rather than a second copy here.
+- Tasks are filed to the company that owns the meeting's calendar, link back to
+  the meeting, and **never take its `gcalEventId`**: that field means "the event
+  this task made", and writing it here would hand a task the meeting's hour —
+  ticking either would then finish the other.
+- **The next meeting is one of the actions**, handed to the calendar's own
+  composer seeded with this meeting's people, calendar and place, a week on at
+  the same hour. `NewEventPanel` gained a `seed` prop, read only while
+  composing; no replies and no Meet link travel, because nobody has said yes to
+  a meeting that does not exist and a conference belongs to the event it was
+  minted for.
+Two guards came out of measuring it, each with its own control:
+- **`ComposerShell` no longer treats a dialog over it as "outside".** Every
+  pointerdown in the prompt closed the event panel underneath and took the
+  selected event with it — the Budget drill-down's fault, one module along.
+- **Delete/Backspace stands aside while a dialog is open.** A pill is not a
+  text field, so one Backspace after picking a box **deleted the meeting from
+  Google**; the control sends a real DELETE.
+`scripts/meeting-outcome-becomes-tasks.mjs [tasks|dismiss|followup|keys]` — 65
+assertions. Control: the tick writes the status and asks nothing.
+
+## Booking — letting somebody outside put an hour on the calendar
+Two things, kept apart because they answer different questions. **Meeting
+plans** (`meeting_plans`) are the predefined calls an outsider picks from —
+each with its own length, buffers, notice and target calendar. **Open hours**
+(`booking_windows`) are the hours you are willing to be booked in, and
+**nothing is open until you draw it**. What is offered is the intersection:
+the hours you opened, minus everything on the calendars the plan names, minus
+buffers and notice. An open hour that stops being free stops being offered.
+- **The anon key is in a public bundle, so the client cannot be the boundary.**
+  `20260024_booking.sql` gives the booking tables no policy for anybody but
+  their owner — gated on the `calendar` module — and the `book-me` edge
+  function with the service role is the entire public surface. Verified on a
+  throwaway Postgres: an anon role reads nothing, another account sees none of
+  it, and `booking_hits` has no policy at all.
+- **The slot index is the race guard, not the application code.**
+  `unique (user_id, start_at) where status <> 'cancelled'`, keyed on the
+  *owner* rather than the plan — two plans must not sell one hour twice — and a
+  cancellation frees it. Control: with the index dropped, 11:00 sells to two
+  people.
+- **A window is a wall clock; busy time is instants.** 09:00 Cairo stays 09:00
+  across a summer-time change while the instant under it moves, so each
+  occurrence is converted at the offset in force on *its own* day. Control: a
+  fixed offset gets 4 of 7 weeks wrong, in both directions. `_shared/slots.ts`
+  is pure (no Deno), so the test runs the real module, in five zones.
+- **A diary it could not read is never answered as an empty one.** `freeBusy`
+  returns `{busy, failed}` and any failure refuses the whole answer — the gap
+  is exactly where the meeting it could not see is sitting. The page says "the
+  diary cannot be read just now" rather than showing a stranger an empty month.
+- **`/freeBusy`, not `events.list`:** one request per account instead of one
+  per calendar, and **no title ever leaves Google** — the right default for an
+  endpoint answering the public. The cost is that an event you declined, or one
+  marked cancelled in this app (that status is localStorage), still counts as
+  busy.
+- **Nothing the client says about *when* is trusted.** Every write recomputes
+  the offer from the windows and the live diary; a 409 carries the fresh list,
+  because "that one has just gone" is only useful beside what is still there.
+- **The public page never mounts the app.** The branch is in `main.tsx`, not
+  beside the sign-in gate: React runs every hook before the first `return`, so
+  a check inside `App` would already have fired the auth listener, `hydrate()`
+  and every store load on behalf of somebody with no account. `?book=<handle>`
+  is the only deep link that survives a hard load — there is no router and
+  Pages has no SPA fallback. Measured: **not one `/rest/v1` read** from a
+  stranger's browser. Control: before the branch, that URL is the sign-in
+  screen.
+- **The same drag means two things**, so which one is in force is on screen the
+  whole time: a strip above the grid while marking, and bands in the positive
+  tint behind the events. Control: out of the mode the identical drag opens the
+  composer and writes no window; in it, it writes a window and nothing reaches
+  Google.
+- **A window you draw may repeat**, and that is the only way anything recurs —
+  there is no invisible default pattern, so a week you never touched offers
+  exactly what you put there. One occurrence is taken back with a `skips` date
+  rather than an overrides table; changing one occurrence's hours is a skip
+  plus a one-off window.
+- **Times are shown on the visitor's clock**, with a zone picker built from
+  `Intl.supportedValuesOf('timeZone')` — never a hard-coded three, the mistake
+  the shopping currency list made. `zoneOffset` is rounded to whole minutes for
+  display, or the label reads `GMT+01:59.99695`.
+- **Two failures, two variables.** "The page could not read the diary" replaces
+  the picker; "that time has just gone" must leave it standing — sharing one
+  variable meant the message asking you to pick again took away the thing you
+  would pick from.
+- Google sends the invitations (`sendUpdates=all`), so there is no mail service
+  and no new secret. A booking the calendar refuses is deleted again rather
+  than left as a row nobody can see; a cancellation that Google refuses does
+  **not** mark the row cancelled, because a row that says cancelled beside an
+  event still sitting on your morning is the one state nobody can act on.
+- `book-me` is in `deploy-functions.yml` with `--no-verify-jwt`. Function names
+  there are hand-written, not globbed — which is how `health-ingest`,
+  `professor-mcp` and `shopping-price-watch` are still hand-deployed.
+`scripts/booking-sql-holds.sh` (23, on a throwaway Postgres 16),
+`booking-slots.mjs` (21 × 5 zones, plus `--control`),
+`booking-page-is-public.mjs` (37 over four modes),
+`booking-hours-draw.mjs` (46 over four modes). The ink audit covers the panel,
+the marking mode and the public page — 22 screens, 0 failing pairs in all four
+themes.
+
 ## Finance — how money is written
 `src/modules/finance/format.ts` is the only place that decides this.
 - **Accounting convention.** A negative is bracketed and drops its minus —

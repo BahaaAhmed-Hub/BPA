@@ -5,6 +5,7 @@ import {
   ChevronLeft, ChevronRight, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Check, ExternalLink, AlertCircle, Shield, Copy, Trash2, CheckSquare, Plus,
+  CalendarPlus, Repeat, X,
 } from 'lucide-react'
 import { formatTime } from '@/modules/tasks/SchedulePopover'
 import {
@@ -46,6 +47,11 @@ import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
 import { NewEventPanel, type ExistingEvent, type SeededEvent } from './NewEventPanel'
 import { useMeetingOutcome } from './MeetingOutcome'
+import { BookingPanel } from '@/modules/booking/BookingPanel'
+import {
+  addWindow, deleteWindow, hhmmOf, loadWindows, minOf, updateWindow, windowsOnDate,
+  type WindowRow,
+} from '@/lib/booking'
 import type { OutcomeEvent } from './MeetingOutcome'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
 import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
@@ -653,7 +659,10 @@ function ColorPickerPopover({ current, onPick, onClose }: { current: string; onP
 function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: `col-${dateStr}` })
   return (
-    <div ref={setNodeRef} style={{
+    // The column says which day it is. The week may start on Sunday or Monday
+    // and may be three days wide, so anything measuring this grid from outside
+    // has to read the date rather than count from an assumed first day.
+    <div ref={setNodeRef} data-date={dateStr} style={{
       flex: 1, position: 'relative', height: GRID_H,
       borderRight: 'var(--sb-border-width) solid var(--sb-border)',
       background: isToday ? 'rgba(var(--sb-accent-rgb),0.045)' : isOver ? 'rgba(var(--sb-accent-rgb),0.09)' : 'transparent',
@@ -1233,6 +1242,26 @@ export function CalendarIntelligence() {
   const creatingRef = useRef<CreatingEvt | null>(null)
   useEffect(() => { creatingRef.current = creatingEvt }, [creatingEvt])
 
+  // ── Booking ───────────────────────────────────────────────────────────────
+  // `openHours` turns the week you are already looking at into the week you
+  // are configuring: your real events stay drawn — dimmed — so you can see
+  // what the hours have to fit around, and a drag opens hours instead of
+  // drawing an event.
+  const [showBooking, setShowBooking] = useState(false)
+  const [openHours, setOpenHours] = useState(false)
+  const [windows, setWindows] = useState<WindowRow[] | null>(null)
+  const [editWin, setEditWin] = useState<{ w: WindowRow; date: string; x: number; y: number } | null>(null)
+  const openHoursRef = useRef(false)
+  useEffect(() => { openHoursRef.current = openHours }, [openHours])
+
+  // Read only when they are wanted: a stranger's hours are nobody's business
+  // on a boot that is going straight to the grid.
+  useEffect(() => {
+    if (!openHours && !showBooking) return
+    if (windows !== null) return
+    void loadWindows().then(rows => setWindows(rows ?? []))
+  }, [openHours, showBooking, windows])
+
   useEffect(() => {
     if (!creatingEvt) return
     const onMove = (e: PointerEvent) => {
@@ -1250,6 +1279,10 @@ export function CalendarIntelligence() {
       const startMin = Math.min(cur.originMin, cur.currentMin)
       const endMin   = Math.max(cur.originMin + SNAP_MIN, cur.currentMin)
       if (endMin - startMin >= SNAP_MIN) {
+        // The same gesture, two meanings — and which one is in force is said
+        // on screen the whole time, so the hours you draw are never a
+        // surprise event or the other way round.
+        if (openHoursRef.current) { void openTheseHours(cur.dateStr, startMin, endMin); return }
         setNewEventSeed(null)
         setNewEventDraft({ dateStr: cur.dateStr, startMin, endMin, anchorX: e.clientX, anchorY: e.clientY })
       }
@@ -1612,6 +1645,34 @@ export function CalendarIntelligence() {
       const o = outcomeOf(eventId)
       if (o) askAboutOutcome(o)
     }
+  }
+
+  // ── Open hours, written where they were drawn ─────────────────────────────
+  async function openTheseHours(dateStr: string, startMin: number, endMin: number) {
+    if (!user?.id) return
+    const row = await addWindow({
+      user_id: user.id, on_date: dateStr, start_min: startMin, end_min: endMin,
+      repeat: { kind: 'none' }, skips: [], label: null,
+    })
+    if (!row) { notify('Those hours could not be saved'); return }
+    setWindows(w => [...(w ?? []), row])
+    // Opened, and then offered — the repeat is the next question, asked where
+    // the answer goes rather than in a dialog of its own.
+    setEditWin({ w: row, date: dateStr, x: window.innerWidth / 2 - 120, y: 180 })
+  }
+
+  async function patchWindow(id: string, patch: Partial<WindowRow>) {
+    const ok = await updateWindow(id, patch)
+    if (!ok) { notify('That change did not save'); return }
+    setWindows(w => (w ?? []).map(x => x.id === id ? { ...x, ...patch } : x))
+    setEditWin(e => e && e.w.id === id ? { ...e, w: { ...e.w, ...patch } } : e)
+  }
+
+  async function dropWindow(id: string) {
+    if (!await deleteWindow(id)) { notify('Could not remove those hours'); return }
+    setWindows(w => (w ?? []).filter(x => x.id !== id))
+    setEditWin(null)
+    notify('Those hours are closed')
   }
 
   /** What the outcome prompt needs to know about a meeting. */
@@ -2483,8 +2544,6 @@ export function CalendarIntelligence() {
 
             {/* Step through time, and come back to now */}
             <button
-              title="Previous"
-              aria-label="Previous"
               className="cal-ctl"
               onClick={() => setAnchorDate(d => {
                 const n = new Date(d)
@@ -2495,6 +2554,8 @@ export function CalendarIntelligence() {
                 else n.setDate(n.getDate() - weekSpan)
                 return n
               })}
+              title={calView === 'day' ? 'The day before' : calView === 'month' ? 'The month before' : 'The week before'}
+              aria-label={calView === 'day' ? 'The day before' : calView === 'month' ? 'The month before' : 'The week before'}
               style={CAL_DISC}><ChevronLeft size={ICON.md} strokeWidth={STROKE.rest} /></button>
             <button
               onClick={() => setAnchorDate(new Date())}
@@ -2506,8 +2567,6 @@ export function CalendarIntelligence() {
                 color: 'var(--sb-ink-1)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
               }}>Today</button>
             <button
-              title="Next"
-              aria-label="Next"
               className="cal-ctl"
               onClick={() => setAnchorDate(d => {
                 const n = new Date(d)
@@ -2516,6 +2575,8 @@ export function CalendarIntelligence() {
                 else n.setDate(n.getDate() + weekSpan)
                 return n
               })}
+              title={calView === 'day' ? 'The day after' : calView === 'month' ? 'The month after' : 'The week after'}
+              aria-label={calView === 'day' ? 'The day after' : calView === 'month' ? 'The month after' : 'The week after'}
               style={CAL_DISC}><ChevronRight size={ICON.md} strokeWidth={STROKE.rest} /></button>
 
             {/* Ideal Week designer — open the weekly template canvas */}
@@ -2531,6 +2592,29 @@ export function CalendarIntelligence() {
                 cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
               }}>
               <Sparkles size={13} strokeWidth={STROKE.active} /> Ideal Week
+            </button>
+
+            {/* Booking — the page strangers use, and the hours it offers */}
+            <button
+              className={openHours || showBooking ? 'cal-ctl cal-ctl-ink' : 'cal-ctl'}
+              onClick={() => {
+                // One pill, and it owns the column: an open event panel or a
+                // half-written composer is about one event, and this is about
+                // the page as a whole.
+                setShowBooking(v => !v)
+                setSelectedEvent(null); setNewEventDraft(null); setNewEventSeed(null)
+              }}
+              title="Let people outside book a time with you"
+              aria-pressed={showBooking}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+                height: 'var(--sb-h-pill)', boxSizing: 'border-box', padding: '0 14px', borderRadius: 999,
+                background: openHours || showBooking ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+                color: openHours || showBooking ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-1)',
+                border: openHours || showBooking ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+              }}>
+              <CalendarPlus size={13} strokeWidth={STROKE.active} /> Booking
             </button>
 
             {/* The one deliberate way in, now that a bare click on the grid does
@@ -2689,7 +2773,7 @@ export function CalendarIntelligence() {
           takes the rail's column rather than covering the grid — the same
           spatial contract the task panel has beside its board, and the reason
           the rail is 324px rather than something the panel has to match. */}
-      <div className="cal-body" data-panel={(selectedEvent || newEventDraft) ? '1' : undefined}>
+      <div className="cal-body" data-panel={(selectedEvent || newEventDraft || showBooking) ? '1' : undefined}>
 
       {/* The calendar itself. In month view it is the panel's own ground
           showing between tiles, so it carries no surface of its own; in the
@@ -2900,6 +2984,35 @@ export function CalendarIntelligence() {
             </div>
           )}
 
+          {/* ── Marking open hours ───────────────────────────────────────────
+              The mode has to be unmissable and escapable without the panel:
+              the same drag means two different things, and a person who
+              cannot tell which is in force will draw an event where they
+              meant to offer an hour. */}
+          {openHours && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+              padding: '8px 14px', background: 'var(--sb-positive-tint)',
+              borderBottom: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 35%, transparent)',
+            }}>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-positive-deep)' }}>
+                Marking open hours
+              </span>
+              <span style={{ flex: 1, minWidth: 140, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)' }}>
+                Drag across the week to open hours. Nothing is offered outside them, and never an hour already taken.
+              </span>
+              <button
+                onClick={() => { setOpenHours(false); setEditWin(null) }}
+                style={{
+                  height: 'var(--sb-h-pill)', padding: '0 14px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
+                  background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', border: 'none',
+                  fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 700,
+                }}>
+                Done
+              </button>
+            </div>
+          )}
+
           {/* Scrollable time grid */}
           <div ref={gridRef} onClick={closePopup}
             style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative', background: 'var(--sb-card)' }}
@@ -2954,6 +3067,49 @@ export function CalendarIntelligence() {
                         <div style={{ position: 'absolute', top: nowPx, left: 0, right: 0, borderTop: 'var(--sb-border-width) solid var(--sb-negative)', zIndex: 5, pointerEvents: 'none' }} />
                       </>
                     )}
+
+                    {/* ── The hours that are open on this day ──────────────
+                        Drawn behind the events, in the positive tint rather
+                        than a calendar colour — they are not appointments.
+                        Where one overlaps something real the overlap is struck
+                        out, because that hour is already gone and the function
+                        will not offer it: the screen says what the server
+                        computes. */}
+                    {openHours && (windows ?? []).length > 0 && windowsOnDate(windows ?? [], ds).map(w => {
+                      const top = w.start_min / 60 * HOUR_PX
+                      const h = Math.max(10, (w.end_min - w.start_min) / 60 * HOUR_PX)
+                      const repeats = (w.repeat?.kind ?? 'none') === 'weekly'
+                      return (
+                        <button
+                          key={w.id}
+                          data-open-hours={w.id}
+                          onPointerDown={e => e.stopPropagation()}
+                          onClick={e => {
+                            e.stopPropagation()
+                            const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                            setEditWin({ w, date: ds, x: r.left, y: r.top })
+                          }}
+                          title={`Open ${hhmmOf(w.start_min)} – ${hhmmOf(w.end_min)}${repeats ? ', every week' : ''}`}
+                          aria-label={`Open hours ${hhmmOf(w.start_min)} to ${hhmmOf(w.end_min)} on ${ds}`}
+                          style={{
+                            position: 'absolute', top, left: 0, right: 0, height: h, zIndex: 1,
+                            background: 'var(--sb-positive-tint)',
+                            borderTop: 'var(--sb-border-emphasis) solid var(--sb-positive)',
+                            borderBottom: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 40%, transparent)',
+                            cursor: 'pointer', textAlign: 'left', padding: '2px 5px', boxSizing: 'border-box',
+                            fontFamily: 'inherit', overflow: 'hidden',
+                          }}>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 3,
+                            fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-positive-deep)',
+                            fontVariantNumeric: 'tabular-nums',
+                          }}>
+                            {hhmmOf(w.start_min)}–{hhmmOf(w.end_min)}
+                            {repeats && <Repeat size={9} strokeWidth={STROKE.active} />}
+                          </span>
+                        </button>
+                      )
+                    })}
 
                     {/* Creation ghost block */}
                     {creatingEvt?.dateStr === ds && (() => {
@@ -3202,7 +3358,20 @@ export function CalendarIntelligence() {
           The right column when nothing else is claiming it. An open event or a
           composer is *about* one event and belongs in the same place the rail
           would be, so the two never stack: whichever you opened is the column. */}
-      {!selectedEvent && !newEventDraft && (
+      {/* The booking page's own panel — the same column, because the week has
+          to stay visible while you set what it offers. */}
+      {showBooking && user?.id && (
+        <BookingPanel
+          userId={user.id}
+          userName={user.email?.split('@')[0]}
+          calendars={allCalendars}
+          windowCount={(windows ?? []).length}
+          openHours={openHours}
+          onOpenHours={on => { setOpenHours(on); if (!on) setEditWin(null) }}
+          onClose={() => setShowBooking(false)} />
+      )}
+
+      {!selectedEvent && !newEventDraft && !showBooking && (
         <CalendarRail
           rows={railEvents}
           dayLabel={new Date(`${railDateStr}T12:00:00`)
@@ -3241,6 +3410,113 @@ export function CalendarIntelligence() {
         }
         .cal-grid-creating, .cal-grid-creating * { cursor: crosshair !important; }
       `}</style>
+
+      {/* ── One window of open hours ──────────────────────────────────────
+          `fixed`, positioned from the band's own rect: the grid is a scroll
+          container, and a popover rendered inside one is clipped by it — the
+          Budget drill-down's lesson, which read as a control that does not
+          open. */}
+      {editWin && (() => {
+        const w = editWin.w
+        const kind = w.repeat?.kind ?? 'none'
+        const x = Math.max(8, Math.min(editWin.x, window.innerWidth - 248))
+        const y = Math.max(8, Math.min(editWin.y, window.innerHeight - 330))
+        const fld: React.CSSProperties = {
+          height: 30, padding: '0 8px', background: 'var(--sb-field)',
+          border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
+          fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none',
+        }
+        const btn: React.CSSProperties = {
+          display: 'inline-flex', alignItems: 'center', gap: 5, height: 'var(--sb-h-pill)', padding: '0 10px',
+          borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', background: 'var(--sb-card)',
+          border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
+          fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
+        }
+        return (
+          <>
+            <div onPointerDown={() => setEditWin(null)} style={{ position: 'fixed', inset: 0, zIndex: 1140 }} />
+            <div
+              role="dialog"
+              aria-label={`Open hours on ${editWin.date}`}
+              style={{
+                position: 'fixed', left: x, top: y, zIndex: 1150, width: 240,
+                display: 'flex', flexDirection: 'column', gap: 9, padding: '12px 13px',
+                background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-menu)',
+              }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>
+                  Open hours
+                </span>
+                <button onClick={() => setEditWin(null)} aria-label="Close" title="Close"
+                  style={{ ...btn, width: 26, height: 26, padding: 0, justifyContent: 'center', borderRadius: 'var(--sb-r-pill)' }}>
+                  <X size={ICON.sm} />
+                </button>
+              </span>
+
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input type="time" defaultValue={hhmmOf(w.start_min)} aria-label="Open from"
+                  onChange={e => { const v = minOf(e.target.value); if (v !== null && v < w.end_min) void patchWindow(w.id, { start_min: v }) }}
+                  style={{ ...fld, flex: 1, minWidth: 84 }} />
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>to</span>
+                <input type="time" defaultValue={hhmmOf(w.end_min)} aria-label="Open until"
+                  onChange={e => { const v = minOf(e.target.value); if (v !== null && v > w.start_min) void patchWindow(w.id, { end_min: v }) }}
+                  style={{ ...fld, flex: 1, minWidth: 84 }} />
+              </span>
+
+              {/* A window you draw may repeat — which is the whole of how a
+                  standing Tuesday afternoon stays one gesture rather than a
+                  chore every Monday. Nothing repeats unless it is said to. */}
+              <span style={{ display: 'flex', gap: 5 }}>
+                {([['none', 'Just once'], ['weekly', 'Every week']] as const).map(([k, label]) => (
+                  <button key={k} aria-pressed={kind === k}
+                    onClick={() => void patchWindow(w.id, {
+                      repeat: k === 'weekly' ? { kind: 'weekly', interval: w.repeat?.interval ?? 1, until: w.repeat?.until ?? null } : { kind: 'none' },
+                    })}
+                    style={{
+                      ...btn, flex: 1, justifyContent: 'center',
+                      background: kind === k ? 'var(--sb-positive-tint)' : 'var(--sb-card)',
+                      borderColor: kind === k ? 'color-mix(in srgb, var(--sb-positive) 45%, transparent)' : 'var(--sb-border)',
+                      color: kind === k ? 'var(--sb-positive-deep)' : 'var(--sb-ink-3)',
+                    }}>
+                    {label}
+                  </button>
+                ))}
+              </span>
+
+              {kind === 'weekly' && (
+                <>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>every</span>
+                    <select value={w.repeat?.interval ?? 1}
+                      onChange={e => void patchWindow(w.id, { repeat: { ...w.repeat, kind: 'weekly', interval: Number(e.target.value) } })}
+                      aria-label="How often it comes round" style={{ ...fld, cursor: 'pointer' }}>
+                      {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n === 1 ? 'week' : `${n} weeks`}</option>)}
+                    </select>
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>until</span>
+                    <input type="date" value={w.repeat?.until ?? ''}
+                      onChange={e => void patchWindow(w.id, { repeat: { ...w.repeat, kind: 'weekly', until: e.target.value || null } })}
+                      aria-label="The last week it applies" style={{ ...fld, flex: 1 }} />
+                  </span>
+                  <button
+                    onClick={() => void patchWindow(w.id, { skips: [...new Set([...(w.skips ?? []), editWin.date])] })}
+                    style={btn}>
+                    Not this week
+                  </button>
+                </>
+              )}
+
+              <button onClick={() => void dropWindow(w.id)}
+                style={{ ...btn, color: 'var(--sb-negative-deep)' }}
+                aria-label="Close these hours">
+                <Trash2 size={ICON.sm} /> Close these hours
+              </button>
+            </div>
+          </>
+        )
+      })()}
 
       {/* What came out of the meeting that was just marked done. The status is
           already written; this only asks. */}

@@ -198,6 +198,64 @@ export class CalendarHub {
     return this.#calendars
   }
 
+  /** When you are busy, across the calendars asked for — and nothing else.
+   *
+   *  `/freeBusy` instead of listing events: one request per account rather than
+   *  one per calendar, and **no title ever leaves Google**, which is the right
+   *  default for an endpoint that answers the public. The booking page needs to
+   *  know an hour is taken; it has no business knowing by what.
+   *
+   *  **A calendar that could not be read is named, never treated as free.**
+   *  Google answers per calendar, and a single entry may carry `errors` while
+   *  its siblings are fine — reading that as "nothing on" would offer a
+   *  stranger an hour that is already gone.
+   */
+  async freeBusy(calendarIds: string[], timeMin: string, timeMax: string): Promise<{
+    busy: { start: string; end: string }[]
+    failed: string[]
+  }> {
+    const mine = await this.calendars()
+    // Only calendars this account actually holds. An id from somewhere else is
+    // not refused loudly — it is simply not one of yours to read.
+    const wanted = calendarIds.length
+      ? mine.filter(c => calendarIds.includes(c.calendarId))
+      : mine.filter(c => c.primary)
+
+    const byAccount = new Map<string, GCalendar[]>()
+    for (const c of wanted) {
+      const list = byAccount.get(c.accountId) ?? []
+      list.push(c)
+      byAccount.set(c.accountId, list)
+    }
+
+    const busy: { start: string; end: string }[] = []
+    const failed: string[] = [...this.unreachable]
+
+    await Promise.all([...byAccount.entries()].map(async ([accountId, cals]) => {
+      const token = await this.token(accountId)
+      if (!token) { failed.push(cals[0].accountEmail); return }
+      try {
+        const res = await fetch(`${CAL_API}/freeBusy`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeMin, timeMax, items: cals.map(c => ({ id: c.calendarId })) }),
+        })
+        if (!res.ok) { failed.push(cals[0].accountEmail); return }
+        const body = await res.json() as {
+          calendars?: Record<string, { busy?: { start: string; end: string }[]; errors?: unknown[] }>
+        }
+        for (const cal of cals) {
+          const row = body.calendars?.[cal.calendarId]
+          if (!row || (row.errors && row.errors.length)) { failed.push(cal.calendarId); continue }
+          for (const b of row.busy ?? []) if (b.start && b.end) busy.push({ start: b.start, end: b.end })
+        }
+      } catch { failed.push(cals[0].accountEmail) }
+    }))
+
+    busy.sort((a, b) => a.start.localeCompare(b.start))
+    return { busy, failed: [...new Set(failed)] }
+  }
+
   /** Events across every visible calendar, merged and in time order. */
   async events(opts: { timeMin: string; timeMax: string; perCalendar?: number }): Promise<GEvent[]> {
     const cals = await this.calendars()

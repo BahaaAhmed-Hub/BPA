@@ -117,3 +117,20 @@ jobs:
             --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      # ── The booking page ────────────────────────────────────────────────────
+      # `--no-verify-jwt` because the caller is a stranger with no Supabase
+      # session at all — that is the whole point of it. It is not thereby
+      # unguarded: it reads nothing but a handle and a plan slug, answers with
+      # free intervals and never a title, and `20260024_booking.sql` gives the
+      # booking tables no policy for anybody but their owner, so this function
+      # with the service role is the entire public surface. The one action
+      # about a signed-in person — accepting a booking that needs approval —
+      # reads the JWT itself.
+      - name: Deploy book-me
+        run: |
+          supabase functions deploy book-me \
+            --no-verify-jwt \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
