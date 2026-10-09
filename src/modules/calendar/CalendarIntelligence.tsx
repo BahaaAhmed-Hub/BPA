@@ -561,11 +561,14 @@ function minToIso(dateStr: string, totalMinutes: number): string {
   return new Date(y, m - 1, d, Math.floor(totalMinutes / 60), totalMinutes % 60).toISOString()
 }
 
-// ─── Overlap layout calculation (lanes algorithm — Calendar 1.6) ──────────────
-// Rule:
-//   • Events with the same start time (≤5 min apart) → side-by-side in one group.
-//     2 events: 50/50 horizontal.  3+: equal columns with vertical text.
-//   • Events that overlap but start at a different time → cascade (indent 14px per level).
+// ─── Overlap layout calculation (connected-component + greedy columns) ────────
+// Any two events whose time ranges overlap are placed in separate columns —
+// never stacked on top of each other.  Algorithm:
+//   1. Build connected components: events linked by any overlap form one cluster.
+//   2. Within each cluster, assign each event to the first free column (greedy).
+//   3. All events in the cluster share the same column count → equal-width cells.
+// Result: 2 overlapping events → 50/50; 3 → 33/33/33; etc.
+// lanes / lane drive the compact rendering modes in EventBlock (isTwoLane / isMultiLane).
 function computeOverlaps(dayEvents: GCalEventExt[]): Map<string, EventLayout> {
   const layout = new Map<string, EventLayout>()
   const timed  = dayEvents.filter(e => !!e.start.dateTime)
@@ -574,58 +577,66 @@ function computeOverlaps(dayEvents: GCalEventExt[]): Map<string, EventLayout> {
     return layout
   }
 
-  const SAME_START = 5 * 60 * 1000  // ≤5 min difference → treated as same start
-  const IND_PCT    = 5               // ~14px expressed as % of a typical column
+  interface IV { ev: GCalEventExt; s: number; e: number }
+  const ivs: IV[] = timed.map(ev => ({
+    ev,
+    s: new Date(ev.start.dateTime!).getTime(),
+    e: new Date(ev.end.dateTime ?? ev.start.dateTime!).getTime(),
+  }))
+  const overlaps = (a: IV, b: IV) => a.s < b.e && a.e > b.s
 
-  const sorted = [...timed].sort((a, b) => {
-    const as = new Date(a.start.dateTime!).getTime()
-    const bs = new Date(b.start.dateTime!).getTime()
-    if (as !== bs) return as - bs
-    return new Date(b.end.dateTime ?? b.start.dateTime!).getTime()
-         - new Date(a.end.dateTime ?? a.start.dateTime!).getTime()
-  })
-
-  interface Group { evs: GCalEventExt[]; level: number; startMs: number }
-  const groups: Group[] = []
-
-  for (const ev of sorted) {
-    const s = new Date(ev.start.dateTime!).getTime()
-    const e = new Date(ev.end.dateTime ?? ev.start.dateTime!).getTime()
-
-    // All groups whose time range overlaps this event
-    const overlapping = groups.filter(g =>
-      g.evs.some(o => {
-        const os = new Date(o.start.dateTime!).getTime()
-        const oe = new Date(o.end.dateTime ?? o.start.dateTime!).getTime()
-        return os < e && oe > s
-      })
-    )
-
-    // Join a group only when this event starts at essentially the same time
-    const sameStart = overlapping.find(g => Math.abs(g.startMs - s) <= SAME_START)
-
-    if (sameStart) {
-      sameStart.evs.push(ev)
-    } else {
-      const maxLevel = overlapping.reduce((m, g) => Math.max(m, g.level), -1)
-      groups.push({ evs: [ev], level: maxLevel + 1, startMs: s })
+  // 1. Connected components via BFS
+  const visited = new Set<string>()
+  const components: IV[][] = []
+  for (const iv of ivs) {
+    if (visited.has(iv.ev.id)) continue
+    const comp: IV[] = []
+    const queue: IV[] = [iv]
+    while (queue.length) {
+      const cur = queue.shift()!
+      if (visited.has(cur.ev.id)) continue
+      visited.add(cur.ev.id)
+      comp.push(cur)
+      for (const other of ivs) {
+        if (!visited.has(other.ev.id) && overlaps(cur, other)) queue.push(other)
+      }
     }
+    components.push(comp)
   }
 
-  sorted.forEach(ev => {
-    const grp = groups.find(g => g.evs.includes(ev))
-    if (!grp) return
-    const lane  = grp.evs.indexOf(ev)
-    const lanes = grp.evs.length
-    const level = grp.level
-    const ind   = level * IND_PCT   // left offset from cascade indent
+  // 2. Layout each component
+  for (const comp of components) {
+    if (comp.length === 1) {
+      layout.set(comp[0].ev.id, { left: 0, width: 99, lane: 0, lanes: 1, level: 0 })
+      continue
+    }
 
-    const available = 100 - ind
-    const leftPct   = ind + available * (lane / lanes)
-    const widthPct  = available / lanes - 0.5
+    // Sort by start (then longer first so greedy columns stay compact)
+    const sorted = [...comp].sort((a, b) => a.s !== b.s ? a.s - b.s : b.e - a.e)
 
-    layout.set(ev.id, { left: leftPct, width: widthPct, lane, lanes, level })
-  })
+    // Greedy column assignment: place each event in the first column whose last
+    // occupant has already ended.
+    const colEnds: number[] = []
+    const evCol = new Map<string, number>()
+    for (const iv of sorted) {
+      let col = colEnds.findIndex(end => end <= iv.s)
+      if (col === -1) { col = colEnds.length; colEnds.push(0) }
+      colEnds[col] = iv.e
+      evCol.set(iv.ev.id, col)
+    }
+
+    const totalCols = colEnds.length
+    for (const iv of comp) {
+      const col = evCol.get(iv.ev.id) ?? 0
+      layout.set(iv.ev.id, {
+        left:  (col / totalCols) * 99,
+        width: 99 / totalCols - 0.5,
+        lane:  col,
+        lanes: totalCols,
+        level: 0,
+      })
+    }
+  }
 
   dayEvents.filter(e => !e.start.dateTime).forEach(e => {
     layout.set(e.id, { left: 0, width: 99 })
@@ -896,17 +907,28 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           {displayTitle(event.summary)}
         </div>
       ) : isTwoLane ? (
-        /* 2 simultaneous events: word-wrap, no time row, no icons */
-        <div style={{
-          fontFamily: SANS, fontSize: 10.5, fontWeight: 600,
-          color: evInk, lineHeight: 1.3,
-          overflowWrap: 'anywhere' as const, wordBreak: 'break-word' as const,
-          overflow: 'hidden',
-          display: '-webkit-box', WebkitLineClamp: Math.max(1, Math.floor((height - 12) / 15)),
-          WebkitBoxOrient: 'vertical' as const,
-          paddingLeft: 8,
-        }}>
-          {displayTitle(event.summary)}
+        /* 2-column pair: compact title + small time if tall enough */
+        <div style={{ paddingLeft: 8, overflow: 'hidden' }}>
+          <div style={{
+            fontFamily: SANS, fontSize: 10.5, fontWeight: 600,
+            color: evInk, lineHeight: 1.3,
+            overflowWrap: 'anywhere' as const, wordBreak: 'break-word' as const,
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: Math.max(1, Math.floor((height - (height >= 52 ? 28 : 12)) / 15)),
+            WebkitBoxOrient: 'vertical' as const,
+          }}>
+            {displayTitle(event.summary)}
+          </div>
+          {height >= 52 && event.start.dateTime && (
+            <div style={{
+              fontFamily: MONO, fontSize: 9.5, fontWeight: 500,
+              color: evInk, opacity: 0.72, marginTop: 2,
+              whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {new Date(event.start.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+            </div>
+          )}
         </div>
       ) : (
       <div ref={titleRef} style={{
