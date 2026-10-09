@@ -561,14 +561,16 @@ function minToIso(dateStr: string, totalMinutes: number): string {
   return new Date(y, m - 1, d, Math.floor(totalMinutes / 60), totalMinutes % 60).toISOString()
 }
 
-// ─── Overlap layout calculation (connected-component + greedy columns) ────────
-// Any two events whose time ranges overlap are placed in separate columns —
-// never stacked on top of each other.  Algorithm:
-//   1. Build connected components: events linked by any overlap form one cluster.
-//   2. Within each cluster, assign each event to the first free column (greedy).
-//   3. All events in the cluster share the same column count → equal-width cells.
-// Result: 2 overlapping events → 50/50; 3 → 33/33/33; etc.
-// lanes / lane drive the compact rendering modes in EventBlock (isTwoLane / isMultiLane).
+// ─── Overlap layout calculation ───────────────────────────────────────────────
+// Rules (matching the design spec):
+//   • Events starting within ≤5 min of each other → same-start cluster.
+//     All events in the cluster are equal-width columns, side-by-side.
+//       2 in cluster  → 50/50, normal horizontal text.
+//       3+ in cluster → equal thirds (etc.), vertical writing-mode text.
+//   • An event that overlaps a cluster but starts >5 min later →
+//     cascade: appears in front (higher z-index) with a small left indent.
+//     The cluster behind it keeps its side-by-side layout unchanged.
+// `lanes` = cluster size, `level` = cascade depth (0 = no cascade).
 function computeOverlaps(dayEvents: GCalEventExt[]): Map<string, EventLayout> {
   const layout = new Map<string, EventLayout>()
   const timed  = dayEvents.filter(e => !!e.start.dateTime)
@@ -577,65 +579,78 @@ function computeOverlaps(dayEvents: GCalEventExt[]): Map<string, EventLayout> {
     return layout
   }
 
-  interface IV { ev: GCalEventExt; s: number; e: number }
-  const ivs: IV[] = timed.map(ev => ({
-    ev,
-    s: new Date(ev.start.dateTime!).getTime(),
-    e: new Date(ev.end.dateTime ?? ev.start.dateTime!).getTime(),
-  }))
-  const overlaps = (a: IV, b: IV) => a.s < b.e && a.e > b.s
+  const SAME_START = 5 * 60 * 1000   // ≤5 min → same-start cluster
+  const IND_PCT    = 5                // indent per cascade level (~14px in a 280px column)
 
-  // 1. Connected components via BFS
-  const visited = new Set<string>()
-  const components: IV[][] = []
-  for (const iv of ivs) {
-    if (visited.has(iv.ev.id)) continue
-    const comp: IV[] = []
-    const queue: IV[] = [iv]
-    while (queue.length) {
-      const cur = queue.shift()!
-      if (visited.has(cur.ev.id)) continue
-      visited.add(cur.ev.id)
-      comp.push(cur)
-      for (const other of ivs) {
-        if (!visited.has(other.ev.id) && overlaps(cur, other)) queue.push(other)
-      }
+  const sorted = [...timed].sort((a, b) => {
+    const as = new Date(a.start.dateTime!).getTime()
+    const bs = new Date(b.start.dateTime!).getTime()
+    if (as !== bs) return as - bs
+    return new Date(b.end.dateTime ?? b.start.dateTime!).getTime()
+         - new Date(a.end.dateTime ?? a.start.dateTime!).getTime()
+  })
+
+  interface Cluster { evs: GCalEventExt[]; startMs: number }
+  const clusters: Cluster[] = []
+
+  // Build same-start clusters
+  for (const ev of sorted) {
+    const s = new Date(ev.start.dateTime!).getTime()
+    const e = new Date(ev.end.dateTime ?? ev.start.dateTime!).getTime()
+
+    // All clusters this event overlaps in time
+    const overlapping = clusters.filter(c =>
+      c.evs.some(o => {
+        const os = new Date(o.start.dateTime!).getTime()
+        const oe = new Date(o.end.dateTime ?? o.start.dateTime!).getTime()
+        return os < e && oe > s
+      })
+    )
+
+    // Join a cluster only when this event starts at essentially the same time
+    const sameStart = overlapping.find(c => Math.abs(c.startMs - s) <= SAME_START)
+    if (sameStart) {
+      sameStart.evs.push(ev)
+    } else {
+      clusters.push({ evs: [ev], startMs: s })
     }
-    components.push(comp)
   }
 
-  // 2. Layout each component
-  for (const comp of components) {
-    if (comp.length === 1) {
-      layout.set(comp[0].ev.id, { left: 0, width: 99, lane: 0, lanes: 1, level: 0 })
-      continue
+  // Determine cascade level for each cluster (how many earlier overlapping clusters sit below it)
+  const clusterLevel = new Map<Cluster, number>()
+  for (let i = 0; i < clusters.length; i++) {
+    const c = clusters[i]
+    let maxLvl = -1
+    for (let j = 0; j < i; j++) {
+      const prev = clusters[j]
+      const hasOverlap = c.evs.some(ev =>
+        prev.evs.some(o => {
+          const as = new Date(ev.start.dateTime!).getTime()
+          const ae = new Date(ev.end.dateTime ?? ev.start.dateTime!).getTime()
+          const bs = new Date(o.start.dateTime!).getTime()
+          const be = new Date(o.end.dateTime ?? o.start.dateTime!).getTime()
+          return as < be && ae > bs
+        })
+      )
+      if (hasOverlap) maxLvl = Math.max(maxLvl, clusterLevel.get(prev) ?? 0)
     }
+    clusterLevel.set(c, maxLvl + 1)
+  }
 
-    // Sort by start (then longer first so greedy columns stay compact)
-    const sorted = [...comp].sort((a, b) => a.s !== b.s ? a.s - b.s : b.e - a.e)
+  // Assign layout coordinates
+  for (const cluster of clusters) {
+    const level = clusterLevel.get(cluster) ?? 0
+    const lanes = cluster.evs.length
+    const ind   = level * IND_PCT
+    const avail = 100 - ind
 
-    // Greedy column assignment: place each event in the first column whose last
-    // occupant has already ended.
-    const colEnds: number[] = []
-    const evCol = new Map<string, number>()
-    for (const iv of sorted) {
-      let col = colEnds.findIndex(end => end <= iv.s)
-      if (col === -1) { col = colEnds.length; colEnds.push(0) }
-      colEnds[col] = iv.e
-      evCol.set(iv.ev.id, col)
-    }
-
-    const totalCols = colEnds.length
-    for (const iv of comp) {
-      const col = evCol.get(iv.ev.id) ?? 0
-      layout.set(iv.ev.id, {
-        left:  (col / totalCols) * 99,
-        width: 99 / totalCols - 0.5,
-        lane:  col,
-        lanes: totalCols,
-        level: 0,
+    cluster.evs.forEach((ev, lane) => {
+      layout.set(ev.id, {
+        left:  ind + avail * (lane / lanes),
+        width: avail / lanes - 0.5,
+        lane, lanes, level,
       })
-    }
+    })
   }
 
   dayEvents.filter(e => !e.start.dateTime).forEach(e => {
@@ -834,13 +849,11 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   const w = isDragOverlay ? 130 : cardW || 999
   const tiny     = height < 28
   const lanes    = layout.lanes ?? 1
-  // 2-lane: side-by-side pair — horizontal word-wrap, no time row
-  const isTwoLane   = lanes === 2
-  // 3+-lane: three or more simultaneous — vertical writing-mode, only if tall enough
-  const isMultiLane = lanes >= 3
-  const canWrap  = !isTwoLane && !isMultiLane && w >= 52 && height >= 34
-  const showTime = !isTwoLane && !isMultiLane && w >= 104 && height >= 38
-  const showHost = !isTwoLane && !isMultiLane && w >= 104 && height >= 56
+  // 3+ events starting at the same time → vertical writing-mode columns
+  const isMultiLane = lanes >= 3 && (layout.level ?? 0) === 0
+  const canWrap  = !isMultiLane && w >= 52 && height >= 34
+  const showTime = !isMultiLane && w >= 104 && height >= 38
+  const showHost = !isMultiLane && w >= 104 && height >= 56
 
   const padV = tiny ? 6 : 13                       // the card's own 5px + 8px
   const room = height - padV - footH
@@ -867,14 +880,14 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         background: evBg,
         borderRadius: 12,
         border: evBorder,
-        padding: isMultiLane ? '6px 2px 7px' : isTwoLane ? '5px 3px' : tiny ? '5px 8px 5px 10px' : '7px 9px 7px 12px',
+        padding: isMultiLane ? '6px 2px 7px' : tiny ? '5px 8px 5px 10px' : '7px 9px 7px 12px',
         overflow: 'hidden',
         cursor: isDragOverlay ? 'grabbing' : 'pointer',
         touchAction: 'none',
         opacity: isDragSrc ? 0.35 : 1,
         transition: isDragging ? 'none' : 'box-shadow 0.12s, opacity 0.12s, filter 0.12s',
         boxSizing: 'border-box',
-        zIndex: isSelected ? 4 : (layout.lane ?? 0) + 2,
+        zIndex: isSelected ? 10 : (layout.level ?? 0) * 3 + (layout.lane ?? 0) + 2,
         boxShadow: layout.level && layout.level > 0 ? '-3px 0 0 #FFFFFF, 0 8px 16px -8px rgba(25,23,18,.35)' : 'none',
         filter: isPast && !isSelected ? 'saturate(.55) brightness(1.03)' : 'none',
         userSelect: 'none',
@@ -892,43 +905,24 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
       {/* Done is a tick in front of the name; cancelled strikes the name
           through. Neither touches the card's colour — that belongs to the
           calendar the event is on, not to what happened to it. */}
-      {/* 3+ simultaneous events: vertical writing-mode column */}
+      {/* 3+ events starting at the same time: vertical writing-mode, centered */}
       {isMultiLane && height >= 44 ? (
-        <div title={displayTitle(event.summary)} style={{
-          writingMode: 'vertical-rl' as const,
-          textOrientation: 'mixed' as const,
-          fontFamily: SANS, fontSize: 11.5, fontWeight: 600,
-          color: evInk, lineHeight: 1.2,
-          overflow: 'hidden', textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap' as const,
-          height: '100%', display: 'flex', alignItems: 'center',
-          paddingLeft: 2,
+        <div style={{
+          position: 'absolute', top: 0, left: 8, right: 0, bottom: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden',
         }}>
-          {displayTitle(event.summary)}
-        </div>
-      ) : isTwoLane ? (
-        /* 2-column pair: compact title + small time if tall enough */
-        <div style={{ paddingLeft: 8, overflow: 'hidden' }}>
-          <div style={{
-            fontFamily: SANS, fontSize: 10.5, fontWeight: 600,
-            color: evInk, lineHeight: 1.3,
-            overflowWrap: 'anywhere' as const, wordBreak: 'break-word' as const,
-            overflow: 'hidden',
-            display: '-webkit-box',
-            WebkitLineClamp: Math.max(1, Math.floor((height - (height >= 52 ? 28 : 12)) / 15)),
-            WebkitBoxOrient: 'vertical' as const,
+          <span title={displayTitle(event.summary)} style={{
+            writingMode: 'vertical-rl' as const,
+            textOrientation: 'mixed' as const,
+            fontFamily: SANS, fontSize: 11.5, fontWeight: 600,
+            color: evInk, lineHeight: 1.2,
+            overflow: 'hidden', textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap' as const,
+            maxHeight: '100%',
           }}>
             {displayTitle(event.summary)}
-          </div>
-          {height >= 52 && event.start.dateTime && (
-            <div style={{
-              fontFamily: MONO, fontSize: 9.5, fontWeight: 500,
-              color: evInk, opacity: 0.72, marginTop: 2,
-              whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>
-              {new Date(event.start.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-            </div>
-          )}
+          </span>
         </div>
       ) : (
       <div ref={titleRef} style={{
