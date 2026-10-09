@@ -46,7 +46,13 @@ export interface Suggestion {
 }
 
 /** Due date -> urgency. Priority · company -> importance. Status · schedule -> column. */
-export function suggestPlacement(task: Task): Suggestion {
+/** The fields a placement is worked out from — all four of them. Narrower
+ *  than `Task` on purpose: the meeting-outcome rows answer this question about
+ *  a line that is not a task yet, and widening the parameter is how they get
+ *  the app's own answer rather than a second one. */
+export type Placeable = Pick<Task, 'dueDate' | 'priority' | 'companyId' | 'plannedTime'>
+
+export function suggestPlacement(task: Placeable): Suggestion {
   const hasDate     = !!task.dueDate
   const hasPriority = !!task.priority
   const urgent      = hasDate ? daysUntil(task.dueDate!) <= 1 : false
@@ -77,7 +83,7 @@ export function suggestPlacement(task: Task): Suggestion {
  *  `updateTask` puts a dumped task the moment it is given a date. What it must
  *  never be is `null`: null is what the brain dump *is*, and a task created in
  *  a column and filed in the dump is the gesture being ignored. */
-export function placementForNew(task: Task): Quadrant {
+export function placementForNew(task: Placeable): Quadrant {
   if (task.dueDate || task.priority || task.companyId) return suggestPlacement(task).quadrant
   return 'schedule'
 }

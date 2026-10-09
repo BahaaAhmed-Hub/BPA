@@ -150,9 +150,22 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
       // A click on the grid picks another event or draws a new one; it should
       // not also have to close this first.
       if (t.closest('.event-card, .sb-compose')) return
+      // **Anything drawn over this panel is not "outside" it.** The meeting
+      // outcome prompt is a sibling in a portal, not a child, so every
+      // pointerdown in it read as a click away and closed the panel under it —
+      // the Budget drill-down's own fault, one module along. Nothing looked
+      // broken: the panel simply left, taking the selected event with it, and
+      // with it the keyboard shortcuts that hang off one.
+      if (t.closest('[role="dialog"]')) return
       if (panelRef.current && !panelRef.current.contains(t)) onClose()
     }
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    // Escape belongs to the topmost thing on screen, and a dialog over this
+    // panel is that thing — it closes itself.
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (document.querySelector('[role="dialog"]')) return
+      onClose()
+    }
     document.addEventListener('pointerdown', away)
     document.addEventListener('mousedown', away)
     document.addEventListener('keydown', key)
@@ -204,6 +217,16 @@ export function rsvpOf(status: string | undefined): { label: string; bg: string;
     case 'tentative': return { label: 'Maybe',    bg: C.inset,    ink: C.third }
     default:          return { label: 'Awaiting', bg: C.goldSurf, ink: C.goldInk }
   }
+}
+
+/** The answers a new event can arrive with. No Meet link and no replies: a
+ *  conference belongs to the event it was minted for, and nobody has said yes
+ *  to a meeting that does not exist yet. */
+export interface SeededEvent {
+  title?: string
+  calId?: string
+  location?: string
+  invitees?: ComposerInvitee[]
 }
 
 export interface ComposerResult {
@@ -360,7 +383,7 @@ function initialsOf(s: string): string {
 }
 
 export function NewEventPanel({
-  draft, existing, calendars, organiser, provider = 'google',
+  draft, existing, seed, calendars, organiser, provider = 'google',
   clashes, onSave, onCancel, onPush, onDelete, onMoveCalendar, extra, uploadFile,
   alertMinutes, onAlert, onAddMeet, onRemoveMeet, onStatus,
 }: {
@@ -368,6 +391,12 @@ export function NewEventPanel({
   /** The event this panel is about, when it already exists. Absent means the
    *  panel is composing a new one — the only difference between the two. */
   existing?: ExistingEvent
+  /** What a new event starts out saying, when something upstream already knows
+   *  — the next meeting after one that is done carries its people, its
+   *  calendar and its place. Read only while composing: an event that exists
+   *  says what it says. Everything in it is still editable, which is why this
+   *  is a seed for the form rather than a second event form of its own. */
+  seed?: SeededEvent
   calendars: ComposerCalendar[]
   /** Whose calendar this is — the organiser row, and the company in the header. */
   organiser: string | undefined
@@ -408,8 +437,15 @@ export function NewEventPanel({
   const startMin = draft.startMin
   const endMin = memory.minutes && !editing ? startMin + memory.minutes : draft.endMin
 
-  const [title, setTitle] = useState(existing?.title ?? '')
-  const [calId, setCalId] = useState(existing?.calId ?? (writable.find(c => c.primary) ?? writable[0])?.id ?? '')
+  // A seed answers only what it has, and only for an event being composed.
+  const sown = editing ? undefined : seed
+  const [title, setTitle] = useState(existing?.title ?? sown?.title ?? '')
+  const [calId, setCalId] = useState(
+    existing?.calId
+    // A calendar nobody may write to is not an answer, so it falls through to
+    // the usual one rather than opening the panel on a dead Create button.
+    ?? (sown?.calId && writable.some(c => c.id === sown.calId) ? sown.calId : undefined)
+    ?? (writable.find(c => c.primary) ?? writable[0])?.id ?? '')
   const [startDate, setStartDate] = useState(existing?.startDate ?? draft.dateStr)
   const [startTime, setStartTime] = useState(existing?.startTime ?? pad(startMin))
   const [endTime, setEndTime] = useState(existing?.endTime ?? pad(endMin))
@@ -417,8 +453,8 @@ export function NewEventPanel({
 
   /** Which of place or call the shared row is showing. */
   const [whereRow, setWhereRow] = useState<'place' | 'call' | null>(
-    existing?.location ? 'place' : existing?.meetLink ? 'call' : null)
-  const [location, setLocation] = useState(existing?.location ?? '')
+    existing?.location ? 'place' : existing?.meetLink ? 'call' : sown?.location ? 'place' : null)
+  const [location, setLocation] = useState(existing?.location ?? sown?.location ?? '')
   const [meetLink, setMeetLink] = useState(existing?.meetLink ?? '')
   const minted = existing?.meetLink ?? ''
   useEffect(() => {
@@ -435,7 +471,7 @@ export function NewEventPanel({
   const [count, setCount] = useState(existing?.repeat?.count ?? 8)
   const [until, setUntil] = useState(existing?.repeat?.until ?? '')
 
-  const [people, setPeople] = useState<ComposerInvitee[]>(existing?.invitees ?? [])
+  const [people, setPeople] = useState<ComposerInvitee[]>(existing?.invitees ?? sown?.invitees ?? [])
 
   // ── You are not your own guest ────────────────────────────────────────────
   //

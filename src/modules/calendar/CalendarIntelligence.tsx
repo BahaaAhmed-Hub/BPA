@@ -36,7 +36,7 @@ import { uploadToDrive } from '@/lib/googleDrive'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { CalendarRail, Label as CalLabel, type RailEvent } from './CalendarRail'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
-import { loadEventStatuses, saveEventStatuses } from '@/lib/eventStatus'
+import { loadEventStatuses, toggleEventStatus } from '@/lib/eventStatus'
 import { isCalendarHiddenByCompany } from '@/lib/companyVisibility'
 import { isTaskEvent, stripTaskMark } from '@/lib/taskEvent'
 import { loadWeather, weatherGlyph, type WeatherByHour } from '@/lib/weather'
@@ -44,7 +44,9 @@ import { T, SANS, DISPLAY, MONO, ICON, STROKE } from '@/lib/type'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { NewEventPanel, type ExistingEvent } from './NewEventPanel'
+import { NewEventPanel, type ExistingEvent, type SeededEvent } from './NewEventPanel'
+import { useMeetingOutcome } from './MeetingOutcome'
+import type { OutcomeEvent } from './MeetingOutcome'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
 import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
 import { syncTaskToEvent } from '@/lib/taskEventLink'
@@ -941,7 +943,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         >
           <button
             onClick={e => { e.stopPropagation(); onStatusToggle('done') }}
-            title="Mark done"
+            title={isDone ? 'Not done after all' : 'Mark done'}
+            aria-label={`${isDone ? 'Not done after all' : 'Mark done'}: ${displayTitle(event.summary)}`}
             style={{
               width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', border: 'none', padding: 0,
               background: isDone ? 'color-mix(in srgb, var(--sb-positive) 90.0%, transparent)' : 'color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
@@ -956,7 +959,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           </button>
           <button
             onClick={e => { e.stopPropagation(); onStatusToggle('cancelled') }}
-            title="Cancel"
+            title={isCancelled ? 'Back on' : 'Cancel'}
+            aria-label={`${isCancelled ? 'Back on' : 'Cancel'}: ${displayTitle(event.summary)}`}
             style={{
               width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', border: 'none', padding: 0,
               background: isCancelled ? 'color-mix(in srgb, var(--sb-negative) 90.0%, transparent)' : 'color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
@@ -1223,6 +1227,9 @@ export function CalendarIntelligence() {
   // ── Drag-to-create state ────────────────────────────────────────────────────
   const [creatingEvt,   setCreatingEvt]   = useState<CreatingEvt | null>(null)
   const [newEventDraft, setNewEventDraft] = useState<NewEventDraft | null>(null)
+  /** What the composer opens already saying, when something knew — today only
+   *  the meeting that just finished. Cleared with the draft it belongs to. */
+  const [newEventSeed, setNewEventSeed] = useState<SeededEvent | null>(null)
   const creatingRef = useRef<CreatingEvt | null>(null)
   useEffect(() => { creatingRef.current = creatingEvt }, [creatingEvt])
 
@@ -1243,6 +1250,7 @@ export function CalendarIntelligence() {
       const startMin = Math.min(cur.originMin, cur.currentMin)
       const endMin   = Math.max(cur.originMin + SNAP_MIN, cur.currentMin)
       if (endMin - startMin >= SNAP_MIN) {
+        setNewEventSeed(null)
         setNewEventDraft({ dateStr: cur.dateStr, startMin, endMin, anchorX: e.clientX, anchorY: e.clientY })
       }
     }
@@ -1315,7 +1323,7 @@ export function CalendarIntelligence() {
         try { surface.setPointerCapture(pointerId) } catch { /* gesture already gone */ }
       }
       setCreatingEvt({ dateStr, originMin: dragMin, currentMin: dragMin })
-      setSelectedEvent(null); setNewEventDraft(null)
+      setSelectedEvent(null); setNewEventDraft(null); setNewEventSeed(null)
     }
 
     const cleanup = () => {
@@ -1581,18 +1589,84 @@ export function CalendarIntelligence() {
   }, [])
 
   // ── Status toggle ───────────────────────────────────────────────────────────
+  //
+  // Every door that marks an event done comes through here — the tick on the
+  // block, the context menu, and the panel's own Completed glyph — so the
+  // question that follows a finished meeting is asked in one place rather than
+  // at each caller. `toggleEventStatus` is the flip, in `eventStatus.ts`,
+  // where the Today plan reads it too: this used to keep a second copy of it
+  // inside a state updater, which also meant a status written by a task's own
+  // tick was invisible here until a reload.
   function toggleStatus(eventId: string, status: EventStatus) {
-    setEventStatuses(prev => {
-      const next = { ...prev }
-      if (next[eventId] === status) delete next[eventId]; else next[eventId] = status
-      saveEventStatuses(next)
-      // A block that came from a task is that task's hour. Ticking it here
-      // finishes the task too, or the board goes on asking for work that is
-      // done.
-      syncTaskToEvent(eventId, next[eventId] ?? null)
-      return next
-    })
+    const next = toggleEventStatus(eventId, status)
+    setEventStatuses(next)
+    // A block that came from a task is that task's hour. Ticking it here
+    // finishes the task too, or the board goes on asking for work that is
+    // done.
+    syncTaskToEvent(eventId, next[eventId] ?? null)
+
+    // **The event is done before anything is asked.** The prompt is not a
+    // gate: it opens after the status is written, so closing it costs the
+    // outputs nobody typed and never the tick itself.
+    if (next[eventId] === 'done') {
+      const o = outcomeOf(eventId)
+      if (o) askAboutOutcome(o)
+    }
   }
+
+  /** What the outcome prompt needs to know about a meeting. */
+  function outcomeOf(eventId: string): OutcomeEvent | null {
+    const ev = (events as GCalEventExt[]).find(e => e.id === eventId)
+    if (!ev) return null
+    const s0 = ev.start?.dateTime ?? ev.start?.date ?? ''
+    const e0 = ev.end?.dateTime ?? ev.end?.date ?? s0
+    return {
+      id: eventId,
+      title: displayTitle(ev.summary),
+      when: s0 ? fmtPopupDate(s0, e0, !ev.start?.dateTime) : undefined,
+      calendarId: ev.calendarId,
+      htmlLink: ev.htmlLink,
+    }
+  }
+
+  /** The next one. It hands to the composer rather than writing an event of
+   *  its own: a second event form would be a second answer to a question
+   *  `NewEventPanel` already answers, and the follow-up wants every one of its
+   *  controls — a time you can move, a guest you can drop, its own Meet link.
+   *  A week on at the same hour for the same length is the default, because
+   *  the meeting that most often needs a next one is the one that repeats. */
+  function openFollowUp(o: OutcomeEvent) {
+    const src = (events as GCalEventExt[]).find(e => e.id === o.id)
+    const startIso = src?.start?.dateTime
+    const endIso = src?.end?.dateTime
+    const base = startIso ? new Date(startIso) : null
+    const mins = base ? base.getHours() * 60 + base.getMinutes() : null
+    const len = startIso && endIso
+      ? Math.max(15, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000))
+      : 60
+    const nextHour = Math.min(22, new Date().getHours() + 1) * 60
+    const day = base ?? new Date()
+    const when = new Date(day.getTime() + 7 * 86400000)
+    const startMin = mins ?? nextHour
+
+    const title = /^follow[- ]?up/i.test(o.title) ? o.title : `Follow-up: ${o.title}`
+    setSelectedEvent(null)
+    setCtxMenu(null)
+    setNewEventSeed({
+      title,
+      calId: o.calendarId,
+      ...(src?.location ? { location: src.location } : {}),
+      // Their replies are about the meeting that happened, not this one, so
+      // only the addresses travel. The organiser's own copy is dropped: you
+      // are not your own guest.
+      invitees: (src?.attendees ?? [])
+        .filter(a => !a.self && a.email)
+        .map(a => ({ email: a.email, ...(a.optional ? { optional: true } : {}) })),
+    })
+    setNewEventDraft({ dateStr: localDateStr(when), startMin, endMin: startMin + len, anchorX: 0, anchorY: 0 })
+  }
+
+  const { askAboutOutcome, outcomePrompt } = useMeetingOutcome(openFollowUp)
 
   // ── Calendar visibility ─────────────────────────────────────────────────────
   function toggleCal(id: string) {
@@ -1660,6 +1734,11 @@ export function CalendarIntelligence() {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return
       if (e.metaKey || e.ctrlKey || e.altKey) return
       if (inTextField(document.activeElement)) return
+      // A shortcut that deletes the event behind a modal has no business
+      // firing while the modal is up: a pill or a select in the outcome
+      // prompt is not a text field, so one Backspace after picking a box
+      // would have deleted the meeting it was asking about.
+      if (document.querySelector('[role="dialog"]')) return
       e.preventDefault()
       void handleDeleteEvent(selectedEvent)
     }
@@ -2180,6 +2259,7 @@ export function CalendarIntelligence() {
 
   async function handleCreateEvent(data: NewEventData) {
     setNewEventDraft(null)
+    setNewEventSeed(null)
     const tz     = Intl.DateTimeFormat().resolvedOptions().timeZone
     const cal    = allCalendars.find(c => c.id === data.calId)
     const tempId = `temp-${Date.now()}`
@@ -2462,6 +2542,7 @@ export function CalendarIntelligence() {
                 const d = localDateStr(calView === 'month' ? anchorDate : (weekDays.find(x => localDateStr(x) === today) ?? anchorDate))
                 const nextHour = Math.min(23, new Date().getHours() + 1) * 60
                 setSelectedEvent(null)
+                setNewEventSeed(null)
                 setNewEventDraft({ dateStr: d, startMin: nextHour, endMin: nextHour + 60, anchorX: 0, anchorY: 0 })
               }}
               style={{
@@ -3108,11 +3189,12 @@ export function CalendarIntelligence() {
       {newEventDraft && (
         <NewEventPanel
           draft={newEventDraft}
+          seed={newEventSeed ?? undefined}
           calendars={allCalendars}
           organiser={user?.email}
           onSave={data => void handleCreateEvent(data)}
           uploadFile={uploadForCalendar}
-          onCancel={() => setNewEventDraft(null)}
+          onCancel={() => { setNewEventDraft(null); setNewEventSeed(null) }}
         />
       )}
 
@@ -3159,6 +3241,10 @@ export function CalendarIntelligence() {
         }
         .cal-grid-creating, .cal-grid-creating * { cursor: crosshair !important; }
       `}</style>
+
+      {/* What came out of the meeting that was just marked done. The status is
+          already written; this only asks. */}
+      {outcomePrompt}
 
       {/* Ideal Week designer modal */}
       {showIdealWeek && (
