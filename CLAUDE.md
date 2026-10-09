@@ -3550,6 +3550,43 @@ chosen together.
   knows not to hold it to 3:1.
 
 `node scripts/ink-audit.mjs <port>` against a dev server is the measurement:
-nine screens × four themes, every text against the background it is *actually*
-drawn on. 21 failing pairs when written, none now. Re-run it after touching a
-token or a palette.
+**22 screens** × four themes, every text against the background it is
+*actually* drawn on. 21 failing pairs when written, none now. Re-run it after
+touching a token or a palette.
+- `visit(label, go, floor = 40)` — `floor` is the element count below which a
+  screen is called blind. 40 suits the app's own dense screens; the stranger's
+  booking page is 32 elements and all of them real, so it says its own.
+
+## Ink — a hex is a token's *value*, not a licence to write one
+A calendar week-view redesign wrote **54 raw hexes** into
+`CalendarIntelligence.tsx` — every one of them a Sunlit Bento value typed out
+rather than referred to. It looked right, because it *was* right in the theme
+it was designed in. The audit found **1 failing pair in Sunlit and 6 in Glass**,
+the worst being `#191712` ink on Glass's near-black page at **1.1:1** — text
+that is simply not there. Each hex went back to the token it was standing in
+for (`#A29C88` → `--sb-ink-4`, `#8A6A1E` → `--sb-accent-deep`, `#E4572E` →
+`--sb-negative`, `#FAF8F2` → `--sb-field`, …), two became mixes of tokens, and
+`1px solid` became `var(--sb-border-width) solid` — a border's weight is a
+token too, and the same file already said so in fifteen places.
+Two of the failures were not spelling, and neither could have been fixed by
+swapping one hex for one token:
+- **A card's ground is a colour nobody chose from the palette, so its ink
+  cannot be a token either.** An event card's fill is the calendar's own hue at
+  24%: `--sb-ink-3` on a pale violet reads 4.42, and in Glass `--sb-ink-1` is
+  *light*, which on that same fill is 2.3. `lib/ink.ts` is the answer that
+  already existed — `useInkOn()(evBg)` for the title, and
+  `useInkOnKeeping()('var(--sb-ink-3)', evBg, 4.5)` for the time, so muted
+  stays muted where muted can be read. The time on a *selected* card is the
+  accent over `--sb-ink-1`: 9:1 on Sunlit's amber, **3.66** on Warm Minimal's
+  terracotta, which is the mid-tone that theme's own note says cannot carry 4.5
+  either way.
+- **Mixing a hue into a wash gives a mid-tone, and a mid-tone carries neither
+  ink.** `color-mix(… 24%, var(--sb-card))` is a white mix in three themes and,
+  in Glass, a mix into `rgba(255,255,255,.05)` — which composites over the dark
+  page to a mid grey-violet where white measured 2.71 and near-black worse. No
+  choice of ink fixes that; the *fill* was wrong. `--sb-overlay` is the one
+  token opaque in every theme (Glass: `#1C1B26`, its own card colour
+  composited onto the page), so the mix goes there and the three light themes
+  are unchanged by construction.
+Four themes, 22 screens, 0 failing pairs after — and the behaviour suites that
+drive that file (meeting outcome 65, booking hours 46) re-run unchanged.
