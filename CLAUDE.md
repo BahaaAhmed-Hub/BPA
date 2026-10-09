@@ -222,6 +222,25 @@ work is editing rather than filling.
   says to sign in again. Sharing the file with guests is Drive's decision, and
   Google Calendar asks about it itself.
 
+## Calendar — overlap, and the hex that came back with it
+The week view's stacking is a **connected component split into greedy columns**:
+events that start together sit side by side, one that starts later inside
+another cascades over it. A cascaded card needs `zIndex` of
+`(level * 3) + lane` — `lane` alone puts a card under the one it overlaps — and
+the 3px spacer that separates it from the card beneath is
+**`var(--sb-card)`, never `#FFFFFF`**: it stands in for the grid's own surface,
+which is white in the three light themes and a dark wash in Glass, where a hard
+white line is the one thing that cannot be there. The rail is resizable
+(`--cal-rail-w`) *and* the booking panel takes its column — `data-panel` reads
+`selectedEvent || newEventDraft || showBooking`, since the divider and the panel
+are not alternatives.
+- **This file is where two sessions meet**, and both times the conflict was a
+  behaviour change and a colour in one line. A merge that takes one side whole
+  loses the other: the overlap work arrived carrying `#FFFFFF` a week after the
+  54 hexes in this same file had been converted, and the ink audit is the only
+  thing that would have said so. Re-run it after any merge that touches here —
+  `npm run build` is blind to a colour that is simply wrong.
+
 ## Calendar — dragging an event
 `CalendarIntelligence.tsx` moves events with dnd-kit and a `DragOverlay`. The
 overlay is what follows the pointer, so the source card must **not** take
