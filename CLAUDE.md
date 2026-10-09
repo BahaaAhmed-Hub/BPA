@@ -270,6 +270,14 @@ Two guards came out of measuring it, each with its own control:
   Google**; the control sends a real DELETE.
 `scripts/meeting-outcome-becomes-tasks.mjs [tasks|dismiss|followup|keys]` — 65
 assertions. Control: the tick writes the status and asks nothing.
+- **There were two of these for a while.** A parallel session built
+  `MeetingOutcomesModal.tsx` — task drafts with a due date and a priority, a
+  company off the calendar, everything filed to Schedule, and its own little
+  form for the follow-up event — and wired it at each of the three call sites
+  that mark an event done. Merged, one tick opened **two** dialogs. The modal
+  is gone, kept by hand are none of its parts: `toggleStatus` was already the
+  funnel all three of those call sites went through, which is why asking there
+  covers the doors nobody has thought of yet.
 
 ## Booking — letting somebody outside put an hour on the calendar
 Two things, kept apart because they answer different questions. **Meeting

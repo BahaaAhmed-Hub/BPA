@@ -547,25 +547,39 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           <div style={{ marginTop: 18 }}>
             <p style={SECTION_LABEL}>Attachments · {attachments.length + linkCount}</p>
             <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {(task.links ?? []).map((url, i) => (
-                <div key={`${url}-${i}`} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '9px 11px',
-                }}>
-                  <span style={{
-                    width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'var(--sb-field)',
-                    border: 'var(--sb-border-width) solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
-                  }}><Link2 size={ICON.sm} /></span>
-                  <a href={url} target="_blank" rel="noreferrer" style={{
-                    flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>{url}</a>
-                  <button onClick={() => patch({ links: (task.links ?? []).filter((_, j) => j !== i) })}
-                    title="Remove link" style={{ ...ICON_BTN, width: 22, height: 22, color: 'var(--sb-ink-4)' }}>
-                    <X size={ICON.sm} />
-                  </button>
-                </div>
-              ))}
+              {(task.links ?? []).map((url, i) => {
+                const isCalEvent = url.startsWith('cal-event:')
+                return (
+                  <div key={`${url}-${i}`} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '9px 11px',
+                  }}>
+                    <span style={{
+                      width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'var(--sb-field)',
+                      border: 'var(--sb-border-width) solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
+                    }}><Link2 size={ICON.sm} /></span>
+                    {isCalEvent ? (
+                      <button
+                        onClick={() => focusOn({ module: 'calendar', id: url.replace('cal-event:', '') })}
+                        style={{
+                          flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
+                          textDecoration: 'underline',
+                        }}>Action item from meeting</button>
+                    ) : (
+                      <a href={url} target="_blank" rel="noreferrer" style={{
+                        flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>{url}</a>
+                    )}
+                    <button onClick={() => patch({ links: (task.links ?? []).filter((_, j) => j !== i) })}
+                      title="Remove link" style={{ ...ICON_BTN, width: 22, height: 22, color: 'var(--sb-ink-4)' }}>
+                      <X size={ICON.sm} />
+                    </button>
+                  </div>
+                )
+              })}
               {attachments.map(f => {
                 const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name)
                 return (
