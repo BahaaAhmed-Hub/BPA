@@ -7,6 +7,7 @@ import { BookLookup } from './BookLookup'
 import { AreaField, DateField, Eyebrow, NumField, Row, Stars, TextField } from './fields'
 import { applyCandidate } from './applyCandidate'
 import { BookFileCard } from './BookFileCard'
+import { BookLinksCard } from './BookLinksCard'
 import { BookNotesCard } from './Notes'
 import { QuotesCard } from './QuotesCard'
 import { useLibraryStore } from './libraryStore'
@@ -155,6 +156,8 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
         )}
         <Button size="sm" variant="ghost" onClick={onManageLists} style={{ alignSelf: 'flex-start' }}>Manage lists &amp; categories</Button>
       </Card>
+
+      <BookLinksCard book={book} />
 
       <BookFileCard book={book} onOpen={onOpenReader} />
 

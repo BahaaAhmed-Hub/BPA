@@ -12,7 +12,11 @@ const SETTINGS_KEY = 'library-settings'
 const VIEW_KEY = 'library-view'
 export const LIBRARY_PREFS_EVENT = 'professor:libraryPrefsChanged'
 
-export interface LibrarySettings { enabled: boolean }
+export interface LibrarySettings {
+  enabled: boolean
+  /** ISO 3166 region the buy links point at. Absent = read it from the browser. */
+  country?: string
+}
 export type LibraryView = 'shelf' | 'covers' | 'lists' | 'quotes' | 'discover'
 
 export function loadLibrarySettings(): LibrarySettings {
@@ -21,7 +25,7 @@ export function loadLibrarySettings(): LibrarySettings {
     // Absent means on: a person who has never opened Settings has not said no.
     if (!raw) return { enabled: true }
     const p = JSON.parse(raw) as Partial<LibrarySettings>
-    return { enabled: p.enabled !== false }
+    return { enabled: p.enabled !== false, ...(typeof p.country === 'string' && /^[A-Z]{2}$/.test(p.country) ? { country: p.country } : {}) }
   } catch { return { enabled: true } }
 }
 

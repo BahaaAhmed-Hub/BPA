@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Check, Plus, Search } from 'lucide-react'
+import { ArrowLeft, Check, Plus, Search, ShoppingCart } from 'lucide-react'
 import { Button, Card, Segmented } from '@/components/ui'
 import { ICON } from '@/lib/type'
 import { booksByAuthor, lookupBooks, searchAuthors, shelfMatch, type AuthorHit, type BookCandidate } from './bookLookup'
@@ -11,7 +11,7 @@ type Mode = 'books' | 'authors'
 const SOURCE_NAME = { openlibrary: 'Open Library', google: 'Google Books', manual: '' } as const
 
 /** A search result drawn as a book would be, so the cover is the same object. */
-function ResultCard({ c, onShelfId, onAdd, onOpen }: { c: BookCandidate; onShelfId?: string; onAdd: () => void; onOpen: (id: string) => void }) {
+function ResultCard({ c, onShelfId, onAdd, onBuy, onOpen }: { c: BookCandidate; onShelfId?: string; onAdd: () => void; onBuy: () => void; onOpen: (id: string) => void }) {
   return (
     <Card style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
       <CoverArt book={{ id: c.sourceKey ?? c.title, title: c.title, authors: c.authors, coverUrl: c.coverUrl }} />
@@ -27,9 +27,14 @@ function ResultCard({ c, onShelfId, onAdd, onOpen }: { c: BookCandidate; onShelf
           <Check size={ICON.sm} color="var(--sb-positive)" /> On your shelf
         </Button>
       ) : (
-        <Button size="sm" variant="accent" onClick={onAdd} aria-label={`Want to read: ${c.title}`}>
-          <Plus size={ICON.sm} /> Want to read
-        </Button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <Button size="sm" variant="accent" onClick={onAdd} aria-label={`Want to read: ${c.title}`} style={{ flex: 1, minWidth: 0 }}>
+            <Plus size={ICON.sm} /> Want to read
+          </Button>
+          <Button size="sm" variant="secondary" iconOnly onClick={onBuy} aria-label={`Buy later: ${c.title}`} title="Put it on your buy-later list">
+            <ShoppingCart size={ICON.sm} />
+          </Button>
+        </div>
       )}
     </Card>
   )
@@ -102,9 +107,10 @@ export function DiscoverView({ onOpenBook }: { onOpenBook: (id: string) => void 
   function openAuthor(a: AuthorHit) { setAuthor(a); setFound([]); setFailed([]); setState('busy') }
   function back() { setAuthor(null); setFound([]); setState(q.length >= 2 ? 'busy' : 'idle') }
 
-  const add = (c: BookCandidate) => addBook({
+  const add = (c: BookCandidate, toBuy?: boolean) => addBook({
     title: c.title, subtitle: c.subtitle, authors: c.authors, isbn: c.isbn, publisher: c.publisher, publishedYear: c.publishedYear,
     pages: c.pages, language: c.language, description: c.description, coverUrl: c.coverUrl, source: c.source, sourceKey: c.sourceKey, status: 'want',
+    ...(toBuy ? { toBuy: true } : {}),
   })
 
   const showBooks = mode === 'books' || !!author
@@ -142,7 +148,7 @@ export function DiscoverView({ onOpenBook }: { onOpenBook: (id: string) => void 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
           {found.map((c, i) => {
             const mine = shelfMatch(books, c)
-            return <ResultCard key={`${c.source}-${c.sourceKey ?? i}`} c={c} onShelfId={mine?.id} onAdd={() => add(c)} onOpen={onOpenBook} />
+            return <ResultCard key={`${c.source}-${c.sourceKey ?? i}`} c={c} onShelfId={mine?.id} onAdd={() => add(c)} onBuy={() => add(c, true)} onOpen={onOpenBook} />
           })}
         </div>
       ) : (

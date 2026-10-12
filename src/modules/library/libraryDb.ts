@@ -19,6 +19,8 @@ interface BookRow {
   rating: number; review: string | null; spine_color: string | null; file_path: string | null
   shelf_order: number; started_on: string | null; finished_on: string | null
   added_at: string; updated_at: string
+  /** 20260028 — absent from a project that has not run it. */
+  to_buy?: boolean | null
 }
 interface ListRow {
   id: string; user_id: string; name: string; kind: string; description: string | null
@@ -35,7 +37,7 @@ const toBook = (r: BookRow): Book => ({
   pages: opt(r.pages), language: opt(r.language), description: opt(r.description),
   coverUrl: opt(r.cover_url), source: r.source as BookSource, sourceKey: opt(r.source_key),
   status: r.status as BookStatus, format: r.format as BookFormat, rating: r.rating,
-  review: opt(r.review), spineColor: opt(r.spine_color), filePath: opt(r.file_path),
+  review: opt(r.review), spineColor: opt(r.spine_color), filePath: opt(r.file_path), toBuy: opt(r.to_buy),
   shelfOrder: r.shelf_order, startedOn: opt(r.started_on), finishedOn: opt(r.finished_on),
   addedAt: r.added_at, updatedAt: r.updated_at,
 })
@@ -52,6 +54,9 @@ const fromBook = (b: Book, userId: string) => ({
   spine_color: b.spineColor ?? null, file_path: b.filePath ?? null, shelf_order: b.shelfOrder,
   started_on: b.startedOn ?? null, finished_on: b.finishedOn ?? null,
   added_at: b.addedAt, updated_at: new Date().toISOString(),
+  // Sent only once it has a value, so a project without 20260028 keeps saving
+  // every other change to a book — the same shape as a quote's `explanation`.
+  ...(b.toBuy !== undefined ? { to_buy: b.toBuy } : {}),
 })
 
 const toList = (r: ListRow): LibList => ({

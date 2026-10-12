@@ -44,6 +44,7 @@ export function LibraryModule() {
   const [q, setQ] = useState('')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [listId, setListId] = useState<string | null>(null)
+  const [toBuyOnly, setToBuyOnly] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [flight, setFlight] = useState<{ book: Book; from: DOMRect } | null>(null)
   const [adding, setAdding] = useState(false)
@@ -68,9 +69,10 @@ export function LibraryModule() {
     const inList = activeListId ? new Set(links.filter(l => l.listId === activeListId).map(l => l.bookId)) : null
     return books.filter(b =>
       (status === 'all' || b.status === status) &&
+      (!toBuyOnly || b.toBuy) &&
       (!inList || inList.has(b.id)) &&
       (!needle || [b.title, b.subtitle, b.isbn, ...b.authors].some(s => s?.toLowerCase().includes(needle))))
-  }, [books, links, q, status, activeListId])
+  }, [books, links, q, status, activeListId, toBuyOnly])
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = { all: books.length, want: 0, reading: 0, finished: 0, paused: 0, abandoned: 0 }
@@ -96,7 +98,8 @@ export function LibraryModule() {
     return () => document.removeEventListener('keydown', esc)
   }, [selectedId])
 
-  const filtered = status !== 'all' || !!activeListId || !!q.trim()
+  const toBuyCount = books.filter(b => b.toBuy).length
+  const filtered = status !== 'all' || !!activeListId || !!q.trim() || toBuyOnly
   const reading = counts.reading, finished = counts.finished
 
   return (
@@ -140,6 +143,11 @@ export function LibraryModule() {
                   </Pill>
                 ))}
               </div>
+              {(toBuyCount > 0 || toBuyOnly) && (
+                <Pill on={toBuyOnly} onClick={() => setToBuyOnly(o => !o)} style={{ flexShrink: 0 }} title="Books you mean to buy">
+                  To buy <span style={{ opacity: .7, marginLeft: 4 }}>{toBuyCount}</span>
+                </Pill>
+              )}
               {list && (
                 <Pill on onClick={() => setListId(null)} title="Show every book again">
                   {list.name} <X size={ICON.sm} style={{ marginLeft: 4 }} />
@@ -169,7 +177,7 @@ export function LibraryModule() {
               ) : visible.length === 0 ? (
                 <p style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>
                   {filtered ? 'No book matches that.' : 'Nothing here.'}{' '}
-                  {filtered && <button type="button" onClick={() => { setQ(''); setStatus('all'); setListId(null) }}
+                  {filtered && <button type="button" onClick={() => { setQ(''); setStatus('all'); setListId(null); setToBuyOnly(false) }}
                     style={{ all: 'unset', cursor: 'pointer', textDecoration: 'underline' }}>Clear filters</button>}
                 </p>
               ) : view === 'shelf' ? (

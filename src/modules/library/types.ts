@@ -29,6 +29,8 @@ export interface Book {
   spineColor?: string
   /** Phase 2: an uploaded PDF in the `library` bucket. */
   filePath?: string
+  /** 3b: on the buy-later list. Absent until the migration (20260028) has run. */
+  toBuy?: boolean
   shelfOrder: number
   startedOn?: string
   finishedOn?: string

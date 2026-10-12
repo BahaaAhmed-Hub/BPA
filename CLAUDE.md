@@ -3924,3 +3924,48 @@ faked *with the CORS headers the real ones send* and each switchable off, and a
 PostgREST that refuses an unknown `library_books` column. A trailing space is not
 a new search (`wants` is trimmed), which the first draft of the test tripped on.
 The ink audit has Discover over books and over authors (35 screens).
+
+## Library 3b — where to read it free, where to buy it, and "buy later"
+`bookLinks.ts` (pure), `BookLinksCard.tsx` (a **Get it** card in the book panel),
+`20260028_library_acquire.sql` (`library_books.to_buy`).
+- **Links, not prices.** Every button opens a shop's or library's *own search
+  page* for the book; nothing asks whether it is in stock or what it costs, and
+  the card says so in a line. Price watch is Phase 7 and reuses the Shopping
+  one. A link to a shop's search page cannot be wrong about stock; a price shown
+  here could.
+- **Free means legal, and the list is closed.** Open Library and the Internet
+  Archive (lent scans), Project Gutenberg (out of copyright), a Google Books
+  preview, and WorldCat (the nearest library that holds it). There is no "free
+  PDF" source in `bookLinks.ts` and there will not be — a pirated copy is not
+  something a reading app should hand over however often it is asked for. A test
+  pins the five ids.
+- **The country picks the storefront**: Amazon's per-region domain (a region
+  with no store falls back to .com and the note says it ships abroad), Play
+  Books told the region, Bookshop.org only for US/GB, **Jamalon** only for the
+  regions it delivers to (Egypt, the Gulf, Jordan, Lebanon, Iraq). Region
+  *names* come from `Intl.DisplayNames`, never a typed table (the shopping
+  currency-list mistake). The default is the browser's region (`en-GB` → GB,
+  `ar-EG` → EG, a bare `en` → US) — a guess, shown, and changeable on the card;
+  the choice is `library-settings.country` and **Settings → Library's switch now
+  spreads the stored settings** rather than writing `{enabled}` alone, which
+  would have dropped the country each time it was flipped.
+- **The ISBN is the search when there is one**, stripped to digits/X; otherwise
+  title + first author. Everything goes through `encodeURIComponent`, so a `&` or
+  `#` in a title ("Rich Dad & Poor Dad #1") cannot cut the query short. Links open
+  `_blank` with `noopener noreferrer`.
+- **"To buy" is a flag, not a status**: a want-to-read can be a loan, or at the
+  library, or a gift. It composes with every reading state. A pill on the card, a
+  **Buy later** button beside *Want to read* on a Discover result (adds it wanted
+  and flagged in one gesture), and a **To buy N** filter in the shelf toolbar —
+  shown only once something is flagged.
+- **A project without 20260028 keeps working.** `fromBook` sends `to_buy` only
+  once the book has a value, the way a quote's `explanation` does; only toggling
+  the flag is refused (400 naming `to_buy`) and the store's failure path says so
+  and reloads. Verified: the flag refused, then a rename still saves. The first
+  fake kept `to_buy` on the stored row and handed it back on the next read, which
+  made every later save re-send the refused column — a real project without the
+  column returns nothing, so the fake now strips it on read.
+`scripts/library-links.mjs` — 27 assertions, the pure module imported from the
+dev server (regions, encoding, the closed free list, locale defaults) and the card
+driven in `en-GB`. The ink audit's first book carries `to_buy`, so the pill and
+the card are measured (35 screens).

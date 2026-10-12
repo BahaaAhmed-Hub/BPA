@@ -2765,7 +2765,7 @@ function LibrarySection() {
 
   function flip(v: boolean) {
     setEnabled(v)
-    saveLibrarySettings({ enabled: v })
+    saveLibrarySettings({ ...loadLibrarySettings(), enabled: v })
     // Pushed now rather than on the five-minute timer: switching it off on the
     // laptop and opening the iPad a minute later should not still show it.
     void pushSharedPrefs()
