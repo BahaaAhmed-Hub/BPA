@@ -263,6 +263,19 @@ const LIBRARY = {
     { id: 'l1', user_id: SU, name: 'Philosophy', kind: 'category', description: null, thumb_url: null, color: 'var(--sb-cat-5)', sort_order: 0, created_at: '2026-09-01T00:00:00Z' },
     { id: 'l2', user_id: SU, name: 'Summer reading', kind: 'list', description: 'Easy ones for the beach.', thumb_url: null, color: null, sort_order: 1, created_at: '2026-09-01T00:00:00Z' },
   ],
+  // Quotes, a note on one, a page note and a bookmark, so the panel's second half
+  // is measured with something in it rather than as an empty form.
+  library_quotes: [
+    { id: 'q1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'text', body: 'We are what we repeatedly do.', image_path: null, page: 12, line: 4, color: 'var(--sb-cat-3)', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
+    { id: 'q2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'text', body: 'Habits are the compound interest of self-improvement.', image_path: null, page: null, line: null, color: null, created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
+  ],
+  library_notes: [
+    { id: 'n1', user_id: SU, scope: 'quote', book_id: null, quote_id: 'q1', list_id: null, page: null, line: null, body: 'Aristotle, really.', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
+    { id: 'n2', user_id: SU, scope: 'page', book_id: '00000000-0000-4000-8000-000000000000', quote_id: null, list_id: null, page: 30, line: null, body: 'Revisit this chapter.', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
+  ],
+  library_bookmarks: [
+    { id: 'b1', user_id: SU, kind: 'quote', book_id: '00000000-0000-4000-8000-000000000000', quote_id: 'q1', page: null, line: null, label: null, created_at: '2026-09-02T00:00:00Z' },
+  ],
   library_list_books: [0, 1, 2].map(i => ({ list_id: 'l2', book_id: `00000000-0000-4000-8000-00000000000${i}`, user_id: SU, sort_order: 0, added_at: '2026-09-01T00:00:00Z' })),
 }
 

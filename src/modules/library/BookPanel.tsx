@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Trash2, X, Search } from 'lucide-react'
+import { Bookmark, Trash2, X, Search } from 'lucide-react'
 import { Button, Card, Pill, Segmented } from '@/components/ui'
 import { CAPS, ICON } from '@/lib/type'
 import { CoverArt } from './CoverArt'
 import { BookLookup } from './BookLookup'
 import { AreaField, DateField, Eyebrow, NumField, Row, Stars, TextField } from './fields'
 import { applyCandidate } from './applyCandidate'
+import { BookNotesCard } from './Notes'
+import { QuotesCard } from './QuotesCard'
 import { useLibraryStore } from './libraryStore'
 import { FORMAT_LABEL, STATUS_LABEL, type Book, type BookFormat, type BookStatus } from './types'
 
@@ -41,6 +43,9 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists }: {
   const links = useLibraryStore(s => s.links)
   const setBookLists = useLibraryStore(s => s.setBookLists)
   const [finding, setFinding] = useState(false)
+  const extrasMissing = useLibraryStore(s => s.extrasMissing)
+  const marked = useLibraryStore(s => s.bookmarks.some(m => m.kind === 'book' && m.bookId === book.id))
+  const toggleMark = useLibraryStore(s => s.toggleBookmark)
 
   const mine = links.filter(l => l.bookId === book.id).map(l => l.listId)
   const patch = (p: Partial<Book>) => update(book.id, p)
@@ -71,6 +76,10 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists }: {
         <span style={{ ...CAPS, color: 'var(--sb-ink-3)', flex: 1 }}>Book</span>
         {/* What you do *to* the book, then the way out — a different glyph from
             Close and no stronger than it. Deleting is one ⌘Z away. */}
+        <Button variant="ghost" iconOnly title={marked ? 'Remove from favourites' : 'Add to favourites'} aria-label={marked ? 'Remove from favourites' : 'Add to favourites'}
+          aria-pressed={marked} disabled={extrasMissing} onClick={() => toggleMark({ kind: 'book', bookId: book.id })}>
+          <Bookmark size={ICON.md} fill={marked ? 'var(--sb-accent)' : 'none'} color={marked ? 'var(--sb-accent-deep)' : 'currentColor'} />
+        </Button>
         <Button variant="ghost" iconOnly title="Delete this book" aria-label="Delete this book"
           onClick={() => { del(book.id); onClose() }}><Trash2 size={ICON.md} /></Button>
         <Button variant="ghost" iconOnly title="Close" aria-label="Close" onClick={onClose}><X size={ICON.md} /></Button>
@@ -144,6 +153,9 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists }: {
         )}
         <Button size="sm" variant="ghost" onClick={onManageLists} style={{ alignSelf: 'flex-start' }}>Manage lists &amp; categories</Button>
       </Card>
+
+      <QuotesCard bookId={book.id} disabled={extrasMissing} />
+      <BookNotesCard bookId={book.id} disabled={extrasMissing} />
 
       <Card style={{ padding: '16px 18px' }}>
         <AreaField label="Your review" value={book.review ?? ''} rows={4} placeholder="What stayed with you?"

@@ -6,7 +6,10 @@
  */
 import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
-import type { Book, BookFormat, BookSource, BookStatus, LibList, ListBook, ListKind } from './types'
+import type {
+  Book, BookFormat, BookSource, BookStatus, Bookmark, BookmarkKind, LibList, ListBook, ListKind,
+  Note, NoteScope, Quote, QuoteKind,
+} from './types'
 
 interface BookRow {
   id: string; user_id: string; title: string; subtitle: string | null; authors: string[] | null
@@ -142,4 +145,95 @@ export async function setBookLists(bookId: string, listIds: string[], existing: 
     const { error } = await supabase.from('library_list_books').delete().eq('book_id', bookId).in('list_id', drop)
     fail(error)
   }
+}
+
+// ─── Phase 2: quotes, notes, bookmarks (20260026) ────────────────────────────
+interface QuoteRow {
+  id: string; user_id: string; book_id: string; kind: string; body: string | null; image_path: string | null
+  page: number | null; line: number | null; color: string | null; created_at: string; updated_at: string
+}
+interface NoteRow {
+  id: string; user_id: string; scope: string; book_id: string | null; quote_id: string | null; list_id: string | null
+  page: number | null; line: number | null; body: string; created_at: string; updated_at: string
+}
+interface BookmarkRow {
+  id: string; user_id: string; kind: string; book_id: string; quote_id: string | null
+  page: number | null; line: number | null; label: string | null; created_at: string
+}
+
+const toQuote = (r: QuoteRow): Quote => ({
+  id: r.id, bookId: r.book_id, kind: r.kind as QuoteKind, body: opt(r.body), imagePath: opt(r.image_path),
+  page: opt(r.page), line: opt(r.line), color: opt(r.color), createdAt: r.created_at, updatedAt: r.updated_at,
+})
+const fromQuote = (q: Quote, userId: string) => ({
+  id: q.id, user_id: userId, book_id: q.bookId, kind: q.kind, body: q.body ?? null, image_path: q.imagePath ?? null,
+  page: q.page ?? null, line: q.line ?? null, color: q.color ?? null, created_at: q.createdAt, updated_at: new Date().toISOString(),
+})
+const toNote = (r: NoteRow): Note => ({
+  id: r.id, scope: r.scope as NoteScope, bookId: opt(r.book_id), quoteId: opt(r.quote_id), listId: opt(r.list_id),
+  page: opt(r.page), line: opt(r.line), body: r.body, createdAt: r.created_at, updatedAt: r.updated_at,
+})
+const fromNote = (n: Note, userId: string) => ({
+  id: n.id, user_id: userId, scope: n.scope, book_id: n.bookId ?? null, quote_id: n.quoteId ?? null, list_id: n.listId ?? null,
+  page: n.page ?? null, line: n.line ?? null, body: n.body, created_at: n.createdAt, updated_at: new Date().toISOString(),
+})
+const toBookmark = (r: BookmarkRow): Bookmark => ({
+  id: r.id, kind: r.kind as BookmarkKind, bookId: r.book_id, quoteId: opt(r.quote_id),
+  page: opt(r.page), line: opt(r.line), label: opt(r.label), createdAt: r.created_at,
+})
+const fromBookmark = (b: Bookmark, userId: string) => ({
+  id: b.id, user_id: userId, kind: b.kind, book_id: b.bookId, quote_id: b.quoteId ?? null,
+  page: b.page ?? null, line: b.line ?? null, label: b.label ?? null, created_at: b.createdAt,
+})
+
+export interface LibraryExtras { quotes: Quote[]; notes: Note[]; bookmarks: Bookmark[] }
+
+/** Read separately from the shelf: an account that has run 20260025 but not
+ *  20260026 still has a working shelf, and `'missing'` says only that this half
+ *  is not there yet. `null` is a failed read, which is not an empty answer. */
+export async function loadLibraryExtras(): Promise<LibraryExtras | null | 'missing'> {
+  const [q, n, b] = await Promise.all([
+    supabase.from('library_quotes').select('*').order('created_at'),
+    supabase.from('library_notes').select('*').order('created_at'),
+    supabase.from('library_bookmarks').select('*').order('created_at'),
+  ])
+  for (const r of [q, n, b]) {
+    if (r.error) return r.error.code === '42P01' || r.error.code === 'PGRST205' ? 'missing' : null
+  }
+  return {
+    quotes: (q.data as QuoteRow[]).map(toQuote),
+    notes: (n.data as NoteRow[]).map(toNote),
+    bookmarks: (b.data as BookmarkRow[]).map(toBookmark),
+  }
+}
+
+export async function saveQuote(q: Quote): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_quotes').upsert(fromQuote(q, await uid()), { onConflict: 'id' })
+  fail(error)
+}
+export async function removeQuote(id: string): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_quotes').delete().eq('id', id)
+  fail(error)
+}
+export async function saveNote(n: Note): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_notes').upsert(fromNote(n, await uid()), { onConflict: 'id' })
+  fail(error)
+}
+export async function removeNote(id: string): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_notes').delete().eq('id', id)
+  fail(error)
+}
+export async function saveBookmark(b: Bookmark): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_bookmarks').upsert(fromBookmark(b, await uid()), { onConflict: 'id' })
+  fail(error)
+}
+export async function removeBookmark(id: string): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_bookmarks').delete().eq('id', id)
+  fail(error)
 }

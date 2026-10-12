@@ -3667,3 +3667,36 @@ photograph-your-shelf (6) and the extras (7) each arrive as their own migration.
   the cover always and everything else only where the book has nothing.
 `scripts/library-shelf.mjs` — 28 assertions against an in-memory PostgREST that
 refuses an unknown column. The ink audit has five Library screens.
+
+## Library 2a — quotes, notes and bookmarks
+`20260026_library_quotes.sql`. Phase 2 is split into small chunks: **2a** (this:
+quotes, notes, bookmarks, the file bucket), 2b PDF upload and reader with page
+and line bookmarks, 2c quotes from a photo, 2d the quote board, 2e export and
+"apply this idea" as a task.
+- **Read separately from the shelf.** `loadLibraryExtras()` runs after
+  `loadLibrary()`, so an account that has run 20260025 but not 20260026 keeps a
+  working shelf: `extrasMissing` disables favouriting, hides the quote and note
+  forms and names the migration, instead of costing the books.
+- **One notes table, anchored by `scope`** (`book` / `quote` / `list` / `page` /
+  `line`), and the CHECK refuses a note whose anchor is missing — a `line` note
+  with no page is a note about nothing. The UI never picks a scope: a page typed
+  beside the words makes it a page note, a page and a line a line note. The fake
+  server in `scripts/library-quotes.mjs` enforces the same CHECKs and has a
+  control that proves it refuses.
+- **A page left in the form is not carried to the next quote.** It was, and a
+  second quote silently inherited page 42 — a wrong page is worse than none, so
+  saving clears words, page and line together. Line stays disabled until a page.
+- **A book bookmark is a favourite**; a quote bookmark is anchored to the quote.
+  Page and line bookmarks arrive with the reader (2b).
+- **Delete takes everything and undo gives it all back.** The server cascades a
+  book's quotes, notes and bookmarks away, so the store drops them locally too
+  and the undo entry re-saves each one — restoring only the book row would bring
+  back an empty book. Verified: 3 quotes / 4 notes / 1 bookmark, gone, then back.
+- **Quote colour is chosen while editing**, not a standing row of six dots beside
+  three icons; the row wrapped into a mess at panel width.
+- **The `library` bucket is private and keyed by the owner's id** as the first
+  path segment, so nobody reads or writes another account's files whatever name
+  they guess. Nothing uses it until 2b/2c.
+`scripts/library-quotes.mjs` (22 assertions; `missing` runs the 20260026-not-run
+case, 4 more). The ink audit's Library fixture now carries quotes, notes and a
+bookmark, so the panel's second half is measured with something in it.

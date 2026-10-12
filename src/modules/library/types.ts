@@ -60,3 +60,54 @@ export const STATUS_LABEL: Record<BookStatus, string> = {
 export const FORMAT_LABEL: Record<BookFormat, string> = {
   print: 'Print', ebook: 'E-book', pdf: 'PDF', audio: 'Audio',
 }
+
+// ─── Phase 2: quotes, notes, bookmarks ───────────────────────────────────────
+
+export type QuoteKind = 'text' | 'image'
+
+export interface Quote {
+  id: string
+  bookId: string
+  kind: QuoteKind
+  body?: string
+  /** A photograph of the page, in the `library` bucket (2c). */
+  imagePath?: string
+  page?: number
+  line?: number
+  color?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** Which of a note's anchors is the one it hangs off. */
+export type NoteScope = 'book' | 'quote' | 'list' | 'page' | 'line'
+
+export interface Note {
+  id: string
+  scope: NoteScope
+  bookId?: string
+  quoteId?: string
+  listId?: string
+  page?: number
+  line?: number
+  body: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type BookmarkKind = 'book' | 'page' | 'line' | 'quote'
+
+export interface Bookmark {
+  id: string
+  kind: BookmarkKind
+  bookId: string
+  quoteId?: string
+  page?: number
+  line?: number
+  label?: string
+  createdAt: string
+}
+
+/** Where a thing sits in a book, for display: "p. 42 · line 3". */
+export const placeOf = (x: { page?: number; line?: number }): string =>
+  [x.page != null ? `p. ${x.page}` : '', x.line != null ? `line ${x.line}` : ''].filter(Boolean).join(' · ')
