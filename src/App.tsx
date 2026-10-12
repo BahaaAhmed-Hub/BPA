@@ -532,40 +532,37 @@ const KIND_COLOR: Record<string, string> = {
   decision: 'var(--sb-negative)', conflict: 'var(--sb-accent)', habit: 'var(--sb-positive)', review: 'var(--sb-accent)',
 }
 
-function TopNav() {
+// ─── You, top right ──────────────────────────────────────────────────────────
+// Search, the bell and the avatar: what you reach for, and what has just
+// happened, in the corner the eye goes to for status.
+//
+// **A row in the layout, not an overlay.** `position: fixed` drew it on top of
+// whatever each page happened to put in its own top-right corner — Today's
+// dark banner, most visibly — and no z-index fixes that, because the problem
+// is two things wanting the same box. Owning a row means nothing can be under
+// it on any page, including ones nobody has written yet. It costs 48px, which
+// is less than the header this replaced.
+//
+// It is its own component because it belongs to the **content column** rather
+// than beside the rail.
+function YouCluster() {
   const activeModule    = useUIStore(s => s.activeModule)
   const setActiveModule = useUIStore(s => s.setActiveModule)
-  // The menu row is drawn for an admin only — but that is politeness, not the
-  // gate: `public.admins` hands out own-row-only and every table behind the
-  // panel answers to its own policy, so forcing the route gets empty lists.
+  // Drawn for an admin only — politeness, not the gate: `public.admins` hands
+  // out own-row-only and every table behind the panel answers to its own
+  // policy, so forcing the route gets empty lists.
   const [isAdmin, setIsAdmin] = useState(false)
   useEffect(() => {
     let live = true
     void amIAdmin().then(v => { if (live) setIsAdmin(v) })
     return () => { live = false }
   }, [])
-  // Drawn, not enforced — the bundle is public, so this is for the person
-  // reading it. RLS is what actually answers.
-  useModules()
-  const navItems = NAV_ITEMS.filter(item => !moduleIsOff(item.id))
-  // `activeModule` is persisted, so a plan that changed under a shut laptop
-  // reopens on a tab that is no longer there. Land on the first one that is
-  // rather than on a blank page.
-  useEffect(() => {
-    if (moduleIsOff(activeModule) && navItems.length) setActiveModule(navItems[0].id)
-  }, [activeModule, navItems, setActiveModule])
-  const user            = useAuthStore(s => s.user)
-
+  const user = useAuthStore(s => s.user)
   const initials = user?.name
     ? user.name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
     : user?.email?.slice(0, 2).toUpperCase() ?? '?'
-
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  // The two width measurements that used to live here — the search box
-  // covering "Dashboard" at 1100px, the nav labels going at 800px — were
-  // about a row that had to fit the window's width. A column has as much
-  // room as the window is tall, so neither question is asked any more.
   useEffect(() => {
     if (!menuOpen) return
     const away = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false) }
@@ -576,122 +573,127 @@ function TopNav() {
   }, [menuOpen])
 
   return (
-    <>
-      <SideRail
+    <div data-you style={{
+      flexShrink: 0, height: 48, paddingRight: 18, paddingLeft: 12,
+      display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
+    }}>
+      {/* Search sits with them rather than in the rail: it is a thing you
+          reach for, not a place you go. It keeps ⌘K and loses its box —
+          beside two round controls a worded field is a third kind of
+          object. */}
+      <button
+        onClick={() => window.dispatchEvent(new Event('professor:openSearch'))}
+        title="Search everything (⌘K)"
+        aria-label="Search everything"
+        style={{
+          width: 34, height: 34, flexShrink: 0, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: 'var(--sb-r-pill)', border: 'none',
+          background: 'transparent', color: 'var(--sb-ink-3)',
+        }}>
+        <Search size={ICON.md} />
+      </button>
+      <NotificationBell />
+
+      {/* You, and what is behind you. */}
+      <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
+        <button
+          onClick={() => setMenuOpen(o => !o)}
+          title={user?.email ?? 'Your account'}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          style={{
+            width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', padding: 0, margin: '3px 0',
+            background: 'var(--sb-ink-1)', border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', overflow: 'hidden',
+          }}>
+          {user?.avatarUrl ? (
+            <img src={user.avatarUrl} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-on-dark)', letterSpacing: '0.02em' }}>
+              {initials}
+            </span>
+          )}
+        </button>
+        {menuOpen && (
+              <div role="menu" style={{
+                position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120, minWidth: 216,
+                background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
+                boxShadow: 'var(--sb-shadow-frame)',
+              }}>
+                <div style={{ padding: '8px 10px 10px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', marginBottom: 5 }}>
+                  <p style={{
+                    margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{user?.name ?? 'Your account'}</p>
+                  <p style={{
+                    margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{user?.email}</p>
+                </div>
+                <button
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); setActiveModule('settings') }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
+                    padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
+                    background: activeModule === 'settings' ? 'var(--sb-accent-tint)' : 'transparent',
+                    color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
+                  }}>
+                  <Settings size={ICON.md} color="var(--sb-ink-3)" /> Settings
+                </button>
+                {isAdmin && (
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenuOpen(false); setActiveModule('admin') }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
+                      padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
+                      background: activeModule === 'admin' ? 'var(--sb-accent-tint)' : 'transparent',
+                      color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
+                    }}>
+                    <ShieldCheck size={ICON.md} color="var(--sb-ink-3)" /> Admin
+                  </button>
+                )}
+                <button
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); void googleSignOut() }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
+                    padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
+                    background: 'transparent', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body)',
+                    fontFamily: 'inherit', textAlign: 'left',
+                  }}>
+                  <LogOut size={ICON.md} color="var(--sb-negative)" /> Sign out
+                </button>
+              </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function TopNav() {
+  const activeModule    = useUIStore(s => s.activeModule)
+  const setActiveModule = useUIStore(s => s.setActiveModule)
+  // Drawn, not enforced — the bundle is public, so this is for the person
+  // reading it. RLS is what actually answers.
+  useModules()
+  const navItems = NAV_ITEMS.filter(item => !moduleIsOff(item.id))
+  // `activeModule` is persisted, so a plan that changed under a shut laptop
+  // reopens on a tab that is no longer there. Land on the first one that is
+  // rather than on a blank page.
+  useEffect(() => {
+    if (moduleIsOff(activeModule) && navItems.length) setActiveModule(navItems[0].id)
+  }, [activeModule, navItems, setActiveModule])
+
+  return (
+    <SideRail
       items={navItems.map(item => ({ id: item.id, label: item.label, icon: NAV_ICONS[item.id] }))}
       activeModule={activeModule}
       onPick={setActiveModule}
-      footer={
-        <>
-          {/* Search keeps its shortcut and loses its box: a word and a ⌘K
-              inside a 44px column would be two lines of furniture, and the
-              magnifier says the same thing in none. */}
-          <button
-            onClick={() => window.dispatchEvent(new Event('professor:openSearch'))}
-            title="Search everything (⌘K)"
-            aria-label="Search everything"
-            style={{
-              width: 44, height: 42, flexShrink: 0, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: 'var(--sb-r-nav)', border: 'none',
-              background: 'transparent', color: 'var(--sb-ink-3)',
-            }}>
-            <Search size={ICON.md} />
-          </button>
-        </>
-      } />
-
-      {/* ── You, top right ────────────────────────────────────────────────────
-          The bell and the avatar are not navigation: they are about *you* and
-          about what has just happened, which is the corner the eye goes to for
-          status rather than the foot of a column of modules. They float on the
-          page's own ground like everything else — fixed to the viewport, so
-          they stay put while the module under them scrolls — and the account
-          menu opens downward, which is where a menu under a top-right avatar
-          has always opened. */}
-      <div style={{
-        position: 'fixed', top: 14, right: 18, zIndex: 90,
-        display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-          <NotificationBell />
-
-          {/* You, and what is behind you. */}
-          <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
-            <button
-              onClick={() => setMenuOpen(o => !o)}
-              title={user?.email ?? 'Your account'}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              style={{
-                width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', padding: 0, margin: '3px 0',
-                background: 'var(--sb-ink-1)', border: 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', overflow: 'hidden',
-              }}>
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-on-dark)', letterSpacing: '0.02em' }}>
-                  {initials}
-                </span>
-              )}
-            </button>
-            {menuOpen && (
-                  <div role="menu" style={{
-                    position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120, minWidth: 216,
-                    background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
-                    boxShadow: 'var(--sb-shadow-frame)',
-                  }}>
-                    <div style={{ padding: '8px 10px 10px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', marginBottom: 5 }}>
-                      <p style={{
-                        margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>{user?.name ?? 'Your account'}</p>
-                      <p style={{
-                        margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>{user?.email}</p>
-                    </div>
-                    <button
-                      role="menuitem"
-                      onClick={() => { setMenuOpen(false); setActiveModule('settings') }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
-                        padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
-                        background: activeModule === 'settings' ? 'var(--sb-accent-tint)' : 'transparent',
-                        color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
-                      }}>
-                      <Settings size={ICON.md} color="var(--sb-ink-3)" /> Settings
-                    </button>
-                    {isAdmin && (
-                      <button
-                        role="menuitem"
-                        onClick={() => { setMenuOpen(false); setActiveModule('admin') }}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
-                          padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
-                          background: activeModule === 'admin' ? 'var(--sb-accent-tint)' : 'transparent',
-                          color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
-                        }}>
-                        <ShieldCheck size={ICON.md} color="var(--sb-ink-3)" /> Admin
-                      </button>
-                    )}
-                    <button
-                      role="menuitem"
-                      onClick={() => { setMenuOpen(false); void googleSignOut() }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
-                        padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
-                        background: 'transparent', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body)',
-                        fontFamily: 'inherit', textAlign: 'left',
-                      }}>
-                      <LogOut size={ICON.md} color="var(--sb-negative)" /> Sign out
-                    </button>
-                  </div>
-            )}
-          </div>
-      </div>
-    </>
+    />
   )
 }
 
@@ -1357,6 +1359,7 @@ function App() {
       }}>
         <TopNav />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+          <YouCluster />
           <SyncGapBanner />
           <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', background: 'var(--sb-page)' }}>
             <ActiveModule />

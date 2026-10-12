@@ -475,15 +475,31 @@ second changes what the first shows without changing which module is open.
   at 1080px, and below that the right-hand group was drawn *over* the nav, so
   "Dashboard" was unreachable from 1100px down. `useNarrowerThan` and both
   measurements are gone — neither question is asked of a column.
-- **Search is the rail's foot; the bell and the avatar are top right.** Those
-  two are not navigation — they are about *you* and about what has just
+- **Search, the bell and the avatar are not in the rail at all, and they own a
+  row.** None of the three is navigation: they are *you* and what has just
   happened, which is the corner the eye goes to for status rather than the
-  foot of a column of modules. They are `position: fixed`, so they stay put
-  while the module scrolls, and the account menu opens downward from them.
+  foot of a column of modules. Search went with them — it is a thing you reach
+  for, not a place you go, and beside two round controls a worded field is a
+  third kind of object. `YouCluster` in `App.tsx` is the three of them, and it
+  occupies a **48px row at the top of the content column** rather than
+  floating over it: `position: fixed` drew it on top of whatever each page
+  puts in its own top-right corner — Today's dark ON FIRE / CARRIED OVER
+  banner, most visibly — and no `z-index` answers that, because the problem is
+  two things wanting one box rather than one being underneath. A row costs
+  48px, less than the header this replaced, and nothing can be under it on any
+  page, including ones nobody has written yet. The account menu opens below
+  the avatar (`top: calc(100% + 8px)`, `right: 0`), where there is now room.
+  `SideRail` takes no `footer` prop any more: a prop nothing passes is a
+  second design still in the file.
   **The ink audit reached Admin through that avatar**, so moving it turned
   `Admin · users` into a screen measuring nothing — caught by the audit's own
   blindness warning, and the selector is scoped to `aria-haspopup="menu"`
   rather than to where the avatar happens to sit.
+- **The two lozenges are centred down the window**, with `margin: auto 0` on
+  the pair rather than `justify-content`, so a rail taller than the window
+  still scrolls to both ends instead of clipping its first group. Pinned to
+  the top edge they sit against the window's corner, which is the one place
+  nothing else is; centred they read as floating beside the page.
 - **Two lozenges that float, on one continuous ground.** Making them
   *transparent* was an over-correction: the rail then disappeared into the
   background rather than floating on it. What had to go was the tinted box
@@ -573,6 +589,21 @@ because "whose is this?" is one question whatever module is drawing.
   opened** — the exact vacuous result that file's own note was written about.
   It clicks `[data-side-rail] button[aria-label="<module>"]` now, which depends
   on neither an icon nor the rail's position.
+`scripts/you-cluster-owns-its-row.mjs [today|calendar|rail|control]` — 26,
+and the measurement had to be rebuilt twice because each first attempt
+answered a question next to the one being asked. A rect-against-rect sweep of
+`<main>`'s descendants reported **11 collisions on a clean calendar**: the grid
+is a scroll container, so a row scrolled out of view keeps a rect above the
+viewport that intersects anything up there while painting nothing. And
+hit-testing the cluster's own box *through* the cluster answers the cluster at
+every point, however empty the page behind it — so the control passed for the
+wrong reason. The hit-test is taken with the cluster standing aside
+(`pointerEvents: 'none'`), only a hit inside `<main>` counts, and the
+structural claim — that the two boxes do not intersect at all — is asserted
+beside it. Control: `position: fixed` put back on the very same element, one
+property changed, and **7,008px²** of Today is underneath with **55 of 55**
+points landing on the Morning Brief.
+
 `scripts/company-lens-dims.mjs [rail|calendar|tasks|clear]` — 30 assertions,
 measured as `getComputedStyle().opacity` on the real cards rather than as a
 class name, since a class assertion passes with the rule missing from the

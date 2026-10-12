@@ -29,12 +29,9 @@
 //   rail of one tile is a filter you can see; a rail of none is furniture.
 
 import { useEffect, useRef, useState } from 'react'
-import { Bell as _Bell } from 'lucide-react'
 import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { useCompanyFocus } from '@/lib/companyFocus'
 import { useInkOnKeeping } from '@/lib/ink'
-
-void _Bell
 
 /** Up to two letters, the way every company chip in the app already shortens. */
 export function initialsOf(name: string): string {
@@ -159,14 +156,16 @@ function CompanyTile({ co, chosen, onPick }: {
   )
 }
 
-export function SideRail({ items, activeModule, onPick, footer }: {
+// **The rail holds modules and companies, and nothing of yours.** The bell,
+// the avatar and search sat at its foot for a while; they are *you*, not a
+// place to go, and they belong in the content column's own top-right corner
+// where every app of this shape puts them — which is also where the person
+// asked for them back. So the rail takes no footer: a prop nothing passes is
+// a second design still in the file.
+export function SideRail({ items, activeModule, onPick }: {
   items: { id: string; label: string; icon: React.ReactNode }[]
   activeModule: string
   onPick: (id: string) => void
-  /** The bell and the avatar menu, which belong to *you* rather than to a
-   *  module — kept at the foot of the rail, where the mock puts its own
-   *  settings and help. Passed in so the rail owns no account state. */
-  footer?: React.ReactNode
 }) {
   const [lens, setLens] = useCompanyFocus()
   const [companies, setCompanies] = useState<DynamicCompany[]>(() =>
@@ -194,9 +193,16 @@ export function SideRail({ items, activeModule, onPick, footer }: {
 
   return (
     <nav aria-label="Main" data-side-rail style={{
+      // **Centred down the window**, not stacked from the top: two lozenges
+      // of fixed height pinned to the top edge sit against the window's
+      // corner, which is the one place nothing else is. Centred they read as
+      // floating beside the page rather than hanging off it. `auto` margins
+      // rather than `justify-content`, so a rail taller than the window
+      // still scrolls to both ends instead of clipping its first group.
       flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
       gap: 13, padding: '16px 14px', height: '100%', overflowY: 'auto',
     }}>
+      <div style={{ margin: 'auto 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 13 }}>
       <div style={PILL}>
         {items.map(item => (
           <RailButton
@@ -207,15 +213,6 @@ export function SideRail({ items, activeModule, onPick, footer }: {
             {item.icon}
           </RailButton>
         ))}
-        {footer && (
-          <>
-            <span aria-hidden style={{
-              width: 22, height: 0, margin: '4px 0',
-              borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
-            }} />
-            {footer}
-          </>
-        )}
       </div>
 
       {companies.length > 0 && (
@@ -246,6 +243,7 @@ export function SideRail({ items, activeModule, onPick, footer }: {
           )}
         </div>
       )}
+      </div>
     </nav>
   )
 }
