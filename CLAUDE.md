@@ -3609,3 +3609,61 @@ swapping one hex for one token:
   are unchanged by construction.
 Four themes, 22 screens, 0 failing pairs after — and the behaviour suites that
 drive that file (meeting outcome 65, booking hours 46) re-run unchanged.
+
+## Library — a shelf, built in phases
+`src/modules/library/`, `20260025_library.sql`. Phase 1 of six (shelf, lists and
+categories, cover lookup, the on/off switch). Quotes/notes/PDF reader (2),
+Discover and buy links (3), tracker and plans (4), AI summary and audio (5),
+photograph-your-shelf (6) and the extras (7) each arrive as their own migration.
+- **Two switches, either one turns it off.** The server's (`my_modules()`: plan
+  and admin override) and the person's (Settings → Library, `library-settings`,
+  a prefSync key). `libraryIsOff()` is the one answer, used by the nav, the
+  module gate, the loader and the live-sync handler — which asks **at call
+  time**, because the person can switch it on while the app is open. Off means
+  never loaded, as for every module.
+- **The migration registers it for `free` as well as `pro`.** The backfill put
+  every account on `free`; a module in neither plan resolves false for everyone
+  and vanishes from the nav the moment the migration runs.
+- **One table for lists and categories** (`library_lists.kind`). A category is
+  what a book *is*, a list is what you are *doing* with it; they differ in the
+  question the UI asks, not in shape, and two tables would be two copies of
+  every control that edits a name and a thumbnail. `library_list_books` carries
+  its own `user_id` because Realtime can only filter on a column the row has.
+- **Authoritative from the server, optimistic on the screen.** `loadFromDB`
+  replaces; every write goes straight out; a failed write says so and reloads
+  rather than leaving a book on screen the server never heard of. `loading` is
+  distinct from empty ("Fetching your library…", never "Your shelf is empty"
+  about a shelf on its way), and a failed read keeps what is shown. `'missing'`
+  (42P01 / PGRST205) means the migration has not run and says so.
+- **`?? null` on every optional in `fromBook`.** `undefined` is dropped on the
+  way to JSON, so an upsert never *clears* a field the person emptied — the
+  `parent_id` hole again.
+- **The panel is the calendar composer's contract**: a cream shell of white
+  cards, every control writes straight through, words held 700ms
+  (`lib/useHeldText.ts` — a third copy of a hook Shopping already has twice;
+  promoted for the Library only, the Shopping ones are untouched).
+  Starting/finishing date themselves; coming off *finished* clears the date.
+- **A picked book is inert on the shelf** (`data-picked`, dashed empty slot,
+  `pointer-events: none`) while its panel is open — it has left the shelf.
+  Escape closes the panel but never from under a dialog or a text field.
+- **The flight is a clone moved by transform only.** `BookFlight` sizes itself
+  to the panel's cover *in the layout effect* (on a first pick the panel has
+  only just mounted) and animates translate+scale+rotateY; the real cover is
+  `visibility: hidden` until it lands. Reduced motion skips it. Never
+  `oncancel = onDone`: unmount cancels, and that clobbered the *next* flight.
+- **Lift is gated on `hover: hover`.** A finger has no hover; a tap would
+  leave the first book touched stuck halfway out.
+- **Under 760px the panel replaces the shelf** instead of docking (300px of
+  panel left a phone ~90px of books), as the Mail reader stacks.
+- **A button must not carry `role="listitem"`** — it replaces the button role.
+  Found by the test looking for the button; the group is `role="group"`.
+- **Spine colours are theme tokens** (`--sb-cat-*`, deep semantics) with
+  `inkOn()` per spine, so Glass draws a Glass shelf. Width follows page count,
+  height a stable hash of the id, minimum 34px (a touch target).
+- **Lookup is Open Library + Google Books, asked together, merged.** One source
+  down is named, never reported as "no results"; both down says to add by hand.
+  Google's `http:` thumbnails are upgraded (a https page will not load them) and
+  Open Library's 1×1 "no cover" gif is treated as a miss. `applyCandidate` takes
+  the cover always and everything else only where the book has nothing.
+`scripts/library-shelf.mjs` — 28 assertions against an in-memory PostgREST that
+refuses an unknown column. The ink audit has five Library screens.

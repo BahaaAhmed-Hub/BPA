@@ -51,6 +51,7 @@ const SHARED_KEYS = [
   'professor-compact',
   'task-board-col-order',
   'task-board-type',
+  'library-settings',            // whether the Library is on for you
   'finance-budget-rules',
   'finance-money-reminders',
   'finance-credit-limits',

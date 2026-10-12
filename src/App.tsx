@@ -12,6 +12,9 @@ import { SettingsModule } from './modules/settings/SettingsModule'
 import { BehavioralOS } from './modules/behavioral/BehavioralOS'
 import { PlanningAssistant } from './modules/planning/PlanningAssistant'
 import { FinanceModule } from './modules/finance/FinanceModule'
+import { LibraryModule } from './modules/library/LibraryModule'
+import { useLibraryStore } from './modules/library/libraryStore'
+import { libraryIsOff, useLibraryOff } from './modules/library/libraryPrefs'
 import { NavRow } from './components/ui'
 import { useUIStore } from './store/uiStore'
 import { cachedModules, fetchModules, forgetEntitlements, moduleIsOff, useModules } from './lib/entitlements'
@@ -323,6 +326,13 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
       <rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/>
     </svg>
   ),
+  // Three books standing, the middle one leaning — a shelf, which is what the
+  // screen is. Collapsed, a missing glyph draws an empty pill.
+  library: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3.5" y="4" width="4.5" height="16" rx="1.2"/><rect x="9.5" y="4" width="4.5" height="16" rx="1.2"/><path d="M16.2 5.4l3.9-1 2.1 15.2-3.9 1z"/>
+    </svg>
+  ),
   inbox: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7.5l8.5 6 8.5-6"/>
@@ -369,6 +379,10 @@ function useNarrowerThan(px: number): boolean {
   return hit
 }
 
+/** The gate for a nav id. Library has a second switch of its own; every other
+ *  module answers to the server alone. */
+const offHere = (id: string) => (id === 'library' ? libraryIsOff() : moduleIsOff(id))
+
 const NAV_ITEMS = [
   { id: 'morning',   label: 'Today'    },
   { id: 'calendar',  label: 'Calendar' },
@@ -378,6 +392,9 @@ const NAV_ITEMS = [
   { id: 'tasks',     label: 'Tasks'    },
   { id: 'habits',    label: 'Habits'   },
   { id: 'finance',   label: 'Finance'  },
+  // Off for two reasons — the plan (`my_modules()`) or the person (Settings →
+  // Library) — and either one hides it, so it is asked through `offHere`.
+  { id: 'library',   label: 'Library'  },
   // The dashboard was the module the app opened on and the one place with no
   // way back to it — Today's pill lit up for it instead, which named the wrong
   // screen. Settings left the row for the avatar menu, where the things about
@@ -564,12 +581,13 @@ function TopNav() {
   // Drawn, not enforced — the bundle is public, so this is for the person
   // reading it. RLS is what actually answers.
   useModules()
-  const navItems = NAV_ITEMS.filter(item => !moduleIsOff(item.id))
+  useLibraryOff()
+  const navItems = NAV_ITEMS.filter(item => !offHere(item.id))
   // `activeModule` is persisted, so a plan that changed under a shut laptop
   // reopens on a tab that is no longer there. Land on the first one that is
   // rather than on a blank page.
   useEffect(() => {
-    if (moduleIsOff(activeModule) && navItems.length) setActiveModule(navItems[0].id)
+    if (offHere(activeModule) && navItems.length) setActiveModule(navItems[0].id)
   }, [activeModule, navItems, setActiveModule])
   const user            = useAuthStore(s => s.user)
 
@@ -758,6 +776,7 @@ function ActiveModule() {
   const activeModule = useUIStore(s => s.activeModule)
   const everMounted  = useRef<Set<string>>(new Set([activeModule]))
   useModules()
+  useLibraryOff()
 
   // Track which modules have ever been active so we only mount them once.
   everMounted.current.add(activeModule)
@@ -765,7 +784,7 @@ function ActiveModule() {
   // A module switched off stays mounted-but-hidden if it was ever open, which
   // is a screen holding data the account is no longer entitled to. Drop it.
   const show = (id: string): CSSProperties =>
-    activeModule === id && !moduleIsOff(id) ? {} : { display: 'none' }
+    activeModule === id && !offHere(id) ? {} : { display: 'none' }
 
   return (
     <>
@@ -781,6 +800,7 @@ function ActiveModule() {
       {everMounted.current.has('behavioral') && <div style={show('behavioral')}><BehavioralOS /></div>}
       {everMounted.current.has('planning')   && <div style={show('planning')}><PlanningAssistant /></div>}
       {everMounted.current.has('finance') && !moduleIsOff('finance')    && <div style={show('finance')}><FinanceModule /></div>}
+      {everMounted.current.has('library') && !libraryIsOff()            && <div style={show('library')}><LibraryModule /></div>}
     </>
   )
 }
@@ -835,6 +855,7 @@ async function loadAllFromDB(
     // it back, so a transaction added on the laptop simply did not exist on the
     // iPad — each device saw only what it had entered itself.
     off('finance') ? Promise.resolve() : useFinanceStore.getState().loadFromDB(),
+    libraryIsOff() ? Promise.resolve() : useLibraryStore.getState().loadFromDB(),
     // Companies
     loadCompaniesFromDB().then(companies => {
       if (companies.length === 0) return
@@ -961,6 +982,7 @@ function clearUserData(clearTasks: () => void, clearHabits: () => void) {
   // Reset in-memory Zustand stores
   clearTasks()
   clearHabits()
+  useLibraryStore.getState().clearAll()
   saveAccounts([])
 }
 
@@ -984,6 +1006,9 @@ function App() {
       habits:  moduleIsOff('habits')  ? quiet : loadHabitsFromDB,
       tasks:   moduleIsOff('tasks')   ? quiet : loadTasksFromDB,
       finance: moduleIsOff('finance') ? quiet : () => useFinanceStore.getState().loadFromDB(),
+      // Asked at call time, not at start: the person can switch the Library on
+      // while the app is open, and a handler fixed at boot would never wake.
+      library: async () => { if (!libraryIsOff()) await useLibraryStore.getState().loadFromDB() },
     })
     // Shopping has its own Realtime channel — start it alongside liveSync.
     // It tears its own previous channel down, as this function does above.

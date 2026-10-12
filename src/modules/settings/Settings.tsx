@@ -12,6 +12,7 @@ import {
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
   Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard, Sparkles,
   ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed, Check,
+  Library as LibraryIcon,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { pushSharedPrefs } from '@/lib/prefSync'
@@ -76,6 +77,8 @@ import {
   type MoneyReminder,
 } from '@/modules/finance/reminders'
 import { alpha } from '@/lib/alpha'
+import { loadLibrarySettings, saveLibrarySettings } from '@/modules/library/libraryPrefs'
+import { useLibraryStore } from '@/modules/library/libraryStore'
 import { SearchSelect } from '@/components/SearchSelect'
 import { listUserTokens, createUserToken, revokeUserToken, type UserToken } from '@/lib/userTokens'
 import { getTelegramLinks, revokeTelegramLink, type TelegramLink } from '@/lib/telegramLink'
@@ -105,7 +108,7 @@ interface CompanyRow {
   users: CompanyUser[]
 }
 
-const SECTION_IDS = ['profile','billing','schedule','companies','habits','tasks','accounts','professor','automation','notifications','appearance','blocking','behavioral','finance'] as const
+const SECTION_IDS = ['profile','billing','schedule','companies','habits','tasks','accounts','professor','automation','notifications','appearance','blocking','behavioral','finance','library'] as const
 type SectionId = typeof SECTION_IDS[number]
 
 interface SectionMeta { id: SectionId; title: string; icon: React.ElementType; description: string }
@@ -124,13 +127,14 @@ const SECTION_META: SectionMeta[] = [
   { id: 'behavioral',    title: 'Behavioral OS',        icon: Brain,       description: 'Rank scoring, operating mode and tone' },
   { id: 'companies',     title: 'Data & privacy',       icon: Shield,      description: 'Where your data sits and how long it stays' },
   { id: 'finance',       title: 'Finance',              icon: Hash,        description: 'Envelope style, figures, dates & alerts' },
+  { id: 'library',       title: 'Library',              icon: LibraryIcon, description: 'Turn the book shelf on or off, and what it holds' },
 ]
 
 // Grouped nav — matches 11A Sunlit Bento design
 const NAV_GROUPS: { label: string; ids: SectionId[] }[] = [
   { label: 'YOU',       ids: ['profile', 'billing'] },
   { label: 'WORKSPACE', ids: ['accounts', 'professor', 'schedule', 'blocking'] },
-  { label: 'WORK',      ids: ['tasks', 'habits'] },
+  { label: 'WORK',      ids: ['tasks', 'habits', 'library'] },
   { label: 'SYSTEM',    ids: ['automation', 'notifications', 'appearance', 'behavioral', 'companies', 'finance'] },
 ]
 
@@ -2753,6 +2757,38 @@ function BlockingRulesSection() {
 
 // ─── Behavioral OS Section ────────────────────────────────────────────────────
 
+function LibrarySection() {
+  const [enabled, setEnabled] = useState(() => loadLibrarySettings().enabled)
+  const books = useLibraryStore(s => s.books.length)
+  const lists = useLibraryStore(s => s.lists.length)
+  const missing = useLibraryStore(s => s.missing)
+
+  function flip(v: boolean) {
+    setEnabled(v)
+    saveLibrarySettings({ enabled: v })
+    // Pushed now rather than on the five-minute timer: switching it off on the
+    // laptop and opening the iPad a minute later should not still show it.
+    void pushSharedPrefs()
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <FieldRow label="Show the Library" sub="Your books, quotes, reading plans and listening — a shelf in the top menu. Off hides it and stops it loading; nothing is deleted.">
+        <Toggle checked={enabled} onChange={flip} />
+      </FieldRow>
+      {missing ? (
+        <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-warning)' }}>
+          The Library's tables are not on this account yet — migration <code>20260025_library.sql</code> has not run.
+        </div>
+      ) : (
+        <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
+          {books} book{books === 1 ? '' : 's'} · {lists} list{lists === 1 ? '' : 's'} &amp; categories
+        </div>
+      )}
+    </div>
+  )
+}
+
 function BehavioralSection() {
   const { enabled, mode, setEnabled, setMode } = useBehavioralStore()
   const SB = {
@@ -4797,7 +4833,7 @@ const SECTION_TO_PAGE: Record<SectionId, PageKey> = {
   accounts: 'connected', schedule: 'connected',
   professor: 'ai',
   blocking: 'integrations',
-  tasks: 'work',    habits: 'work',
+  tasks: 'work',    habits: 'work',  library: 'work',
   automation: 'system', notifications: 'system',
   appearance: 'display', behavioral: 'display', companies: 'display',
   finance: 'finance',
@@ -5178,6 +5214,9 @@ export function Settings() {
           </SectionCard>
           <SectionCard id="habits" active={activeSection === 'habits'} actions={<SaveBtn id="habits" />}>
             <HabitsSection />
+          </SectionCard>
+          <SectionCard id="library" active={activeSection === 'library'}>
+            <LibrarySection />
           </SectionCard>
         </div>
       </div>

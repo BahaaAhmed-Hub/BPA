@@ -239,6 +239,33 @@ const ADMIN_T = {
   ],
 }
 
+// The Library: books across every status, with and without a cover, one of them
+// carrying a long title — a spine's label is drawn on a colour nobody chose
+// from the theme, so each of those colours has to be measured.
+const LIB_BOOK = (i, title, authors, status, extra = {}) => ({
+  id: `00000000-0000-4000-8000-00000000000${i}`, user_id: SU, title, subtitle: null, authors, isbn: null, publisher: null,
+  published_year: null, pages: 180 + i * 60, language: null, description: 'A book about ideas worth keeping.', cover_url: null,
+  source: 'manual', source_key: null, status, format: 'print', rating: i % 6, review: null, spine_color: null, file_path: null,
+  shelf_order: i, started_on: null, finished_on: null, added_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z', ...extra,
+})
+const LIBRARY = {
+  library_books: [
+    LIB_BOOK(0, 'Atomic Habits', ['James Clear'], 'reading'),
+    LIB_BOOK(1, 'Deep Work', ['Cal Newport'], 'finished'),
+    LIB_BOOK(2, 'The Almanack of Naval Ravikant', ['Eric Jorgenson'], 'want'),
+    LIB_BOOK(3, 'Sapiens', ['Yuval Noah Harari'], 'paused'),
+    LIB_BOOK(4, 'Meditations', ['Marcus Aurelius'], 'finished'),
+    LIB_BOOK(5, 'Man\u2019s Search for Meaning', ['Viktor Frankl'], 'want'),
+    LIB_BOOK(6, 'Antifragile', ['Nassim Taleb'], 'reading'),
+    LIB_BOOK(7, 'Dune', ['Frank Herbert'], 'abandoned'),
+  ],
+  library_lists: [
+    { id: 'l1', user_id: SU, name: 'Philosophy', kind: 'category', description: null, thumb_url: null, color: 'var(--sb-cat-5)', sort_order: 0, created_at: '2026-09-01T00:00:00Z' },
+    { id: 'l2', user_id: SU, name: 'Summer reading', kind: 'list', description: 'Easy ones for the beach.', thumb_url: null, color: null, sort_order: 1, created_at: '2026-09-01T00:00:00Z' },
+  ],
+  library_list_books: [0, 1, 2].map(i => ({ list_id: 'l2', book_id: `00000000-0000-4000-8000-00000000000${i}`, user_id: SU, sort_order: 0, added_at: '2026-09-01T00:00:00Z' })),
+}
+
 const THEMES = process.env.INK_THEME ? [process.env.INK_THEME]
   : ['sunlit-bento', 'warm-minimal', 'glass-depth', 'evergreen']
 const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] })
@@ -260,6 +287,7 @@ for (const theme of THEMES) {
     const t = /\/rest\/v1\/([a-z_]+)/.exec(u)?.[1]
     const GET = r.request().method() === 'GET'
     if (t && SHOPPING[t] && GET) return r.fulfill({ json: SHOPPING[t] })
+    if (t && LIBRARY[t] && GET) return r.fulfill({ json: LIBRARY[t] })
     if (t === 'rpc' || u.includes('/rpc/has_module')) {
       const b = (() => { try { return r.request().postDataJSON() } catch { return {} } })()
       const m = A_MODULES.find(x => x.id === b.mod)
@@ -378,6 +406,37 @@ for (const theme of THEMES) {
       d?.parentElement?.click()
     })
   })
+
+  // Library: spines on a shelf, covers face-out, lists, a book open beside the
+  // shelf, and the add dialog with a lookup typed into it.
+  const libraryTab = async () => {
+    await page.locator('header nav button', { hasText: /^Library$/ }).first().click()
+    await page.waitForTimeout(1200)
+  }
+  await visit('Library · shelf', libraryTab)
+  await visit('Library · covers', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Covers' }).click()
+  })
+  await visit('Library · lists', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Lists' }).click()
+  })
+  await visit('Library · a book open', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Shelf' }).click()
+    await page.getByRole('button', { name: /Atomic Habits by/ }).click()
+    await page.waitForTimeout(900)
+  })
+  await visit('Library · add a book', async () => {
+    await libraryTab()
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: /Add book/ }).first().click()
+    await page.waitForTimeout(300)
+  })
+  // The dialog is a scrim over the whole page; the next screen's nav click
+  // would land on it.
+  await page.keyboard.press('Escape')
 
   await visit('Dashboard', async () => { await page.locator('header nav button', { hasText: /^Dashboard$/ }).first().click() })
   // Settings is behind the avatar menu, and carries every colour picker there
