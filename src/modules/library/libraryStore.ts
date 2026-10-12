@@ -16,6 +16,15 @@ import type { Book, Bookmark, LibList, ListBook, ListKind, Note, Quote } from '.
 // says so and reloads, which puts the screen back to what is true rather than
 // leaving a book on it that the server never heard of.
 
+export type BookmarkTarget =
+  | { kind: 'book'; bookId: string }
+  | { kind: 'quote'; bookId: string; quoteId: string }
+  | { kind: 'page'; bookId: string; page: number }
+
+const sameMark = (m: Bookmark, t: BookmarkTarget) =>
+  m.kind === t.kind && m.bookId === t.bookId &&
+  (t.kind === 'book' || (t.kind === 'quote' ? m.quoteId === t.quoteId : m.page === t.page))
+
 interface LibraryState {
   books: Book[]
   lists: LibList[]
@@ -54,9 +63,9 @@ interface LibraryState {
   updateNote: (id: string, body: string) => void
   deleteNote: (id: string) => void
 
-  /** Toggle a bookmark on a book or a quote; pages and lines come with the reader (2b). */
-  isBookmarked: (target: { kind: 'book' | 'quote'; bookId: string; quoteId?: string }) => boolean
-  toggleBookmark: (target: { kind: 'book' | 'quote'; bookId: string; quoteId?: string }) => void
+  /** A bookmark on a book (a favourite), a quote, or a page of its file. */
+  isBookmarked: (target: BookmarkTarget) => boolean
+  toggleBookmark: (target: BookmarkTarget) => void
 }
 
 const nowISO = () => new Date().toISOString()
@@ -258,17 +267,20 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   isBookmarked(t) {
-    return get().bookmarks.some(m => m.kind === t.kind && m.bookId === t.bookId && (t.kind === 'book' || m.quoteId === t.quoteId))
+    return get().bookmarks.some(m => sameMark(m, t))
   },
 
   toggleBookmark(t) {
-    const hit = get().bookmarks.find(m => m.kind === t.kind && m.bookId === t.bookId && (t.kind === 'book' || m.quoteId === t.quoteId))
+    const hit = get().bookmarks.find(m => sameMark(m, t))
     if (hit) {
       set(s => ({ bookmarks: s.bookmarks.filter(m => m.id !== hit.id) }))
       void removeBookmark(hit.id).catch(failed('remove the bookmark', get().loadFromDB))
       return
     }
-    const m: Bookmark = { id: crypto.randomUUID(), kind: t.kind, bookId: t.bookId, quoteId: t.quoteId, createdAt: nowISO() }
+    const m: Bookmark = {
+      id: crypto.randomUUID(), kind: t.kind, bookId: t.bookId, createdAt: nowISO(),
+      quoteId: t.kind === 'quote' ? t.quoteId : undefined, page: t.kind === 'page' ? t.page : undefined,
+    }
     set(s => ({ bookmarks: [...s.bookmarks, m] }))
     void saveBookmark(m).catch(failed('save the bookmark', get().loadFromDB))
   },

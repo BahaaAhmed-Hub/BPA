@@ -3700,3 +3700,60 @@ and line bookmarks, 2c quotes from a photo, 2d the quote board, 2e export and
 `scripts/library-quotes.mjs` (22 assertions; `missing` runs the 20260026-not-run
 case, 4 more). The ink audit's Library fixture now carries quotes, notes and a
 bookmark, so the panel's second half is measured with something in it.
+
+## Library 2b — a book's file, and the reader
+`libraryFiles.ts`, `PdfReader.tsx`, `BookFileCard.tsx`. One PDF per book in the
+private `library` bucket (20260026), read with `pdfjs-dist`.
+- **pdf.js is a lazy chunk.** `React.lazy(() => import('./PdfReader'))` in the
+  module: the reader is ~500 kB and its worker 1.3 MB, loaded the first time a
+  book is opened to read. The main bundle grew by 8 kB. The **legacy** build
+  (`pdfjs-dist/legacy/…`) is used so an older iPad Safari still opens it.
+- **The path is `<owner id>/<book id>/book.pdf`**, which is what the bucket's
+  policy compares to `auth.uid()`; one file per book, so Replace is the same call
+  as the first upload (`upsert`). The harness's storage fake **refuses an upload
+  outside the owner's folder**, with a control that shows it does.
+- **The first five bytes decide it is a PDF** (`looksLikePdf`), not the extension
+  or the MIME type, which are only what a person or a browser claims — and the
+  50 MB ceiling is checked before the upload, not after the whole transfer.
+- **Its text layer is transparent on purpose.** pdf.js draws a page to a canvas
+  and lays its words over it as invisible spans, which is what makes them
+  selectable and readable aloud. Its own stylesheet is global (`.page`,
+  `.pdfViewer`, `:root`) and would reach the rest of the app, so the few rules
+  that matter are in `index.css` under `.lib-textlayer`, with `--total-scale-factor`
+  set by the reader — every span's font-size is a calc() of it, and without it
+  the words are the wrong size and the selection misses the printed ones.
+  **The ink audit names `.lib-textlayer` as exempt**, with the reason beside it:
+  it cannot be `aria-hidden` (that takes the words from a screen reader), and
+  what is *seen* is the PDF's own picture, the document's ink and not the app's.
+- **Selecting text offers Save as quote**, filed with the page it came from —
+  the thing a typed quote never knew. `tidySelection` joins the PDF's hard line
+  breaks and the hyphen where a word wrapped, since a quote is a sentence. The
+  last good selection is kept, because a tap on the button can collapse the
+  selection first on some browsers.
+- **Page bookmarks** share the bookmark table (`kind: 'page'`); `BookmarkTarget`
+  is a union so a page can't be asked for without its number. **Line** bookmarks
+  are not here: a printed line is not something a PDF's text layer exposes
+  reliably, so they wait for something better than a guess.
+- **The page box shows where it landed.** Asking for page 99 of 3 while already on
+  3 changed no state, so the box kept saying 99 — found by the test, fixed in `go`.
+- **Reading position is per device** (`library-page:<book id>` in localStorage):
+  the books table has no column for it, and Phase 4's tracker is where reading
+  progress is kept properly. A book with no length learns it from its own file.
+- **Removing the file asks twice, inline**, because the bytes are deleted and it
+  cannot be undone. **Deleting a *book* does not delete its file** — undo has to be
+  able to bring the book back with a file that still exists — so a deleted book's
+  PDF stays in the bucket. A purge of files no book points at is not built yet.
+- **A file the reader cannot open is a message** (password-protected, corrupt),
+  not a crash or a blank page.
+- **A disabled accent or primary button looked live — a platform bug found here.**
+  `.sb-btn:disabled` and the variants (`.sb-btn[data-variant=…]`) are the same
+  weight and the variant comes later, so it won: "Save as quote" was amber with
+  nothing selected, and so was every other disabled accent button in the app,
+  against the stylesheet's own comment. `[data-variant]` is now in the disabled
+  selector for specificity. The audit is clean in all four themes after it.
+`scripts/library-reader.mjs` — 37 assertions on a three-page PDF **built byte by
+byte** (`scripts/pdf-fixture.mjs`, also used by the audit) so pdf.js really parses
+and draws it: dark pixels on the canvas, the words in the text layer and sitting
+over the page, zoom, page turns, bookmarks, a selection filed as a quote with its
+page, resume, the two-step removal, and a corrupt file. The ink audit has the
+reader (28 screens, 0 failing pairs).

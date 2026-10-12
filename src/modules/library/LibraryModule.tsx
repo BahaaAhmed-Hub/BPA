@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { Plus, Search, X } from 'lucide-react'
 import { Button, Card, Pill, Segmented } from '@/components/ui'
 import { CAPS, ICON } from '@/lib/type'
@@ -13,6 +13,9 @@ import { inputStyle } from './fieldStyle'
 import { loadLibraryView, saveLibraryView, type LibraryView } from './libraryPrefs'
 import { useLibraryStore } from './libraryStore'
 import { STATUS_LABEL, type Book, type BookStatus } from './types'
+
+// pdf.js is large; it loads the first time a book is opened to read, not with the app.
+const PdfReader = lazy(() => import('./PdfReader'))
 
 type StatusFilter = 'all' | BookStatus
 
@@ -42,6 +45,7 @@ export function LibraryModule() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [flight, setFlight] = useState<{ book: Book; from: DOMRect } | null>(null)
   const [adding, setAdding] = useState(false)
+  const [readingId, setReadingId] = useState<string | null>(null)
   const narrow = useNarrow()
   const { ref: fillRef, height: fillHeight } = useFillsTheWindow<HTMLDivElement>(360)
 
@@ -171,6 +175,7 @@ export function LibraryModule() {
 
             {selected && (
               <BookPanel key={selected.id} book={selected} narrow={narrow} flying={!!flight && flight.book.id === selected.id}
+                onOpenReader={() => setReadingId(selected.id)}
                 onClose={() => setSelectedId(null)} onManageLists={() => { setSelectedId(null); setView('lists') }} />
             )}
           </div>
@@ -181,6 +186,16 @@ export function LibraryModule() {
         <BookFlight key={flight.book.id} book={flight.book} from={flight.from}
           onDone={() => setFlight(f => (f && f.book.id === flight.book.id ? null : f))} />
       )}
+      {readingId && (() => {
+        const rb = books.find(b => b.id === readingId)
+        // A book deleted from another device while it is open closes its reader.
+        if (!rb?.filePath) return null
+        return (
+          <Suspense fallback={<div role="status" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--sb-overlay)', display: 'grid', placeItems: 'center', color: 'var(--sb-ink-3)' }}>Opening the reader…</div>}>
+            <PdfReader book={rb} onClose={() => setReadingId(null)} />
+          </Suspense>
+        )
+      })()}
       {adding && (
         <AddBookModal defaultListIds={activeListId ? [activeListId] : []} onClose={() => setAdding(false)}
           onAdded={() => { setAdding(false); setView(view === 'lists' ? 'shelf' : view) }} />

@@ -21,6 +21,7 @@
 //   on where the glyph falls, so that is left out rather than guessed at, and
 //   `aria-hidden` decoration is exempt under WCAG and skipped.
 //
+import { PDF as LIB_PDF } from './pdf-fixture.mjs'
 import { chromium } from 'playwright-core'
 
 const b64u = o => Buffer.from(JSON.stringify(o)).toString('base64url')
@@ -137,6 +138,12 @@ const AUDIT = () => {
     // Decoration is exempt by WCAG, and `aria-hidden` is how a component says
     // so — the same mark that keeps a screen reader from announcing it.
     if (el.closest('[aria-hidden="true"]')) continue
+    // The reader's text layer is transparent by design: pdf.js lays the page's
+    // words over the canvas so they can be selected and read aloud, and what is
+    // SEEN is the PDF's own picture of them underneath — the document's ink, not
+    // the app's. It cannot be aria-hidden (that would take the words from a
+    // screen reader), so it is named here instead.
+    if (el.closest('.lib-textlayer')) continue
 
     const fgRaw = px(svg ? (cs.stroke !== 'none' ? cs.stroke : cs.color) : cs.color)
     if (!fgRaw) continue
@@ -250,7 +257,7 @@ const LIB_BOOK = (i, title, authors, status, extra = {}) => ({
 })
 const LIBRARY = {
   library_books: [
-    LIB_BOOK(0, 'Atomic Habits', ['James Clear'], 'reading'),
+    LIB_BOOK(0, 'Atomic Habits', ['James Clear'], 'reading', { file_path: 'u1/00000000-0000-4000-8000-000000000000/book.pdf', pages: 3 }),
     LIB_BOOK(1, 'Deep Work', ['Cal Newport'], 'finished'),
     LIB_BOOK(2, 'The Almanack of Naval Ravikant', ['Eric Jorgenson'], 'want'),
     LIB_BOOK(3, 'Sapiens', ['Yuval Noah Harari'], 'paused'),
@@ -297,6 +304,8 @@ for (const theme of THEMES) {
       if (action === 'slots') return r.fulfill({ json: BOOKING_SLOTS })
       return r.fulfill({ json: {} })
     }
+    // The reader downloads the book's file through Storage.
+    if (u.includes('/storage/v1/object/library/')) return r.fulfill({ status: 200, contentType: 'application/pdf', body: LIB_PDF })
     const t = /\/rest\/v1\/([a-z_]+)/.exec(u)?.[1]
     const GET = r.request().method() === 'GET'
     if (t && SHOPPING[t] && GET) return r.fulfill({ json: SHOPPING[t] })
@@ -447,6 +456,21 @@ for (const theme of THEMES) {
     await page.getByRole('button', { name: /Add book/ }).first().click()
     await page.waitForTimeout(300)
   })
+  // The reader: toolbar, a page drawn from a real PDF, and its bookmarks menu
+  // open over it with a page bookmark and a quote in it.
+  await page.keyboard.press('Escape')   // the add dialog above is still open
+  await page.waitForTimeout(300)
+  await visit('Library · the reader', async () => {
+    await libraryTab()
+    await page.getByRole('button', { name: /Atomic Habits by/ }).click()
+    await page.waitForTimeout(700)
+    await page.getByRole('button', { name: /Open and read/ }).click()
+    await page.waitForTimeout(2200)
+    await page.getByRole('button', { name: 'Bookmarks and quotes' }).click()
+    await page.waitForTimeout(300)
+  })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
   // The dialog is a scrim over the whole page; the next screen's nav click
   // would land on it.
   await page.keyboard.press('Escape')

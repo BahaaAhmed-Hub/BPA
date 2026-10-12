@@ -6,6 +6,7 @@ import { CoverArt } from './CoverArt'
 import { BookLookup } from './BookLookup'
 import { AreaField, DateField, Eyebrow, NumField, Row, Stars, TextField } from './fields'
 import { applyCandidate } from './applyCandidate'
+import { BookFileCard } from './BookFileCard'
 import { BookNotesCard } from './Notes'
 import { QuotesCard } from './QuotesCard'
 import { useLibraryStore } from './libraryStore'
@@ -28,7 +29,7 @@ const today = () => {
  * goes the moment it is made; words are held 700ms so a keystroke is not a
  * request. There is no Save button because there is nothing to save.
  */
-export function BookPanel({ book, flying, narrow, onClose, onManageLists }: {
+export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpenReader }: {
   book: Book
   /** A phone: the panel takes the whole column instead of docking beside the shelf. */
   narrow?: boolean
@@ -36,6 +37,7 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists }: {
   flying: boolean
   onClose: () => void
   onManageLists: () => void
+  onOpenReader: () => void
 }) {
   const update = useLibraryStore(s => s.updateBook)
   const del = useLibraryStore(s => s.deleteBook)
@@ -153,6 +155,8 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists }: {
         )}
         <Button size="sm" variant="ghost" onClick={onManageLists} style={{ alignSelf: 'flex-start' }}>Manage lists &amp; categories</Button>
       </Card>
+
+      <BookFileCard book={book} onOpen={onOpenReader} />
 
       <QuotesCard bookId={book.id} disabled={extrasMissing} />
       <BookNotesCard bookId={book.id} disabled={extrasMissing} />

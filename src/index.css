@@ -337,8 +337,15 @@ textarea:focus,
 /* A disabled control is still text somebody has to read. Half-opacity grey on
    cream is 2.2:1, and it was the only signal that the control was off; muted
    ink on the field colour is 4.7:1, and aria-disabled says it out loud. */
+/* `[data-variant]` is in the selector for specificity, not for meaning: the
+   variants below are `.sb-btn[data-variant=…]`, the same weight as `.sb-btn:
+   disabled`, and come later — so a disabled accent or primary button kept its
+   fill and read as live. Measured: Save-as-quote was amber with nothing
+   selected. */
 .sb-btn:disabled,
-.sb-btn[aria-disabled="true"] {
+.sb-btn[data-variant]:disabled,
+.sb-btn[aria-disabled="true"],
+.sb-btn[data-variant][aria-disabled="true"] {
   background: var(--sb-field);
   border-color: var(--sb-border);
   color: var(--sb-ink-3);
@@ -989,3 +996,20 @@ img { max-width: 100%; }
   .lib-spine, .lib-cover { transition: none; }
   .lib-spine:hover, .lib-spine:focus-visible, .lib-spine:active, .lib-cover:hover { transform: none; }
 }
+
+/* ─── Library — the reader's text layer ───────────────────────────────────────
+   pdf.js draws a page to a canvas and lays its words over it as transparent
+   spans, which is what makes the text selectable. Its own stylesheet is global
+   (`.page`, `.pdfViewer`, `:root` variables) and would reach the rest of the
+   app, so the few rules the text layer actually needs are written here, under
+   one class. `--total-scale-factor` is set by the reader: every span's
+   font-size is a calc() of it, so without it the words are the wrong size and
+   the selection rectangles miss the printed words. */
+.lib-textlayer {
+  position: absolute; inset: 0; overflow: clip; line-height: 1; text-align: initial;
+  text-size-adjust: none; -webkit-text-size-adjust: none; transform-origin: 0 0; z-index: 1;
+  forced-color-adjust: none; -webkit-user-select: text; user-select: text;
+}
+.lib-textlayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+.lib-textlayer ::selection { background: rgba(var(--sb-accent-rgb), .5); }
+.lib-textlayer .markedContent { display: contents; }
