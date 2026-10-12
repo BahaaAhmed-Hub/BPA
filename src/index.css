@@ -945,3 +945,35 @@ img { max-width: 100%; }
    anything. It still scrolls, by wheel, by drag and by keyboard. */
 .sb-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .sb-no-scrollbar::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ── Out of focus ───────────────────────────────────────────────────────────
+   One rule owns what "not this company" looks like, everywhere. Dimmed and
+   desaturated rather than removed: a filtered screen that hid the rest would
+   be indistinguishable from an empty one, and the shape of the week behind
+   the company you are reading is most of why you looked.
+   Still reachable — it is a lens, not a lock — so no `pointer-events: none`;
+   hovering one brings it back, because the thing you reach for is the thing
+   you want to read.
+
+   **`!important`, and it is the one place that earns it.** A card sets its
+   own opacity inline — an event dims to 0.35 while it is the source of a
+   drag, a task while it is finished — and an inline style beats every
+   stylesheet rule, so without this the class landed on the right cards and
+   changed nothing on screen. (Measured exactly that way: the class was on the
+   element, the rule was in the sheet, and the computed opacity was still 1.)
+   A lens is by definition an override of what each card says about itself,
+   and it lives in this one rule rather than being multiplied into every
+   module's own number. */
+.sb-out-of-focus {
+  opacity: 0.26 !important;
+  filter: saturate(0.45);
+  transition: opacity 0.16s ease, filter 0.16s ease;
+}
+.sb-out-of-focus:hover,
+.sb-out-of-focus:focus-within {
+  opacity: 0.72 !important;
+  filter: saturate(0.8);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-out-of-focus { transition: none; }
+}

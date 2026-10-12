@@ -7,7 +7,8 @@ import { accountLabel } from './mailAccounts'
 import type { SmartThread, PassResult } from '@/lib/mailSmartSync'
 import type { SmartSection } from '@/lib/mailSmart'
 import { canNeedAction, type MailKind } from '@/lib/mailKinds'
-import { tagOfMail } from '@/lib/mailCompany'
+import { tagOfMail, companyOfMail } from '@/lib/mailCompany'
+import { useFocusClass } from '@/lib/companyFocus'
 import { isBusinessAccount } from '@/lib/businessAccounts'
 
 // ─── The smart view ──────────────────────────────────────────────────────────
@@ -532,6 +533,13 @@ function Row({
   // Whether words back are the thing this thread wants. Everything a row does
   // differently for a machine's notice hangs off this one question.
   const answerable = canNeedAction(t.kind)
+  // Whose mail this is, under the company lens. `companyOfMail` is the same
+  // counterparty-first resolver the chip beside the sender already uses — the
+  // chip wants a label, the lens wants an id, and both come from one answer.
+  const focusClass = useFocusClass()
+  const lensCompany = useMemo(
+    () => companyOfMail({ fromEmail: t.fromEmail, accountEmail: t.accountEmail })?.id,
+    [t.fromEmail, t.accountEmail])
   // A stored row carries the sender and the mailbox, which is enough: the
   // company is resolved from those the same way the flat list resolves it.
   const company = useMemo(
@@ -554,7 +562,7 @@ function Row({
     return label === company?.label ? '' : label
   }, [manyAccounts, t.accountEmail, company?.label])
   return (
-    <div style={{
+    <div className={focusClass(lensCompany)} style={{
       // `flex-start`, not the default stretch: a stretched checkbox centres its
       // own glyph against the whole row and drifts away from the title it
       // selects.

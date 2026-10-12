@@ -328,9 +328,9 @@ for (const theme of THEMES) {
     for (const f of rows) found.push({ ...f, screen: label })
   }
 
-  await visit('Today', async () => { await page.locator('header nav button', { hasText: /^Today$/ }).first().click() })
+  await visit('Today', async () => { await page.locator('[data-side-rail] button[aria-label="Today"]').click() })
   await visit('Calendar + event panel', async () => {
-    await page.locator('header nav button', { hasText: /^Calendar$/ }).first().click()
+    await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
     await page.waitForTimeout(1600)
     await page.locator('.event-card').first().click()
   })
@@ -339,7 +339,7 @@ for (const theme of THEMES) {
   // the sign-in gate, with no session — so it is audited by its own file
   // rather than from in here.
   await visit('Calendar · booking panel', async () => {
-    await page.locator('header nav button', { hasText: /^Calendar$/ }).first().click()
+    await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
     await page.waitForTimeout(1400)
     await page.getByRole('button', { name: /^Booking$/ }).click()
     await page.waitForTimeout(900)
@@ -348,14 +348,14 @@ for (const theme of THEMES) {
     const mark = page.getByRole('button', { name: /Mark hours on the week/i })
     if (await mark.count()) { await mark.click(); await page.waitForTimeout(800) }
   })
-  await visit('Mail', async () => { await page.locator('header nav button', { hasText: /^Mail$/ }).first().click() })
-  await visit('Tasks', async () => { await page.locator('header nav button', { hasText: /^Tasks$/ }).first().click() })
-  await visit('Habits', async () => { await page.locator('header nav button', { hasText: /^Habits$/ }).first().click() })
-  await visit('Finance', async () => { await page.locator('header nav button', { hasText: /^Finance$/ }).first().click() })
+  await visit('Mail', async () => { await page.locator('[data-side-rail] button[aria-label="Mail"]').click() })
+  await visit('Tasks', async () => { await page.locator('[data-side-rail] button[aria-label="Tasks"]').click() })
+  await visit('Habits', async () => { await page.locator('[data-side-rail] button[aria-label="Habits"]').click() })
+  await visit('Finance', async () => { await page.locator('[data-side-rail] button[aria-label="Finance"]').click() })
   // Shopping: the list with an item open (every field of the editor), the board
   // (cards on a column ground), and the stores page with one opened.
   const shoppingTab = async () => {
-    await page.locator('header nav button', { hasText: /^Finance$/ }).first().click()
+    await page.locator('[data-side-rail] button[aria-label="Finance"]').click()
     await page.waitForTimeout(1200)
     await page.locator('button', { hasText: /^Shopping$/ }).first().click()
     await page.waitForTimeout(1400)
@@ -379,7 +379,7 @@ for (const theme of THEMES) {
     })
   })
 
-  await visit('Dashboard', async () => { await page.locator('header nav button', { hasText: /^Dashboard$/ }).first().click() })
+  await visit('Dashboard', async () => { await page.locator('[data-side-rail] button[aria-label="Dashboard"]').click() })
   // Settings is behind the avatar menu, and carries every colour picker there
   // is — the company swatches, the habit colours, the category palette.
   await visit('Settings', async () => {
@@ -413,7 +413,7 @@ for (const theme of THEMES) {
   // morning page under an Admin label. Clicking is also the only version that
   // proves the menu row exists at all.
   const goAdmin = async () => {
-    await page.locator('header button', { hasText: /^(BA|A)$/ }).last().click({ timeout: 4000 })
+    await page.locator('[data-side-rail] button[aria-haspopup="menu"]').click({ timeout: 4000 })
     await page.waitForTimeout(400)
     await page.locator('button[role="menuitem"]', { hasText: 'Admin' }).first().click({ timeout: 4000 })
     await page.waitForTimeout(1400)

@@ -5,6 +5,7 @@ import { Trash2, Check, Clock, CalendarDays, Paperclip, Flame, User } from 'luci
 import type { Task, TaskType, Priority } from '@/types'
 import { TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies, isOnFire } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { useFocusClass } from '@/lib/companyFocus'
 import { useDeliverableGate } from './DeliverablePrompt'
 import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
 import type { ExtractedTask } from '@/lib/professor'
@@ -84,6 +85,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   const { TypeIcon } = v
   const allUsers = getVisibleUsers()
   const companies = loadVisibleCompanies()
+  const focusClass = useFocusClass()
   const users = task.companyId ? allUsers.filter(u => u.companyId === task.companyId) : allUsers
   const attachmentCount = task.attachments?.length ?? 0
 
@@ -95,6 +97,9 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   return (
     <div
       data-task-node
+      // Whose task this is, under the company lens. A task already carries
+      // its company, so nothing is derived here.
+      className={focusClass(task.companyId)}
       ref={setNodeRef}
       {...listeners}
       {...attributes}

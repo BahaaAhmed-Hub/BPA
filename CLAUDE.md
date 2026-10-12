@@ -436,6 +436,72 @@ visitor's own `doProfile` filter asserted against what was stored;
 `open-hours-are-visible.mjs [shows|inert|nested|panel]` — 23, each with the
 control above. `booking-hours-draw.mjs` re-runs unchanged at 46.
 
+## The rail — the main menu, and the company you are looking at
+`components/SideRail.tsx` replaces the header. Two floating pills down the left
+edge: the modules, then the companies you are part of. They are deliberately
+**two objects** rather than one list with a rule between them, because they
+answer different questions — *what am I looking at* and *whose is it* — and the
+second changes what the first shows without changing which module is open.
+- **A column has as much room as the window is tall.** The old header's own
+  notes record seven labelled pills, a search box, a bell and an avatar never
+  fitting one row: it dropped the search wording at 1180px and the nav labels
+  at 1080px, and below that the right-hand group was drawn *over* the nav, so
+  "Dashboard" was unreachable from 1100px down. `useNarrowerThan` and both
+  measurements are gone — neither question is asked of a column.
+- **Search, the bell and the avatar are the rail's foot**, under a hairline.
+  The account menu opens to the **right** of the rail (`left: calc(100% + 12px)`,
+  `bottom: 0`) rather than below it — there is nothing below it.
+- **A company tile is its colour and its initials.** `DynamicCompany` carries
+  `name`, `color`, a domain, an account and a calendar and no logo, so drawing
+  one would mean inventing it; the colour is already that company's identity on
+  every chip and dot in the app. The ink on it is `inkOn(co.color)` — measured,
+  because a dozen hues cannot share one fixed foreground.
+- **The chosen tile is ringed, not tinted**, and `ALL` appears beside it only
+  while a lens is on. It is the only thing on screen explaining why
+  three-quarters of the page has gone quiet, so it has to read as *on* from
+  across the room — and a lens you cannot see is one you report as missing data.
+- **A lens pointing at a company that is gone clears itself.** Deleting or
+  hiding the company in Settings would otherwise dim the whole app with no tile
+  left to press.
+
+## The company lens — one answer, every module
+`lib/companyFocus.ts`. Pressing a tile dims everything that is not that
+company's, on whatever screen is open — the calendar, tasks and mail alike,
+because "whose is this?" is one question whatever module is drawing.
+- **Dimmed, never hidden.** Removing the rest would make a filtered screen
+  indistinguishable from an empty one — *a reload is not an empty ledger*
+  pointed at a lens instead of a load — and the shape of the week behind the
+  company you are reading is most of why you looked. Hover brings one back:
+  a lens, not a lock, so no `pointer-events: none`.
+- **This file never resolves a company.** Each module already knows how to name
+  its own row's — the calendar from the calendar id, a task from `companyId`,
+  mail from `companyOfMail`'s counterparty-first rule — so it takes that id and
+  answers only *is it in focus*. A second resolver here would be a second
+  answer about the same row.
+- **`!important`, and it is the one place that earns it.** A card sets its own
+  opacity inline — an event at 0.35 while it is a drag source, a task while it
+  is finished — and an inline style beats every stylesheet rule. Measured
+  exactly that way mid-build: the class was on the right element, the rule was
+  in the sheet, and the computed opacity was still **1**. A lens is by
+  definition an override of what each card says about itself. Control: with the
+  `!important` dropped, the suite fails on the two cards that should have gone
+  quiet and on nothing else.
+- **Not knowing and not matching are the same answer here.** A row with no
+  company — mail from a stranger, an unfiled task — is dimmed under a lens,
+  because the question being asked is "show me this company".
+- The lens survives a reload (per browser, like every other view preference),
+  which is only safe because the rail is on every screen with the tile ringed.
+- **The ink audit navigated by `header nav button` and had to be repointed.**
+  It reported *0 failing pairs over 22 screens* while **15 of them never
+  opened** — the exact vacuous result that file's own note was written about.
+  It clicks `[data-side-rail] button[aria-label="<module>"]` now, which depends
+  on neither an icon nor the rail's position.
+`scripts/company-lens-dims.mjs [rail|calendar|tasks|clear]` — 30 assertions,
+measured as `getComputedStyle().opacity` on the real cards rather than as a
+class name, since a class assertion passes with the rule missing from the
+sheet. A third event on a calendar no company owns is what stops "dim
+everything" passing; the dimmed cards are asserted to still have a box.
+
 ## Finance — how money is written
 `src/modules/finance/format.ts` is the only place that decides this.
 - **Accounting convention.** A negative is bracketed and drops its minus —

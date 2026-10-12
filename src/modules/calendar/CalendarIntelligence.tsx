@@ -55,6 +55,8 @@ import {
   type WindowRow,
 } from '@/lib/booking'
 import type { OutcomeEvent } from './MeetingOutcome'
+import { useFocusClass } from '@/lib/companyFocus'
+import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
 import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
 import { syncTaskToEvent } from '@/lib/taskEventLink'
@@ -754,7 +756,7 @@ function ResizeHandle({ eventId, edge }: { eventId: string; edge: 'top' | 'botto
 }
 
 // ─── EventBlock (draggable, positioned in time grid) ─────────────────────────
-function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, onStatusToggle, onClick, onContextMenu }: {
+function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, focusClass, onStatusToggle, onClick, onContextMenu }: {
   event: GCalEventExt
   layout: EventLayout
   status: EventStatus | undefined
@@ -762,6 +764,10 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   isDragSrc: boolean
   isDragOverlay?: boolean
   colorOverride?: string
+  /** '' while this event's company is the one being looked at (or no company
+   *  is), the out-of-focus class when it is not. Decided at the call site,
+   *  which is where the calendar→company map lives. */
+  focusClass?: string
   onStatusToggle: (s: EventStatus) => void
   onClick: (e: React.MouseEvent) => void
   onContextMenu?: (e: React.MouseEvent) => void
@@ -917,7 +923,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
       {...(isDragOverlay ? {} : attributes)}
       onClick={onClick}
       onContextMenu={isDragOverlay ? undefined : onContextMenu}
-      className="event-card"
+      className={`event-card ${focusClass ?? ''}`.trim()}
       style={{
         position: isDragOverlay ? 'relative' : 'absolute',
         top:    isDragOverlay ? undefined : top,
@@ -1384,6 +1390,28 @@ export function CalendarIntelligence() {
   const [showBooking, setShowBooking] = useState(false)
   const [openHours, setOpenHours] = useState(false)
   const [windows, setWindows] = useState<WindowRow[] | null>(null)
+
+  // ── Whose event is this ───────────────────────────────────────────────────
+  // A company owns a calendar, so an event's company is its calendar's. The
+  // map is rebuilt when Settings changes the companies, and the class comes
+  // from `companyFocus` so the fade is the same one tasks and mail wear.
+  const focusClass = useFocusClass()
+  const [focusCompanies, setFocusCompanies] = useState<DynamicCompany[]>(
+    () => loadDynamicCompanies().filter(c => !c.hidden))
+  useEffect(() => {
+    const read = () => setFocusCompanies(loadDynamicCompanies().filter(c => !c.hidden))
+    window.addEventListener('professor:companiesUpdated', read)
+    window.addEventListener('storage', read)
+    return () => {
+      window.removeEventListener('professor:companiesUpdated', read)
+      window.removeEventListener('storage', read)
+    }
+  }, [])
+  const companyOfCalendar = useMemo(() => {
+    const byCal = new Map<string, string>()
+    for (const c of focusCompanies) if (c.calendarId) byCal.set(c.calendarId, c.id)
+    return (calendarId: string | undefined) => (calendarId ? byCal.get(calendarId) : undefined)
+  }, [focusCompanies])
   const [editWin, setEditWin] = useState<{ w: WindowRow; date: string; x: number; y: number } | null>(null)
   const openHoursRef = useRef(false)
   useEffect(() => { openHoursRef.current = openHours }, [openHours])
@@ -3354,6 +3382,7 @@ export function CalendarIntelligence() {
                           isSelected={selectedEvent?.id === ev.id}
                           isDragSrc={draggingEvt?.id === ev.id && dragMode === 'move'}
                           colorOverride={cal ? calEffectiveColor(cal) : undefined}
+                          focusClass={focusClass(companyOfCalendar((ev as GCalEventExt).calendarId))}
                           onStatusToggle={s => {
                             toggleStatus(ev.id, s)
                           }}
