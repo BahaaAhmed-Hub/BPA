@@ -90,7 +90,14 @@ const GRID_H   = HOUR_PX * 24  // total grid height (24h)
 type GCalEventExt = GCalEvent & { calendarId?: string; calendarColor?: string }
 type EventStatus  = 'done' | 'cancelled'
 type DragMode     = 'move' | 'resize-top' | 'resize-bottom'
-interface EventLayout { left: number; width: number; lane?: number; lanes?: number; level?: number }
+interface EventLayout {
+  left: number; width: number; lane?: number; lanes?: number; level?: number
+  /** Pixels to pull both edges in by, so a booking drawn over an open-hours
+   *  box sits visibly *inside* that box's border rather than across it. The
+   *  percentage pair stays the lane's; this is the nesting, and nothing else
+   *  about the layout knows about booking. */
+  inset?: number
+}
 interface CreatingEvt  { dateStr: string; originMin: number; currentMin: number }
 interface NewEventDraft { dateStr: string; startMin: number; endMin: number; anchorX: number; anchorY: number }
 interface NewEventData {
@@ -914,8 +921,10 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
       style={{
         position: isDragOverlay ? 'relative' : 'absolute',
         top:    isDragOverlay ? undefined : top,
-        left:   isDragOverlay ? undefined : `${layout.left}%`,
-        width:  isDragOverlay ? 130 : `${layout.width}%`,
+        // The lane is a percentage of the column; the inset is the nesting
+        // inside an open-hours box, in pixels, so the two cannot be one value.
+        left:   isDragOverlay ? undefined : `calc(${layout.left}% + ${layout.inset ?? 0}px)`,
+        width:  isDragOverlay ? 130 : `calc(${layout.width}% - ${(layout.inset ?? 0) * 2}px)`,
         height: isDragOverlay ? Math.max(38, height) : height,
         background: evBg,
         borderRadius: 12,
@@ -1379,13 +1388,17 @@ export function CalendarIntelligence() {
   const openHoursRef = useRef(false)
   useEffect(() => { openHoursRef.current = openHours }, [openHours])
 
-  // Read only when they are wanted: a stranger's hours are nobody's business
-  // on a boot that is going straight to the grid.
+  // **Read once with the grid, not when the panel opens.** These used to be
+  // fetched lazily, which was right while they were drawn only in marking
+  // mode — now that an open hour is a standing box on the week, deferring the
+  // read means "always drawn" really means "drawn after you have opened the
+  // booking panel once", which is worse than not drawing them at all: the
+  // week looks like nothing is offered. It is one request, for the owner's
+  // own rows, in the module they are already looking at.
   useEffect(() => {
-    if (!openHours && !showBooking) return
     if (windows !== null) return
     void loadWindows().then(rows => setWindows(rows ?? []))
-  }, [openHours, showBooking, windows])
+  }, [windows])
 
   useEffect(() => {
     if (!creatingEvt) return
@@ -1771,6 +1784,28 @@ export function CalendarIntelligence() {
       const o = outcomeOf(eventId)
       if (o) askAboutOutcome(o)
     }
+  }
+
+  // ── An event that sits inside an open hour belongs inside its box ─────────
+  //
+  // Open hours are a container, so what was booked into one is drawn nested in
+  // it rather than straddling its border. "Inside" is the event's own minutes
+  // falling within the window's, with a minute of slack either side — a 30-min
+  // booking at the top of a 09:00 window is inside it, and a meeting that runs
+  // past the end is not, because it is not a thing that window offered.
+  const INSET_PX = 7
+  function insetFor(dateStr: string, ev: GCalEventExt): number {
+    if (!ev.start.dateTime || !ev.end?.dateTime) return 0
+    const list = windowsOnDate(windows ?? [], dateStr)
+    if (!list.length) return 0
+    const s = new Date(ev.start.dateTime)
+    const e = new Date(ev.end.dateTime)
+    // Only an event on this very day, read on the grid's own clock.
+    if (localDateStr(s) !== dateStr) return 0
+    const sMin = s.getHours() * 60 + s.getMinutes()
+    const eMin = e.getHours() * 60 + e.getMinutes()
+    const within = list.some(w => sMin >= w.start_min - 1 && eMin <= w.end_min + 1)
+    return within ? INSET_PX : 0
   }
 
   // ── Open hours, written where they were drawn ─────────────────────────────
@@ -3210,48 +3245,63 @@ export function CalendarIntelligence() {
                     )}
 
                     {/* ── The hours that are open on this day ──────────────
-                        Drawn behind the events, in the positive tint rather
-                        than a calendar colour — they are not appointments.
-                        Where one overlaps something real the overlap is struck
-                        out, because that hour is already gone and the function
-                        will not offer it: the screen says what the server
-                        computes. */}
-                    {openHours && (windows ?? []).length > 0 && windowsOnDate(windows ?? [], ds).map(w => {
+                        **Always drawn, not only while marking.** An open hour
+                        is a standing fact about the week — leaving the mode
+                        used to make every one of them invisible, so the one
+                        screen that could answer "what am I offering?" showed
+                        nothing unless you happened to be editing.
+                        It is drawn as a **box like an event's**, because that
+                        is what it is on this grid: the card's own radius and
+                        border weight, in the positive tint so it reads as a
+                        container rather than an appointment. What was booked
+                        into it is inset inside this border (`insetFor`).
+                        Out of the mode it is **inert** (`pointerEvents:
+                        none`): a box lying across the column would otherwise
+                        swallow the drag that draws an event over those hours,
+                        which is the one gesture the grid exists for. */}
+                    {(windows ?? []).length > 0 && windowsOnDate(windows ?? [], ds).map(w => {
                       const top = w.start_min / 60 * HOUR_PX
-                      const h = Math.max(10, (w.end_min - w.start_min) / 60 * HOUR_PX)
+                      const h = Math.max(12, (w.end_min - w.start_min) / 60 * HOUR_PX)
                       const repeats = (w.repeat?.kind ?? 'none') === 'weekly'
+                      const marking = openHours
                       return (
                         <button
                           key={w.id}
                           data-open-hours={w.id}
-                          onPointerDown={e => e.stopPropagation()}
-                          onClick={e => {
+                          tabIndex={marking ? 0 : -1}
+                          onPointerDown={marking ? (e => e.stopPropagation()) : undefined}
+                          onClick={marking ? (e => {
                             e.stopPropagation()
                             const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
                             setEditWin({ w, date: ds, x: r.left, y: r.top })
-                          }}
-                          title={`Open ${hhmmOf(w.start_min)} – ${hhmmOf(w.end_min)}${repeats ? ', every week' : ''}`}
+                          }) : undefined}
+                          title={marking
+                            ? `Open ${hhmmOf(w.start_min)} – ${hhmmOf(w.end_min)}${repeats ? ', every week' : ''} — click to change`
+                            : `Open for booking ${hhmmOf(w.start_min)} – ${hhmmOf(w.end_min)}${repeats ? ', every week' : ''}`}
                           aria-label={`Open hours ${hhmmOf(w.start_min)} to ${hhmmOf(w.end_min)} on ${ds}`}
                           style={{
-                            position: 'absolute', top, left: 0, right: 0, height: h, zIndex: 1,
+                            position: 'absolute', top, left: 0, right: 0, height: h, zIndex: 0,
                             background: 'var(--sb-positive-tint)',
-                            borderTop: 'var(--sb-border-emphasis) solid var(--sb-positive)',
-                            borderBottom: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 40%, transparent)',
-                            cursor: 'pointer', textAlign: 'left', padding: '2px 5px', boxSizing: 'border-box',
+                            border: `var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 45%, transparent)`,
+                            borderLeft: `var(--sb-border-emphasis) solid var(--sb-positive)`,
+                            borderRadius: 'var(--sb-r-card)',
+                            cursor: marking ? 'pointer' : 'default',
+                            pointerEvents: marking ? 'auto' : 'none',
+                            textAlign: 'left', padding: '3px 7px', boxSizing: 'border-box',
                             fontFamily: 'inherit', overflow: 'hidden',
                           }}>
                           <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 3,
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
                             fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-positive-deep)',
                             fontVariantNumeric: 'tabular-nums',
                           }}>
                             {hhmmOf(w.start_min)}–{hhmmOf(w.end_min)}
                             {repeats && <Repeat size={9} strokeWidth={STROKE.active} />}
+                            {h >= 40 && <span style={{ fontWeight: 600, letterSpacing: '.06em' }}>OPEN</span>}
                           </span>
                         </button>
                       )
                     })}
-
                     {/* Creation ghost block */}
                     {creatingEvt?.dateStr === ds && (() => {
                       const sMin = Math.min(creatingEvt.originMin, creatingEvt.currentMin)
@@ -3291,7 +3341,9 @@ export function CalendarIntelligence() {
                     {/* Events */}
                     {dayEvents.map(ev => {
                       if (!ev.start.dateTime) return null
-                      const layout = layouts.get(ev.id) ?? { left: 0, width: 99 }
+                      const base   = layouts.get(ev.id) ?? { left: 0, width: 99 }
+                      // Nested inside its open-hours box where it sits in one.
+                      const layout = { ...base, inset: insetFor(ds, ev as GCalEventExt) }
                       const cal    = allCalendars.find(c => c.id === (ev as GCalEventExt).calendarId)
                       return (
                         <EventBlock
@@ -3557,9 +3609,10 @@ export function CalendarIntelligence() {
           userId={user.id}
           userName={user.email?.split('@')[0]}
           calendars={allCalendars}
-          windowCount={(windows ?? []).length}
+          windows={windows ?? []}
           openHours={openHours}
           onOpenHours={on => { setOpenHours(on); if (!on) setEditWin(null) }}
+          onPickWindow={date => { setAnchorDate(new Date(`${date}T12:00:00`)); setOpenHours(true) }}
           onClose={() => setShowBooking(false)} />
       )}
 

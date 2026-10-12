@@ -336,6 +336,29 @@ export function windowsOnDate(windows: WindowRow[], date: string): WindowRow[] {
   return windows.filter(w => windowFallsOn(w, date)).sort((a, b) => a.start_min - b.start_min)
 }
 
+/** The next few dates a window actually falls on, from `from` forward.
+ *
+ *  A repeat is the only way anything recurs here, and a `skips` date takes one
+ *  occurrence back — so "every week from the 14th" is not enough to say when it
+ *  next opens. This walks the rule the way the server does and answers with
+ *  real dates, which is the only form that can be checked against a calendar.
+ *  Bounded: a weekly window has no end, and a list is not a stream. */
+export function nextDatesOf(
+  w: Pick<WindowRow, 'on_date' | 'repeat' | 'skips'>,
+  from: Date = new Date(),
+  want = 3,
+): string[] {
+  const out: string[] = []
+  const d = new Date(from.getFullYear(), from.getMonth(), from.getDate())
+  // 400 days covers a yearly-ish interval without ever running away.
+  for (let i = 0; i < 400 && out.length < want; i++) {
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    if (windowFallsOn(w, date)) out.push(date)
+    d.setDate(d.getDate() + 1)
+  }
+  return out
+}
+
 /** "09:00" from minutes past midnight. */
 export function hhmmOf(min: number): string {
   return `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`

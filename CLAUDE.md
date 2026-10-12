@@ -375,6 +375,67 @@ buffers and notice. An open hour that stops being free stops being offered.
 the marking mode and the public page — 22 screens, 0 failing pairs in all four
 themes.
 
+## Booking — an open hour is a box on the week, and what is booked sits in it
+Open hours were drawn **only while marking them**, so leaving the mode made
+every one invisible: the single screen that could answer *what am I offering
+this week?* showed nothing unless you happened to be editing. They are drawn
+always now, as a box with the card's own radius and border in the positive
+tint — a container, not an appointment — and the windows are **loaded with the
+grid** rather than when the panel opens, or "always drawn" means "drawn once
+you have opened the booking panel", which is worse than not drawing them.
+- **Out of the mode the box is inert** (`pointerEvents: 'none'`). It lies
+  across the column at `left:0 right:0`, so interactive it swallows the drag
+  that draws an event over those hours — the one gesture the grid exists for.
+  Control: made interactive, `elementFromPoint` answers the box **and the
+  composer never opens at all**. In the mode it is clickable, as before.
+- **A booking is nested inside the border it was booked into.** `insetFor`
+  answers in pixels and rides on `EventLayout.inset`; the lane stays a
+  percentage, so the two cannot be one value
+  (`calc(${left}% + ${inset}px)`). "Inside" is the event's own minutes within
+  the window's, a minute of slack either side — an event that **overruns** the
+  window is not nested, because that is not an hour the window offered, and
+  that case is what stops "everything is inset" passing. Control: without the
+  inset the booking's left edge is the box's own, to the pixel (552 vs 552).
+- **The panel lists the windows rather than counting them.** "3 windows open"
+  cannot be checked against what you meant to open; a wrong one is only found
+  by reading it. Each row carries its hours, whether it repeats, and the next
+  date it **actually** falls on — `nextDatesOf` walks the rule and the `skips`
+  the way the server does, because "every week from the 14th" does not say
+  when it next opens. A row takes the week to that day.
+
+## Booking — "nothing can be booked here just now" was a plan that was never saved
+The owner's panel showed a call; the visitor's page said nothing could be
+booked. Both were right. **Add one** pushes a row into *local state* with
+`id: ''`, and until Save lands there is no row in `meeting_plans` — while the
+card rendered identically to a saved one ("30 min · you approve"). `doProfile`
+reads the table (`user_id`, `active`), gets nothing, and the page says its
+empty sentence. Two screens disagreeing with nothing to explain it.
+- **An unsaved plan says so** — *"Not saved yet — press Save, or nobody can
+  book it"*, in the negative ink, in the slot that held the duration.
+- **The active switch was the one write that bypassed `save()`**, and its error
+  was discarded (`void onSave(...)`), so a refusal was indistinguishable from a
+  success. On an unsaved plan it now says to save first; on a saved one it
+  reports what came back.
+- **The panel asks the public endpoint the visitor asks** (*Check what a
+  visitor sees* → `loadPublicProfile`). The owner reads the tables as
+  themselves; the stranger reads `book-me` through the service role with its
+  own `active` filters, and the two can disagree. A claim about what a stranger
+  sees is worth nothing beside a measurement of it, and this panel was the one
+  screen that could not make one.
+- **The first diagnosis was wrong and the harness is what caught it.**
+  `savePlan` branches on `row.id` being falsy to insert, and sends the whole
+  object — so it looked certain that `id: ''` reached a
+  `uuid primary key default gen_random_uuid()` and was refused. The stub was
+  built to **refuse an empty uuid with PostgREST's own 22P02** (the
+  `accounts-come-back.mjs` rule: a fake server has to be able to refuse) and
+  the insert passed, because the call site already writes
+  `id: next.id || undefined`. The theory died on a measurement rather than in
+  production.
+`scripts/plan-actually-saves.mjs [save|unsaved|visitor|switch]` — 30, the
+visitor's own `doProfile` filter asserted against what was stored;
+`open-hours-are-visible.mjs [shows|inert|nested|panel]` — 23, each with the
+control above. `booking-hours-draw.mjs` re-runs unchanged at 46.
+
 ## Finance — how money is written
 `src/modules/finance/format.ts` is the only place that decides this.
 - **Accounting convention.** A negative is bracketed and drops its minus —
