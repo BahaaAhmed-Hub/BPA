@@ -340,6 +340,17 @@ for (const theme of THEMES) {
     if (id && T[id]) return r.fulfill({ json: { id, messages: [msg(id)] } })
     return r.fulfill({ json: { items: [], threads: [] } })
   })
+  // Discover: the two catalogues (a later route wins over the blanket
+  // googleapis one above) — one book on the shelf already, one not, and an author.
+  await page.route('https://www.googleapis.com/books/**', r => r.fulfill({ json: { items: [
+    { id: 'g9', volumeInfo: { title: 'Digital Minimalism', authors: ['Cal Newport'], publishedDate: '2019-02-05' } }] }, headers: { 'access-control-allow-origin': '*' } }))
+  await page.route('https://openlibrary.org/**', r => {
+    const cors = { 'access-control-allow-origin': '*' }
+    if (r.request().url().includes('/search/authors.json')) return r.fulfill({ headers: cors, json: { docs: [{ key: 'OL123A', name: 'Cal Newport', top_work: 'Deep Work', work_count: 12, birth_date: '1982' }] } })
+    return r.fulfill({ headers: cors, json: { docs: [
+      { key: '/works/OL1W', title: 'Atomic Habits', author_name: ['James Clear'], first_publish_year: 2018 },
+      { key: '/works/OL2W', title: 'Deep Work', author_name: ['Cal Newport'], first_publish_year: 2016 }] } })
+  })
   await page.addInitScript(([s, cs, th]) => {
     localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
     localStorage.setItem('google_provider_token', 'tok')
@@ -472,6 +483,20 @@ for (const theme of THEMES) {
   })
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)
+  await visit('Library · discover', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Discover' }).click()
+    await page.getByRole('tab', { name: 'Books' }).click()
+    await page.getByLabel('Search online').fill('newport')
+    await page.waitForTimeout(1500)
+  })
+  await visit('Library · discover authors', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Discover' }).click()
+    await page.getByRole('tab', { name: 'Authors' }).click()
+    await page.getByLabel('Search online').fill('newport')
+    await page.waitForTimeout(1500)
+  })
   await visit('Library · a book open', async () => {
     await libraryTab()
     await page.getByRole('tab', { name: 'Shelf' }).click()

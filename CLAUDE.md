@@ -3885,3 +3885,42 @@ and **Export** (`exportQuotes.ts`, `zip.ts`, `ExportDialog.tsx`).
 `scripts/library-export.mjs` — the fake PostgREST carries a `tasks` table, so the
 task is read off what was really upserted. The ink audit has the dialog (33
 screens).
+
+## Library 3a — Discover: find a book you do not have
+Phase 3 is four chunks: **3a** (this) search online and put it on the shelf, 3b
+buy and free-download links by country, 3c ISBN / barcode scan, 3d follow an
+author or series. A fifth view in the header, **Discover** (`DiscoverView.tsx`),
+no migration: a result is added as an ordinary book with `status: 'want'`.
+- **Two modes, because they are two questions.** *Books* is the Add dialog's
+  search (`lookupBooks`: Open Library + Google Books, merged) with room for 24.
+  *Authors* asks Open Library for the author **as a person** — it has keys
+  (`OL23919A`), where a book only carries a name string — and then lists their
+  works through `author_key:OL…A`, most-edited first (`sort=editions`, a decent
+  proxy for the ones people mean). Google's `inauthor:` is a text match and would
+  return anyone who shares the name, so authors are Open Library only, and the
+  file says why.
+- **An author key is not free text.** `booksByAuthor` refuses anything that is not
+  `^OL\d+A$` before it reaches a query string and asks nothing for it; a
+  catalogue's own response is still data, not a query.
+- **Already on the shelf says so and opens it.** `shelfMatch` — the ISBN when
+  both have one, otherwise the same title by the same first author with case and
+  punctuation stripped, since two catalogues never agree on those. A card whose
+  book you own is a receipt, not a second "Want to read" (the button is a link to
+  the shelf copy). Compared against the live store, so adding turns the card
+  over by itself.
+- **A source down is named; both down is not "nothing found".** One catalogue
+  failing reads "Google Books could not be reached; showing the other"; both
+  failing reads "Could not reach the book catalogues" — telling a person a book
+  does not exist because the network dropped is the lie this copies Add's rule
+  to avoid. A fetch that throws (offline, CORS) is the same as a 503.
+- **A stale answer never overwrites a newer one**: a counter per request, plus an
+  AbortController, keyed on a single `wants` string (`books:newport`,
+  `works:OL123A`). State that follows a keystroke is set in the handler; the effect
+  only schedules the request (the lint rule, and the right shape).
+- **Cover and spine are the shelf's own** (`CoverArt` with the candidate dressed
+  as a book), so a result without a cover draws a title-page, not a hole.
+`scripts/library-discover.mjs` — 25 assertions with Open Library and Google Books
+faked *with the CORS headers the real ones send* and each switchable off, and a
+PostgREST that refuses an unknown `library_books` column. A trailing space is not
+a new search (`wants` is trimmed), which the first draft of the test tripped on.
+The ink audit has Discover over books and over authors (35 screens).

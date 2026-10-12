@@ -121,3 +121,56 @@ export async function lookupBooks(query: string, signal?: AbortSignal, limit = 8
   for (let i = 0; i < Math.max(a.length, b.length); i++) { if (a[i]) mixed.push(a[i]); if (b[i]) mixed.push(b[i]) }
   return { candidates: merge(mixed).slice(0, limit), failed }
 }
+
+// ─── Discover: an author, and everything they wrote ──────────────────────────
+// Open Library only. It is the source that knows an author as a thing with a
+// key rather than a string on a book, which is what "show me their other books"
+// needs; Google's `inauthor:` is a text match and would return anyone sharing
+// the name.
+
+export interface AuthorHit {
+  /** Open Library's id, `OL23919A`. */
+  key: string
+  name: string
+  topWork?: string
+  workCount?: number
+  born?: string
+}
+
+export async function searchAuthors(query: string, signal?: AbortSignal, limit = 12): Promise<AuthorHit[]> {
+  const q = query.trim()
+  if (q.length < 2) return []
+  const data = await get(`https://openlibrary.org/search/authors.json?q=${encodeURIComponent(q)}&limit=${limit}`, signal) as {
+    docs?: { key: string; name: string; top_work?: string; work_count?: number; birth_date?: string }[]
+  }
+  return (data.docs ?? []).filter(d => d.key && d.name).map(d => ({
+    key: d.key.replace(/^\/authors\//, ''), name: d.name, topWork: d.top_work, workCount: d.work_count, born: d.birth_date,
+  }))
+}
+
+/** An author's books by their key, most-edited first — which is a decent proxy
+ *  for the ones people actually mean. A key is not free text, so it is checked
+ *  before it goes into a query string. */
+export async function booksByAuthor(key: string, signal?: AbortSignal, limit = 40): Promise<BookCandidate[]> {
+  if (!/^OL\d+A$/.test(key)) return []
+  const fields = 'key,title,subtitle,author_name,first_publish_year,isbn,cover_i,number_of_pages_median,publisher,language'
+  const data = await get(`https://openlibrary.org/search.json?q=${encodeURIComponent(`author_key:${key}`)}&sort=editions&limit=${limit}&fields=${fields}`, signal) as {
+    docs?: { key: string; title: string; subtitle?: string; author_name?: string[]; first_publish_year?: number; isbn?: string[]
+      cover_i?: number; number_of_pages_median?: number; publisher?: string[]; language?: string[] }[]
+  }
+  return (data.docs ?? []).map(d => ({
+    title: d.title, subtitle: d.subtitle, authors: d.author_name ?? [],
+    isbn: d.isbn?.find(i => i.length === 13) ?? d.isbn?.[0],
+    publisher: d.publisher?.[0], publishedYear: d.first_publish_year, pages: d.number_of_pages_median, language: d.language?.[0],
+    coverUrl: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg` : undefined,
+    source: 'openlibrary' as const, sourceKey: d.key,
+  }))
+}
+
+/** Is this candidate already on the shelf? The ISBN is the sure answer; failing
+ *  that, the same title by the same first author. Titles are compared with
+ *  punctuation and case stripped, since two catalogues never agree on those. */
+export function shelfMatch<T extends { id: string; title: string; authors: string[]; isbn?: string }>(books: T[], c: BookCandidate): T | undefined {
+  const key = norm(c.title) + '|' + norm(c.authors[0] ?? '')
+  return books.find(b => (c.isbn && b.isbn && b.isbn === c.isbn) || norm(b.title) + '|' + norm(b.authors[0] ?? '') === key)
+}
