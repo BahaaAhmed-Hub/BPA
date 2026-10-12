@@ -1,11 +1,13 @@
-import { useState } from 'react'
-import { Bookmark, Pencil, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Bookmark, Camera, Pencil, Trash2 } from 'lucide-react'
 import { Button, Card } from '@/components/ui'
 import { ICON } from '@/lib/type'
 import { useHeldText } from '@/lib/useHeldText'
 import { Eyebrow, Row } from './fields'
 import { inputStyle } from './fieldStyle'
 import { QuoteNotes } from './Notes'
+import { QuotePhotoDialog } from './QuotePhotoDialog'
+import { quoteImageUrl } from './libraryFiles'
 import { SPINE_COLORS } from './spine'
 import { useLibraryStore } from './libraryStore'
 import { placeOf, type Quote } from './types'
@@ -19,6 +21,31 @@ function QuoteBody({ quote }: { quote: Quote }) {
     <textarea value={text} rows={Math.min(8, Math.max(2, Math.ceil(text.length / 38)))} aria-label="Quote text"
       onChange={e => onChange(e.target.value)} onBlur={onBlur}
       style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, fontStyle: 'italic' }} />
+  )
+}
+
+/** The photo a quote was made from. The bucket is private, so it is fetched and
+ *  shown from an object URL; tapping it enlarges it, since a thumbnail of a page
+ *  is only good for knowing which page. */
+function QuotePhoto({ path }: { path: string }) {
+  const [src, setSrc] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+  const [big, setBig] = useState(false)
+  useEffect(() => {
+    let live = true
+    quoteImageUrl(path).then(u => { if (live) setSrc(u) }, () => { if (live) setFailed(true) })
+    return () => { live = false }
+  }, [path])
+  if (failed) return <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>The photo could not be loaded.</div>
+  if (!src) return <div style={{ height: 60, borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-field)' }} aria-hidden />
+  return (
+    <button type="button" onClick={() => setBig(b => !b)} aria-label={big ? 'Shrink the photo' : 'Enlarge the photo'} aria-pressed={big}
+      style={{ all: 'unset', cursor: 'zoom-in', display: 'block' }}>
+      <img src={src} alt="Photo of the page" style={{
+        width: '100%', maxHeight: big ? 'none' : 130, objectFit: 'contain', display: 'block', borderRadius: 'var(--sb-r-sm)',
+        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-hairline)',
+      }} />
+    </button>
   )
 }
 
@@ -36,9 +63,12 @@ function QuoteItem({ quote }: { quote: Quote }) {
     <div style={{ display: 'flex', gap: 10, padding: '10px 0', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
       <span aria-hidden style={{ width: 4, flexShrink: 0, borderRadius: 'var(--sb-r-pill)', background: quote.color ?? QUOTE_COLORS[0] }} />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {quote.imagePath && <QuotePhoto path={quote.imagePath} />}
         {editing
           ? <QuoteBody quote={quote} />
-          : <p style={{ margin: 0, fontStyle: 'italic', lineHeight: 1.55, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>“{quote.body}”</p>}
+          : quote.body
+            ? <p style={{ margin: 0, fontStyle: 'italic', lineHeight: 1.55, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>“{quote.body}”</p>
+            : <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>No text yet — edit this quote to type what the photo says.</p>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginRight: 'auto' }}>{place}</span>
           {/* The colour is a thing you choose while editing, not a permanent row of six dots. */}
@@ -76,6 +106,8 @@ export function QuotesCard({ bookId, disabled }: { bookId: string; disabled?: bo
   const [body, setBody] = useState('')
   const [page, setPage] = useState('')
   const [line, setLine] = useState('')
+  const [photo, setPhoto] = useState<File | null>(null)
+  const picker = useRef<HTMLInputElement>(null)
 
   const ordered = [...quotes].sort((a, b) => (a.page ?? 1e9) - (b.page ?? 1e9) || (a.line ?? 1e9) - (b.line ?? 1e9) || a.createdAt.localeCompare(b.createdAt))
 
@@ -101,10 +133,19 @@ export function QuotesCard({ bookId, disabled }: { bookId: string; disabled?: bo
             <input value={line} inputMode="numeric" placeholder="Line" aria-label="Quote line (optional)" disabled={!page.trim()} onChange={e => setLine(e.target.value)} style={{ ...inputStyle, flex: '1 1 70px' }} />
             <Button variant="secondary" disabled={!body.trim()} onClick={commit}>Save quote</Button>
           </Row>
+          {/* No `capture`: that would force the camera and take away the photo
+              library, which is where a screenshot of an e-book page lives. On
+              iOS the plain image picker offers both. */}
+          <input ref={picker} type="file" accept="image/*" hidden aria-label="Choose a photo of a page"
+            onChange={e => { const f = e.target.files?.[0]; if (f) setPhoto(f); e.target.value = '' }} />
+          <Button variant="ghost" size="sm" onClick={() => picker.current?.click()} style={{ alignSelf: 'flex-start' }}>
+            <Camera size={ICON.sm} /> Quote from a photo
+          </Button>
         </>
       )}
-      {disabled && <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-warning)' }}>Quotes need migration <code>20260026_library_quotes.sql</code>.</p>}
+      {disabled && <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)' }}>Quotes need migration <code>20260026_library_quotes.sql</code>.</p>}
       {ordered.map(q => <QuoteItem key={q.id} quote={q} />)}
+      {photo && <QuotePhotoDialog bookId={bookId} file={photo} onClose={() => setPhoto(null)} />}
     </Card>
   )
 }

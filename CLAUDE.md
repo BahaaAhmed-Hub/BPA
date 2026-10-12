@@ -3757,3 +3757,50 @@ and draws it: dark pixels on the canvas, the words in the text layer and sitting
 over the page, zoom, page turns, bookmarks, a selection filed as a quote with its
 page, resume, the two-step removal, and a corrupt file. The ink audit has the
 reader (28 screens, 0 failing pairs).
+
+## Library 2c — a photographed page becomes a quote
+`readPassage.ts`, `QuotePhotoDialog.tsx`, `quoteImageUrl`/`uploadQuoteImage` in
+`libraryFiles.ts`. A photo goes to Claude vision with the key from Settings → AI —
+no second key, nothing server-side — and the passage comes back as text.
+- **What comes back is a draft, and the screen says so.** A model reading a phone
+  photo of a curved page gets words wrong, so the photo is shown beside the text
+  to be checked, with a line saying whether it read the marked passage or the
+  whole page. The prompt says *copy, do not correct or complete*, join wrapped
+  lines, un-hyphenate, write `[illegible]` rather than guess, and read **only the
+  marked part** (highlighted, underlined, boxed) if there is one.
+- **Every failure leaves the quote typeable.** No key, a refused key (401/403),
+  a rate limit (429), a refused image (400), an unreachable service, a page with
+  no text, a reply that is not JSON — each is a sentence naming what to do, the
+  text box stays live, and Save does not wait for words (a photo of the page you
+  want to come back to is a quote). A reply in code fences parses; a reply with
+  no JSON at all is taken as the text, since keeping it beats losing it.
+- **The upload comes first, and a failed one saves nothing.** The photo is stored
+  under `<owner>/<book>/quotes/<random>.<ext>` — random, not the quote's id, so it
+  can be uploaded before the quote exists — and only then is the quote written. A
+  quote pointing at a photo that never arrived is worse than no quote, so on a
+  failure the dialog stays open with the words kept and says "Nothing was added".
+- **Reuses the assistant's image path** (`readAttachment`: downscale to 1568px,
+  JPEG where smaller, a small PNG keeps its encoding) rather than a second
+  scaler, and `anthropic()` is exported from `professor.ts` instead of building a
+  second client.
+- **No `capture` attribute on the file input.** It forces the camera and takes the
+  photo library away, which is where a screenshot of an e-book page lives; on iOS
+  the plain image picker offers both.
+- **The bucket is private, so a photo is fetched and shown from an object URL**,
+  once per path per session, and a failed fetch is not remembered or the photo
+  stays broken until reload. Tapping enlarges it.
+- **Deleting a quote does not delete its photo** (undo must be able to bring the
+  quote back with a photo that exists) — the same call, and the same unbuilt
+  purge, as a book's PDF.
+- **The audit found a contrast failure in the first draft of the notice**:
+  `--sb-warning` on white reads 4.24 in Sunlit, under 4.5. The three Library
+  notices (the dialog's, the missing-migration line on quotes, and Settings →
+  Library) use `--sb-accent-deep`, which each theme tunes for text. Other
+  `--sb-warning` text in Settings (the lost-access line) is older and unmeasured
+  — Settings' own screens still measure nothing.
+`scripts/library-photo.mjs` — 32 assertions with Claude and Storage both faked
+(the Anthropic route answers CORS preflight, as the SDK's browser fetch needs):
+the request carries the photo as a base64 image block, the words and printed page
+number arrive for checking, a corrected text is what is saved, Read again calls
+once more, and each failure above. The ink audit has the dialog and a photo-only
+quote (29 screens).

@@ -2777,7 +2777,7 @@ function LibrarySection() {
         <Toggle checked={enabled} onChange={flip} />
       </FieldRow>
       {missing ? (
-        <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-warning)' }}>
+        <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)' }}>
           The Library's tables are not on this account yet — migration <code>20260025_library.sql</code> has not run.
         </div>
       ) : (

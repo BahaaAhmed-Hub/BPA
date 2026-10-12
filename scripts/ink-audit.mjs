@@ -22,6 +22,7 @@
 //   `aria-hidden` decoration is exempt under WCAG and skipped.
 //
 import { PDF as LIB_PDF } from './pdf-fixture.mjs'
+const LIB_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
 import { chromium } from 'playwright-core'
 
 const b64u = o => Buffer.from(JSON.stringify(o)).toString('base64url')
@@ -275,7 +276,9 @@ const LIBRARY = {
   library_quotes: [
     { id: 'q1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'text', body: 'We are what we repeatedly do.', image_path: null, page: 12, line: 4, color: 'var(--sb-cat-3)', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
     { id: 'q2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'text', body: 'Habits are the compound interest of self-improvement.', image_path: null, page: null, line: null, color: null, created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
+    { id: 'q3', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'image', body: null, image_path: 'u1/00000000-0000-4000-8000-000000000000/quotes/x.png', page: 40, line: null, color: null, created_at: '2026-09-03T00:00:00Z', updated_at: '2026-09-03T00:00:00Z' },
   ],
+  // A quote made from a photo with no words typed yet: its own row, its own ink.
   library_notes: [
     { id: 'n1', user_id: SU, scope: 'quote', book_id: null, quote_id: 'q1', list_id: null, page: null, line: null, body: 'Aristotle, really.', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
     { id: 'n2', user_id: SU, scope: 'page', book_id: '00000000-0000-4000-8000-000000000000', quote_id: null, list_id: null, page: 30, line: null, body: 'Revisit this chapter.', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
@@ -305,7 +308,7 @@ for (const theme of THEMES) {
       return r.fulfill({ json: {} })
     }
     // The reader downloads the book's file through Storage.
-    if (u.includes('/storage/v1/object/library/')) return r.fulfill({ status: 200, contentType: 'application/pdf', body: LIB_PDF })
+    if (u.includes('/storage/v1/object/library/')) return u.endsWith('.png') ? r.fulfill({ status: 200, contentType: 'image/png', body: LIB_PNG }) : r.fulfill({ status: 200, contentType: 'application/pdf', body: LIB_PDF })
     const t = /\/rest\/v1\/([a-z_]+)/.exec(u)?.[1]
     const GET = r.request().method() === 'GET'
     if (t && SHOPPING[t] && GET) return r.fulfill({ json: SHOPPING[t] })
@@ -468,6 +471,14 @@ for (const theme of THEMES) {
     await page.waitForTimeout(2200)
     await page.getByRole('button', { name: 'Bookmarks and quotes' }).click()
     await page.waitForTimeout(300)
+  })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+  // A photographed page: the dialog with no AI key saved (the warning ink on the
+  // overlay), over the panel that carries a photo-only quote.
+  await visit('Library · quote from a photo', async () => {
+    await page.getByLabel('Choose a photo of a page').setInputFiles({ name: 'page.png', mimeType: 'image/png', buffer: LIB_PNG })
+    await page.waitForTimeout(1500)
   })
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)

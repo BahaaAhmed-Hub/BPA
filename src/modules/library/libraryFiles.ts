@@ -47,3 +47,35 @@ export async function removeBookFile(path: string): Promise<void> {
   const { error } = await supabase.storage.from(BUCKET).remove([path])
   if (error) throw new Error(error.message)
 }
+
+// ─── Quote photos ────────────────────────────────────────────────────────────
+// `<owner>/<book>/quotes/<random>.<ext>` — under the same first segment the
+// bucket's policy checks. The name is random rather than the quote's id so the
+// photo can be uploaded *before* the quote exists, and a failed upload never
+// leaves a quote pointing at nothing.
+
+const EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }
+const TYPE: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' }
+
+export async function uploadQuoteImage(bookId: string, bytes: Blob, mediaType: string): Promise<string> {
+  markLocalWrite('library')
+  const path = `${await uid()}/${bookId}/quotes/${crypto.randomUUID()}.${EXT[mediaType] ?? 'jpg'}`
+  const { error } = await supabase.storage.from(BUCKET).upload(path, bytes, { contentType: mediaType, upsert: false })
+  if (error) throw new Error(error.message)
+  return path
+}
+
+const urls = new Map<string, Promise<string>>()
+
+/** A displayable address for a stored photo, fetched once per path per session
+ *  (the bucket is private, so it cannot simply be an <img src>). */
+export function quoteImageUrl(path: string): Promise<string> {
+  let hit = urls.get(path)
+  if (!hit) {
+    hit = downloadBookFile(path).then(buf => URL.createObjectURL(new Blob([buf], { type: TYPE[path.split('.').pop() ?? ''] ?? 'image/jpeg' })))
+    // A failed fetch must not be remembered, or the photo stays broken until reload.
+    hit.catch(() => urls.delete(path))
+    urls.set(path, hit)
+  }
+  return hit
+}
