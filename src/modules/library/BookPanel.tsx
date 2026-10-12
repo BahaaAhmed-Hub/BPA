@@ -8,6 +8,7 @@ import { AreaField, DateField, Eyebrow, NumField, Row, Stars, TextField } from '
 import { applyCandidate } from './applyCandidate'
 import { BookFileCard } from './BookFileCard'
 import { BookLinksCard } from './BookLinksCard'
+import { ReadingLogCard } from './ReadingLogCard'
 import { BookNotesCard } from './Notes'
 import { QuotesCard } from './QuotesCard'
 import { useLibraryStore } from './libraryStore'
@@ -47,6 +48,7 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
   const setBookLists = useLibraryStore(s => s.setBookLists)
   const [finding, setFinding] = useState(false)
   const extrasMissing = useLibraryStore(s => s.extrasMissing)
+  const sessionsMissing = useLibraryStore(s => s.sessionsMissing)
   const marked = useLibraryStore(s => s.bookmarks.some(m => m.kind === 'book' && m.bookId === book.id))
   const toggleMark = useLibraryStore(s => s.toggleBookmark)
 
@@ -123,6 +125,8 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
           <DateField label="Finished" value={book.finishedOn} onPush={finishedOn => patch({ finishedOn })} />
         </Row>
       </Card>
+
+      <ReadingLogCard book={book} disabled={sessionsMissing} />
 
       <Card style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Eyebrow>Details</Eyebrow>

@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
 import type {
   Book, BookFormat, BookSource, BookStatus, Bookmark, BookmarkKind, LibList, ListBook, ListKind,
-  Follow, FollowKind, Note, NoteScope, Quote, QuoteKind,
+  Follow, FollowKind, Note, ReadingSession, SessionKind, NoteScope, Quote, QuoteKind,
 } from './types'
 
 interface BookRow {
@@ -240,6 +240,33 @@ export async function saveFollow(f: Follow): Promise<void> {
 export async function removeFollow(id: string): Promise<void> {
   markLocalWrite('library')
   const { error } = await supabase.from('library_follows').delete().eq('id', id)
+  fail(error)
+}
+
+interface SessionRow { id: string; user_id: string; book_id: string; kind: string; on_date: string; minutes: number; pages: number | null; to_page: number | null; created_at: string }
+const toSession = (r: SessionRow): ReadingSession => ({
+  id: r.id, bookId: r.book_id, kind: r.kind as SessionKind, on: r.on_date, minutes: r.minutes,
+  pages: opt(r.pages), toPage: opt(r.to_page), createdAt: r.created_at,
+})
+const fromSession = (s: ReadingSession, userId: string) => ({
+  id: s.id, user_id: userId, book_id: s.bookId, kind: s.kind, on_date: s.on, minutes: s.minutes,
+  pages: s.pages ?? null, to_page: s.toPage ?? null, created_at: s.createdAt,
+})
+
+/** Read on its own like follows: without 20260030 the shelf is untouched. */
+export async function loadSessions(): Promise<ReadingSession[] | null | 'missing'> {
+  const r = await supabase.from('library_sessions').select('*').order('on_date', { ascending: false }).order('created_at', { ascending: false })
+  if (r.error) return r.error.code === '42P01' || r.error.code === 'PGRST205' ? 'missing' : null
+  return (r.data as SessionRow[]).map(toSession)
+}
+export async function saveSession(s: ReadingSession): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_sessions').upsert(fromSession(s, await uid()), { onConflict: 'id' })
+  fail(error)
+}
+export async function removeSession(id: string): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_sessions').delete().eq('id', id)
   fail(error)
 }
 

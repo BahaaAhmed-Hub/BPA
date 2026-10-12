@@ -3,9 +3,9 @@ import { pushUndo, notify, suppressUndo } from '@/lib/undo'
 import { markLocalWrite } from '@/lib/liveSync'
 import {
   loadLibrary, saveBooks, removeBook, saveList, removeList, setBookLists,
-  loadLibraryExtras, loadFollows, saveFollow, removeFollow, saveQuote, removeQuote, saveNote, removeNote, saveBookmark, removeBookmark,
+  loadLibraryExtras, loadFollows, saveFollow, removeFollow, loadSessions, saveSession, removeSession, saveQuote, removeQuote, saveNote, removeNote, saveBookmark, removeBookmark,
 } from './libraryDb'
-import type { Book, Bookmark, Follow, LibList, ListBook, ListKind, Note, Quote } from './types'
+import type { Book, Bookmark, Follow, LibList, ListBook, ListKind, Note, Quote, ReadingSession } from './types'
 
 // ─── Library store ───────────────────────────────────────────────────────────
 // Authoritative-from-the-server, like Finance: `loadFromDB` replaces the lists
@@ -33,6 +33,9 @@ interface LibraryState {
   notes: Note[]
   bookmarks: Bookmark[]
   follows: Follow[]
+  sessions: ReadingSession[]
+  /** 20260030 has not run: sessions cannot be logged. */
+  sessionsMissing: boolean
   /** 20260029 has not run: following cannot be saved. */
   followsMissing: boolean
   /** 20260026 has not run: the shelf works, quotes and notes cannot be saved. */
@@ -66,6 +69,10 @@ interface LibraryState {
   updateNote: (id: string, body: string) => void
   deleteNote: (id: string) => void
 
+  /** Logs a sitting. The first one on a want-to-read book starts it. */
+  addSession: (s: Omit<ReadingSession, 'id' | 'createdAt'>) => ReadingSession
+  deleteSession: (id: string) => void
+
   addFollow: (f: Omit<Follow, 'id' | 'createdAt'>) => Follow
   /** Widens what counts as already seen — never narrows it. */
   markSeen: (id: string, keys: string[]) => void
@@ -86,7 +93,7 @@ function failed(what: string, reload: () => Promise<void>) {
 }
 
 export const useLibraryStore = create<LibraryState>()((set, get) => ({
-  books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, extrasMissing: false, loading: true, missing: false,
+  books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, extrasMissing: false, loading: true, missing: false,
 
   async loadFromDB() {
     const data = await loadLibrary()
@@ -104,9 +111,32 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const follows = await loadFollows()
     if (follows === 'missing') set({ followsMissing: true })
     else if (follows) set({ follows, followsMissing: false })
+
+    const sessions = await loadSessions()
+    if (sessions === 'missing') set({ sessionsMissing: true })
+    else if (sessions) set({ sessions, sessionsMissing: false })
   },
 
-  clearAll() { set({ books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, extrasMissing: false, loading: true, missing: false }) },
+  clearAll() { set({ books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, extrasMissing: false, loading: true, missing: false }) },
+
+  addSession(input) {
+    const s: ReadingSession = { ...input, id: crypto.randomUUID(), createdAt: nowISO() }
+    set(st => ({ sessions: [s, ...st.sessions] }))
+    // A want-to-read book you have just spent time with is being read.
+    const b = get().books.find(x => x.id === s.bookId)
+    if (b && b.status === 'want') get().updateBook(b.id, { status: 'reading', startedOn: b.startedOn ?? s.on })
+    pushUndo(`Log ${s.minutes} min`, () => suppressUndo(() => get().deleteSession(s.id)))
+    void saveSession(s).catch(failed('log that', get().loadFromDB))
+    return s
+  },
+
+  deleteSession(id) {
+    const s = get().sessions.find(x => x.id === id)
+    if (!s) return
+    set(st => ({ sessions: st.sessions.filter(x => x.id !== id) }))
+    pushUndo(`Delete ${s.minutes} min`, () => suppressUndo(() => { set(st => ({ sessions: [s, ...st.sessions] })); void saveSession(s).catch(failed('restore that', get().loadFromDB)) }))
+    void removeSession(id).catch(failed('delete that', get().loadFromDB))
+  },
 
   addFollow(input) {
     const f: Follow = { ...input, id: crypto.randomUUID(), createdAt: nowISO() }
@@ -170,7 +200,9 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const myQuotes = quotes.filter(q => q.bookId === id)
     const myNotes = notes.filter(n => n.bookId === id || myQuotes.some(q => q.id === n.quoteId))
     const myMarks = bookmarks.filter(m => m.bookId === id)
+    const mySessions = get().sessions.filter(x => x.bookId === id)
     set(s => ({
+      sessions: s.sessions.filter(x => x.bookId !== id),
       books: s.books.filter(b => b.id !== id), links: s.links.filter(l => l.bookId !== id),
       quotes: s.quotes.filter(q => q.bookId !== id), bookmarks: s.bookmarks.filter(m => m.bookId !== id),
       notes: s.notes.filter(n => !myNotes.includes(n)),
@@ -181,6 +213,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       set(s => ({
         books: [...s.books, book], links: [...s.links, ...mine],
         quotes: [...s.quotes, ...myQuotes], notes: [...s.notes, ...myNotes], bookmarks: [...s.bookmarks, ...myMarks],
+        sessions: [...mySessions, ...s.sessions],
       }))
       void (async () => {
         await saveBooks([book])
@@ -188,6 +221,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         for (const q of myQuotes) await saveQuote(q)
         for (const n of myNotes) await saveNote(n)
         for (const m of myMarks) await saveBookmark(m)
+        for (const x of mySessions) await saveSession(x)
       })().catch(failed('restore the book', get().loadFromDB))
     })
     void removeBook(id).catch(failed('delete the book', get().loadFromDB))

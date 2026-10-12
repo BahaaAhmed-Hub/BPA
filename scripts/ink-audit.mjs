@@ -290,6 +290,12 @@ const LIBRARY = {
     { id: 'f1', user_id: SU, kind: 'author', name: 'Cal Newport', query: 'author_key:OL123A', author_key: 'OL123A', seen_keys: ['/works/OL1W'], created_at: '2026-09-01T00:00:00Z' },
     { id: 'f2', user_id: SU, kind: 'series', name: 'The Expanse', query: 'title:"The Expanse"', author_key: null, seen_keys: ['/works/OL1W', '/works/OL2W'], created_at: '2026-09-02T00:00:00Z' },
   ],
+  // Sessions on the first book (3 pages long in the fixture's PDF, 300 in the row), so the
+  // progress bar, the totals and the recent list are on screen when the panel is.
+  library_sessions: [
+    { id: 's1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'read', on_date: '2026-10-10', minutes: 40, pages: 60, to_page: 60, created_at: '2026-10-10T20:00:00Z' },
+    { id: 's2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'listen', on_date: '2026-10-11', minutes: 25, pages: null, to_page: null, created_at: '2026-10-11T08:00:00Z' },
+  ],
   library_list_books: [0, 1, 2].map(i => ({ list_id: 'l2', book_id: `00000000-0000-4000-8000-00000000000${i}`, user_id: SU, sort_order: 0, added_at: '2026-09-01T00:00:00Z' })),
 }
 

@@ -72,6 +72,24 @@ export interface Follow {
   createdAt: string
 }
 
+// ─── Phase 4a: reading and listening sessions ───────────────────────────────
+
+export type SessionKind = 'read' | 'listen'
+
+export interface ReadingSession {
+  id: string
+  bookId: string
+  kind: SessionKind
+  /** The day it happened, YYYY-MM-DD (local) — not when it was logged. */
+  on: string
+  minutes: number
+  /** Pages read in this sitting, when reading. */
+  pages?: number
+  /** The page you had reached at the end of it. */
+  toPage?: number
+  createdAt: string
+}
+
 export const STATUS_LABEL: Record<BookStatus, string> = {
   want: 'Want to read', reading: 'Reading', finished: 'Finished', paused: 'Paused', abandoned: 'Set aside',
 }

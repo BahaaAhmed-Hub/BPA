@@ -4059,3 +4059,47 @@ seen-set, a release already on the shelf not being new, Mark all seen surviving 
 reload, a series refused when unreadable, narrowing to an author, one follow
 failing without hiding the others, unfollow and undo, and the missing migration.
 The ink audit has the view with an author, a series and the form (37 screens).
+
+## Library 4a — reading and listening sessions
+Phase 4 is five chunks: **4a** (this) log a sitting and see progress, 4b a
+Tracker view (the week, streak, totals), 4c reading plans (a finish date and a
+daily/weekly target, from a pace you actually have), 4d those plans as calendar
+blocks, 4e yearly goals and challenges. `20260030_library_sessions.sql`,
+`ReadingLogCard.tsx` (a **Progress** card in the book panel), `readingStats.ts`,
+`readingTimer.ts`.
+- **Progress is derived, never stored on the book.** It is the furthest
+  `to_page` any reading session reached. So deleting a mistaken session puts it
+  back by itself, two devices cannot disagree, and there is exactly one source
+  for "how far am I". Listening sessions add minutes and no page.
+- **New ground only.** `pagesCovered(previousFurthest, toPage)`: re-reading, or
+  jumping back, is time spent but not progress, so it logs minutes and no
+  `pages`, and the bar does not fall.
+- **The stopwatch is a start time, not a counter** (`library-timer`,
+  localStorage): a counter dies with the tab or a locked phone, a start time does
+  not, so a reload, a sleeping iPad and a second tab all agree. One timer at a
+  time (you are reading one thing); on another book the card says where it is
+  running and will not start a second. Per device on purpose. Elapsed is clamped
+  to 1–1440 minutes — a timer left running for days stops at a day, to be
+  corrected.
+- **Stop opens the form; it does not save.** The number worth keeping is the one
+  the reader agrees with, not the one the clock produced — so the measured time
+  is filled in to correct. By-hand logging ends in the same form.
+- **A day is the reader's local day** (`todayISO`): a session logged at 00:30
+  belongs to the night you were up reading, not to UTC. A future day is refused.
+- **Validation lives on the form and in the table**: `minutes` 1–1440 and `kind`
+  are CHECKs in the migration, and the fake server in the test enforces them, so a
+  bad row would be refused by the "server", not just the form. A page past the
+  book's length is refused naming the page count (the catalogue's count is often
+  not the edition in hand; the message points at the field to fix).
+- **The first session on a want-to-read book starts it** (`status: reading`,
+  `startedOn` the day logged). **Reaching the last page offers *Mark finished*
+  and does not do it** — finishing is the reader's call.
+- Sessions are read separately (`sessionsMissing`), so a project without 20260030
+  keeps its shelf and the card names the migration; deleting a book takes its
+  sessions locally and ⌘Z restores them; both log and delete are undoable.
+`scripts/library-sessions.mjs` — 31 assertions: the pure maths (furthest page,
+new ground, hours, midnight), the form's refusals sending nothing, the stored row,
+progress bar and percentages, delete and undo, Mark finished, the stopwatch
+surviving a reload (a start time rewritten to 12 minutes ago), a second book
+refusing a second timer, listening, the 1440 cap, and the missing migration. The
+ink audit's first book carries two sessions (37 screens).
