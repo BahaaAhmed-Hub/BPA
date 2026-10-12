@@ -576,7 +576,8 @@ function TopNav() {
   }, [menuOpen])
 
   return (
-    <SideRail
+    <>
+      <SideRail
       items={navItems.map(item => ({ id: item.id, label: item.label, icon: NAV_ICONS[item.id] }))}
       activeModule={activeModule}
       onPick={setActiveModule}
@@ -597,11 +598,24 @@ function TopNav() {
             }}>
             <Search size={ICON.md} />
           </button>
+        </>
+      } />
 
+      {/* ── You, top right ────────────────────────────────────────────────────
+          The bell and the avatar are not navigation: they are about *you* and
+          about what has just happened, which is the corner the eye goes to for
+          status rather than the foot of a column of modules. They float on the
+          page's own ground like everything else — fixed to the viewport, so
+          they stay put while the module under them scrolls — and the account
+          menu opens downward, which is where a menu under a top-right avatar
+          has always opened. */}
+      <div style={{
+        position: 'fixed', top: 14, right: 18, zIndex: 90,
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}>
           <NotificationBell />
 
-          {/* You, and what is behind you. The menu opens to the right of the
-              rail rather than under it — there is nothing under it. */}
+          {/* You, and what is behind you. */}
           <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
             <button
               onClick={() => setMenuOpen(o => !o)}
@@ -624,7 +638,7 @@ function TopNav() {
             </button>
             {menuOpen && (
                   <div role="menu" style={{
-                    position: 'absolute', bottom: 0, left: 'calc(100% + 12px)', zIndex: 120, minWidth: 216,
+                    position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120, minWidth: 216,
                     background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
                     boxShadow: 'var(--sb-shadow-frame)',
                   }}>
@@ -676,8 +690,8 @@ function TopNav() {
                   </div>
             )}
           </div>
-        </>
-      } />
+      </div>
+    </>
   )
 }
 

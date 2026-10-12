@@ -55,7 +55,7 @@ import {
   type WindowRow,
 } from '@/lib/booking'
 import type { OutcomeEvent } from './MeetingOutcome'
-import { useFocusClass } from '@/lib/companyFocus'
+import { useFocusClass, useCompanyFocus } from '@/lib/companyFocus'
 import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
 import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
@@ -1396,6 +1396,7 @@ export function CalendarIntelligence() {
   // map is rebuilt when Settings changes the companies, and the class comes
   // from `companyFocus` so the fade is the same one tasks and mail wear.
   const focusClass = useFocusClass()
+  const [lensCompany] = useCompanyFocus()
   const [focusCompanies, setFocusCompanies] = useState<DynamicCompany[]>(
     () => loadDynamicCompanies().filter(c => !c.hidden))
   useEffect(() => {
@@ -1407,11 +1408,39 @@ export function CalendarIntelligence() {
       window.removeEventListener('storage', read)
     }
   }, [])
+  // Three ways a company owns an event, in order, because **`calendarId` is
+  // optional on a company and most are linked by account instead**. Matching
+  // only on an exact calendar id answered "nobody" for nearly every real
+  // event, so a lens dimmed the whole week and looked broken rather than
+  // empty — which is exactly how it was reported.
   const companyOfCalendar = useMemo(() => {
-    const byCal = new Map<string, string>()
-    for (const c of focusCompanies) if (c.calendarId) byCal.set(c.calendarId, c.id)
-    return (calendarId: string | undefined) => (calendarId ? byCal.get(calendarId) : undefined)
-  }, [focusCompanies])
+    const byCal = new Map<string, string>()      // the company names this calendar
+    const byAccount = new Map<string, string>()  // …or owns the account it is on
+    const byName = new Map<string, string>()     // …or the calendar is named for it
+    for (const c of focusCompanies) {
+      if (c.calendarId) byCal.set(c.calendarId, c.id)
+      if (c.accountId) byAccount.set(c.accountId, c.id)
+      byName.set(c.name.trim().toLowerCase(), c.id)
+    }
+    const calById = new Map(allCalendars.map(c => [c.id, c]))
+    return (calendarId: string | undefined) => {
+      if (!calendarId) return undefined
+      const direct = byCal.get(calendarId)
+      if (direct) return direct
+      const cal = calById.get(calendarId)
+      if (!cal) return undefined
+      if (cal.accountId) {
+        const byAcc = byAccount.get(cal.accountId)
+        if (byAcc) return byAcc
+      }
+      // A calendar literally called "Teradix Ltd" is Teradix's, whether or not
+      // anybody has linked the two in Settings.
+      return byName.get((cal.summary ?? '').trim().toLowerCase())
+    }
+  }, [focusCompanies, allCalendars])
+  const lensName = lensCompany
+    ? focusCompanies.find(c => c.id === lensCompany)?.name ?? null
+    : null
   const [editWin, setEditWin] = useState<{ w: WindowRow; date: string; x: number; y: number } | null>(null)
   const openHoursRef = useRef(false)
   useEffect(() => { openHoursRef.current = openHours }, [openHours])
@@ -2631,6 +2660,18 @@ export function CalendarIntelligence() {
                 const keys = new Set(scope.map(localDateStr))
                 const inScope = displayedEvents.filter(e => keys.has((e.start?.dateTime ?? e.start?.date ?? '').slice(0, 10)))
                 const bits = [`${inScope.length} event${inScope.length === 1 ? '' : 's'}`]
+                // **What the lens actually matched.** Without this, a company
+                // whose events this app cannot recognise looks identical to a
+                // company with nothing on this week: every card goes quiet and
+                // the screen says the same thing either way. A count tells the
+                // two apart, and it is the only honest way to report a filter.
+                if (lensName) {
+                  const mine = inScope.filter(e =>
+                    companyOfCalendar((e as GCalEventExt).calendarId) === lensCompany).length
+                  bits.push(mine > 0
+                    ? `${mine} ${lensName}`
+                    : `none here is ${lensName}'s`)
+                }
                 if (clashCount > 0) bits.push(`${clashCount} clash${clashCount === 1 ? '' : 'es'}`)
                 if (nextInMin !== null) {
                   bits.push(nextInMin < 60

@@ -475,9 +475,15 @@ second changes what the first shows without changing which module is open.
   at 1080px, and below that the right-hand group was drawn *over* the nav, so
   "Dashboard" was unreachable from 1100px down. `useNarrowerThan` and both
   measurements are gone — neither question is asked of a column.
-- **Search, the bell and the avatar are the rail's foot**, under a hairline.
-  The account menu opens to the **right** of the rail (`left: calc(100% + 12px)`,
-  `bottom: 0`) rather than below it — there is nothing below it.
+- **Search is the rail's foot; the bell and the avatar are top right.** Those
+  two are not navigation — they are about *you* and about what has just
+  happened, which is the corner the eye goes to for status rather than the
+  foot of a column of modules. They are `position: fixed`, so they stay put
+  while the module scrolls, and the account menu opens downward from them.
+  **The ink audit reached Admin through that avatar**, so moving it turned
+  `Admin · users` into a screen measuring nothing — caught by the audit's own
+  blindness warning, and the selector is scoped to `aria-haspopup="menu"`
+  rather than to where the avatar happens to sit.
 - **A company tile is its colour and its initials.** `DynamicCompany` carries
   `name`, `color`, a domain, an account and a calendar and no logo, so drawing
   one would mean inventing it; the colour is already that company's identity on
@@ -490,6 +496,35 @@ second changes what the first shows without changing which module is open.
 - **A lens pointing at a company that is gone clears itself.** Deleting or
   hiding the company in Settings would otherwise dim the whole app with no tile
   left to press.
+
+## The lens matched almost nothing, because a company is rarely linked by calendar
+"I click a company logo and it doesn't show its events and tasks." Both halves
+were the same mistake: **reading one field when the data has always lived in
+several.**
+- **An event** was matched only on `company.calendarId === event.calendarId`.
+  `calendarId` is *optional* on a `DynamicCompany` and most are linked by
+  **account** instead, so that answered "nobody" for nearly every real event —
+  and under a lens "nobody" is dimmed, so the whole week went quiet and the
+  filter looked broken rather than empty. Three ways now, in order: the company
+  names the calendar, the company owns the **account** the calendar is on, or
+  the calendar is **named** for the company.
+- **A task** was matched on `companyId` against company **ids**. But `dbSync`
+  writes *any* non-static `company_tag` into `companyId` verbatim, so a task
+  tagged with the company's **name** arrives with that name sitting in
+  `companyId` and the string `personal` in `company`. `companyIdOfTask` in
+  `types/index.ts` tries **both fields against both ids and names** — the rule
+  `isTaskHidden` already had to learn, now named once so the two cannot drift.
+- **The header says what the lens matched** — `3 events · 1 Teradix Ltd`, or
+  `none here is Teradix Ltd's`. Without it a company whose events cannot be
+  resolved is indistinguishable from a company with nothing on this week: every
+  card quiet, the same sentence either way. That ambiguity *is* how this was
+  reported, so the count is the fix as much as the resolution is.
+- **The fixture is what was wrong, not just the code.** The first one gave
+  every company a `calendarId` and every task a dynamic `companyId` — shapes in
+  which the bug cannot occur. It now links the second company by account to a
+  calendar that is neither named for it nor carries its id (a real connected
+  account, told apart by bearer token), and files its task under the company's
+  *name*. Control, on the shipped resolution: both of those dim.
 
 ## The company lens — one answer, every module
 `lib/companyFocus.ts`. Pressing a tile dims everything that is not that

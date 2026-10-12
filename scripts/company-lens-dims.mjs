@@ -20,9 +20,13 @@ import { session, user } from './session.mjs'
 const MODE = process.argv[2] ?? 'rail'
 const U = user.id
 
+// Deliberately NOT both linked the same way. `calendarId` is optional on a
+// company and most real ones are linked by account, so a fixture where every
+// company names its calendar is a fixture that cannot fail the way the real
+// app did: it dimmed everything, because nothing resolved.
 const COMPANIES = [
-  { id: 'co-teradix', name: 'Teradix Ltd',   color: '#3B82F6', users: [], calendarId: 'teradix-cal' },
-  { id: 'co-dx',      name: 'DX Technologies', color: '#0C8140', users: [], calendarId: 'dx-cal' },
+  { id: 'co-teradix', name: 'Teradix Ltd',     color: '#3B82F6', users: [], calendarId: 'teradix-cal' },
+  { id: 'co-dx',      name: 'DX Technologies', color: '#0C8140', users: [], accountId: 'acc-dx' },
 ]
 
 const monday = (() => {
@@ -49,8 +53,19 @@ const EVENTS = [
 // tags is read back as `companyId` — which is what the lens compares against.
 const TASKS = [
   { id: 'tk-t', user_id: U, title: 'Teradix — send the deck', quadrant: 'do', status: 'open', completed: false, company_tag: 'co-teradix', priority: 'P1', created_at: new Date().toISOString() },
-  { id: 'tk-d', user_id: U, title: 'DX — chase the invoice',  quadrant: 'do', status: 'open', completed: false, company_tag: 'co-dx',      priority: 'P1', created_at: new Date().toISOString() },
+  // Filed under the company's NAME, the way a task written before companies
+  // were rows is: `dbSync` leaves `companyId` empty for it entirely.
+  { id: 'tk-d', user_id: U, title: 'DX — chase the invoice',  quadrant: 'do', status: 'open', completed: false, company_tag: 'DX Technologies', priority: 'P1', created_at: new Date().toISOString() },
 ]
+
+// The second company is linked by ACCOUNT, so the fixture needs a real
+// connected account for its calendar to carry one. The stub tells the two
+// accounts apart by the bearer token, the way Google does.
+const DX_ACCOUNT = {
+  id: 'acc-dx', email: 'ops@dxtech.example', name: 'DX Ops',
+  providerToken: 'dx-token', providerTokenSavedAt: Date.now(),
+  scopes: ['calendar'], connectedAt: new Date().toISOString(), isPrimary: false,
+}
 
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--ignore-certificate-errors'] })
 const ctx = await b.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1500, height: 950 } })
@@ -67,11 +82,19 @@ await ctx.route('**://placeholder.supabase.co/**', r => {
 await ctx.route('**://www.googleapis.com/**', r => {
   const u = new URL(r.request().url())
   const j = x => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(x) })
-  if (u.pathname.includes('/users/me/calendarList')) return j({ items: [
-    { id: 'primary',     summary: user.email,       primary: true,  accessRole: 'owner', backgroundColor: '#9B9180', selected: true },
-    { id: 'teradix-cal', summary: 'Teradix Ltd',    primary: false, accessRole: 'owner', backgroundColor: '#3B82F6', selected: true },
-    { id: 'dx-cal',      summary: 'DX Technologies',primary: false, accessRole: 'owner', backgroundColor: '#0C8140', selected: true },
-  ] })
+  if (u.pathname.includes('/users/me/calendarList')) {
+    const dx = (r.request().headers()['authorization'] ?? '').includes('dx-token')
+    // The DX calendar is deliberately NOT named after its company and does
+    // not carry its id: the only thing that can match it is the account it
+    // is on, which is the case an exact-calendar-id match answered
+    // "nobody" for — and that is what dimmed a real week to nothing.
+    return j({ items: dx
+      ? [{ id: 'dx-cal', summary: 'Ops diary', primary: true, accessRole: 'owner', backgroundColor: '#0C8140', selected: true }]
+      : [
+        { id: 'primary',     summary: user.email,    primary: true,  accessRole: 'owner', backgroundColor: '#9B9180', selected: true },
+        { id: 'teradix-cal', summary: 'Teradix Ltd', primary: false, accessRole: 'owner', backgroundColor: '#3B82F6', selected: true },
+      ] })
+  }
   if (u.pathname.includes('/events')) {
     const which = decodeURIComponent(u.pathname).match(/calendars\/([^/]+)\/events/)?.[1]
     return j({ items: EVENTS.filter(e => !which || e.calendarId === which) })
@@ -80,17 +103,18 @@ await ctx.route('**://www.googleapis.com/**', r => {
 })
 await ctx.route('**://oauth2.googleapis.com/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
 
-await ctx.addInitScript(([s, cos]) => { try {
+await ctx.addInitScript(([s, cos, acc]) => { try {
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'calendar', themeId: 'sunlit-bento' }, version: 0 }))
   localStorage.setItem('professor-companies', JSON.stringify(cos))
+  localStorage.setItem('professor-connected-accounts', JSON.stringify([acc]))
   localStorage.setItem('google_provider_token', 'stub-token')
   localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
   // Deliberately NOT clearing `professor-company-focus` here: an init script
   // runs before *every* navigation, so doing it here wiped the lens on the
   // very reload the `clear` case exists to measure. A fresh context already
   // starts with empty storage.
-} catch { /* quota */ } }, [session, COMPANIES])
+} catch { /* quota */ } }, [session, COMPANIES, DX_ACCOUNT])
 
 const p = await ctx.newPage()
 p.on('dialog', d => d.accept())
@@ -126,6 +150,19 @@ if (MODE === 'rail') {
      await p.locator('[data-company-tile] >> nth=0').getAttribute('aria-label').then(s => /show only teradix/i.test(s ?? '')))
   ok('nothing is chosen on a fresh browser',
      await p.locator('[data-company-tile][aria-pressed="true"]').count() === 0)
+
+  // The bell and the avatar are about *you*, not about which module is open,
+  // so they sit at the corner the eye goes to for status — and they are NOT
+  // in the rail any more.
+  const avatar = p.locator('button[aria-haspopup="menu"]')
+  const ar = await avatar.boundingBox()
+  const vw = p.viewportSize().width
+  ok('the avatar is top right', !!ar && ar.y < 70 && (ar.x + ar.width) > vw - 90,
+     JSON.stringify(ar))
+  ok('and no longer inside the rail',
+     await p.locator('[data-side-rail] button[aria-haspopup="menu"]').count() === 0)
+  const bell = await p.locator('button[aria-label*="otification"], button[title*="otification"]').first().boundingBox().catch(() => null)
+  ok('the bell is up there with it', !bell || (bell.y < 70 && bell.x > vw - 220), JSON.stringify(bell))
   ok('and so there is no way-out control yet',
      await p.getByRole('button', { name: /show everything again/i }).count() === 0)
   await b.close(); process.exit(code)
@@ -154,6 +191,23 @@ if (MODE === 'calendar') {
      await p.locator('[data-company-tile="co-teradix"][aria-pressed="true"]').count() === 1)
   ok('and a way out appeared',
      await p.getByRole('button', { name: /show everything again/i }).count() === 1)
+
+  // **The header says what the lens matched.** Without it, a company whose
+  // events cannot be resolved looks exactly like a company with nothing on
+  // this week — every card quiet, the same sentence either way. That
+  // ambiguity is the whole of how the broken resolution was reported.
+  const head = await text()
+  ok('the header counts what is in focus', /1 Teradix Ltd/.test(head),
+     JSON.stringify(head.split('\n').find(l => /event/.test(l))))
+
+  // The second company is linked by ACCOUNT, not by a calendar id — the way
+  // most real ones are, and the case an exact-id match answered "nobody" for.
+  await p.locator('[data-company-tile="co-dx"]').click()
+  await p.waitForTimeout(800)
+  const d2 = await card('DX board')
+  const t2 = await card('NEOM')
+  ok('a company linked by account still matches its events', d2?.opacity === 1, JSON.stringify(d2))
+  ok('and the other company is the dimmed one now', (t2?.opacity ?? 1) < 0.5, JSON.stringify(t2))
   await b.close(); process.exit(code)
 }
 

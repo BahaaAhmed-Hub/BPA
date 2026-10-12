@@ -618,17 +618,22 @@ img { max-width: 100%; }
 .sb-fin-row:focus-within .sb-row-tools { opacity: 1 !important; }
 
 /* ─── Calendar shell ──────────────────────────────────────────────────────────
-   The calendar is not a dashboard page. It is one framed panel floating on a
-   ground a step deeper than the page, holding white cards whose separation is
-   that ground rather than a rule. The route therefore owns its own background
-   and its own gutter, and nothing on it sits outside the panel.
+   **The calendar has no ground of its own.** It used to paint
+   `--sb-cal-ground`, "a step deeper than the page" — a different tone across
+   the whole module. Nothing else in the app did that, and because the rail
+   sits *outside* this element the effect was a big tinted box holding every
+   component with the menu stranded beside it: the one thing that most made
+   the app look like a frame in a window. The separation between the white
+   cards inside is the page's own colour, which is what every other module
+   already relies on.
 
-   These four rules are here rather than inline because each carries a media
-   query, and a width watched in JavaScript reports a number that lags the
-   layout by a frame.
+   It keeps the gutter and the column, which are layout and not decoration.
+   These rules are here rather than inline because each carries a media query,
+   and a width watched in JavaScript reports a number that lags the layout by
+   a frame.
    ──────────────────────────────────────────────────────────────────────────── */
 .cal-ground {
-  background: var(--sb-cal-ground);
+  background: transparent;
   padding: 20px;
   height: 100%;
   box-sizing: border-box;
@@ -652,10 +657,11 @@ img { max-width: 100%; }
   flex-direction: column;
   gap: 14px;
   background: transparent;
-  padding: 18px 20px 20px;
+  /* The ground above already provides the gutter; two nested paddings were
+     two boxes' worth of inset for a module that now draws neither. */
+  padding: 0;
   overflow: hidden;
 }
-@media (max-width: 900px) { .cal-panel { padding: 14px 12px 12px; } }
 
 /* The view on the left, the day rail on the right. Under 1180px the rail goes
    below the grid at full width rather than squeezing to nothing. */

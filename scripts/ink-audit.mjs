@@ -413,7 +413,10 @@ for (const theme of THEMES) {
   // morning page under an Admin label. Clicking is also the only version that
   // proves the menu row exists at all.
   const goAdmin = async () => {
-    await page.locator('[data-side-rail] button[aria-haspopup="menu"]').click({ timeout: 4000 })
+    // The avatar is top right now, not in the rail. Scoped to the menu it
+    // opens rather than to where it happens to sit, so moving it again does
+    // not quietly turn this screen into one that measures nothing.
+    await page.locator('button[aria-haspopup="menu"]').click({ timeout: 4000 })
     await page.waitForTimeout(400)
     await page.locator('button[role="menuitem"]', { hasText: 'Admin' }).first().click({ timeout: 4000 })
     await page.waitForTimeout(1400)

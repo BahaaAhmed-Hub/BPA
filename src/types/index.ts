@@ -70,6 +70,34 @@ export function loadVisibleCompanies(): DynamicCompany[] {
   return loadDynamicCompanies().filter(c => !c.hidden)
 }
 
+/** The company a task belongs to, as an id — or undefined where nobody filed it.
+ *
+ *  **`company` has held both an id and a name over the life of the app**, and
+ *  `companyId` only ever carries a *dynamic* company: `dbSync` maps
+ *  `company_tag` into `companyId` only when the tag is not one of the four
+ *  static ones (`teradix`, `dxtech`, `consulting`, `personal`), so a task
+ *  filed before companies were rows has a `company` and no `companyId` at all.
+ *  Reading `companyId` alone therefore answers "nobody" for a great many real
+ *  tasks — which, under a lens, dims them all and looks exactly like a filter
+ *  that does not work. `isTaskHidden` already had to learn this; this is the
+ *  same rule, named once so the two cannot drift.
+ */
+export function companyIdOfTask(task: { companyId?: string; company?: string }): string | undefined {
+  const companies = loadDynamicCompanies()
+  // **Both fields hold either an id or a name**, so both are tried against
+  // both. `dbSync` writes *any* non-static `company_tag` into `companyId`
+  // verbatim — so a task tagged with the company's NAME arrives with that
+  // name sitting in `companyId` and the string `personal` in `company`.
+  // Matching `companyId` against ids alone therefore missed it twice over,
+  // which the fixture caught only once it carried the real shape.
+  const match = (v: string | undefined) => {
+    if (!v) return undefined
+    const k = v.trim().toLowerCase()
+    return companies.find(c => c.id.toLowerCase() === k || c.name.trim().toLowerCase() === k)?.id
+  }
+  return match(task.companyId) ?? match(task.company)
+}
+
 /** Returns true if the task belongs to a hidden company and should be excluded
  *  from views. `company` has held both an id and a name over the life of the
  *  app, so it is matched against either. */
