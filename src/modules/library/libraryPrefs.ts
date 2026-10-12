@@ -17,7 +17,7 @@ export interface LibrarySettings {
   /** ISO 3166 region the buy links point at. Absent = read it from the browser. */
   country?: string
 }
-export type LibraryView = 'shelf' | 'covers' | 'lists' | 'quotes' | 'discover'
+export type LibraryView = 'shelf' | 'covers' | 'lists' | 'quotes' | 'discover' | 'tracker'
 
 export function loadLibrarySettings(): LibrarySettings {
   try {
@@ -37,7 +37,7 @@ export function saveLibrarySettings(s: LibrarySettings): void {
 export function loadLibraryView(): LibraryView {
   try {
     const v = localStorage.getItem(VIEW_KEY)
-    return v === 'covers' || v === 'lists' || v === 'quotes' || v === 'discover' ? v : 'shelf'
+    return v === 'covers' || v === 'lists' || v === 'quotes' || v === 'discover' || v === 'tracker' ? v : 'shelf'
   } catch { return 'shelf' }
 }
 export function saveLibraryView(v: LibraryView): void {

@@ -4103,3 +4103,30 @@ progress bar and percentages, delete and undo, Mark finished, the stopwatch
 surviving a reload (a start time rewritten to 12 minutes ago), a second book
 refusing a second timer, listening, the 1440 cap, and the missing migration. The
 ink audit's first book carries two sessions (37 screens).
+
+## Library 4b — the Tracker
+`trackerStats.ts` (pure), `TrackerView.tsx`, a sixth header view (**Tracker**). No
+migration: it reads the `library_sessions` log 4a already writes, so a figure here
+and the same figure on a book panel cannot disagree.
+- **Dates go through noon-local Dates, never `+ 86 400 000`.** A clock change makes
+  a day 23 or 25 hours, and midnight-plus-a-day lands on the wrong date twice a
+  year, putting a Sunday session in Monday's bar. Asserted across both hemispheres'
+  changes.
+- **Weeks run Monday to Sunday** (`weekStart`); a Sunday session belongs to the week
+  before the Monday after it. The 12-week chart is twelve such buckets ending with
+  this one.
+- **A streak is days with a session of either kind, and it survives a day not
+  logged *yet*.** At 08:00 you have not read today; a number that read 0 every
+  morning would break itself. It is alive until a whole day has gone, and `today`
+  says whether today is already in it. Future-dated rows are ignored, `longest` is
+  kept after a run ends.
+- **The figure is printed on the bar**, reading in the accent and listening in
+  `--sb-info`; each column has an accessible label ("Monday 12 Oct: 30 min reading,
+  15 min listening") since the bar itself is `aria-hidden`.
+- A session's book opens on the shelf; a deleted book's session says so rather than
+  vanishing from the list. `sessionsMissing` names `20260030` instead of drawing an
+  empty week that would read as "you read nothing".
+`scripts/library-tracker.mjs` — 27 assertions: the pure maths (week edges, year
+edge, clock changes, every streak case, inclusive period totals, buckets) and the
+view (streak tile, filters, 12 columns, opening a book, the missing migration).
+The ink audit has the Tracker.

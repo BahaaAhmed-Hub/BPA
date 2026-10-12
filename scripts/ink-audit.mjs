@@ -529,6 +529,11 @@ for (const theme of THEMES) {
     await page.getByRole('button', { name: /Follow a series/ }).click()
     await page.waitForTimeout(1800)
   })
+  await visit('Library · tracker', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Tracker' }).click()
+    await page.waitForTimeout(800)
+  })
   await visit('Library · a book open', async () => {
     await libraryTab()
     await page.getByRole('tab', { name: 'Shelf' }).click()

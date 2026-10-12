@@ -11,6 +11,7 @@ import { DiscoverView } from './DiscoverView'
 import { ListsView } from './ListsView'
 import { QuoteBoard } from './QuoteBoard'
 import { Shelf } from './Shelf'
+import { TrackerView } from './TrackerView'
 import { inputStyle } from './fieldStyle'
 import { loadLibraryView, saveLibraryView, type LibraryView } from './libraryPrefs'
 import { useLibraryStore } from './libraryStore'
@@ -116,7 +117,7 @@ export function LibraryModule() {
           )}
         </div>
         <Segmented value={view} onChange={setView} options={[
-          { value: 'shelf', label: 'Shelf' }, { value: 'covers', label: 'Covers' }, { value: 'lists', label: 'Lists' }, { value: 'quotes', label: 'Quotes' }, { value: 'discover', label: 'Discover' },
+          { value: 'shelf', label: 'Shelf' }, { value: 'covers', label: 'Covers' }, { value: 'lists', label: 'Lists' }, { value: 'quotes', label: 'Quotes' }, { value: 'discover', label: 'Discover' }, { value: 'tracker', label: 'Tracker' },
         ]} />
         <Button variant="accent" disabled={missing} onClick={() => setAdding(true)}><Plus size={ICON.md} /> Add book</Button>
       </header>
@@ -161,6 +162,8 @@ export function LibraryModule() {
             <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', paddingBottom: 16, display: narrow && selected ? 'none' : undefined }}>
               {loading && books.length === 0 ? (
                 <p style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>Fetching your library…</p>
+              ) : view === 'tracker' ? (
+                <TrackerView onOpenBook={id => { setView('shelf'); setStatus('all'); setQ(''); setListId(null); setSelectedId(id) }} />
               ) : view === 'discover' ? (
                 <DiscoverView onAddByHand={isbn => { setAddIsbn(isbn); setAdding(true) }} onOpenBook={id => { setView('shelf'); setStatus('all'); setQ(''); setListId(null); setSelectedId(id) }} />
               ) : view === 'quotes' ? (
@@ -213,7 +216,7 @@ export function LibraryModule() {
       })()}
       {adding && (
         <AddBookModal defaultListIds={activeListId ? [activeListId] : []} initialIsbn={addIsbn} onClose={() => { setAdding(false); setAddIsbn(undefined) }}
-          onAdded={() => { setAdding(false); setAddIsbn(undefined); setView(view === 'lists' || view === 'quotes' || view === 'discover' ? 'shelf' : view) }} />
+          onAdded={() => { setAdding(false); setAddIsbn(undefined); setView(view === 'lists' || view === 'quotes' || view === 'discover' || view === 'tracker' ? 'shelf' : view) }} />
       )}
     </div>
   )
