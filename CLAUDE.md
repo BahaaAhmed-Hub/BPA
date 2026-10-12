@@ -509,8 +509,10 @@ second changes what the first shows without changing which module is open.
   the one surface token opaque in every theme (Glass's card is a 5% wash that
   would leave the rail see-through on its own dark page). `borderRadius: 999`,
   because at 64px a lozenge and a rounded rectangle read quite differently.
-- **A company tile is a disc tinted with its colour, and the letters are ink.**
-  `DynamicCompany` carries no logo, so drawing one would mean inventing it.
+- **A company tile is `CompanyMark`** — the real logo where there is one
+  (Settings → Accounts & companies sets it), and otherwise a disc tinted with
+  its colour carrying two letters in ink. One drawing, shared with the picker
+  that sets it, so the two cannot drift.
   Putting the colour in the *glyph* on a white disc was measured and failed its
   own purpose: `#3B82F6` on white is ~3.1:1, so `inkOnKeeping` fell back to
   `--sb-ink-1` and Teradix's mark came out `rgb(20,18,14)` — the same near-black
@@ -527,6 +529,108 @@ second changes what the first shows without changing which module is open.
 - **A lens pointing at a company that is gone clears itself.** Deleting or
   hiding the company in Settings would otherwise dim the whole app with no tile
   left to press.
+
+## Companies — a logo, and the three things that were in the way
+`lib/companyLogo.ts` + `components/CompanyMark.tsx`. A `DynamicCompany` carried
+`name`, `color`, a domain, an account and a calendar and **no logo**, so every
+tile in the rail and every card in Settings drew a tinted disc with two
+initials. That was right while there was nothing to draw — *nothing is
+invented* — and this is the way to give it the real one. Settings →
+Accounts & companies: the circle at the head of each company card **is** the
+control (press, drop or paste), and Remove is a word in the caption's slot,
+never a ✕ pinned to the picture's corner — the mistake the habit record made
+and had to undo.
+- **What is stored is a data URL, not a link.** A link is a request to
+  somebody else's server on every render, it dies when their path changes, and
+  most marks sit behind a sign-in. A data URL rides in the `companies` row, so
+  it travels to every device the way the colour does, with no bucket to police
+  and nothing to fetch.
+- **What is stored is pixels, never markup.** An SVG is rasterised like
+  everything else, so nothing drawn from this field can be markup — one shape
+  in, one shape out — and a 50KB SVG with a font in it costs what a 128px
+  bitmap costs.
+- **No logo is ever refused for being big, and the ladder is why.** Measured in
+  Chromium on the densest thing a 128px box can hold (pure RGB noise) and on a
+  flat mark: PNG 75,574 / 65,458 / 1,186 bytes, WebP at 0.85 39,000 / 10,000 /
+  800. PNG is the first rung because it is lossless and, for the flat marks
+  most logos are, *smaller*; WebP is the second because **noise is the bound by
+  construction** — nothing of a fixed pixel count compresses worse than maximum
+  entropy — so 39KB is this ladder's ceiling and the 48KB cap sits above it
+  rather than in front of anybody. A 96px rung and a "that image is too big"
+  refusal were both written before the measurement and both were unreachable;
+  unreachable guards are worse than none, so they went. Quality moves it far
+  less than it looks: 0.9 measured 41KB, 0.85 measured 39KB, because what costs
+  the bytes is the entropy, not the quantiser.
+- **`CompanyMark` is one drawing, used by the rail's tile and by the picker**,
+  so what you set in Settings is the thing you press in the rail. The disc
+  carries the colour and the mark carries the letters (the measured pairing —
+  the other way round made two of three discs identically near-black), and a
+  logo sits on that same tint, `object-fit: contain` with an inset so a
+  transparent PNG reads against the company's own colour and a wordmark is not
+  cropped to a square.
+- **`logo_url` is `COMPANY_OPTIONAL`** (`20260025`), so a project that has not
+  run the migration keeps the logo in the browser and still writes every other
+  column — and `mergeCompanies` refuses to let the server's blank beat it.
+
+Two faults were in the way, both bigger than the feature:
+- **Settings' `saveCompanies` announced nothing.** `professor-companies` is read
+  by the rail's tiles, the calendar's company resolution and `mailCompany`'s
+  cache, each of which listens for `professor:companiesUpdated` — and the one
+  screen that edits companies never fired it. `storage` does not fire in the
+  tab that wrote, so a rename, a colour, an account link or a logo set here
+  reached nothing until a reload. The one writer announces the write, the shape
+  `saveRules` → `finance:budgetRulesChanged` already has.
+- **Settings held a second company merge, written by hand**, carrying only
+  `users` and `hidden` forward from the browser — then `saveCompanies(merged)`.
+  So opening Settings wrote the server's blank over `account_id`,
+  `email_domain`, `calendar_id` and the logo: the exact failure
+  `mergeCompanies` exists to stop (*link an account, refresh, gone*) surviving
+  in a copy one file along, with App's own loader protecting the key that this
+  screen then overwrote. It goes through `mergeCompanies` now; the
+  `professor-company-users` restore stays on top, because that is a different
+  question rather than a second field merge.
+`scripts/company-logo-sticks.mjs [set|shrinks|remove|no-column|dense]` — 56
+assertions over the real picker with a real PNG made in the page: the logo
+reaches the store, the row and the rail **with no reload**; a 900×300 wordmark
+is stored 128 square, under the cap, and *contained* (the middle band carries
+the mark, the top band is empty — only true if it was fitted rather than
+filled); Remove clears the column rather than leaving the old one; a dense
+image falls through to WebP with nothing asked of anybody; and on a project
+without the column the write is refused once, the row still lands with its
+name, colour, calendar and people, and the browser keeps both the logo and the
+calendar link across a reload. The fixture's own first version re-seeded
+`professor-companies` on every navigation and so wiped the very thing that
+reload was measuring — the init-script trap, for the third time in this file.
+
+## The ink audit was measuring Sunlit four times, under four names
+Two faults, found in one afternoon, both of them the *vacuous pass* this file
+has a section about already:
+- **`INK_THEME` was taken on trust**, written into `professor-ui`, where an id
+  the app does not know falls back to Sunlit. The theme is called *Glass &
+  Depth* and its id is **`glass-depth`** — so `INK_THEME=glass-and-depth` ran
+  the whole audit against Sunlit and reported *0 failing pairs* under a Glass
+  label. Reported here as four clean themes, twice, before it was caught. The
+  id is now checked against the list, and the **ground is measured on the
+  page** (`--sb-page` differs in all four) rather than trusted: a theme that
+  did not apply exits 2 and names what it found.
+- **The init script rewrote `professor-ui` before every navigation**, so the
+  Settings visit — which sets `activeModule` and reloads — had its own write
+  wiped by the reload, and the app came back up on the default module. That is
+  why `Settings`, `Settings · Appearance` and `Settings · Accounts & companies`
+  had measured **nothing** since the file was written; the note under the count
+  said that predated the rail work, which was true, and the cause was one line
+  in this file all along. It merges now.
+Reaching those three screens found **four real failures on text nobody had
+ever measured**, each a token swap of the kind that section prescribes:
+- the two **meeting-buffer pill rows** — `--sb-accent` on the accent at 12%,
+  **1.42:1**, a label that is simply not there. `--sb-accent-deep`; the border
+  stays the accent, being a line rather than text.
+- the primary account's **Active** chip — `--sb-positive` on its own 10% tint,
+  4.06 at 10px → `--sb-positive-deep`.
+- **Delete account** in the danger zone — Evergreen's `#B4574A` on its own 8%
+  tint, 4.1 at 12.5px → `--sb-negative-deep`.
+All four themes now read **0 failing pairs over 22 screens with no blind
+screens at all**, which is the first run of this file that has been true of.
 
 ## The lens matched almost nothing, because a company is rarely linked by calendar
 "I click a company logo and it doesn't show its events and tasks." Both halves

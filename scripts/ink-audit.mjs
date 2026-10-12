@@ -239,8 +239,31 @@ const ADMIN_T = {
   ],
 }
 
-const THEMES = process.env.INK_THEME ? [process.env.INK_THEME]
-  : ['sunlit-bento', 'warm-minimal', 'glass-depth', 'evergreen']
+const ALL_THEMES = ['sunlit-bento', 'warm-minimal', 'glass-depth', 'evergreen']
+// **A theme id nobody has is not a theme to audit.** `INK_THEME` was taken on
+// trust and written into `professor-ui`, where an id the app does not know
+// falls back to Sunlit — so `INK_THEME=glass-and-depth` (the theme's *name*,
+// not its id: it is `glass-depth`) audited Sunlit four screens at a time and
+// reported it under a Glass label. Clean, and about the wrong theme. The exact
+// vacuous result this file's own note was written about, arrived at from a new
+// direction: it is not enough for a screen to be reached, the theme on it has
+// to be the one asked for.
+// Each theme's own `--sb-page`, as Chrome reports it. Written out rather than
+// imported because this script does not run through Vite and cannot read
+// `themes.ts`; a value that drifts fails the run loudly, which is the point.
+const GROUNDS = {
+  'sunlit-bento':  'rgb(247, 244, 234)',
+  'warm-minimal':  'rgb(244, 241, 234)',
+  'glass-depth':   'rgb(11, 10, 18)',
+  'evergreen':     'rgb(245, 247, 246)',
+}
+const THEMES = process.env.INK_THEME ? [process.env.INK_THEME] : ALL_THEMES
+for (const t of THEMES) {
+  if (!ALL_THEMES.includes(t)) {
+    console.error(`INK_THEME=${t} is not a theme id. One of: ${ALL_THEMES.join(', ')}`)
+    process.exit(2)
+  }
+}
 const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] })
 
 for (const theme of THEMES) {
@@ -293,7 +316,20 @@ for (const theme of THEMES) {
     localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
     localStorage.setItem('cal-intel-cals-cache', JSON.stringify(cs))
     localStorage.setItem('cal-view', 'week')
-    localStorage.setItem('professor-ui', JSON.stringify({ state: { themeId: th }, version: 0 }))
+    // **Merged, never replaced.** An init script runs before *every*
+    // navigation, so writing this whole key again wiped whatever the run had
+    // just put in it — and the Settings visit reaches its module by setting
+    // `activeModule` and reloading. The reload re-ran this line, the app came
+    // back up on the default module, and `Settings`, `Settings · Appearance`
+    // and `Settings · Accounts & companies` measured nothing from the day this
+    // file was written. The note under the count said that predated the rail
+    // work, which was true, and the cause was this line all along.
+    const prevUi = (() => {
+      try { return JSON.parse(localStorage.getItem('professor-ui') ?? '{}') } catch { return {} }
+    })()
+    localStorage.setItem('professor-ui', JSON.stringify({
+      ...prevUi, state: { ...(prevUi.state ?? {}), themeId: th }, version: 0,
+    }))
     // The Shopping screen is behind a switch, and so is its tab in Finance.
     localStorage.setItem('shopping-settings', JSON.stringify({
       enabled: true, viewMode: 'byWeek', priceWatchFrequency: 'off',
@@ -304,6 +340,13 @@ for (const theme of THEMES) {
 
   await page.goto(`http://localhost:${process.argv[2]}/BPA/`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3400)
+  // Measured, not assumed: a theme that did not apply is a run about another
+  // theme's colours. `--sb-page` differs in all four, so it answers this.
+  const ground = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
+  if (!GROUNDS[theme] || ground !== GROUNDS[theme]) {
+    console.error(`${theme} did not apply — body is ${ground}, expected ${GROUNDS[theme] ?? '(unknown)'}`)
+    process.exit(2)
+  }
   await page.getByText('Skip for now').first().click().catch(() => {})
   await page.waitForTimeout(700)
 

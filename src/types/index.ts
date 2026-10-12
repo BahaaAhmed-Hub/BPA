@@ -32,6 +32,11 @@ export interface DynamicCompany {
   emailDomain?: string
   accountId?: string
   calendarId?: string
+  /** The company's mark, as a data URL of pixels — `lib/companyLogo.ts` is the
+   *  only thing that writes it and `components/CompanyMark.tsx` the only thing
+   *  that draws it. Absent is the ordinary case and means the tinted initials.
+   */
+  logoUrl?: string
 }
 
 export function loadDynamicCompanies(): DynamicCompany[] {
