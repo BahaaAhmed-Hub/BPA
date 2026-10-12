@@ -436,6 +436,33 @@ visitor's own `doProfile` filter asserted against what was stored;
 `open-hours-are-visible.mjs [shows|inert|nested|panel]` — 23, each with the
 control above. `booking-hours-draw.mjs` re-runs unchanged at 46.
 
+## One ground — the app is not a card floating in a window
+The calendar drew itself inside `.cal-panel`: a box in **the page's own
+colour**, with a 28px radius and `0 30px 80px -30px rgba(25,23,18,.5)` under
+it — the same colour as the ground it sat on, lifted off that ground by a
+heavy shadow. The result reads as a framed slab in a window rather than as
+the page, and nothing else in the app did it. It is transparent and flush
+now; the padding stays, because content still needs air, and so does
+`overflow: hidden`, because the grid inside scrolls against it.
+- **The rail lost its surface for the same reason.** It was two white cards
+  with a border and a frame shadow. Beside a module that no longer draws its
+  own slab, the only boxed objects left on screen would have been the menu —
+  so the icons, the active pill and the company circles float on the page's
+  ground, and the two groups are separated by the gap between them rather
+  than by two frames.
+- **A logo is a circle** (`border-radius: 50%`), not a rounded square: beside
+  a column of round glyphs a rounded square reads as a different kind of
+  object, and every other avatar in the app is round. The chosen one's ring is
+  `box-shadow: 0 0 0 2px var(--sb-page), 0 0 0 4px var(--sb-accent-deep)` —
+  drawn **outside** the circle with a gap of the page's own colour, so it is a
+  halo rather than something eating into the colour that identifies the
+  company. A border would have taken 2px off the fill.
+- Measured rather than assumed: the panel computes `rgba(0,0,0,0)` / `0px` /
+  `none`, every rail group computes transparent with no border and no shadow,
+  and a tile computes `50%`. The ink audit matters here because the rail's
+  icons moved from `--sb-card` to `--sb-page` — a different ground — and
+  re-runs at 22 screens x 4 themes, 0 failing pairs.
+
 ## The rail — the main menu, and the company you are looking at
 `components/SideRail.tsx` replaces the header. Two floating pills down the left
 edge: the modules, then the companies you are part of. They are deliberately

@@ -637,19 +637,25 @@ img { max-width: 100%; }
 }
 @media (max-width: 900px) { .cal-ground { padding: 14px; } }
 
+/* **Not a slab.** This used to be a page-coloured box with a 28px radius and
+   `0 30px 80px -30px rgba(25,23,18,.5)` under it — the same colour as the
+   ground it sat on, lifted off it by a heavy shadow, so the whole screen read
+   as a framed card floating in a window. It is the page: the rail, the module
+   and everything in it share one continuous background, and the only things
+   that carry an edge are the cards that genuinely are cards.
+   The padding stays — content still needs air — and `overflow: hidden` stays,
+   because the grid inside scrolls against it. */
 .cal-panel {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: var(--sb-page);
-  border-radius: 28px;
-  padding: 24px 22px 22px;
+  background: transparent;
+  padding: 18px 20px 20px;
   overflow: hidden;
-  box-shadow: 0 30px 80px -30px rgba(25, 23, 18, .5);
 }
-@media (max-width: 900px) { .cal-panel { border-radius: 22px; padding: 18px 14px 14px; } }
+@media (max-width: 900px) { .cal-panel { padding: 14px 12px 12px; } }
 
 /* The view on the left, the day rail on the right. Under 1180px the rail goes
    below the grid at full width rather than squeezing to nothing. */

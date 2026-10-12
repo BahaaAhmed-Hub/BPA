@@ -44,16 +44,20 @@ export function initialsOf(name: string): string {
   return (words[0][0] + words[1][0]).toUpperCase()
 }
 
+/** **The rail has no surface of its own.** It was two white cards with a
+ *  border and a frame shadow, which made the menu a thing sitting *on* the
+ *  app rather than part of it — and beside a module that no longer draws its
+ *  own slab, the only boxed objects left on screen would have been the nav.
+ *  Everything shares one ground: the icons, the active pill and the company
+ *  circles float on it, and the two groups are separated by the gap between
+ *  them rather than by two frames. */
 const PILL: React.CSSProperties = {
-  background: 'var(--sb-card)',
-  border: 'var(--sb-border-width) solid var(--sb-border)',
-  borderRadius: 34,
-  boxShadow: 'var(--sb-shadow-frame)',
+  background: 'transparent',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   gap: 4,
-  padding: '10px 8px',
+  padding: '2px 0',
 }
 
 function RailButton({ active, label, onClick, children }: {
@@ -99,22 +103,26 @@ function CompanyTile({ co, chosen, onPick }: {
       aria-pressed={chosen}
       data-company-tile={co.id}
       style={{
-        width: 44, height: 44, flexShrink: 0, padding: 0, cursor: 'pointer',
-        borderRadius: 'var(--sb-r-nav)',
+        width: 42, height: 42, flexShrink: 0, padding: 0, cursor: 'pointer',
+        // A logo is a circle. A rounded square beside a column of round
+        // glyphs reads as a different kind of object; these are faces of a
+        // sort, and a face is round here as it is in every avatar in the app.
+        borderRadius: '50%',
         background: co.color,
         color: ink,
         fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 700,
         letterSpacing: '0.02em',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         // Ringed, not tinted: this is the only thing on screen that explains
-        // why the rest of the page has gone quiet.
-        border: chosen
-          ? '2px solid var(--sb-accent-deep)'
-          : 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 12%, transparent)',
-        outline: chosen ? '2px solid var(--sb-card)' : 'none',
-        outlineOffset: chosen ? -4 : 0,
+        // why the rest of the page has gone quiet. The ring is drawn *outside*
+        // the circle with a gap of the page's own colour, so it reads as a
+        // halo rather than eating into the colour that identifies the company.
+        border: 'none',
+        boxShadow: chosen
+          ? '0 0 0 2px var(--sb-page), 0 0 0 4px var(--sb-accent-deep)'
+          : 'inset 0 0 0 1px color-mix(in srgb, var(--sb-ink-1) 10%, transparent)',
         transition: 'transform 0.12s',
-        transform: chosen ? 'none' : 'scale(0.94)',
+        transform: chosen ? 'none' : 'scale(0.9)',
       }}>
       {initialsOf(co.name)}
     </button>
@@ -181,7 +189,7 @@ export function SideRail({ items, activeModule, onPick, footer }: {
       </div>
 
       {companies.length > 0 && (
-        <div data-company-rail style={{ ...PILL, gap: 7 }}>
+        <div data-company-rail style={{ ...PILL, gap: 9, padding: '4px 0' }}>
           {companies.map(co => (
             <CompanyTile
               key={co.id}
@@ -197,9 +205,9 @@ export function SideRail({ items, activeModule, onPick, footer }: {
               title="Show everything again"
               aria-label="Show everything again"
               style={{
-                width: 44, height: 28, flexShrink: 0, marginTop: 1, cursor: 'pointer',
-                borderRadius: 'var(--sb-r-nav)', border: 'none',
-                background: 'var(--sb-field)', color: 'var(--sb-ink-2)',
+                width: 42, height: 26, flexShrink: 0, marginTop: 2, cursor: 'pointer',
+                borderRadius: 'var(--sb-r-pill)', border: 'none',
+                background: 'color-mix(in srgb, var(--sb-ink-1) 8%, transparent)', color: 'var(--sb-ink-2)',
                 fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
                 letterSpacing: '0.06em',
               }}>
