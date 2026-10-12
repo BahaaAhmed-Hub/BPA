@@ -1,6 +1,12 @@
 import type { BookCandidate } from './bookLookup'
 import type { Book } from './types'
 
+/** The book a lookup result becomes when it is put on the shelf as wanted. */
+export const bookFromCandidate = (c: BookCandidate): Partial<Book> & { title: string } => ({
+  title: c.title, subtitle: c.subtitle, authors: c.authors, isbn: c.isbn, publisher: c.publisher, publishedYear: c.publishedYear,
+  pages: c.pages, language: c.language, description: c.description, coverUrl: c.coverUrl, source: c.source, sourceKey: c.sourceKey, status: 'want',
+})
+
 /**
  * What to take from a lookup result for a book that already exists: the cover
  * always (that is usually why you asked), everything else only where the book

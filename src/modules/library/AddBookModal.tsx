@@ -30,14 +30,16 @@ const BLANK: Draft = { title: '', authors: '', source: 'manual', status: 'want',
  * that starts inside the dialog and ends outside it (selecting text) is not a
  * dismissal.
  */
-export function AddBookModal({ onClose, onAdded, defaultListIds = [] }: {
+export function AddBookModal({ onClose, onAdded, defaultListIds = [], initialIsbn }: {
   onClose: () => void
   onAdded: (b: Book) => void
   defaultListIds?: string[]
+  /** A scanned or typed ISBN no catalogue knew: the form opens with it filled in. */
+  initialIsbn?: string
 }) {
   const addBook = useLibraryStore(s => s.addBook)
   const lists = useLibraryStore(s => s.lists)
-  const [d, setD] = useState<Draft>(BLANK)
+  const [d, setD] = useState<Draft>(() => (initialIsbn ? { ...BLANK, isbn: initialIsbn } : BLANK))
   const [picked, setPicked] = useState<string[]>(defaultListIds)
   const set = (p: Partial<Draft>) => setD(prev => ({ ...prev, ...p }))
 

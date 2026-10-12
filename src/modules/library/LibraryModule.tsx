@@ -48,6 +48,7 @@ export function LibraryModule() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [flight, setFlight] = useState<{ book: Book; from: DOMRect } | null>(null)
   const [adding, setAdding] = useState(false)
+  const [addIsbn, setAddIsbn] = useState<string | undefined>()
   const [readingId, setReadingId] = useState<string | null>(null)
   const narrow = useNarrow()
   const { ref: fillRef, height: fillHeight } = useFillsTheWindow<HTMLDivElement>(360)
@@ -161,7 +162,7 @@ export function LibraryModule() {
               {loading && books.length === 0 ? (
                 <p style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>Fetching your library…</p>
               ) : view === 'discover' ? (
-                <DiscoverView onOpenBook={id => { setView('shelf'); setStatus('all'); setQ(''); setListId(null); setSelectedId(id) }} />
+                <DiscoverView onAddByHand={isbn => { setAddIsbn(isbn); setAdding(true) }} onOpenBook={id => { setView('shelf'); setStatus('all'); setQ(''); setListId(null); setSelectedId(id) }} />
               ) : view === 'quotes' ? (
                 <QuoteBoard onOpenBook={id => setSelectedId(id)} />
               ) : view === 'lists' ? (
@@ -211,8 +212,8 @@ export function LibraryModule() {
         )
       })()}
       {adding && (
-        <AddBookModal defaultListIds={activeListId ? [activeListId] : []} onClose={() => setAdding(false)}
-          onAdded={() => { setAdding(false); setView(view === 'lists' || view === 'quotes' || view === 'discover' ? 'shelf' : view) }} />
+        <AddBookModal defaultListIds={activeListId ? [activeListId] : []} initialIsbn={addIsbn} onClose={() => { setAdding(false); setAddIsbn(undefined) }}
+          onAdded={() => { setAdding(false); setAddIsbn(undefined); setView(view === 'lists' || view === 'quotes' || view === 'discover' ? 'shelf' : view) }} />
       )}
     </div>
   )

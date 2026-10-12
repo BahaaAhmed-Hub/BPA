@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Check, Plus, Search, ShoppingCart } from 'lucide-react'
+import { ArrowLeft, Check, Plus, ScanBarcode, Search, ShoppingCart } from 'lucide-react'
 import { Button, Card, Segmented } from '@/components/ui'
 import { ICON } from '@/lib/type'
 import { booksByAuthor, lookupBooks, searchAuthors, shelfMatch, type AuthorHit, type BookCandidate } from './bookLookup'
+import { bookFromCandidate } from './applyCandidate'
 import { CoverArt } from './CoverArt'
 import { inputStyle } from './fieldStyle'
+import { ScanIsbnDialog } from './ScanIsbnDialog'
 import { useLibraryStore } from './libraryStore'
 
 type Mode = 'books' | 'authors'
@@ -53,7 +55,7 @@ function ResultCard({ c, onShelfId, onAdd, onBuy, onOpen }: { c: BookCandidate; 
  * A result that is already on the shelf says so and opens it rather than adding
  * a second copy.
  */
-export function DiscoverView({ onOpenBook }: { onOpenBook: (id: string) => void }) {
+export function DiscoverView({ onOpenBook, onAddByHand }: { onOpenBook: (id: string) => void; onAddByHand: (isbn: string) => void }) {
   const books = useLibraryStore(s => s.books)
   const addBook = useLibraryStore(s => s.addBook)
   const [mode, setMode] = useState<Mode>('books')
@@ -63,6 +65,7 @@ export function DiscoverView({ onOpenBook }: { onOpenBook: (id: string) => void 
   const [authors, setAuthors] = useState<AuthorHit[]>([])
   const [failed, setFailed] = useState<string[]>([])
   const [state, setState] = useState<'idle' | 'busy' | 'done'>('idle')
+  const [scanning, setScanning] = useState(false)
   const run = useRef(0)
 
   const q = term.trim()
@@ -107,11 +110,7 @@ export function DiscoverView({ onOpenBook }: { onOpenBook: (id: string) => void 
   function openAuthor(a: AuthorHit) { setAuthor(a); setFound([]); setFailed([]); setState('busy') }
   function back() { setAuthor(null); setFound([]); setState(q.length >= 2 ? 'busy' : 'idle') }
 
-  const add = (c: BookCandidate, toBuy?: boolean) => addBook({
-    title: c.title, subtitle: c.subtitle, authors: c.authors, isbn: c.isbn, publisher: c.publisher, publishedYear: c.publishedYear,
-    pages: c.pages, language: c.language, description: c.description, coverUrl: c.coverUrl, source: c.source, sourceKey: c.sourceKey, status: 'want',
-    ...(toBuy ? { toBuy: true } : {}),
-  })
+  const add = (c: BookCandidate, toBuy?: boolean) => addBook({ ...bookFromCandidate(c), ...(toBuy ? { toBuy: true } : {}) })
 
   const showBooks = mode === 'books' || !!author
   const allDown = state === 'done' && failed.length >= (author || mode === 'authors' ? 1 : 2)
@@ -125,6 +124,7 @@ export function DiscoverView({ onOpenBook }: { onOpenBook: (id: string) => void 
           <input value={term} onChange={e => change(e.target.value)} aria-label="Search online"
             placeholder={mode === 'books' ? 'A title, an author or an ISBN' : 'An author’s name'} style={{ ...inputStyle, paddingLeft: 32 }} />
         </div>
+        <Button variant="secondary" onClick={() => setScanning(true)} title="Scan a book’s barcode"><ScanBarcode size={ICON.md} /> Scan ISBN</Button>
       </div>
 
       {author && (
@@ -168,6 +168,7 @@ export function DiscoverView({ onOpenBook }: { onOpenBook: (id: string) => void 
           ))}
         </ul>
       )}
+      {scanning && <ScanIsbnDialog onClose={() => setScanning(false)} onOpenBook={onOpenBook} onAddByHand={onAddByHand} />}
     </div>
   )
 }

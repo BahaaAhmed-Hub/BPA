@@ -497,6 +497,18 @@ for (const theme of THEMES) {
     await page.getByLabel('Search online').fill('newport')
     await page.waitForTimeout(1500)
   })
+  // The scanner dialog. Headless Chromium has no camera, so what is measured is
+  // the "camera unavailable" notice, a typed ISBN's result card, and the form.
+  await visit('Library · scan an ISBN', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Discover' }).click()
+    await page.getByRole('button', { name: /Scan ISBN/ }).click()
+    await page.getByLabel('Or type the ISBN').fill('9781612680194')
+    await page.getByRole('button', { name: 'Look up' }).click()
+    await page.waitForTimeout(1500)
+  })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
   await visit('Library · a book open', async () => {
     await libraryTab()
     await page.getByRole('tab', { name: 'Shelf' }).click()

@@ -3969,3 +3969,54 @@ The ink audit has Discover over books and over authors (35 screens).
 dev server (regions, encoding, the closed free list, locale defaults) and the card
 driven in `en-GB`. The ink audit's first book carries `to_buy`, so the pill and
 the card are measured (35 screens).
+
+## Library 3c — scan a book's barcode
+`isbn.ts`, `barcodeScan.ts`, `ScanIsbnDialog.tsx`, reached from **Scan ISBN** in
+Discover. No migration. `@zxing/library` is the one new dependency, loaded only
+when a scan needs it.
+- **The check digit is the whole defence.** A camera guesses at stripes and a
+  person at digits; an unchecked ISBN becomes a confidently wrong book.
+  `parseIsbn` accepts ISBN-10 or 13, with or without hyphens, and returns an
+  ISBN-13 — an ISBN-10 is the same book with `978` in front and a new check
+  digit — or `null` for a wrong check digit, the wrong length, **or an EAN that
+  is not a book** (a 977 magazine, a tin of beans: valid EAN-13s that must not
+  reach a catalogue).
+- **Two engines behind one `Scanner`, chosen at the moment of use.** The
+  browser's `BarcodeDetector` where it exists **and lists `ean_13`**; ZXing
+  everywhere else, which in practice is **Safari on iPhone and iPad** — the
+  devices this is for. A detector that exists but cannot read EAN-13 would scan
+  for ever and find nothing, so it falls through to ZXing. Only EAN-13 is asked
+  for: that is every book, and asking for all formats is slower in both engines
+  and lets a QR code across the room win. ZXing decodes frames drawn to a canvas
+  at ≤960px, luminance only; "no barcode in this frame" is its ordinary
+  `NotFoundException` and is swallowed.
+- **Three ways in, because a camera is the one that is sometimes missing**: the
+  live camera, a **photo** of the barcode (tried upright and quarter-turned each
+  way, since a phone photo of a back cover is as often sideways), and the number
+  **typed**. All end in one `handle(isbn)`. Denied, missing, insecure-context and
+  failed cameras each get their own sentence naming the way round; none leaves
+  the dialog empty. The file input has no `capture` (it would take the photo
+  library away).
+- **A scan never adds a book by itself.** It looks the ISBN up
+  (`lookupByIsbn`: `isbn:` in both catalogues, merged, one result), shows the
+  book, and waits — so a misread that happens to pass the check digit is one tap
+  from being ignored rather than one tap from being on the shelf. The scanner
+  **pauses while a result is on screen**, or a camera still pointing at the same
+  book finds it every 140ms; **Scan next** resumes. The ISBN stored is the one
+  scanned, not the catalogue's first listed edition. A book already on the shelf
+  says so and opens it.
+- **Not found, and could not look, are different sentences.** No catalogue knows
+  it → *Add it by hand*, which opens the Add form with the ISBN already in it
+  (`initialIsbn`). Both catalogues failing → "could not be reached".
+- **The camera is let go** on close, Escape and unmount (the recording light going
+  out is the proof), and a stream that arrives after the dialog was dismissed is
+  stopped on arrival. The test wraps `getUserMedia` and asserts every track is
+  `ended`.
+`scripts/make-barcode.py` draws a real EAN-13 from the standard's L/G/R tables
+and writes a PNG and a looping Y4M; Chromium is told to use it as its fake camera
+(`--use-file-for-fake-video-capture`), so **ZXing decodes real bars off a real
+video stream**. `scripts/library-scan.mjs` (31 assertions) covers that, the
+native path with a stand-in detector (headless Linux has none: it reads EAN-13
+only, passes over a non-book code seen first, and never downloads ZXing),
+the photo path (upright, sideways, a non-ISBN barcode, a blank page), a refused
+camera, and the typed path. The ink audit has the dialog (36 screens).

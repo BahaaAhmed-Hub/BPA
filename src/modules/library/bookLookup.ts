@@ -107,6 +107,18 @@ function merge(all: BookCandidate[]): BookCandidate[] {
   return out
 }
 
+/** One book by its ISBN. Both catalogues index it directly, so this is the
+ *  precise question where `lookupBooks` is the fuzzy one. The tell between "no
+ *  catalogue knows this" and "no catalogue could be reached" is `failed`. */
+export async function lookupByIsbn(isbn: string, signal?: AbortSignal): Promise<LookupResult> {
+  const [ol, gb] = await Promise.allSettled([openLibrary(`isbn:${isbn}`, 3, signal), googleBooks(`isbn:${isbn}`, 3, signal)])
+  const failed: string[] = []
+  if (ol.status === 'rejected') failed.push('Open Library')
+  if (gb.status === 'rejected') failed.push('Google Books')
+  const all = [...(ol.status === 'fulfilled' ? ol.value : []), ...(gb.status === 'fulfilled' ? gb.value : [])]
+  return { candidates: merge(all).slice(0, 1), failed }
+}
+
 export async function lookupBooks(query: string, signal?: AbortSignal, limit = 8): Promise<LookupResult> {
   const q = query.trim()
   if (q.length < 2) return { candidates: [], failed: [] }
