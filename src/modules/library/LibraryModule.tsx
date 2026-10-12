@@ -8,6 +8,7 @@ import { BookFlight } from './BookFlight'
 import { BookPanel } from './BookPanel'
 import { CoverGrid } from './CoverGrid'
 import { ListsView } from './ListsView'
+import { QuoteBoard } from './QuoteBoard'
 import { Shelf } from './Shelf'
 import { inputStyle } from './fieldStyle'
 import { loadLibraryView, saveLibraryView, type LibraryView } from './libraryPrefs'
@@ -110,7 +111,7 @@ export function LibraryModule() {
           )}
         </div>
         <Segmented value={view} onChange={setView} options={[
-          { value: 'shelf', label: 'Shelf' }, { value: 'covers', label: 'Covers' }, { value: 'lists', label: 'Lists' },
+          { value: 'shelf', label: 'Shelf' }, { value: 'covers', label: 'Covers' }, { value: 'lists', label: 'Lists' }, { value: 'quotes', label: 'Quotes' },
         ]} />
         <Button variant="accent" disabled={missing} onClick={() => setAdding(true)}><Plus size={ICON.md} /> Add book</Button>
       </header>
@@ -124,7 +125,7 @@ export function LibraryModule() {
         </Card>
       ) : (
         <>
-          {view !== 'lists' && (
+          {(view === 'shelf' || view === 'covers') && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
               <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 340 }}>
                 <Search size={ICON.md} color="var(--sb-ink-4)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
@@ -150,6 +151,8 @@ export function LibraryModule() {
             <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', paddingBottom: 16, display: narrow && selected ? 'none' : undefined }}>
               {loading && books.length === 0 ? (
                 <p style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>Fetching your library…</p>
+              ) : view === 'quotes' ? (
+                <QuoteBoard onOpenBook={id => setSelectedId(id)} />
               ) : view === 'lists' ? (
                 <ListsView onOpen={id => { setListId(id); setStatus('all'); setQ(''); setView('shelf') }} />
               ) : books.length === 0 ? (
@@ -198,7 +201,7 @@ export function LibraryModule() {
       })()}
       {adding && (
         <AddBookModal defaultListIds={activeListId ? [activeListId] : []} onClose={() => setAdding(false)}
-          onAdded={() => { setAdding(false); setView(view === 'lists' ? 'shelf' : view) }} />
+          onAdded={() => { setAdding(false); setView(view === 'lists' || view === 'quotes' ? 'shelf' : view) }} />
       )}
     </div>
   )

@@ -13,7 +13,7 @@ const VIEW_KEY = 'library-view'
 export const LIBRARY_PREFS_EVENT = 'professor:libraryPrefsChanged'
 
 export interface LibrarySettings { enabled: boolean }
-export type LibraryView = 'shelf' | 'covers' | 'lists'
+export type LibraryView = 'shelf' | 'covers' | 'lists' | 'quotes'
 
 export function loadLibrarySettings(): LibrarySettings {
   try {
@@ -33,7 +33,7 @@ export function saveLibrarySettings(s: LibrarySettings): void {
 export function loadLibraryView(): LibraryView {
   try {
     const v = localStorage.getItem(VIEW_KEY)
-    return v === 'covers' || v === 'lists' ? v : 'shelf'
+    return v === 'covers' || v === 'lists' || v === 'quotes' ? v : 'shelf'
   } catch { return 'shelf' }
 }
 export function saveLibraryView(v: LibraryView): void {

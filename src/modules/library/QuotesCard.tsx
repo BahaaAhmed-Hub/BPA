@@ -27,7 +27,7 @@ function QuoteBody({ quote }: { quote: Quote }) {
 /** The photo a quote was made from. The bucket is private, so it is fetched and
  *  shown from an object URL; tapping it enlarges it, since a thumbnail of a page
  *  is only good for knowing which page. */
-function QuotePhoto({ path }: { path: string }) {
+export function QuotePhoto({ path }: { path: string }) {
   const [src, setSrc] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
   const [big, setBig] = useState(false)

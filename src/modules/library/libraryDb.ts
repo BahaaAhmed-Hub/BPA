@@ -150,7 +150,8 @@ export async function setBookLists(bookId: string, listIds: string[], existing: 
 // ─── Phase 2: quotes, notes, bookmarks (20260026) ────────────────────────────
 interface QuoteRow {
   id: string; user_id: string; book_id: string; kind: string; body: string | null; image_path: string | null
-  page: number | null; line: number | null; color: string | null; created_at: string; updated_at: string
+  page: number | null; line: number | null; color: string | null; explanation?: string | null
+  created_at: string; updated_at: string
 }
 interface NoteRow {
   id: string; user_id: string; scope: string; book_id: string | null; quote_id: string | null; list_id: string | null
@@ -163,11 +164,15 @@ interface BookmarkRow {
 
 const toQuote = (r: QuoteRow): Quote => ({
   id: r.id, bookId: r.book_id, kind: r.kind as QuoteKind, body: opt(r.body), imagePath: opt(r.image_path),
-  page: opt(r.page), line: opt(r.line), color: opt(r.color), createdAt: r.created_at, updatedAt: r.updated_at,
+  page: opt(r.page), line: opt(r.line), color: opt(r.color), explanation: opt(r.explanation), createdAt: r.created_at, updatedAt: r.updated_at,
 })
+// `explanation` is sent only when it has been set (or cleared to null). The
+// column comes from 20260027; naming it in every quote write would make every
+// quote write fail on an account that has not run it yet.
 const fromQuote = (q: Quote, userId: string) => ({
   id: q.id, user_id: userId, book_id: q.bookId, kind: q.kind, body: q.body ?? null, image_path: q.imagePath ?? null,
   page: q.page ?? null, line: q.line ?? null, color: q.color ?? null, created_at: q.createdAt, updated_at: new Date().toISOString(),
+  ...(q.explanation !== undefined ? { explanation: q.explanation } : {}),
 })
 const toNote = (r: NoteRow): Note => ({
   id: r.id, scope: r.scope as NoteScope, bookId: opt(r.book_id), quoteId: opt(r.quote_id), listId: opt(r.list_id),

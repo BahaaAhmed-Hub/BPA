@@ -3804,3 +3804,44 @@ the request carries the photo as a base64 image block, the words and printed pag
 number arrive for checking, a corrected text is what is saved, Read again calls
 once more, and each failure above. The ink audit has the dialog and a photo-only
 quote (29 screens).
+
+## Library 2d — the quote board, and an explanation that says what it has read
+`QuoteBoard.tsx`, a fourth header view (**Quotes**) across every book. Three
+modes, remembered in `library-quote-mode`: **Cards** (a wall to scan), **Poster**
+(one quote set large, to sit with) and **Explain** (the words, and what they
+mean). Search, a book filter and a bookmarked-only filter apply to all three.
+- **A card opens its poster** — the same thought, larger; the book's title on a
+  poster or explanation opens that book's panel.
+- **Poster and Explain show quotes with words only.** A photo with no text typed
+  has nothing to set in type or to explain; the view says how many are left out
+  rather than silently dropping them. Cards show all of them.
+- **The poster is a tint of the theme, not a white card**: the quote's colour
+  mixed 16% into `--sb-overlay` (opaque in every theme) with the ordinary ink on
+  it, so Glass draws a Glass poster and the contrast the audit measures holds.
+  Type steps down with length (`posterSize`) and `text-wrap: balance`; arrow
+  keys and a sideways swipe turn it, ignored in a field and when the drag is a
+  text selection.
+- **Explain is opt-in and one quote at a time.** Each answer is a model call; a
+  board that spent them on every open would be a bill nobody chose. The answer
+  is stored on the quote (`explanation`, `20260027`) so it is paid for once, and
+  survives a reload without a second call.
+- **Grounded in the words, not in the book.** The prompt is the passage, the
+  title and author, and the reader's own notes on that quote — and says in so
+  many words that the model has NOT read the book and must not invent chapters
+  or characters. The screen labels it "An AI explanation of the words alone".
+  `apply` items are short and start with a verb so 2e can turn each into a task.
+- **An empty or non-JSON reply is never stored as an explanation** (`parseExplanation`
+  returns `null`): it would show a blank "explained" card with no way to ask again.
+  A stored value that is not JSON reads back as plain meaning rather than lost.
+- **`aiFailure.ts` is the one place AI failures are worded** (no key, 401/403,
+  429, 400, other); `readPassage` (2c) uses it too, so a photographed page and an
+  explanation refuse in the same words and point at Settings → AI.
+- **A migration-less account keeps working**: `fromQuote` sends `explanation`
+  only when it was set, so every other quote write survives without `20260027`.
+  Only the explanation write is refused by the server, and `failed()` says so.
+`scripts/library-board.mjs` — the fake PostgREST refuses an unknown column
+(`explanation` known only once migrated) and the fake Anthropic can be ok, a 401,
+a 429, prose or `{}`. The fake only counts calls whose system prompt is the
+explain one: the Today screen makes its own, and counting those read as the board
+asking twice. A 429 needs a longer wait — the SDK retries it. The ink audit has
+the three modes (32 screens) and a stored explanation on the fixture.

@@ -75,6 +75,9 @@ export interface Quote {
   page?: number
   line?: number
   color?: string
+  /** The explainer's JSON (see `explainQuote.ts`), or `null` to clear it. Absent
+   *  means never asked — which is not the same as asked and emptied. */
+  explanation?: string | null
   createdAt: string
   updatedAt: string
 }

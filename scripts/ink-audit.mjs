@@ -275,7 +275,7 @@ const LIBRARY = {
   // is measured with something in it rather than as an empty form.
   library_quotes: [
     { id: 'q1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'text', body: 'We are what we repeatedly do.', image_path: null, page: 12, line: 4, color: 'var(--sb-cat-3)', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
-    { id: 'q2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'text', body: 'Habits are the compound interest of self-improvement.', image_path: null, page: null, line: null, color: null, created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
+    { id: 'q2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'text', body: 'Habits are the compound interest of self-improvement.', image_path: null, page: null, line: null, color: null, explanation: JSON.stringify({ meaning: 'Small gains repeat, and what repeats grows.', apply: ['Pick one tiny habit and do it daily', 'Track it for a week'] }), created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
     { id: 'q3', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'image', body: null, image_path: 'u1/00000000-0000-4000-8000-000000000000/quotes/x.png', page: 40, line: null, color: null, created_at: '2026-09-03T00:00:00Z', updated_at: '2026-09-03T00:00:00Z' },
   ],
   // A quote made from a photo with no words typed yet: its own row, its own ink.
@@ -447,6 +447,17 @@ for (const theme of THEMES) {
     await libraryTab()
     await page.getByRole('tab', { name: 'Lists' }).click()
   })
+  // The quote board: a wall of cards, one poster, and the explain view with a
+  // stored explanation on q2 (the AI label and the "try this" list).
+  for (const [label, mode] of [['cards', 'Cards'], ['poster', 'Poster'], ['explain', 'Explain']]) {
+    await visit(`Library · quote board · ${label}`, async () => {
+      await libraryTab()
+      await page.getByRole('tab', { name: 'Quotes' }).click()
+      await page.waitForTimeout(500)
+      await page.getByRole('tab', { name: mode }).click()
+      await page.waitForTimeout(500)
+    })
+  }
   await visit('Library · a book open', async () => {
     await libraryTab()
     await page.getByRole('tab', { name: 'Shelf' }).click()

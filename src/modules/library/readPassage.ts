@@ -8,6 +8,7 @@
 // checked, and every failure here is a message the screen can say: the quote
 // can always still be typed by hand.
 import { anthropic, anthropicKey } from '@/lib/professor'
+import { AiFailure, describeAiFailure } from './aiFailure'
 
 export interface PassageRead {
   text: string
@@ -33,7 +34,7 @@ Reply with ONLY a JSON object, no other words:
 {"text": string, "page": number | null, "marked": boolean}`
 
 /** Why it could not be read, in words the person can act on. */
-export class PassageError extends Error {}
+export const PassageError = AiFailure
 
 export async function readPassage(image: { data: string; mediaType: string }): Promise<PassageRead> {
   if (!anthropicKey()) {
@@ -55,13 +56,7 @@ export async function readPassage(image: { data: string; mediaType: string }): P
     })
     raw = msg.content.find(b => b.type === 'text')?.text ?? ''
   } catch (e) {
-    const status = (e as { status?: number })?.status
-    throw new PassageError(
-      status === 401 || status === 403 ? 'Your Anthropic key was refused. Check it under Settings → AI.'
-      : status === 429 ? 'The AI service is rate-limited right now. Try again in a minute, or type the quote.'
-      : status === 400 ? 'The AI service refused this image. Try a clearer, closer photo, or type the quote.'
-      : 'The page could not be read just now — the AI service did not answer. You can still type the quote.',
-    )
+    throw describeAiFailure(e, 'Reading the page', 'You can still type the quote.')
   }
   return parsePassage(raw)
 }
