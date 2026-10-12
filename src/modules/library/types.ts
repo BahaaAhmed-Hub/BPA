@@ -56,6 +56,22 @@ export interface ListBook {
   sortOrder: number
 }
 
+// ─── Phase 3d: authors and series you follow ────────────────────────────────
+
+export type FollowKind = 'author' | 'series'
+
+export interface Follow {
+  id: string
+  kind: FollowKind
+  name: string
+  /** The Open Library search this follow asks. */
+  query: string
+  authorKey?: string
+  /** Works that existed when you followed (or last said "seen"). */
+  seenKeys: string[]
+  createdAt: string
+}
+
 export const STATUS_LABEL: Record<BookStatus, string> = {
   want: 'Want to read', reading: 'Reading', finished: 'Finished', paused: 'Paused', abandoned: 'Set aside',
 }

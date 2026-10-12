@@ -42,9 +42,9 @@ const get = async (url: string, signal?: AbortSignal) => {
 }
 
 // Open Library's `fields` keeps the response to what is used.
-async function openLibrary(q: string, limit: number, signal?: AbortSignal): Promise<BookCandidate[]> {
+async function openLibrary(q: string, limit: number, signal?: AbortSignal, sort?: string): Promise<BookCandidate[]> {
   const fields = 'key,title,subtitle,author_name,first_publish_year,isbn,cover_i,number_of_pages_median,publisher,language'
-  const data = await get(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=${limit}&fields=${fields}`, signal) as {
+  const data = await get(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}${sort ? `&sort=${sort}` : ''}&limit=${limit}&fields=${fields}`, signal) as {
     docs?: {
       key: string; title: string; subtitle?: string; author_name?: string[]; first_publish_year?: number
       isbn?: string[]; cover_i?: number; number_of_pages_median?: number; publisher?: string[]; language?: string[]
@@ -178,6 +178,11 @@ export async function booksByAuthor(key: string, signal?: AbortSignal, limit = 4
     source: 'openlibrary' as const, sourceKey: d.key,
   }))
 }
+
+/** Newest first, for the question "what has this author put out lately". Open
+ *  Library only (see above), and it **throws** on failure: unlike a search box,
+ *  a follow check must tell "nothing new" from "could not look". */
+export const latestWorks = (q: string, limit = 40, signal?: AbortSignal): Promise<BookCandidate[]> => openLibrary(q, limit, signal, 'new')
 
 /** Is this candidate already on the shelf? The ISBN is the sure answer; failing
  *  that, the same title by the same first author. Titles are compared with

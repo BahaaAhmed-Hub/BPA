@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
 import type {
   Book, BookFormat, BookSource, BookStatus, Bookmark, BookmarkKind, LibList, ListBook, ListKind,
-  Note, NoteScope, Quote, QuoteKind,
+  Follow, FollowKind, Note, NoteScope, Quote, QuoteKind,
 } from './types'
 
 interface BookRow {
@@ -215,6 +215,32 @@ export async function loadLibraryExtras(): Promise<LibraryExtras | null | 'missi
     notes: (n.data as NoteRow[]).map(toNote),
     bookmarks: (b.data as BookmarkRow[]).map(toBookmark),
   }
+}
+
+interface FollowRow { id: string; user_id: string; kind: string; name: string; query: string; author_key: string | null; seen_keys: string[] | null; created_at: string }
+const toFollow = (r: FollowRow): Follow => ({
+  id: r.id, kind: r.kind as FollowKind, name: r.name, query: r.query, authorKey: opt(r.author_key), seenKeys: r.seen_keys ?? [], createdAt: r.created_at,
+})
+const fromFollow = (f: Follow, userId: string) => ({
+  id: f.id, user_id: userId, kind: f.kind, name: f.name, query: f.query, author_key: f.authorKey ?? null, seen_keys: f.seenKeys, created_at: f.createdAt,
+})
+
+/** Its own read, like the extras: an account that has not run 20260029 keeps a
+ *  working shelf. `null` = a failed read (keep what is on screen). */
+export async function loadFollows(): Promise<Follow[] | null | 'missing'> {
+  const r = await supabase.from('library_follows').select('*').order('created_at')
+  if (r.error) return r.error.code === '42P01' || r.error.code === 'PGRST205' ? 'missing' : null
+  return (r.data as FollowRow[]).map(toFollow)
+}
+export async function saveFollow(f: Follow): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_follows').upsert(fromFollow(f, await uid()), { onConflict: 'id' })
+  fail(error)
+}
+export async function removeFollow(id: string): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_follows').delete().eq('id', id)
+  fail(error)
 }
 
 export async function saveQuote(q: Quote): Promise<void> {

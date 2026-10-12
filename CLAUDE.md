@@ -4020,3 +4020,42 @@ native path with a stand-in detector (headless Linux has none: it reads EAN-13
 only, passes over a non-book code seen first, and never downloads ZXing),
 the photo path (upright, sideways, a non-ISBN barcode, a blank page), a refused
 camera, and the typed path. The ink audit has the dialog (36 screens).
+
+## Library 3d — following an author or a series
+`FollowingView.tsx`, `followCheck.ts`, `ResultCard.tsx` (lifted out of Discover so
+both draw a result the same way), `20260029_library_follows.sql`. A third mode in
+Discover: **Books / Authors / Following**. Phase 3 is now complete.
+- **A follow is a saved question plus what existed when you asked.**
+  `library_follows`: `query` (the Open Library search), `seen_keys` (work keys).
+  "New" = what the question returns now that is not in `seen_keys`, is not
+  duplicated, and is not already on your shelf (`shelfMatch`). So following an
+  author with forty books announces none of them; **Mark all seen** only ever
+  widens the set (capped at 400, oldest dropped).
+- **Following snapshots first, and refuses if it cannot.** A failed snapshot would
+  be an empty set, and an empty set makes every book the author ever wrote "new"
+  — the opposite of the feature. Nothing is created until the snapshot has been
+  read; the message says nothing was followed. Same for a series.
+- **An author is followed by Open Library key** (`author_key:OL…A`, validated
+  against `^OL\d+A$` before it is put in a query), from the **Follow** button on an
+  author's page. **A series is matched by name** (`title:"Name"`, optionally
+  `AND author_key:…` narrowed to an author you follow): no catalogue has a
+  dependable series field, and the form says so beside the box rather than
+  presenting a guess as a fact. Quotes and backslashes are stripped from the name
+  (not escaped) and it is clipped at 80 characters.
+- **Nothing runs in the background.** The check happens when the Following view
+  is open (4 at a time, answered from memory for 30 minutes — a once-a-day glance
+  at someone else's server). An alert while the app is closed needs a scheduled
+  server job; that is Phase 7 and the screen does not pretend otherwise. **Failure
+  is per follow**: one card says "Could not check …" and the others still answer.
+- **Newest first** (`sort=new`) via `latestWorks`, which **throws** — unlike a
+  search box, a follow check must tell "nothing new" from "could not look".
+- **Unfollow is undoable** (⌘Z re-follows with its seen-set intact). A project
+  without 20260029 gets the migration named on that view only; `followsMissing`
+  is read separately, like the extras, so the shelf and quotes are untouched.
+`scripts/library-follow.mjs` (27 assertions) — Open Library keeps a mutable list
+of works, so a new release is a real change between two visits (a reload clears
+the 30-minute cache); covers the snapshot refusal, the stored question and
+seen-set, a release already on the shelf not being new, Mark all seen surviving a
+reload, a series refused when unreadable, narrowing to an author, one follow
+failing without hiding the others, unfollow and undo, and the missing migration.
+The ink audit has the view with an author, a series and the form (37 screens).

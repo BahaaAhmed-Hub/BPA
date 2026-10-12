@@ -286,6 +286,10 @@ const LIBRARY = {
   library_bookmarks: [
     { id: 'b1', user_id: SU, kind: 'quote', book_id: '00000000-0000-4000-8000-000000000000', quote_id: 'q1', page: null, line: null, label: null, created_at: '2026-09-02T00:00:00Z' },
   ],
+  library_follows: [
+    { id: 'f1', user_id: SU, kind: 'author', name: 'Cal Newport', query: 'author_key:OL123A', author_key: 'OL123A', seen_keys: ['/works/OL1W'], created_at: '2026-09-01T00:00:00Z' },
+    { id: 'f2', user_id: SU, kind: 'series', name: 'The Expanse', query: 'title:"The Expanse"', author_key: null, seen_keys: ['/works/OL1W', '/works/OL2W'], created_at: '2026-09-02T00:00:00Z' },
+  ],
   library_list_books: [0, 1, 2].map(i => ({ list_id: 'l2', book_id: `00000000-0000-4000-8000-00000000000${i}`, user_id: SU, sort_order: 0, added_at: '2026-09-01T00:00:00Z' })),
 }
 
@@ -509,6 +513,16 @@ for (const theme of THEMES) {
   })
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)
+  // Following: a followed author with a new release (the stub's search returns two
+  // books, one of them unseen) and a series, so the badge, the cards and the form
+  // are all on screen.
+  await visit('Library · following', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Discover' }).click()
+    await page.getByRole('tab', { name: 'Following' }).click()
+    await page.getByRole('button', { name: /Follow a series/ }).click()
+    await page.waitForTimeout(1800)
+  })
   await visit('Library · a book open', async () => {
     await libraryTab()
     await page.getByRole('tab', { name: 'Shelf' }).click()

@@ -1,46 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Check, Plus, ScanBarcode, Search, ShoppingCart } from 'lucide-react'
-import { Button, Card, Segmented } from '@/components/ui'
+import { ArrowLeft, Check, ScanBarcode, Search } from 'lucide-react'
+import { Button, Segmented } from '@/components/ui'
 import { ICON } from '@/lib/type'
 import { booksByAuthor, lookupBooks, searchAuthors, shelfMatch, type AuthorHit, type BookCandidate } from './bookLookup'
 import { bookFromCandidate } from './applyCandidate'
-import { CoverArt } from './CoverArt'
+import { FollowingView } from './FollowingView'
+import { authorQuery, snapshotKeys } from './followCheck'
+import { ResultCard } from './ResultCard'
 import { inputStyle } from './fieldStyle'
 import { ScanIsbnDialog } from './ScanIsbnDialog'
 import { useLibraryStore } from './libraryStore'
 
-type Mode = 'books' | 'authors'
-const SOURCE_NAME = { openlibrary: 'Open Library', google: 'Google Books', manual: '' } as const
+type Mode = 'books' | 'authors' | 'following'
 
-/** A search result drawn as a book would be, so the cover is the same object. */
-function ResultCard({ c, onShelfId, onAdd, onBuy, onOpen }: { c: BookCandidate; onShelfId?: string; onAdd: () => void; onBuy: () => void; onOpen: (id: string) => void }) {
-  return (
-    <Card style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-      <CoverArt book={{ id: c.sourceKey ?? c.title, title: c.title, authors: c.authors, coverUrl: c.coverUrl }} />
-      <div style={{ minWidth: 0 }}>
-        <div title={c.title} style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.3,
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c.title}</div>
-        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {[c.authors[0], c.publishedYear].filter(Boolean).join(' · ') || SOURCE_NAME[c.source]}
-        </div>
-      </div>
-      {onShelfId ? (
-        <Button size="sm" variant="secondary" onClick={() => onOpen(onShelfId)} aria-label={`On your shelf: ${c.title}`} title="Open it on your shelf">
-          <Check size={ICON.sm} color="var(--sb-positive)" /> On your shelf
-        </Button>
-      ) : (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <Button size="sm" variant="accent" onClick={onAdd} aria-label={`Want to read: ${c.title}`} style={{ flex: 1, minWidth: 0 }}>
-            <Plus size={ICON.sm} /> Want to read
-          </Button>
-          <Button size="sm" variant="secondary" iconOnly onClick={onBuy} aria-label={`Buy later: ${c.title}`} title="Put it on your buy-later list">
-            <ShoppingCart size={ICON.sm} />
-          </Button>
-        </div>
-      )}
-    </Card>
-  )
-}
 
 /**
  * Find a book you do not have yet — by title, or by an author and everything
@@ -66,11 +38,15 @@ export function DiscoverView({ onOpenBook, onAddByHand }: { onOpenBook: (id: str
   const [failed, setFailed] = useState<string[]>([])
   const [state, setState] = useState<'idle' | 'busy' | 'done'>('idle')
   const [scanning, setScanning] = useState(false)
+  const follows = useLibraryStore(s => s.follows)
+  const addFollow = useLibraryStore(s => s.addFollow)
+  const [followBusy, setFollowBusy] = useState(false)
+  const [followNote, setFollowNote] = useState<string | null>(null)
   const run = useRef(0)
 
   const q = term.trim()
   // What is being asked for: an author's works, or a search in the current mode.
-  const wants = author ? `works:${author.key}` : q.length >= 2 ? `${mode}:${q}` : ''
+  const wants = author ? `works:${author.key}` : mode !== 'following' && q.length >= 2 ? `${mode}:${q}` : ''
 
   useEffect(() => {
     if (!wants) return
@@ -115,10 +91,35 @@ export function DiscoverView({ onOpenBook, onAddByHand }: { onOpenBook: (id: str
   const showBooks = mode === 'books' || !!author
   const allDown = state === 'done' && failed.length >= (author || mode === 'authors' ? 1 : 2)
 
+  const modes = <Segmented value={mode} onChange={switchMode} options={[{ value: 'books', label: 'Books' }, { value: 'authors', label: 'Authors' }, { value: 'following', label: 'Following' }]} />
+  const followed = author ? follows.find(f => f.authorKey === author.key) : undefined
+
+  // Follow = snapshot first. A snapshot that failed would be an empty set, and an
+  // empty set makes every book they ever wrote "new" — so nothing is followed
+  // until it has been read.
+  async function followAuthor(a: AuthorHit) {
+    const query = authorQuery(a.key)
+    if (!query) return
+    setFollowBusy(true); setFollowNote(null)
+    try {
+      addFollow({ kind: 'author', name: a.name, query, authorKey: a.key, seenKeys: await snapshotKeys(query) })
+    } catch { setFollowNote('Could not read their books just now, so nothing was followed. Try again in a moment.') }
+    finally { setFollowBusy(false) }
+  }
+
+  if (mode === 'following') {
+    return (
+      <div style={{ paddingTop: 12 }}>
+        {modes}
+        <FollowingView onOpenBook={onOpenBook} />
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <Segmented value={mode} onChange={switchMode} options={[{ value: 'books', label: 'Books' }, { value: 'authors', label: 'Authors' }]} />
+        {modes}
         <div style={{ position: 'relative', flex: '1 1 260px', maxWidth: 440 }}>
           <Search size={ICON.md} color="var(--sb-ink-4)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
           <input value={term} onChange={e => change(e.target.value)} aria-label="Search online"
@@ -132,7 +133,16 @@ export function DiscoverView({ onOpenBook, onAddByHand }: { onOpenBook: (id: str
           <Button variant="ghost" size="sm" onClick={back}><ArrowLeft size={ICON.sm} /> Authors</Button>
           <h2 style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>{author.name}</h2>
           {author.workCount ? <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>{author.workCount} works</span> : null}
+          <span style={{ flex: 1 }} />
+          {followed ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-positive)' }}><Check size={ICON.sm} /> Following</span>
+          ) : (
+            <Button size="sm" variant="accent" disabled={followBusy} onClick={() => void followAuthor(author)} aria-label={`Follow ${author.name}`}>{followBusy ? 'Reading…' : 'Follow'}</Button>
+          )}
         </div>
+      )}
+      {author && followNote && (
+        <div role="alert" style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)' }}>{followNote}</div>
       )}
 
       <div aria-live="polite" style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', minHeight: 18 }}>

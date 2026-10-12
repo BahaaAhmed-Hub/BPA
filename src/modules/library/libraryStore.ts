@@ -3,9 +3,9 @@ import { pushUndo, notify, suppressUndo } from '@/lib/undo'
 import { markLocalWrite } from '@/lib/liveSync'
 import {
   loadLibrary, saveBooks, removeBook, saveList, removeList, setBookLists,
-  loadLibraryExtras, saveQuote, removeQuote, saveNote, removeNote, saveBookmark, removeBookmark,
+  loadLibraryExtras, loadFollows, saveFollow, removeFollow, saveQuote, removeQuote, saveNote, removeNote, saveBookmark, removeBookmark,
 } from './libraryDb'
-import type { Book, Bookmark, LibList, ListBook, ListKind, Note, Quote } from './types'
+import type { Book, Bookmark, Follow, LibList, ListBook, ListKind, Note, Quote } from './types'
 
 // ─── Library store ───────────────────────────────────────────────────────────
 // Authoritative-from-the-server, like Finance: `loadFromDB` replaces the lists
@@ -32,6 +32,9 @@ interface LibraryState {
   quotes: Quote[]
   notes: Note[]
   bookmarks: Bookmark[]
+  follows: Follow[]
+  /** 20260029 has not run: following cannot be saved. */
+  followsMissing: boolean
   /** 20260026 has not run: the shelf works, quotes and notes cannot be saved. */
   extrasMissing: boolean
   /** True until the first answer. Distinguishes "fetching" from "empty" — a
@@ -63,6 +66,11 @@ interface LibraryState {
   updateNote: (id: string, body: string) => void
   deleteNote: (id: string) => void
 
+  addFollow: (f: Omit<Follow, 'id' | 'createdAt'>) => Follow
+  /** Widens what counts as already seen — never narrows it. */
+  markSeen: (id: string, keys: string[]) => void
+  unfollow: (id: string) => void
+
   /** A bookmark on a book (a favourite), a quote, or a page of its file. */
   isBookmarked: (target: BookmarkTarget) => boolean
   toggleBookmark: (target: BookmarkTarget) => void
@@ -78,7 +86,7 @@ function failed(what: string, reload: () => Promise<void>) {
 }
 
 export const useLibraryStore = create<LibraryState>()((set, get) => ({
-  books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], extrasMissing: false, loading: true, missing: false,
+  books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, extrasMissing: false, loading: true, missing: false,
 
   async loadFromDB() {
     const data = await loadLibrary()
@@ -92,9 +100,39 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const extras = await loadLibraryExtras()
     if (extras === 'missing') set({ extrasMissing: true })
     else if (extras) set({ quotes: extras.quotes, notes: extras.notes, bookmarks: extras.bookmarks, extrasMissing: false })
+
+    const follows = await loadFollows()
+    if (follows === 'missing') set({ followsMissing: true })
+    else if (follows) set({ follows, followsMissing: false })
   },
 
-  clearAll() { set({ books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], extrasMissing: false, loading: true, missing: false }) },
+  clearAll() { set({ books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, extrasMissing: false, loading: true, missing: false }) },
+
+  addFollow(input) {
+    const f: Follow = { ...input, id: crypto.randomUUID(), createdAt: nowISO() }
+    set(s => ({ follows: [...s.follows, f] }))
+    pushUndo(`Follow ${f.name}`, () => suppressUndo(() => get().unfollow(f.id)))
+    void saveFollow(f).catch(failed('follow that', get().loadFromDB))
+    return f
+  },
+
+  markSeen(id, keys) {
+    const before = get().follows.find(x => x.id === id)
+    if (!before) return
+    // A set that only grows: "seen" is never un-said, and the cap keeps a
+    // prolific author's row from growing without end (oldest dropped first).
+    const next: Follow = { ...before, seenKeys: [...new Set([...before.seenKeys, ...keys])].slice(-400) }
+    set(s => ({ follows: s.follows.map(x => (x.id === id ? next : x)) }))
+    void saveFollow(next).catch(failed('save that', get().loadFromDB))
+  },
+
+  unfollow(id) {
+    const f = get().follows.find(x => x.id === id)
+    if (!f) return
+    set(s => ({ follows: s.follows.filter(x => x.id !== id) }))
+    pushUndo(`Unfollow ${f.name}`, () => suppressUndo(() => { set(s => ({ follows: [...s.follows, f] })); void saveFollow(f).catch(failed('follow that again', get().loadFromDB)) }))
+    void removeFollow(id).catch(failed('unfollow', get().loadFromDB))
+  },
 
   addBook(input, listIds = []) {
     const { books } = get()
