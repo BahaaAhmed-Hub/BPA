@@ -458,6 +458,20 @@ for (const theme of THEMES) {
       await page.waitForTimeout(500)
     })
   }
+  // The export dialog over the board: format switch, options, the monospace
+  // preview on --sb-field, and the disabled Copy beside the live Download.
+  await visit('Library · export', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Quotes' }).click()
+    await page.waitForTimeout(400)
+    await page.getByRole('tab', { name: 'Cards' }).click()
+    await page.getByRole('button', { name: /Export/ }).click()
+    await page.waitForTimeout(400)
+    await page.getByRole('tab', { name: 'Obsidian' }).click()
+    await page.waitForTimeout(300)
+  })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
   await visit('Library · a book open', async () => {
     await libraryTab()
     await page.getByRole('tab', { name: 'Shelf' }).click()

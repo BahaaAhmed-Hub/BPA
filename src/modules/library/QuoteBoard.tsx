@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Bookmark, Search } from 'lucide-react'
-import { Card, Pill, Segmented } from '@/components/ui'
+import { Bookmark, Download, Search } from 'lucide-react'
+import { Button, Card, Pill, Segmented } from '@/components/ui'
 import { ICON } from '@/lib/type'
 import { inputStyle } from './fieldStyle'
 import { ExplainView } from './ExplainView'
+import { ExportDialog } from './ExportDialog'
 import { PosterView } from './PosterView'
 import { QuotePhoto } from './QuotesCard'
 import { useLibraryStore } from './libraryStore'
@@ -48,6 +49,7 @@ export function QuoteBoard({ onOpenBook }: { onOpenBook: (bookId: string) => voi
   const [bookId, setBookId] = useState('')
   const [onlyMarked, setOnlyMarked] = useState(false)
   const [index, setIndex] = useState(0)
+  const [exporting, setExporting] = useState(false)
   const setMode = (m: Mode) => { setModeState(m); try { localStorage.setItem(MODE_KEY, m) } catch { /* private window */ } }
 
   const { items, all } = useBoardQuotes({ query, bookId, onlyMarked })
@@ -81,6 +83,9 @@ export function QuoteBoard({ onOpenBook }: { onOpenBook: (bookId: string) => voi
         <span style={{ marginLeft: 'auto', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
           {shown.length} of {all} quote{all === 1 ? '' : 's'}
         </span>
+        <Button variant="secondary" size="sm" disabled={items.length === 0} onClick={() => setExporting(true)} title="Export what is shown to Markdown, Obsidian or Notion">
+          <Download size={ICON.sm} /> Export
+        </Button>
       </div>
 
       {all === 0 ? (
@@ -111,6 +116,7 @@ export function QuoteBoard({ onOpenBook }: { onOpenBook: (bookId: string) => voi
           {wordless} photo quote{wordless === 1 ? '' : 's'} with no text yet {wordless === 1 ? 'is' : 'are'} not shown here.
         </p>
       )}
+      {exporting && <ExportDialog quotes={items.map(i => i.quote)} onClose={() => setExporting(false)} />}
     </div>
   )
 }

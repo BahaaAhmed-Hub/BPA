@@ -7,10 +7,14 @@ import { Eyebrow, Row } from './fields'
 import { inputStyle } from './fieldStyle'
 import { useLibraryStore } from './libraryStore'
 import { placeOf, type Note } from './types'
+import { IdeaButton } from './IdeaButton'
 
 /** One note: its words write straight through (held 700ms), and the place it
  *  belongs to — a page, a line — is said above it. */
 function NoteRow({ note }: { note: Note }) {
+  const quote = useLibraryStore(s => s.quotes.find(q => q.id === note.quoteId))
+  // A note on a quote is anchored to the quote, so the book comes through it.
+  const book = useLibraryStore(s => s.books.find(b => b.id === (note.bookId ?? quote?.bookId)))
   const update = useLibraryStore(s => s.updateNote)
   const del = useLibraryStore(s => s.deleteNote)
   const { text, onChange, onBlur } = useHeldText(note.body, v => { if (v.trim()) update(note.id, v.trim()) })
@@ -23,6 +27,7 @@ function NoteRow({ note }: { note: Note }) {
           onChange={e => onChange(e.target.value)} onBlur={onBlur}
           style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, minHeight: 0 }} />
       </div>
+      {book && <IdeaButton sourceId={note.id} text={note.body} source={{ bookTitle: book.title, place, quote: quote?.body }} />}
       <Button variant="ghost" size="sm" iconOnly title="Delete this note" aria-label="Delete this note" onClick={() => del(note.id)}>
         <Trash2 size={ICON.sm} />
       </Button>

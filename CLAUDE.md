@@ -3845,3 +3845,43 @@ a 429, prose or `{}`. The fake only counts calls whose system prompt is the
 explain one: the Today screen makes its own, and counting those read as the board
 asking twice. A 429 needs a longer wait — the SDK retries it. The ink audit has
 the three modes (32 screens) and a stored explanation on the fixture.
+
+## Library 2e — a quote leaves the app, and an idea becomes a task
+Two chunks, both small. **Apply this idea** (`applyIdea.ts`, `IdeaButton.tsx`)
+and **Export** (`exportQuotes.ts`, `zip.ts`, `ExportDialog.tsx`).
+- **Apply this idea is on the two places an action lives**: each *Try this* line
+  of an Explain card, and each note. A quote itself is not an action and has no
+  button. It makes one task through `placementForNew` — asking for it is deciding
+  about it, so it is placed, never filed in the brain dump — in `personal`,
+  open. Where it came from is the **description's first line** ("From “Atomic
+  Habits” · p. 27"), then the quote. **No `links` entry**: the task panel draws
+  every link as a URL, and a book is not one.
+- **Once is once.** A made idea is remembered against its source and its words
+  (`library-idea-tasks`, localStorage, per browser) and the button becomes a
+  "Task made" receipt, surviving a reload — the mail row's `acted` rule. Editing
+  the words makes it a different idea. Private-window storage failing means it
+  can be made twice, not lost.
+- **Export is what the board shows.** Search, book and bookmarked filters decide
+  the quotes; the notes on those quotes and on their books come with them, and
+  the dialog says how many quotes and files. A photo with no text is kept as a
+  line saying so — a silent drop would leave the file a count short of the screen.
+- **Three destinations, two shapes.** *Markdown* is one file. *Obsidian* is a
+  note per book — author, status, rating, ISBN as front-matter (JSON strings are
+  valid YAML, so a title with a colon is safe) and a `^q-xxxxxxxx` block id on
+  every quote so another note can embed it; several books come as a zip. *Notion*
+  reads Markdown on paste or Import → Text & Markdown, so it is the single file
+  again; a separate "Notion format" would be the same text under another name.
+  Nothing is uploaded: the text is built in the browser, downloaded or copied.
+- **File names are ASCII-safe.** `safeName` drops `\ / : * ? " < > | # ^ [ ]`
+  (a wikilink breaks on the last four) and trailing dots; two books with one
+  title get `(2)`. The first draft used an em dash in "Title — quotes.md" and
+  Chromium reported the download as `download` — a hyphen is the whole fix.
+- **`zip.ts` is a stored (uncompressed) zip** with UTF-8 names and a CRC-32 — a
+  few small notes do not justify a dependency. Checked by `unzip -t` on a real
+  download, and crc32 against the standard check value (`cbf43926`).
+- Explanations are **off by default** in an export and labelled "(AI)" when
+  included: a note taken out of the app should not quietly mix a model's words
+  with the reader's own.
+`scripts/library-export.mjs` — the fake PostgREST carries a `tasks` table, so the
+task is read off what was really upserted. The ink audit has the dialog (33
+screens).

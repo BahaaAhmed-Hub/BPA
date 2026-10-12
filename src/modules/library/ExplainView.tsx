@@ -8,6 +8,7 @@ import { AiFailure } from './aiFailure'
 import { useLibraryStore } from './libraryStore'
 import { SPINE_COLORS } from './spine'
 import { placeOf } from './types'
+import { IdeaButton } from './IdeaButton'
 import type { BoardItem } from './quoteBoardData'
 
 function ExplainRow({ item, onOpenBook }: { item: BoardItem; onOpenBook: (id: string) => void }) {
@@ -49,7 +50,14 @@ function ExplainRow({ item, onOpenBook }: { item: BoardItem; onOpenBook: (id: st
               <div>
                 <Eyebrow>Try this</Eyebrow>
                 <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-body)', lineHeight: 1.5 }}>
-                  {ex.apply.map((a, i) => <li key={i}>{a}</li>)}
+                  {ex.apply.map((a, i) => (
+                    <li key={i}>
+                      <span style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 4 }}>
+                        <span>{a}</span>
+                        <IdeaButton sourceId={quote.id} text={a} source={{ bookTitle: book.title, place: placeOf(quote), quote: quote.body }} />
+                      </span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}
