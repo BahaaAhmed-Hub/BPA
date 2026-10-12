@@ -32,7 +32,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Bell as _Bell } from 'lucide-react'
 import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { useCompanyFocus } from '@/lib/companyFocus'
-import { inkOn } from '@/lib/ink'
+import { useInkOnKeeping } from '@/lib/ink'
 
 void _Bell
 
@@ -44,20 +44,32 @@ export function initialsOf(name: string): string {
   return (words[0][0] + words[1][0]).toUpperCase()
 }
 
-/** **The rail has no surface of its own.** It was two white cards with a
- *  border and a frame shadow, which made the menu a thing sitting *on* the
- *  app rather than part of it — and beside a module that no longer draws its
- *  own slab, the only boxed objects left on screen would have been the nav.
- *  Everything shares one ground: the icons, the active pill and the company
- *  circles float on it, and the two groups are separated by the gap between
- *  them rather than by two frames. */
+/** **Two lozenges floating on the page's own ground.**
+ *
+ *  They *are* surfaces — that was the point of the design and taking it away
+ *  made the rail disappear into the background rather than float on it. What
+ *  had to go was the tinted box around the *module* (`--sb-cal-ground`),
+ *  which is what left the menu stranded beside a slab. With one continuous
+ *  ground behind everything, two white lozenges read as floating; against a
+ *  box they read as the one thing left outside it.
+ *
+ *  `--sb-overlay`, not `--sb-card`: this is drawn over the page rather than
+ *  being a card *on* it, and overlay is the one surface token that is opaque
+ *  in every theme — Glass's card is a 5% wash that would leave the rail
+ *  see-through against its own dark page.
+ *
+ *  Fully round ends (`borderRadius: 999`), so the shape is a lozenge rather
+ *  than a rounded rectangle: at this width the two read quite differently. */
 const PILL: React.CSSProperties = {
-  background: 'transparent',
+  background: 'var(--sb-overlay)',
+  border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 7%, transparent)',
+  borderRadius: 999,
+  boxShadow: '0 2px 10px -4px rgba(25, 23, 18, .16), 0 10px 30px -18px rgba(25, 23, 18, .22)',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  gap: 4,
-  padding: '2px 0',
+  gap: 5,
+  padding: '11px 9px',
 }
 
 function RailButton({ active, label, onClick, children }: {
@@ -73,12 +85,14 @@ function RailButton({ active, label, onClick, children }: {
       aria-label={label}
       aria-current={active ? 'page' : undefined}
       style={{
-        width: 44, height: 42, flexShrink: 0,
+        width: 42, height: 40, flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        borderRadius: 'var(--sb-r-nav)',
+        // The active module is a solid dark square with its own corner — the
+        // one thing in the rail that is a shape rather than a glyph.
+        borderRadius: 13,
         border: 'none', cursor: 'pointer',
         background: active ? 'var(--sb-ink-1)' : 'transparent',
-        color: active ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
+        color: active ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-2)',
         transition: 'background 0.12s, color 0.12s',
       }}>
       {children}
@@ -92,9 +106,24 @@ function CompanyTile({ co, chosen, onPick }: {
   chosen: boolean
   onPick: () => void
 }) {
-  // The fill is the company's own colour, so the ink on it is measured rather
-  // than declared — a dozen hues cannot share one fixed foreground.
-  const ink = inkOn(co.color)
+  // **The disc carries the colour; the mark carries the letters.**
+  //
+  // Putting the company's colour in the *glyph* on a white disc was measured
+  // and it failed its own purpose: `#3B82F6` on white is about 3.1:1, so
+  // `inkOnKeeping` fell back to `--sb-ink-1` and Teradix's mark came out
+  // `rgb(20,18,14)` — the same near-black as a company with no usable colour
+  // at all. Two of three discs then looked identical, which is the one thing
+  // a company tile must never do. A white disc is also a 5% wash in Glass,
+  // where `--sb-card` is translucent, so there was barely a disc there.
+  //
+  // So the disc is a tint of the company's own colour mixed into
+  // `--sb-overlay` (opaque in every theme), and the letters are the theme's
+  // ink measured against that tint — the same pairing the app already uses
+  // for `--sb-ink-4` on `--sb-accent-tint`. Identity in the ground, legibility
+  // in the ink, and neither is asked to do the other's job.
+  const keeping = useInkOnKeeping()
+  const disc = `color-mix(in srgb, ${co.color} 20%, var(--sb-overlay))`
+  const mark = keeping('var(--sb-ink-1)', disc, 4.5)
   return (
     <button
       onClick={onPick}
@@ -103,26 +132,27 @@ function CompanyTile({ co, chosen, onPick }: {
       aria-pressed={chosen}
       data-company-tile={co.id}
       style={{
-        width: 42, height: 42, flexShrink: 0, padding: 0, cursor: 'pointer',
-        // A logo is a circle. A rounded square beside a column of round
-        // glyphs reads as a different kind of object; these are faces of a
-        // sort, and a face is round here as it is in every avatar in the app.
+        width: 40, height: 40, flexShrink: 0, padding: 0, cursor: 'pointer',
+        // A logo is a circle, and the circle is a **light disc holding the
+        // company's mark** rather than a solid block of its colour. A column
+        // of saturated discs is five competing fills beside a column of quiet
+        // glyphs; the rim and the ground are the same in every row, so what
+        // differs between them is only the thing that identifies them.
         borderRadius: '50%',
-        background: co.color,
-        color: ink,
-        fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 700,
-        letterSpacing: '0.02em',
+        background: disc,
+        color: mark,
+        fontFamily: 'inherit', fontSize: 12.5, fontWeight: 800,
+        letterSpacing: '-0.01em',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        // Ringed, not tinted: this is the only thing on screen that explains
-        // why the rest of the page has gone quiet. The ring is drawn *outside*
-        // the circle with a gap of the page's own colour, so it reads as a
-        // halo rather than eating into the colour that identifies the company.
+        // Chosen: the company's own colour as a ring, with a gap of the disc's
+        // ground so it reads as a halo. This is the only thing on screen that
+        // explains why the rest of the page has gone quiet.
         border: 'none',
         boxShadow: chosen
-          ? '0 0 0 2px var(--sb-page), 0 0 0 4px var(--sb-accent-deep)'
-          : 'inset 0 0 0 1px color-mix(in srgb, var(--sb-ink-1) 10%, transparent)',
+          ? `0 0 0 2px var(--sb-overlay), 0 0 0 4px ${co.color}`
+          : `inset 0 0 0 1px color-mix(in srgb, ${co.color} 38%, transparent)`,
         transition: 'transform 0.12s',
-        transform: chosen ? 'none' : 'scale(0.9)',
+        transform: chosen ? 'none' : 'scale(0.95)',
       }}>
       {initialsOf(co.name)}
     </button>
@@ -165,7 +195,7 @@ export function SideRail({ items, activeModule, onPick, footer }: {
   return (
     <nav aria-label="Main" data-side-rail style={{
       flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
-      gap: 14, padding: '14px 12px', height: '100%', overflowY: 'auto',
+      gap: 13, padding: '16px 14px', height: '100%', overflowY: 'auto',
     }}>
       <div style={PILL}>
         {items.map(item => (
@@ -189,7 +219,7 @@ export function SideRail({ items, activeModule, onPick, footer }: {
       </div>
 
       {companies.length > 0 && (
-        <div data-company-rail style={{ ...PILL, gap: 9, padding: '4px 0' }}>
+        <div data-company-rail style={{ ...PILL, gap: 8 }}>
           {companies.map(co => (
             <CompanyTile
               key={co.id}
@@ -205,7 +235,7 @@ export function SideRail({ items, activeModule, onPick, footer }: {
               title="Show everything again"
               aria-label="Show everything again"
               style={{
-                width: 42, height: 26, flexShrink: 0, marginTop: 2, cursor: 'pointer',
+                width: 40, height: 24, flexShrink: 0, marginTop: 1, cursor: 'pointer',
                 borderRadius: 'var(--sb-r-pill)', border: 'none',
                 background: 'color-mix(in srgb, var(--sb-ink-1) 8%, transparent)', color: 'var(--sb-ink-2)',
                 fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 700,

@@ -484,11 +484,26 @@ second changes what the first shows without changing which module is open.
   `Admin · users` into a screen measuring nothing — caught by the audit's own
   blindness warning, and the selector is scoped to `aria-haspopup="menu"`
   rather than to where the avatar happens to sit.
-- **A company tile is its colour and its initials.** `DynamicCompany` carries
-  `name`, `color`, a domain, an account and a calendar and no logo, so drawing
-  one would mean inventing it; the colour is already that company's identity on
-  every chip and dot in the app. The ink on it is `inkOn(co.color)` — measured,
-  because a dozen hues cannot share one fixed foreground.
+- **Two lozenges that float, on one continuous ground.** Making them
+  *transparent* was an over-correction: the rail then disappeared into the
+  background rather than floating on it. What had to go was the tinted box
+  round the **module** — against a box, two white lozenges read as the one
+  thing left outside it; against one shared ground they read as floating.
+  `--sb-overlay`, not `--sb-card`: this is drawn over the page, and overlay is
+  the one surface token opaque in every theme (Glass's card is a 5% wash that
+  would leave the rail see-through on its own dark page). `borderRadius: 999`,
+  because at 64px a lozenge and a rounded rectangle read quite differently.
+- **A company tile is a disc tinted with its colour, and the letters are ink.**
+  `DynamicCompany` carries no logo, so drawing one would mean inventing it.
+  Putting the colour in the *glyph* on a white disc was measured and failed its
+  own purpose: `#3B82F6` on white is ~3.1:1, so `inkOnKeeping` fell back to
+  `--sb-ink-1` and Teradix's mark came out `rgb(20,18,14)` — the same near-black
+  as a company with no usable colour, so two of three discs looked **identical**,
+  which is the one thing a company tile must never do. A white disc is also a
+  5% wash in Glass. So the disc is `color-mix(<colour> 20%, var(--sb-overlay))`
+  and the letters are `--sb-ink-1` measured against that tint — the pairing the
+  app already uses for `--sb-ink-4` on `--sb-accent-tint`. Identity in the
+  ground, legibility in the ink, neither doing the other's job.
 - **The chosen tile is ringed, not tinted**, and `ALL` appears beside it only
   while a lens is on. It is the only thing on screen explaining why
   three-quarters of the page has gone quiet, so it has to read as *on* from
