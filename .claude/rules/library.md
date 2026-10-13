@@ -28,6 +28,16 @@ photograph-your-shelf (6) and the extras (7) each arrive as their own migration.
 - **The migration registers it for `free` as well as `pro`.** The backfill put
   every account on `free`; a module in neither plan resolves false for everyone
   and vanishes from the nav the moment the migration runs.
+  **And for every plan that exists, not the two it knew of.** A third plan,
+  `owner`, had been made since; it listed Finance and Mail and not the Library, so
+  `has_module()` resolved false for the owner's own account and the icon never
+  appeared — found by asking the database (`has_module` per account), not by
+  reading the code, which drew the icon correctly. `20260039_library_every_plan.sql`
+  adds the row to every plan that lists anything. **A new module's migration must
+  register it for every plan in `plan_modules` at that moment, never a hard-coded
+  pair**, and the check after applying it is `select plan_of(id), has_module(id,
+  '<module>') from auth.users` — an account whose answer is false is the one who
+  cannot see it.
 - **One table for lists and categories** (`library_lists.kind`). A category is
   what a book *is*, a list is what you are *doing* with it; they differ in the
   question the UI asks, not in shape, and two tables would be two copies of
