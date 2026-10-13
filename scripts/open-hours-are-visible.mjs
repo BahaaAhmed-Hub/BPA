@@ -16,7 +16,7 @@
 //   is inset; one that runs past its end is not, because that is not an hour
 //   the window offered. Measured as real rects, not as a style string.
 //
-//   node scripts/open-hours-are-visible.mjs [shows|inert|nested|panel]
+//   node scripts/open-hours-are-visible.mjs [shows|inert|nested|panel|delete]
 import { chromium } from 'playwright-core'
 import { session, user } from './session.mjs'
 
@@ -56,6 +56,9 @@ const EVENTS = [
 ]
 
 const gcal = []
+// The server's windows, so a DELETE that lands is a row that stops coming back.
+const dels = []
+let SERVER_WINDOWS = [WINDOW, WINDOW2]
 
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--ignore-certificate-errors'] })
 const ctx = await b.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1500, height: 950 } })
@@ -71,7 +74,11 @@ await ctx.route('**://placeholder.supabase.co/**', r => {
     return j({})
   }
   if (u.pathname.endsWith('/booking_windows')) {
-    if (m === 'GET') return j([WINDOW, WINDOW2])
+    if (m === 'GET') return j(SERVER_WINDOWS)
+    if (m === 'DELETE') {
+      const id = new URLSearchParams(u.search).get('id')?.replace(/^eq\./, '')
+      dels.push(id); SERVER_WINDOWS = SERVER_WINDOWS.filter(w => w.id !== id)
+    }
     return j({})
   }
   if (u.pathname.endsWith('/meeting_plans') || u.pathname.endsWith('/bookings')) return j([])
@@ -122,6 +129,12 @@ if (MODE === 'shows') {
   const radius = await p.locator('[data-open-hours="w-open"]').evaluate(
     el => parseFloat(getComputedStyle(el).borderTopLeftRadius))
   ok('it is a card-shaped box, not a band', radius >= 6, `${radius}px radius`)
+  // It has to say what it is for. An event is a solid card; an open hour is
+  // space still on offer, so it is dashed and says so in words.
+  ok('the box says it is open to be booked', /Open to book/i.test(lbl), JSON.stringify(lbl))
+  const dash = await p.locator('[data-open-hours="w-open"]').evaluate(el => getComputedStyle(el).borderTopStyle)
+  ok('it is dashed, so it does not read as a scheduled event', dash === 'dashed', dash)
+  if (process.env.SHOT) await p.locator('[data-open-hours="w-open"]').first().scrollIntoViewIfNeeded().then(() => p.screenshot({ path: process.env.SHOT }))
   await b.close(); process.exit(code)
 }
 
@@ -189,6 +202,38 @@ if (MODE === 'nested') {
   const overInset = over && over.x > win.x + 2
   ok('an event that overruns the window is not nested in it', !overInset,
      `box starts ${Math.round(win.x)}, card starts ${Math.round(over.x)}`)
+  await b.close(); process.exit(code)
+}
+
+// ─── Closing an hour from the list ──────────────────────────────────────────
+// A trash on each row, armed by one press and confirmed by a second: a repeating
+// window is every week at once, and one stray click should not take it.
+if (MODE === 'delete') {
+  await p.getByRole('button', { name: /^Booking$/ }).click()
+  await p.waitForTimeout(1300)
+  const trash = id => p.locator(`[data-booking-hours] button[aria-label^="Close open hours"]`)
+  const n0 = await trash().count()
+  ok('every row has a delete control', n0 === 2, `${n0}`)
+  if (process.env.SHOT) await p.screenshot({ path: process.env.SHOT.replace('.png', '-panel.png') })
+  await trash().first().click()
+  await p.waitForTimeout(250)
+  ok('one press only arms it — and says what it would do', /Close(?: every week)?\?/.test(await text()), JSON.stringify((await text()).match(/Close[^\n]*\?/)?.[0]))
+  ok('…and nothing has been sent yet', dels.length === 0, JSON.stringify(dels))
+  // Moving on disarms it.
+  await p.locator('[data-booking-hours] p').first().click()
+  await p.waitForTimeout(250)
+  ok('clicking elsewhere disarms it', !/Close(?: every week)?\?/.test(await text()))
+  ok('…still nothing sent', dels.length === 0)
+  // Now confirm.
+  await trash().first().click(); await p.waitForTimeout(200)
+  await p.getByRole('button', { name: /^Confirm: close open hours/ }).click()
+  await p.waitForTimeout(900)
+  ok('the confirmed press deletes that window on the server', dels.length === 1, JSON.stringify(dels))
+  const left = await p.locator('[data-booking-hours] button[aria-label^="Close open hours"]').count()
+  ok('its row is gone from the list', left === 1, `${left} left`)
+  ok('…and the other one is untouched', !dels.includes(SERVER_WINDOWS[0]?.id))
+  const gone = await p.locator(`[data-open-hours="${dels[0]}"]`).count()
+  ok('its box is gone from the week', gone === 0, `${gone} boxes`)
   await b.close(); process.exit(code)
 }
 

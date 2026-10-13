@@ -403,6 +403,35 @@ you have opened the booking panel", which is worse than not drawing them.
   the way the server does, because "every week from the 14th" does not say
   when it next opens. A row takes the week to that day.
 
+## Booking — an open hour says what it is for, and can be closed from the list
+Two gaps in the same feature. The boxes on the week said only "OPEN" — to the
+owner, who knows, and to nobody else it ever has to mean anything to; and the
+panel listed the windows but the only way to take one away was to switch into
+marking mode, find its box on the right week and press **Close these hours**.
+- **The box says what it offers, and is dashed.** An event is a solid card; an
+  open hour is space still on offer, so the border is dashed (the left rule
+  stays solid) and the text is `09:00–17:00` / **Open to book** / *Calls &
+  meetings*, with a booking glyph. Lines appear as the box has height for them
+  (≥40px, ≥64px) so a 30-minute window keeps its time and glyph. **A button
+  centres its content**, so a tall box had its label floating mid-box until it
+  was made a top-aligned column. The second line is the same solid
+  `--sb-positive-deep` as the first: a fade (`opacity: .85`) on a tint is how a
+  pair slips under 4.5.
+- **Each row in the panel has a trash, armed by one press and confirmed by a
+  second** ("Close?" / "Close every week?"). A repeating window is every week at
+  once, a one-off is a single stray click away from gone, and the calendar's own
+  popover has no confirm because you opened it on purpose. Moving on disarms it
+  (`onBlur`). The calendar owns the list, so `onDeleteWindow={dropWindow}` — the
+  same function the popover uses, so there is one delete, not two.
+- Two adjacent boxes in a screenshot are usually **two day columns**, not two
+  windows in one day; the list is where that is settled.
+`scripts/open-hours-are-visible.mjs delete` — 10 assertions: a trash on every
+row, one press arms it and sends **nothing**, clicking elsewhere disarms it, the
+second press sends exactly one DELETE for that window, its row and its box go
+and the other window is untouched. `shows` gained the label and the dashed
+border; all five modes pass, and the ink audit reads 0 failing pairs over 22
+screens in all four themes.
+
 ## Booking — "nothing can be booked here just now" was a plan that was never saved
 The owner's panel showed a call; the visitor's page said nothing could be
 booked. Both were right. **Add one** pushes a row into *local state* with
