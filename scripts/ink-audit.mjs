@@ -259,10 +259,10 @@ const LIB_BOOK = (i, title, authors, status, extra = {}) => ({
 const LIBRARY = {
   library_books: [
     LIB_BOOK(0, 'Atomic Habits', ['James Clear'], 'reading', { to_buy: true, file_path: 'u1/00000000-0000-4000-8000-000000000000/book.pdf', pages: 3 }),
-    LIB_BOOK(1, 'Deep Work', ['Cal Newport'], 'finished'),
+    LIB_BOOK(1, 'Deep Work', ['Cal Newport'], 'finished', { started_on: '2026-09-02', finished_on: '2026-09-20' }),
     LIB_BOOK(2, 'The Almanack of Naval Ravikant', ['Eric Jorgenson'], 'want'),
     LIB_BOOK(3, 'Sapiens', ['Yuval Noah Harari'], 'paused'),
-    LIB_BOOK(4, 'Meditations', ['Marcus Aurelius'], 'finished'),
+    LIB_BOOK(4, 'Meditations', ['Marcus Aurelius'], 'finished', { finished_on: '2026-10-01' }),
     LIB_BOOK(5, 'Man\u2019s Search for Meaning', ['Viktor Frankl'], 'want'),
     LIB_BOOK(6, 'Antifragile', ['Nassim Taleb'], 'reading'),
     LIB_BOOK(7, 'Dune', ['Frank Herbert'], 'abandoned'),

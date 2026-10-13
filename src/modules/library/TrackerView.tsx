@@ -3,6 +3,7 @@ import { Card, Segmented } from '@/components/ui'
 import { Eyebrow } from './fields'
 import { useLibraryStore } from './libraryStore'
 import { GoalsCard } from './GoalsCard'
+import { YearReviewCard } from './YearReviewCard'
 import { niceDay, planSentence, planStatus, STATE_INK, STATE_LABEL } from './planStats'
 import { fmtMinutes, todayISO } from './readingStats'
 import { addDays, byDay, dayRange, finishedIn, periodTotals, streaks, total, weekBuckets, weekStart, type Minutes } from './trackerStats'
@@ -102,6 +103,7 @@ export function TrackerView({ onOpenBook }: { onOpenBook: (id: string) => void }
         <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 6 }}>Nothing logged yet</div>
         <p style={{ margin: 0, color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>Open a book and start the timer when you sit down with it, or log a session after. Your week, your streak and your pace gather here.</p>
       </Card>
+      <YearReviewCard onOpenBook={onOpenBook} />
       </div>
     )
   }
@@ -162,6 +164,7 @@ export function TrackerView({ onOpenBook }: { onOpenBook: (id: string) => void }
           </ul>
         )}
       </Card>
+      <YearReviewCard onOpenBook={onOpenBook} />
     </div>
   )
 }

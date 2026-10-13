@@ -194,11 +194,11 @@ ok('a zero target is ignored (the table would refuse it)', T.library_goals.find(
 void booksRow
 
 // other years
-await p.getByRole('button', { name: 'Previous year' }).click(); await wait(300)
+await p.getByRole('button', { name: 'Previous year' }).first().click(); await wait(300)
 ok('the year stepper shows another year with its own (empty) goals', new RegExp(`No goals for ${YEAR - 1} yet`).test(await body()))
 await p.getByRole('tab', { name: 'Books' }).click(); await p.getByLabel('New goal target').fill('10'); await p.getByRole('button', { name: 'Set goal' }).click(); await wait(1200)
 ok('a goal for last year is stored for that year and counts that year\'s books (1 of 10), and is missed', T.library_goals.some(g => g.year === YEAR - 1) && /1 of 10 books/.test(await body()) && /Missed/.test(await body()))
-await p.getByRole('button', { name: 'Next year' }).click(); await wait(300)
+await p.getByRole('button', { name: 'Next year' }).first().click(); await wait(300)
 ok('and this year\'s goals are still there', goalRows().count().then(n => n >= 4) && await goalRows().count() === 4)
 
 // remove + undo

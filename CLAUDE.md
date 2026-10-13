@@ -4429,3 +4429,21 @@ table's CHECKs and persists (answers, the repeat, the five-a-day limit across a
 reload, undo of both kinds, the 20-card cap, a quote disappearing mid-sitting, the
 missing migration). A first draft carried assertions of the form `a || b || true`
 that could not fail; they were replaced with the exact figures.
+
+## Library 7c — the year in review
+`yearStats.ts` (pure), `YearReviewCard.tsx` at the foot of the Tracker. No migration:
+it reads the books, sessions, quotes and lists already loaded, so it cannot disagree with them.
+- **A book belongs to the year of its `finishedOn`.** Finished with no date is in no year,
+  and the card says how many (`undated`) rather than quietly under-counting. The Dec 31 /
+  Jan 1 boundary has a book on each side.
+- **Nothing is averaged over what is not known.** Pages are summed over the books that have
+  a count and print "(3 counted)"; fastest/slowest need both dates and ignore a finish before
+  the start; a top author needs two books; an empty year gives `null`, never NaN. Ties go to
+  the book finished first, so the answer does not depend on the order the server sent.
+- **Quotes are filed by the reader's calendar year** (`getFullYear` of the instant), not UTC,
+  or one saved at 00:30 on 1 January lands in the year before.
+- **Copy summary** puts a Markdown recap on the clipboard (`yearMarkdown`), leaving out any
+  line that would be zero, and an empty year is one sentence.
+`scripts/library-year.mjs` — 40+ assertions; the first fixture run "failed" because the test's
+own `book()` ignored `status`, a reading book counted as finished-undated. Fixtures are code.
+The two year steppers (Goals, Year in review) share aria-labels: tests use `.first()`/`.last()`.
