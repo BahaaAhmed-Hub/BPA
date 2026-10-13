@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
 import type {
   Book, BookFormat, BookSource, BookStatus, Bookmark, BookmarkKind, LibList, ListBook, ListKind,
-  Follow, FollowKind, Note, PlanPer, ReadingGoal, GoalKind, ReadingPlan, ReadingSession, SessionKind, NoteScope, Quote, QuoteKind,
+  Follow, FollowKind, Note, PlanPer, QuoteReview, ReadingGoal, GoalKind, ReadingPlan, ReadingSession, SessionKind, NoteScope, Quote, QuoteKind,
 } from './types'
 
 interface BookRow {
@@ -293,6 +293,27 @@ export async function loadPlans(): Promise<ReadingPlan[] | null | 'missing'> {
   if (rows.some(x => 'block_event_id' in x)) blockColumns = true
   return rows.map(toPlan)
 }
+interface ReviewRow { quote_id: string; user_id: string; due_on: string; interval_days: number; ease: number; reps: number; lapses: number; first_on: string; last_on: string }
+const toReview = (r: ReviewRow): QuoteReview => ({ quoteId: r.quote_id, dueOn: r.due_on, intervalDays: r.interval_days, ease: r.ease, reps: r.reps, lapses: r.lapses, firstOn: r.first_on, lastOn: r.last_on })
+const fromReview = (v: QuoteReview, userId: string) => ({ quote_id: v.quoteId, user_id: userId, due_on: v.dueOn, interval_days: v.intervalDays, ease: v.ease, reps: v.reps, lapses: v.lapses, first_on: v.firstOn, last_on: v.lastOn })
+
+/** Read on its own like goals: without 20260034 the quotes themselves are untouched. */
+export async function loadReviews(): Promise<QuoteReview[] | null | 'missing'> {
+  const r = await supabase.from('library_quote_reviews').select('*')
+  if (r.error) return r.error.code === '42P01' || r.error.code === 'PGRST205' ? 'missing' : null
+  return (r.data as ReviewRow[]).map(toReview)
+}
+export async function saveReview(v: QuoteReview): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_quote_reviews').upsert(fromReview(v, await uid()), { onConflict: 'quote_id' })
+  fail(error)
+}
+export async function removeReview(quoteId: string): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_quote_reviews').delete().eq('quote_id', quoteId)
+  fail(error)
+}
+
 interface GoalRow { id: string; user_id: string; year: number; kind: string; target: number; list_id: string | null; created_at: string }
 const toGoal = (r: GoalRow): ReadingGoal => ({ id: r.id, year: r.year, kind: r.kind as GoalKind, target: r.target, listId: opt(r.list_id), createdAt: r.created_at })
 const fromGoal = (g: ReadingGoal, userId: string) => ({ id: g.id, user_id: userId, year: g.year, kind: g.kind, target: g.target, list_id: g.listId ?? null, created_at: g.createdAt })

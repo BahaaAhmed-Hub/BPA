@@ -6,15 +6,18 @@ import { inputStyle } from './fieldStyle'
 import { ExplainView } from './ExplainView'
 import { ExportDialog } from './ExportDialog'
 import { PosterView } from './PosterView'
+import { ReviewView } from './ReviewView'
+import { buildQueue } from './srs'
+import { todayISO } from './readingStats'
 import { QuotePhoto } from './QuotesCard'
 import { useLibraryStore } from './libraryStore'
 import { useBoardQuotes, withText, type BoardItem } from './quoteBoardData'
 import { SPINE_COLORS } from './spine'
 import { placeOf } from './types'
 
-type Mode = 'cards' | 'poster' | 'explain'
+type Mode = 'cards' | 'poster' | 'explain' | 'review'
 const MODE_KEY = 'library-quote-mode'
-const loadMode = (): Mode => { try { const v = localStorage.getItem(MODE_KEY); return v === 'poster' || v === 'explain' ? v : 'cards' } catch { return 'cards' } }
+const loadMode = (): Mode => { try { const v = localStorage.getItem(MODE_KEY); return v === 'poster' || v === 'explain' || v === 'review' ? v : 'cards' } catch { return 'cards' } }
 
 function QuoteCard({ item, marked, onOpen }: { item: BoardItem; marked: boolean; onOpen: () => void }) {
   const { quote, book } = item
@@ -44,6 +47,8 @@ export function QuoteBoard({ onOpenBook }: { onOpenBook: (bookId: string) => voi
   const books = useLibraryStore(s => s.books)
   const bookmarks = useLibraryStore(s => s.bookmarks)
   const extrasMissing = useLibraryStore(s => s.extrasMissing)
+  const allQuotes = useLibraryStore(s => s.quotes)
+  const reviews = useLibraryStore(s => s.reviews)
   const [mode, setModeState] = useState<Mode>(loadMode)
   const [query, setQuery] = useState('')
   const [bookId, setBookId] = useState('')
@@ -63,12 +68,27 @@ export function QuoteBoard({ onOpenBook }: { onOpenBook: (bookId: string) => voi
     return <Card style={{ padding: '20px 22px', maxWidth: 560 }}>Quotes need migration <code>20260026_library_quotes.sql</code>.</Card>
   }
 
+  // What is waiting for review, on the tab itself: a count you must open the tab to read is one you skip.
+  const waiting = buildQueue(allQuotes, reviews, todayISO()).waiting
+  const modes = [
+    { value: 'cards' as const, label: 'Cards' }, { value: 'poster' as const, label: 'Poster' }, { value: 'explain' as const, label: 'Explain' },
+    { value: 'review' as const, label: waiting ? `Review (${waiting})` : 'Review' },
+  ]
+
+  // Reviewing has its own screen: search, book and export are about a list of quotes, and this is a sitting.
+  if (mode === 'review') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 12 }}>
+        <div><Segmented value={mode} onChange={setMode} options={modes} /></div>
+        <ReviewView onOpenBook={onOpenBook} />
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <Segmented value={mode} onChange={setMode} options={[
-          { value: 'cards', label: 'Cards' }, { value: 'poster', label: 'Poster' }, { value: 'explain', label: 'Explain' },
-        ]} />
+        <Segmented value={mode} onChange={setMode} options={modes} />
         <div style={{ position: 'relative', flex: '1 1 200px', maxWidth: 320 }}>
           <Search size={ICON.md} color="var(--sb-ink-4)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
           <input value={query} onChange={e => { setQuery(e.target.value); setIndex(0) }} placeholder="Search quotes" aria-label="Search quotes" style={{ ...inputStyle, paddingLeft: 32 }} />

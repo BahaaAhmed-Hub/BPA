@@ -4376,3 +4376,56 @@ and the whole path with faked catalogues. The ink audit has the dialog (39 scree
 `scripts/library-daily-quote.mjs` — 25 assertions. The expected pick is computed a
 **different way** (civil date → `Date.UTC` → days since 1970) from the module, so the
 test is not marking its own homework; the card is driven on the real Today screen.
+
+## Library 7b — your quotes, asked back to you
+`20260034_library_quote_reviews.sql`, `srs.ts` + `cloze.ts` (pure), `ReviewView.tsx`, a
+fourth mode on the Quotes board (**Review**, with what is waiting on the tab:
+`Review (7)`). A card is a quote with a few of its words hidden; you fill them in, look,
+and say how it went.
+- **One row per reviewed quote, and no row means new.** `due_on`, `interval_days`,
+  `ease`, `reps`, `lapses`, `first_on`, `last_on` — everything on screen (what is due,
+  how many are new today, the next date) is derived from them, nothing is a stored
+  count. `quote_id` is the primary key with `on delete cascade`; deleting a quote or a
+  book takes its reviews locally too, and undo brings them back (after the quote, for
+  the foreign key).
+- **A small SM-2, readable off a table.** First answers: again 1 d (ease −0.2), hard 1 d
+  (−0.15), good 1 d, easy 4 d (+0.15). Then good = 1 → 3 → `interval × ease`; hard =
+  `× 1.2`; easy = 4 → 7 → `× ease × 1.3`; again = tomorrow, reps reset. Ease lives in
+  1.3–3.0, a gap in 1–365 days. **A lapse is only a lapse if it was known** — a new
+  quote you get wrong has not been forgotten, only not learned yet. The tests pin the
+  numbers (good ×4 is 1, 3, 8, 20), not the formula.
+- **Each button says how long it would wait** (`Forgot · 1 day`, `Good · 8 days`), so
+  the choice is between real things. The label is the scheduler's own `next()`.
+- **Five new a day, twenty cards a sitting.** A backlog of 200 saved quotes is not 200
+  cards tomorrow, and a first screen of fifty is how a habit ends. "New today" is
+  counted from `first_on = today` **on the rows**, so answering five and coming back an
+  hour later — or reloading, or opening the iPad — does not hand you five more; the
+  limit survives because it is not remembered anywhere. A review whose quote is gone
+  does not use up the room. More can be asked for ("Review 5 more").
+- **A sitting is frozen when it starts.** Answering changes what is due; a queue that
+  rearranged itself under you would show a card twice or skip one. A forgotten card is
+  asked once more at the end of the same sitting (never twice — it is already coming
+  back tomorrow). A quote deleted mid-sitting is skipped, not shown blank.
+- **The blanks change every time** (`makeCloze(text, seed)`, the seed carrying the
+  quote, how many times it has been answered and how many times it was shown this
+  sitting): what you learn is the sentence, not the shape of one gap. Longer words,
+  never the connective ones when a better exists; a line of short words hides its last
+  word; 1 blank under 10 words, 2 under 25, 3 beyond. Any script (letters and digits,
+  hyphen and apostrophe inside a word) and the pieces always rejoin to exactly the
+  original — punctuation, dashes, newlines. `dir="auto"` so Arabic reads right to left.
+  The blanks are computed once per card shown, **not per render**, or revealing would
+  re-roll them.
+- **The front gives nothing away**: digits do nothing until the words are shown (Space
+  or Enter shows; 1–4 answer). Reveal marks exactly the hidden words and your notes on
+  that quote follow. `Review` shows no filters or Export — those are about a list of
+  quotes and this is a sitting.
+- **⌘Z takes an answer back to exactly what it was**, including "never reviewed", which
+  is no row at all (a DELETE, not a zeroed row).
+- Read separately (`reviewsMissing`): without 20260034 the screen names the migration
+  and every other mode of the board still works.
+`scripts/library-review.mjs` — 53 assertions: the scheduler as a table, the queue's
+limits, the cloze's invariants, and the whole sitting against a fake that enforces the
+table's CHECKs and persists (answers, the repeat, the five-a-day limit across a
+reload, undo of both kinds, the 20-card cap, a quote disappearing mid-sitting, the
+missing migration). A first draft carried assertions of the form `a || b || true`
+that could not fail; they were replaced with the exact figures.

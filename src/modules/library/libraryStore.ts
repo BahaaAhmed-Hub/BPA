@@ -3,9 +3,11 @@ import { pushUndo, notify, suppressUndo } from '@/lib/undo'
 import { markLocalWrite } from '@/lib/liveSync'
 import {
   loadLibrary, saveBooks, removeBook, saveList, removeList, setBookLists,
-  loadLibraryExtras, loadFollows, saveFollow, removeFollow, loadSessions, saveSession, removeSession, loadPlans, savePlan, removePlan, loadGoals, saveGoal, removeGoal, saveQuote, removeQuote, saveNote, removeNote, saveBookmark, removeBookmark,
+  loadLibraryExtras, loadFollows, saveFollow, removeFollow, loadSessions, saveSession, removeSession, loadPlans, savePlan, removePlan, loadGoals, saveGoal, removeGoal, loadReviews, saveReview, removeReview, saveQuote, removeQuote, saveNote, removeNote, saveBookmark, removeBookmark,
 } from './libraryDb'
-import type { Book, Bookmark, Follow, LibList, ListBook, ListKind, Note, Quote, ReadingGoal, ReadingPlan, ReadingSession } from './types'
+import { schedule } from './srs'
+import { todayISO } from './readingStats'
+import type { Book, Bookmark, Follow, LibList, ListBook, ListKind, Note, Quote, Grade, QuoteReview, ReadingGoal, ReadingPlan, ReadingSession } from './types'
 
 // ─── Library store ───────────────────────────────────────────────────────────
 // Authoritative-from-the-server, like Finance: `loadFromDB` replaces the lists
@@ -42,6 +44,9 @@ interface LibraryState {
   goals: ReadingGoal[]
   /** 20260033 has not run: goals cannot be set. */
   goalsMissing: boolean
+  reviews: QuoteReview[]
+  /** 20260034 has not run: quotes cannot be reviewed. */
+  reviewsMissing: boolean
   /** 20260029 has not run: following cannot be saved. */
   followsMissing: boolean
   /** 20260026 has not run: the shelf works, quotes and notes cannot be saved. */
@@ -89,6 +94,9 @@ interface LibraryState {
   setPlanBlock: (bookId: string, block: Pick<ReadingPlan, 'blockAt' | 'blockEventId' | 'blockSig'>) => void
   deletePlan: (bookId: string) => void
 
+  /** Answers a review card. Undoable: a slipped finger is one ⌘Z, back to exactly what it was. */
+  gradeQuote: (quoteId: string, grade: Grade, today?: string) => QuoteReview | null
+
   /** Refuses a second goal for the same year, kind and scope — the table's unique would anyway. */
   addGoal: (g: Omit<ReadingGoal, 'id' | 'createdAt'>) => ReadingGoal | null
   updateGoalTarget: (id: string, target: number) => void
@@ -114,7 +122,7 @@ function failed(what: string, reload: () => Promise<void>) {
 }
 
 export const useLibraryStore = create<LibraryState>()((set, get) => ({
-  books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, goals: [], goalsMissing: false, extrasMissing: false, loading: true, missing: false,
+  books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, goals: [], goalsMissing: false, reviews: [], reviewsMissing: false, extrasMissing: false, loading: true, missing: false,
 
   async loadFromDB() {
     const data = await loadLibrary()
@@ -144,9 +152,13 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const goals = await loadGoals()
     if (goals === 'missing') set({ goalsMissing: true })
     else if (goals) set({ goals, goalsMissing: false })
+
+    const reviews = await loadReviews()
+    if (reviews === 'missing') set({ reviewsMissing: true })
+    else if (reviews) set({ reviews, reviewsMissing: false })
   },
 
-  clearAll() { set({ books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, goals: [], goalsMissing: false, extrasMissing: false, loading: true, missing: false }) },
+  clearAll() { set({ books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, goals: [], goalsMissing: false, reviews: [], reviewsMissing: false, extrasMissing: false, loading: true, missing: false }) },
 
   addSession(input) {
     const s: ReadingSession = { ...input, id: crypto.randomUUID(), createdAt: nowISO() }
@@ -175,6 +187,20 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       else get().deletePlan(bookId)
     }))
     void savePlan(next).catch(failed('save the plan', get().loadFromDB))
+  },
+
+  gradeQuote(quoteId, grade, today = todayISO()) {
+    if (!get().quotes.some(q => q.id === quoteId)) return null
+    const prev = get().reviews.find(r => r.quoteId === quoteId) ?? null
+    const next = schedule(quoteId, prev, grade, today)
+    set(st => ({ reviews: prev ? st.reviews.map(r => (r.quoteId === quoteId ? next : r)) : [...st.reviews, next] }))
+    // Back to exactly what it was — including "never reviewed", which is no row at all.
+    pushUndo('Answer a quote', () => suppressUndo(() => {
+      if (prev) { set(st => ({ reviews: st.reviews.map(r => (r.quoteId === quoteId ? prev : r)) })); void saveReview(prev).catch(failed('undo that', get().loadFromDB)) }
+      else { set(st => ({ reviews: st.reviews.filter(r => r.quoteId !== quoteId) })); void removeReview(quoteId).catch(failed('undo that', get().loadFromDB)) }
+    }))
+    void saveReview(next).catch(failed('save that answer', get().loadFromDB))
+    return next
   },
 
   addGoal(input) {
@@ -357,7 +383,9 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const myMarks = bookmarks.filter(m => m.bookId === id)
     const mySessions = get().sessions.filter(x => x.bookId === id)
     const myPlan = get().plans.find(p => p.bookId === id)
+    const myReviews = get().reviews.filter(r => myQuotes.some(q => q.id === r.quoteId))
     set(s => ({
+      reviews: s.reviews.filter(r => !myReviews.includes(r)),
       plans: s.plans.filter(p => p.bookId !== id),
       sessions: s.sessions.filter(x => x.bookId !== id),
       books: s.books.filter(b => b.id !== id), links: s.links.filter(l => l.bookId !== id),
@@ -372,11 +400,13 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         quotes: [...s.quotes, ...myQuotes], notes: [...s.notes, ...myNotes], bookmarks: [...s.bookmarks, ...myMarks],
         sessions: [...mySessions, ...s.sessions],
         plans: myPlan ? [...s.plans, myPlan] : s.plans,
+        reviews: [...s.reviews, ...myReviews],
       }))
       void (async () => {
         await saveBooks([book])
         if (mine.length) await setBookLists(id, mine.map(l => l.listId), [])
         for (const q of myQuotes) await saveQuote(q)
+        for (const r of myReviews) await saveReview(r)
         for (const n of myNotes) await saveNote(n)
         for (const m of myMarks) await saveBookmark(m)
         for (const x of mySessions) await saveSession(x)
@@ -462,11 +492,13 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     if (!q) return
     const myNotes = notes.filter(n => n.quoteId === id)
     const myMarks = bookmarks.filter(m => m.quoteId === id)
-    set(s => ({ quotes: s.quotes.filter(x => x.id !== id), notes: s.notes.filter(n => n.quoteId !== id), bookmarks: s.bookmarks.filter(m => m.quoteId !== id) }))
+    const myReview = get().reviews.find(r => r.quoteId === id)
+    set(s => ({ quotes: s.quotes.filter(x => x.id !== id), notes: s.notes.filter(n => n.quoteId !== id), bookmarks: s.bookmarks.filter(m => m.quoteId !== id), reviews: s.reviews.filter(r => r.quoteId !== id) }))
     pushUndo('Delete a quote', () => {
-      set(s => ({ quotes: [...s.quotes, q], notes: [...s.notes, ...myNotes], bookmarks: [...s.bookmarks, ...myMarks] }))
+      set(s => ({ quotes: [...s.quotes, q], notes: [...s.notes, ...myNotes], bookmarks: [...s.bookmarks, ...myMarks], reviews: myReview ? [...s.reviews, myReview] : s.reviews }))
       void (async () => {
         await saveQuote(q)
+        if (myReview) await saveReview(myReview)
         for (const n of myNotes) await saveNote(n)
         for (const m of myMarks) await saveBookmark(m)
       })().catch(failed('restore the quote', get().loadFromDB))

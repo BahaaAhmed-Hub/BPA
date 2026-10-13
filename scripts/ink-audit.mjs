@@ -278,6 +278,10 @@ const LIBRARY = {
     { id: 'q2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'text', body: 'Habits are the compound interest of self-improvement.', image_path: null, page: null, line: null, color: null, explanation: JSON.stringify({ meaning: 'Small gains repeat, and what repeats grows.', apply: ['Pick one tiny habit and do it daily', 'Track it for a week'] }), created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
     { id: 'q3', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'image', body: null, image_path: 'u1/00000000-0000-4000-8000-000000000000/quotes/x.png', page: 40, line: null, color: null, created_at: '2026-09-03T00:00:00Z', updated_at: '2026-09-03T00:00:00Z' },
   ],
+  // One quote already in review and overdue (so "1 due · 1 new"), one never asked.
+  library_quote_reviews: [
+    { quote_id: 'q2', user_id: SU, due_on: '2026-09-30', interval_days: 3, ease: 2.5, reps: 2, lapses: 0, first_on: '2026-09-20', last_on: '2026-09-27' },
+  ],
   // A quote made from a photo with no words typed yet: its own row, its own ink.
   library_notes: [
     { id: 'n1', user_id: SU, scope: 'quote', book_id: null, quote_id: 'q1', list_id: null, page: null, line: null, body: 'Aristotle, really.', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
@@ -507,6 +511,25 @@ for (const theme of THEMES) {
       await page.waitForTimeout(500)
     })
   }
+  // Reviewing quotes: the idle screen (counts, the start button), a card with its words hidden, and the same
+  // card revealed with the four answers and the intervals they promise.
+  await visit('Library · quote review · waiting', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Quotes' }).click()
+    await page.waitForTimeout(500)
+    await page.getByRole('tab', { name: /^Review/ }).click()
+    await page.waitForTimeout(600)
+  })
+  await visit('Library · quote review · a card', async () => {
+    await page.getByRole('button', { name: /^Start/ }).click()
+    await page.waitForTimeout(500)
+  })
+  await visit('Library · quote review · answered', async () => {
+    await page.keyboard.press('Space')
+    await page.waitForTimeout(500)
+  })
+  await page.getByRole('tab', { name: 'Cards' }).click()
+  await page.waitForTimeout(300)
   // The export dialog over the board: format switch, options, the monospace
   // preview on --sb-field, and the disabled Copy beside the live Download.
   await visit('Library · export', async () => {

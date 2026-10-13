@@ -188,3 +188,21 @@ export interface ReadingGoal {
   listId?: string
   createdAt: string
 }
+
+// ─── Phase 7b: spaced review of quotes ──────────────────────────────────────
+
+export type Grade = 'again' | 'hard' | 'good' | 'easy'
+
+/** Where a quote stands in review. No record means it is new. */
+export interface QuoteReview {
+  quoteId: string
+  /** The day it is next asked, YYYY-MM-DD (the reader's local day). */
+  dueOn: string
+  intervalDays: number
+  ease: number
+  reps: number
+  lapses: number
+  /** The day it was first reviewed: what "new today" is counted from. */
+  firstOn: string
+  lastOn: string
+}
