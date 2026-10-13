@@ -136,7 +136,7 @@ export function LibraryModule() {
         ]} />
         <Button variant="secondary" disabled={missing} onClick={() => shelfInput.current?.click()} title="Photograph a shelf and add the books on it"><Camera size={ICON.md} /> Scan shelf</Button>
         {/* No `capture`: it would force the camera and take away the photo library, where a shelf photo usually is. */}
-        <input ref={shelfInput} type="file" accept="image/*" hidden aria-label="Choose a photo of a shelf"
+        <input ref={shelfInput} type="file" accept="image/*,.heic,.heif" hidden aria-label="Choose a photo of a shelf"
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setShelfPhoto(f) }} />
         <Button variant="accent" disabled={missing} onClick={() => setAdding(true)}><Plus size={ICON.md} /> Add book</Button>
       </header>
