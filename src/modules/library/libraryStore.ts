@@ -57,6 +57,10 @@ interface LibraryState {
   clearAll: () => void
 
   addBook: (b: Partial<Book> & { title: string }, listIds?: string[]) => Book
+  /** Many at once — one request, one undo entry. `listIds` applies to every book. */
+  /** Fills in details on books that exist (covers, ISBNs from a lookup). One request, no undo entry of its own: if the books were taken back, there is nothing to fill. */
+  patchBooks: (patches: { id: string; patch: Partial<Book> }[]) => void
+  addBooks: (inputs: (Partial<Book> & { title: string; category?: string })[], listIds?: string[]) => Book[]
   updateBook: (id: string, patch: Partial<Book>) => void
   deleteBook: (id: string) => void
 
@@ -269,6 +273,69 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       .then(() => listIds.length ? setBookLists(book.id, listIds, []) : undefined)
       .catch(failed('save the book', get().loadFromDB))
     return book
+  },
+
+  patchBooks(patches) {
+    const t = nowISO()
+    const next: Book[] = []
+    set(s => ({
+      books: s.books.map(b => {
+        const p = patches.find(x => x.id === b.id)
+        if (!p) return b
+        const n = { ...b, ...p.patch, id: b.id, updatedAt: t }
+        next.push(n)
+        return n
+      }),
+    }))
+    if (next.length) void saveBooks(next).catch(failed('save the details', get().loadFromDB))
+  },
+
+  addBooks(inputs, listIds = []) {
+    if (!inputs.length) return []
+    const t = nowISO()
+    let order = get().books.reduce((m, b) => Math.max(m, b.shelfOrder), -1)
+    // A category is filed by name: a name you already have is yours (any case or punctuation),
+    // and one you do not is made — once, however many books share it.
+    const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+    const have = new Map(get().lists.filter(l => l.kind === 'category').map(l => [norm(l.name), l.id]))
+    const created: LibList[] = []
+    const listFor = (name?: string): string | undefined => {
+      const k = name ? norm(name) : ''
+      if (!k) return undefined
+      let id = have.get(k)
+      if (!id) {
+        // Made here rather than through addList: the links below must wait for it to be saved, and addList's own
+        // save is fire-and-forget — using both wrote the category twice.
+        const l: LibList = { id: crypto.randomUUID(), name: name!.replace(/\s+/g, ' ').trim(), kind: 'category', sortOrder: get().lists.reduce((m, x) => Math.max(m, x.sortOrder), -1) + 1 + created.length }
+        created.push(l); id = l.id; have.set(k, id)
+      }
+      return id
+    }
+    const made: Book[] = []
+    const lists = new Map<string, string[]>()
+    for (const { category, ...input } of inputs) {
+      const book: Book = {
+        authors: [], source: 'manual', status: 'want', format: 'print', rating: 0,
+        ...input, id: crypto.randomUUID(), shelfOrder: ++order, addedAt: t, updatedAt: t,
+      }
+      made.push(book)
+      const own = listFor(category)
+      lists.set(book.id, [...new Set([...listIds, ...(own ? [own] : [])])])
+    }
+    const links: ListBook[] = made.flatMap(b => (lists.get(b.id) ?? []).map(listId => ({ listId, bookId: b.id, sortOrder: 0 })))
+    set(s => ({ books: [...s.books, ...made], lists: [...s.lists, ...created], links: [...s.links, ...links] }))
+    // One entry, not forty: taking back a shelf you photographed is one gesture, and it takes back
+    // the categories it had to make as well, or "undo" would leave empty shelves behind.
+    pushUndo(made.length === 1 ? `Add “${made[0].title}”` : `Add ${made.length} books`, () => suppressUndo(() => {
+      for (const b of made) get().deleteBook(b.id)
+      for (const l of created) get().deleteList(l.id)
+    }))
+    void saveBooks(made)
+      // The categories must exist on the server before a link points at one.
+      .then(async () => { await Promise.all(created.map(l => saveList(l))) })
+      .then(async () => { for (const b of made) { const ids = lists.get(b.id) ?? []; if (ids.length) await setBookLists(b.id, ids, []) } })
+      .catch(failed('save the books', get().loadFromDB))
+    return made
   },
 
   updateBook(id, patch) {

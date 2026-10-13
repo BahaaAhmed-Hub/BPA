@@ -366,6 +366,20 @@ for (const theme of THEMES) {
   })
   // Discover: the two catalogues (a later route wins over the blanket
   // googleapis one above) — one book on the shelf already, one not, and an author.
+  // Claude, for the shelf-photo dialog only: it answers a spine-reading request with a row of each kind
+  // (clear, small print, unsure, already on the shelf, a new category) and everything else with nothing.
+  await page.route('https://api.anthropic.com/**', async r => {
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' }
+    if (r.request().method() === 'OPTIONS') return r.fulfill({ status: 204, headers: cors })
+    const spine = /read book spines/.test(r.request().postData() ?? '')
+    const text = spine ? JSON.stringify({ unreadable: 2, books: [
+      { title: 'Meditations', author: 'Marcus Aurelius', sureness: 'high', category: 'Philosophy' },
+      { title: 'The Odyssey', author: null, sureness: 'medium', category: 'Epic Poetry' },
+      { title: 'Blurry Title', author: null, sureness: 'low', category: null },
+      { title: 'Atomic Habits', author: 'James Clear', sureness: 'high', category: 'Self-help' },
+    ] }) : '{}'
+    return r.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-sonnet-4-6', stop_reason: 'end_turn', stop_sequence: null, content: [{ type: 'text', text }], usage: { input_tokens: 1, output_tokens: 1 } }) })
+  })
   await page.route('https://www.googleapis.com/books/**', r => r.fulfill({ json: { items: [
     { id: 'g9', volumeInfo: { title: 'Digital Minimalism', authors: ['Cal Newport'], publishedDate: '2019-02-05' } }] }, headers: { 'access-control-allow-origin': '*' } }))
   await page.route('https://openlibrary.org/**', r => {
@@ -586,6 +600,17 @@ for (const theme of THEMES) {
   // The dialog is a scrim over the whole page; the next screen's nav click
   // would land on it.
   await page.keyboard.press('Escape')
+
+  // A photographed shelf: every row kind — clear, small print, unsure, a book already on the shelf, an
+  // existing category and a new one — plus the toolbar and the "makes N new categories" line.
+  await visit('Library · books from a shelf photo', async () => {
+    await page.evaluate(() => localStorage.setItem('professor-ai-config', JSON.stringify({ provider: 'anthropic', anthropicKey: 'sk-ant-audit' })))
+    await page.getByLabel('Choose a photo of a shelf').setInputFiles({ name: 'shelf.png', mimeType: 'image/png', buffer: LIB_PNG })
+    await page.waitForTimeout(2500)
+  })
+  await page.keyboard.press('Escape')
+  await page.evaluate(() => localStorage.removeItem('professor-ai-config'))
+  await page.waitForTimeout(300)
 
   await visit('Dashboard', async () => { await page.locator('header nav button', { hasText: /^Dashboard$/ }).first().click() })
   // Settings is behind the avatar menu, and carries every colour picker there

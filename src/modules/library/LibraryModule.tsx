@@ -1,5 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { Plus, Search, X } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { Camera, Plus, Search, X } from 'lucide-react'
 import { Button, Card, Pill, Segmented } from '@/components/ui'
 import { CAPS, ICON } from '@/lib/type'
 import { useFillsTheWindow } from '@/lib/fillsTheWindow'
@@ -11,6 +11,8 @@ import { DiscoverView } from './DiscoverView'
 import { ListsView } from './ListsView'
 import { QuoteBoard } from './QuoteBoard'
 import { Shelf } from './Shelf'
+import { ShelfPhotoDialog } from './ShelfPhotoDialog'
+import { enrichAndReport } from './shelfEnrich'
 import { TrackerView } from './TrackerView'
 import { inputStyle } from './fieldStyle'
 import { loadLibraryView, saveLibraryView, type LibraryView } from './libraryPrefs'
@@ -49,6 +51,8 @@ export function LibraryModule() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [flight, setFlight] = useState<{ book: Book; from: DOMRect } | null>(null)
   const [adding, setAdding] = useState(false)
+  const [shelfPhoto, setShelfPhoto] = useState<File | null>(null)
+  const shelfInput = useRef<HTMLInputElement>(null)
   const [addIsbn, setAddIsbn] = useState<string | undefined>()
   const [readingId, setReadingId] = useState<string | null>(null)
   const narrow = useNarrow()
@@ -119,6 +123,10 @@ export function LibraryModule() {
         <Segmented value={view} onChange={setView} options={[
           { value: 'shelf', label: 'Shelf' }, { value: 'covers', label: 'Covers' }, { value: 'lists', label: 'Lists' }, { value: 'quotes', label: 'Quotes' }, { value: 'discover', label: 'Discover' }, { value: 'tracker', label: 'Tracker' },
         ]} />
+        <Button variant="secondary" disabled={missing} onClick={() => shelfInput.current?.click()} title="Photograph a shelf and add the books on it"><Camera size={ICON.md} /> Scan shelf</Button>
+        {/* No `capture`: it would force the camera and take away the photo library, where a shelf photo usually is. */}
+        <input ref={shelfInput} type="file" accept="image/*" hidden aria-label="Choose a photo of a shelf"
+          onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setShelfPhoto(f) }} />
         <Button variant="accent" disabled={missing} onClick={() => setAdding(true)}><Plus size={ICON.md} /> Add book</Button>
       </header>
 
@@ -214,6 +222,10 @@ export function LibraryModule() {
           </Suspense>
         )
       })()}
+      {shelfPhoto && (
+        <ShelfPhotoDialog file={shelfPhoto} onClose={() => setShelfPhoto(null)}
+          onAdded={(ids, enrich) => { setShelfPhoto(null); setStatus('all'); setQ(''); setListId(null); setView('shelf'); if (enrich) void enrichAndReport(ids) }} />
+      )}
       {adding && (
         <AddBookModal defaultListIds={activeListId ? [activeListId] : []} initialIsbn={addIsbn} onClose={() => { setAdding(false); setAddIsbn(undefined) }}
           onAdded={() => { setAdding(false); setAddIsbn(undefined); setView(view === 'lists' || view === 'quotes' || view === 'discover' || view === 'tracker' ? 'shelf' : view) }} />

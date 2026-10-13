@@ -3919,7 +3919,7 @@ no migration: a result is added as an ordinary book with `status: 'want'`.
   only schedules the request (the lint rule, and the right shape).
 - **Cover and spine are the shelf's own** (`CoverArt` with the candidate dressed
   as a book), so a result without a cover draws a title-page, not a hole.
-`scripts/library-discover.mjs` — 25 assertions with Open Library and Google Books
+`scripts/library-discover.mjs` — 23 assertions with Open Library and Google Books
 faked *with the CORS headers the real ones send* and each switchable off, and a
 PostgREST that refuses an unknown `library_books` column. A trailing space is not
 a new search (`wants` is trimmed), which the first draft of the test tripped on.
@@ -4275,3 +4275,75 @@ only the books on that list or category. One table and one set of controls, not 
 (every state and its boundaries, the lump rule, the grace period, year edges, leap
 years, scope, units, sentences) and the card against a fake that enforces the
 CHECKs, the coalesced unique and the cascade.
+
+## Library 6 — a photographed shelf becomes books
+`shelfTiles.ts`, `readShelf.ts`, `shelfCategories.ts`, `shelfEnrich.ts`,
+`ShelfPhotoDialog.tsx`, reached from **Scan shelf** in the header. No migration. Three
+chunks, one dialog: **6a** read the spines, **6b** file them under categories, **6c**
+fill in covers and details afterwards. Nothing is added until it is ticked.
+- **The photo is cut into overlapping tiles** (`planTiles`, at most 6). A shelf is wide;
+  a phone photo of one is ~4000px across and the model takes ~1568 on an edge, so the
+  whole photo shrunk is a smear. Columns first, then rows, squeezed to the cap, each
+  piece reaching 12% into its neighbour so a spine on a cut line is whole in one. Drawn
+  from `createImageBitmap(file, {imageOrientation:'from-image'})` so a rotated phone
+  photo is read the right way up. Pieces are read **one after another**, not in
+  parallel: in parallel a rate limit takes all of them at once.
+- **The model is told to under-claim.** It lists titles it can actually read, with
+  `high/medium/low` sureness, and *counts* the spines it could not read instead of
+  guessing — a half-covered spine guessed from a fragment is a confident wrong book.
+  The screen says "N spines could not be read — those are not listed", and names
+  uncertainty on the row ("Small print", "Not sure — check this one"). Clear and
+  small-print rows are ticked; unsure ones are not.
+- **Every row is a draft.** Title and author are editable, and a book **already on the
+  shelf** (`shelfMatch`, re-evaluated as you retype a title) is shown as such and
+  cannot be ticked: adding it twice is the one mistake this screen could make for you.
+- **A piece that fails costs its piece.** The books from the others are listed and the
+  screen says "1 of 3 parts could not be read". Only when *every* piece fails is it an
+  error; a **refused key stops after the first piece** (the rest would be refused too).
+  No key, no JSON, nothing readable, a file that is not an image, a corrupt image: each
+  is a sentence ending in the way back to adding by hand, and none sends a call it
+  doesn't need. A reply that isn't JSON is "nothing readable", never an error screen.
+- **The tiles overlap, so a spine is read twice.** `mergeSpines` keys on the normalised
+  title: one row per book, the surer reading wins, an author or category seen once is
+  kept. Capped at 80 rows.
+- **One request and one undo for the whole add** — `addBooks`, not forty `addBook`s. A
+  reload landing between forty sequential upserts replaces the list with what the
+  server has *so far*; one batch cannot be split. ⌘Z takes the books **and any
+  category the add had to make** (not the ones you already had), or "undo" would leave
+  empty shelves behind.
+- **Categories: yours first, spelled your way.** The prompt carries your category names
+  and says to use one *exactly*; the model still answers "history" for "History", so
+  `resolveCategory` maps near-misses (case, punctuation) onto the one you have rather
+  than creating a twin. A genuinely new genre is offered as `Biography (new)`,
+  preselected, with "Makes 1 new category: Biography." on screen before anything is
+  made. **Sort into categories** turns the whole thing off. The category is judged from
+  the title alone — the prompt forbids guessing from a spine's colour or design. A
+  category is made *inside* `addBooks` rather than through `addList`: the links must wait
+  for it to be saved, and `addList` saves fire-and-forget (using both wrote it twice).
+- **Reading goes through a ref, not a dependency.** A background reload replaces `lists`;
+  a read callback depending on the category names would re-run the effect and read (and
+  bill for) the photo again, losing the person's edits.
+- **Enrichment is strict, because a wrong cover is worse than none.** `pickMatch`
+  accepts a catalogue result only if the title matches whole (case/punctuation aside,
+  or once a subtitle is set aside — in either direction), **and**, with an author on the
+  spine, shares its **surname as a whole word** (`Clear` ≠ `Clearwater`); with none, the
+  title must be exact and the result must have a cover to show for it, and a title under
+  4 characters ("It") is refused outright. `Dune` does not get `Dune Messiah`'s cover.
+  Of those that pass, the richest (cover, ISBN, pages) wins. `applyCandidate` then fills
+  only what the book lacks. Books it cannot match stay exactly as the spine read them.
+- **It runs after the dialog closes** (`enrichAndReport` from the module, so it survives
+  the dialog), three books at a time, and applies all patches in **one** request
+  (`patchBooks`). The person gets one line: "Found covers and details for 2 of 5 books",
+  "No confident matches…", or "Could not reach the book catalogues, so N books were
+  added without covers". Both catalogues down for a book is *could not look*, not *no
+  match*. **If the books were taken back (undo) while it ran, nothing is patched and
+  nothing is said** — only books still on the shelf are counted.
+- **"Already read" adds the books without a finish date**, so a shelf you photograph does
+  not move a yearly goal; set the dates where you know them.
+`scripts/library-shelf-photo.mjs` (58) — the tile geometry, parsing, merging and
+categories asked pure questions, then the dialog against a faked Claude: the request
+itself (a JPEG block, the prompt, your categories), ticking and editing, the one
+batch POST, the categories made and the links, one undo, three pieces for a wide
+photo, a piece failing, a refused key, no key, nothing readable, not JSON, not an image,
+corrupt, cancel/Escape. `scripts/library-shelf-enrich.mjs` (25) — the matcher's refusals
+and the whole path with faked catalogues. The ink audit has the dialog (39 screens).
