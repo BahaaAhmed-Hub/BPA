@@ -1951,6 +1951,13 @@ back.
 over the real module with the server's completion order controlled, each batch
 landing backwards. Control, on the shipped code: the browser holds 93
 characters and **the server holds `"s"`**.
+- **A second defence made that control a control of nothing.** The read-back
+  loop added later heals a mis-ordered write on its own, so stripping only the
+  serialisation stopped reproducing the stump: the control asserted the bug
+  appears, the bug did not appear, and the suite reported a failure about code
+  that was fine. A control has to remove **every** defence against the fault it
+  demonstrates, or it measures whichever one somebody left in — so it now
+  strips the retry too, and the server holds `"s"` again.
 
 ## Bots — a 401 is not an empty wallet, and the message has to name the key
 "My API ran out of credit, I paid again, and Telegram still gives me 401."
@@ -4117,3 +4124,30 @@ literal `###`, `**bold**` and `| Time | Event |` rows.
 Measured in Chromium at the panel's width: no raw `###`/`|---` left, one real
 table that scrolls inside its box with no page overflow, an inert `<script>`, a
 broken image falling back to a link.
+
+## Finance — the tab bar was the last slab on the page
+A full-bleed `--sb-header` strip with square corners, running edge to edge
+under a rule. It is the one thing left on screen still drawn as a slab after
+`.cal-panel` gave its frame up and the rail became two floating pills — and
+beside those pills a square strip reads as broken rather than as part of the
+page, which is how it was reported.
+- **It is the rail's own shape, imported rather than retyped.** `LOZENGE` is
+  exported from `SideRail.tsx` — the four properties that are the *shape*
+  (ground, border, `borderRadius: 999`, shadow) with no layout in them, since a
+  column of icons and a row of tabs want different directions and padding.
+  `PILL` spreads it. A hard-coded `borderRadius: 999` in the finance module
+  would have looked identical today and drifted the day the rail's changed.
+- **`--sb-overlay`, for the reason the rail has it**: it is the one surface
+  token opaque in every theme. In Glass `--sb-header` is
+  `rgba(255,255,255,.035)`, a wash that leaves the bar all but the page itself.
+- **The rule goes with the slab.** A floating object does not draw a line
+  across the page; the gap under it is the separation, so the border is now
+  the lozenge's own, all the way round.
+`scripts/finance-bar-is-a-lozenge.mjs [shape|floats|control]` — and the claim
+is about **two** elements, so it reads radius, ground, shadow and border off
+the tab bar *and* off the rail's lozenge and asserts they are equal; a
+one-sided assertion passes with the two already drifted. Control, the old
+values restored on the very same element: radius `0px`, ground `#FCFAF4`, no
+shadow, a bottom rule, and the bar spanning 90→1500 — the full width of
+`<main>`, which is the screenshot. The labels changed ground, so the ink audit
+re-ran: **0 failing pairs over 22 screens in all four themes.**

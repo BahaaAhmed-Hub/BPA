@@ -75,9 +75,18 @@ let src = readFileSync('src/lib/prefSync.ts', 'utf8')
 src = src.replace(/^import .*$/gm, '')
   .replace(/async function userId\(\)[\s\S]*?\n}/, "async function userId() { return 'u1' }")
 if (MODE === 'control') {
-  // The shipped code: every caller ran its own push, concurrently.
+  // The shipped code before either defence existed: every caller ran its own
+  // push, concurrently...
   src = src.replace(/export async function pushSharedPrefs\(\)[\s\S]*?\n}\n/,
     'export async function pushSharedPrefs() { return sendSharedPrefs() }\n')
+  // ...and a write was not read back. #18 added that read-back-and-retry loop
+  // *on top of* the serialisation, and it heals a mis-ordered write on its own
+  // — so stripping only the serialisation stopped reproducing the stump and
+  // this control quietly became a control of nothing. A control has to remove
+  // every defence against the fault it is demonstrating, or it measures
+  // whichever one somebody left in.
+  src = src.replace('for (let attempt = 0; attempt < 3; attempt++) {',
+                    'for (let attempt = 0; attempt < 1; attempt++) {')
 }
 src = `const supabase = globalThis.__sb\n` + src
 writeFileSync(join(dir, 'prefSync.ts'), src)
