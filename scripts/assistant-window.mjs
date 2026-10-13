@@ -107,10 +107,13 @@ const png = readFileSync(new URL('../public/assistant-avatar-cutout.png', import
 ok('the file is a PNG with an alpha channel (colour type 6)', png.subarray(1, 4).toString() === 'PNG' && png[25] === 6)
 ok('the clearance for footers that sit in that corner is a token, 104px', (await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ai-fab-clear').trim())) === '104px')
 ok('before it is opened there is no window on screen', (await shown(p)) === 'false')
+const dialogs = () => p.evaluate(() => document.querySelectorAll('[role="dialog"]').length)
+ok('it is not a [role="dialog"]: three modules ask that selector whether a dialog is open (Library Escape, the calendar’s Delete key, the composer’s dismissal), and an always-mounted window must not answer yes', await dialogs() === 0)
 
 // ── 2 · it floats ──────────────────────────────────────────────────────────
 await p.locator(FAB).click(); await wait(p, 500)
 ok('pressing the button opens the window', (await shown(p)) === 'true')
+ok('…and open, it still is not one', await dialogs() === 0)
 const w = await rect(p, WIN), f2 = await rect(p, FAB)
 ok('it does not run top to bottom — there is page above it and the button below it', w.y > 120 && w.bottom < f2.y && w.h <= 640, `y=${w.y} h=${w.h} bottom=${w.bottom} button.y=${f2.y}`)
 ok('it sits in the corner with the button’s own margin', Math.abs(1280 - w.right - 24) <= 1, `gap ${1280 - w.right}`)

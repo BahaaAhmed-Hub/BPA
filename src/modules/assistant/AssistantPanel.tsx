@@ -737,7 +737,10 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
   return (
     <>
       <div ref={root} className="ai-window" data-assistant-window data-shown={shown ? 'true' : 'false'}
-        role="dialog" aria-label={`${labelOf(persona)}, your assistant`} aria-hidden={!shown}
+        role="region" aria-label={`${labelOf(persona)}, your assistant`} aria-hidden={!shown}
+        // NOT role="dialog": it is not modal, and three modules ask `[role="dialog"]` whether a
+        // dialog is open (Library Escape, the calendar's Delete key, the event composer's
+        // dismissal). A window that is always mounted would answer yes for every one of them.
         style={{
           // A floating card above the button, not a column down the side: it
           // covers what it has to and no more, and the page behind stays visible.
