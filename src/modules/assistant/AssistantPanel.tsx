@@ -18,6 +18,8 @@ import { addressedTo } from '@/lib/callName'
 import { recognitionLang, speak, speechSupported, startListening, stopSpeaking, unlockSpeech, type Listening, type ListenError } from '@/lib/speech'
 import { cleanName, labelOf, loadPersona as loadPersonaNow, NAME_MAX, savePersona, usePersona } from '@/lib/assistantPersona'
 import { AssistantAvatar } from './AssistantAvatar'
+import { ModelBadge } from './ModelBadge'
+import { ASSISTANT_CLAUDE_MODEL } from '@/lib/modelInfo'
 import { clampWidth, loadChosenWidth, rightGap, saveWidth, widthFromDrag, DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH } from '@/lib/assistantWindow'
 import { ASK_EVENT, takePendingAsk } from '@/lib/assistantBridge'
 
@@ -83,14 +85,6 @@ function toGroqTools(tools: Anthropic.Tool[]) {
     type: 'function' as const,
     function: { name: t.name, description: t.description ?? '', parameters: t.input_schema },
   }))
-}
-
-function providerLabel(cfg: AIConfig): string {
-  if (cfg.provider === 'groq') {
-    const short = cfg.groqModel.split('-').slice(0, 3).join('-')
-    return `Groq · ${short}`
-  }
-  return 'Anthropic · Claude'
 }
 
 // ─── System prompt ────────────────────────────────────────────────────────────
@@ -495,7 +489,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
       let   accumText  = ''
 
       const stream = client.messages.stream({
-        model: 'claude-sonnet-4-6', max_tokens: 4096,
+        model: ASSISTANT_CLAUDE_MODEL, max_tokens: 4096,
         system, tools: ASSISTANT_TOOLS, messages: msgs,
       })
 
@@ -783,7 +777,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
           <AssistantAvatar size={38} radius="50%" name={persona.name} />
           <div style={{ flex: 1 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{labelOf(persona)}</p>
-            <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-info)' }}>{providerLabel(cfg)}</p>
+            <ModelBadge provider={cfg.provider === 'groq' ? 'groq' : 'anthropic'} model={cfg.provider === 'groq' ? cfg.groqModel : ASSISTANT_CLAUDE_MODEL} />
           </div>
           {!isEmpty && (
             <button onClick={clearConversation}
