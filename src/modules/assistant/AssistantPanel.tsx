@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Anthropic from '@anthropic-ai/sdk'
-import { Mic, X, Send, Loader2, ChevronDown, ChevronRight, ChevronLeft, Check, CircleAlert, Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
+import { Mic, X, Send, Loader2, ChevronDown, Check, CircleAlert, Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHabitsStore } from '@/store/habitsStore'
@@ -18,6 +18,7 @@ import { addressedTo } from '@/lib/callName'
 import { recognitionLang, speak, speechSupported, startListening, stopSpeaking, unlockSpeech, type Listening, type ListenError } from '@/lib/speech'
 import { cleanName, labelOf, loadPersona as loadPersonaNow, NAME_MAX, savePersona, usePersona } from '@/lib/assistantPersona'
 import { AssistantAvatar } from './AssistantAvatar'
+import { clampWidth, loadChosenWidth, rightGap, saveWidth, widthFromDrag, DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH } from '@/lib/assistantWindow'
 import { ASK_EVENT, takePendingAsk } from '@/lib/assistantBridge'
 
 // ─── Groq types (OpenAI-compatible) ──────────────────────────────────────────
@@ -330,14 +331,88 @@ const SUGGESTIONS = [
 interface AssistantPanelProps {
   open: boolean
   onClose: () => void
-  /** Slid out of the way, but still here — the conversation is untouched. */
+  /** Collapsed to the button, but still here — the conversation is untouched. */
   minimised?: boolean
   onMinimise?: () => void
-  onRestore?: () => void
 }
 
-export function AssistantPanel({ open, onClose, minimised = false, onMinimise, onRestore }: AssistantPanelProps) {
+export function AssistantPanel({ open, onClose, minimised = false, onMinimise }: AssistantPanelProps) {
   const persona = usePersona()
+  // ── The window: where it floats, how wide it is, and when it steps aside ───
+  /** On screen. Collapsed (`minimised`) is faded out and kept mounted — the thread, the draft and an answer still arriving carry on. */
+  const shown = open && !minimised
+  const root = useRef<HTMLDivElement>(null)
+  const [vw, setVw] = useState(() => window.innerWidth)
+  /** What the person chose, bent to the screen only when drawn — so a narrow window never overwrites a wide choice. */
+  const [chosenW, setChosenW] = useState(() => loadChosenWidth())
+  const [dragging, setDragging] = useState(false)
+  const drag = useRef<{ startX: number; startW: number; w: number } | null>(null)
+  const winW = clampWidth(chosenW, vw)
+  useEffect(() => {
+    const on = () => setVw(window.innerWidth)
+    window.addEventListener('resize', on)
+    return () => window.removeEventListener('resize', on)
+  }, [])
+
+  // Anywhere else on any screen collapses it — not closes it. One listener, with a
+  // 400ms guard: a touch screen replays a tap as a synthetic mousedown a moment after
+  // pointerup, so whatever *opened* the window (the button, the search box, the name
+  // listener) would otherwise collapse it in the same gesture. A ref holds the callback
+  // so a re-render of the app does not re-arm the guard.
+  const collapseRef = useRef(onMinimise)
+  collapseRef.current = onMinimise
+  useEffect(() => {
+    if (!shown) return
+    const openedAt = Date.now()
+    const away = (e: PointerEvent) => {
+      if (Date.now() - openedAt < 400) return
+      const t = e.target as Element | null
+      if (!t || !(t instanceof Element)) return
+      if (root.current?.contains(t)) return
+      if (t.closest('[data-assistant-fab]')) return          // the button decides for itself
+      collapseRef.current?.()
+    }
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || !root.current?.contains(document.activeElement)) return
+      collapseRef.current?.()
+    }
+    document.addEventListener('pointerdown', away, true)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('pointerdown', away, true); document.removeEventListener('keydown', esc) }
+  }, [shown])
+
+  const gripDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    drag.current = { startX: e.clientX, startW: winW, w: winW }
+    setDragging(true)
+  }
+  const gripMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = drag.current
+    if (!d) return
+    d.w = widthFromDrag(d.startW, d.startX, e.clientX, window.innerWidth)
+    setChosenW(d.w)
+  }
+  const gripUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = drag.current
+    drag.current = null
+    setDragging(false)
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    if (d) saveWidth(d.w)                                   // the number the person saw, kept
+  }
+  const gripKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Anchored right, so ← widens and → narrows. Home resets to the default.
+    const step = e.shiftKey ? 80 : 20
+    let next: number | null = null
+    if (e.key === 'ArrowLeft') next = winW + step
+    else if (e.key === 'ArrowRight') next = winW - step
+    else if (e.key === 'Home') next = DEFAULT_WIDTH
+    if (next === null) return
+    e.preventDefault()
+    const w = clampWidth(next, window.innerWidth)
+    setChosenW(w); saveWidth(w)
+  }
   // ── Voice: tap the mic, say it, hear it back ──────────────────────────────
   const [listening, setListening] = useState(false)
   const [interim, setInterim] = useState('')
@@ -667,18 +742,38 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
 
   return (
     <>
-      <div style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0, width: 390, zIndex: 150,
-        display: 'flex', flexDirection: 'column',
-        background: 'var(--sb-page)',
-        borderLeft: 'var(--sb-border-width) solid var(--sb-border)',
-        // Minimised is slid out, not unmounted: the thread, the draft in the
-        // box and an answer still streaming all carry on behind it.
-        transform: open && !minimised ? 'translateX(0)' : 'translateX(100%)',
-        transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
-        boxShadow: open && !minimised ? '-8px 0 32px rgba(0,0,0,0.4)' : 'none',
-        visibility: open ? 'visible' : 'hidden',
-      }}>
+      <div ref={root} className="ai-window" data-assistant-window data-shown={shown ? 'true' : 'false'}
+        role="dialog" aria-label={`${labelOf(persona)}, your assistant`} aria-hidden={!shown}
+        style={{
+          // A floating card above the button, not a column down the side: it
+          // covers what it has to and no more, and the page behind stays visible.
+          position: 'fixed', zIndex: 150,
+          right: `calc(${rightGap(vw)}px + env(safe-area-inset-right))`,
+          bottom: 'calc(24px + 72px + 14px + env(safe-area-inset-bottom))',
+          width: winW, height: 'min(640px, calc(100dvh - 200px - env(safe-area-inset-bottom)))',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          // Opaque in every theme: it is drawn over the page, and a wash that is
+          // legible only when a blur lands is how two panels once read as one.
+          background: 'var(--sb-overlay)',
+          border: 'var(--sb-border-width) solid var(--sb-border)',
+          borderRadius: 'var(--sb-r-card)',
+          boxShadow: 'var(--sb-shadow-frame)',
+        }}>
+
+        {/* The left edge is the handle: the right edge is fixed, so dragging it
+            left widens the window. Keyboard and double-click work too. */}
+        <div className="ai-resize" role="separator" aria-orientation="vertical" aria-label="Resize the assistant"
+          aria-valuemin={MIN_WIDTH} aria-valuemax={MAX_WIDTH} aria-valuenow={winW} tabIndex={shown ? 0 : -1}
+          data-dragging={dragging ? 'true' : 'false'}
+          onPointerDown={gripDown} onPointerMove={gripMove} onPointerUp={gripUp} onPointerCancel={gripUp}
+          onKeyDown={gripKey}
+          onDoubleClick={() => { const w = clampWidth(DEFAULT_WIDTH, window.innerWidth); setChosenW(w); saveWidth(w) }}
+          title="Drag to resize · double-click to reset"
+          style={{ position: 'absolute', left: 0, top: 16, bottom: 16, width: 12, zIndex: 3, cursor: 'ew-resize', touchAction: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+          <span aria-hidden className="ai-resize-grip"
+            style={{ width: 4, height: 44, marginLeft: 2, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-4)' }} />
+        </div>
 
         {/* Header */}
         <div style={{
@@ -697,13 +792,13 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
             </button>
           )}
           {onMinimise && (
-            <button onClick={onMinimise} title="Put it aside — the conversation stays"
-              aria-label="Put the assistant aside"
+            <button onClick={onMinimise} title="Collapse — the conversation stays"
+              aria-label="Collapse the assistant"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex' }}>
-              <ChevronRight size={ICON.md} />
+              <ChevronDown size={ICON.md} />
             </button>
           )}
-          <button onClick={onClose} title="Close, and forget the conversation" aria-label="Close the assistant"
+          <button onClick={() => { clearConversation(); onClose() }} title="Close, and forget the conversation" aria-label="Close the assistant"
 
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex' }}>
             <X size={ICON.md} />
@@ -878,33 +973,14 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
         </div>
       </div>
 
-      {/* Minimised: a tab on the edge, which is the whole way back. Without
-          one the panel would be gone with no sign it was ever there. */}
-      {open && minimised && (
-        <button
-          onClick={onRestore}
-          title="Bring the assistant back"
-          aria-label="Bring the assistant back"
-          style={{
-            position: 'fixed', right: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 149,
-            width: 34, height: 104, padding: 0, cursor: 'pointer',
-            borderRadius: 'var(--sb-r-nav) 0 0 var(--sb-r-nav)',
-            border: 'var(--sb-border-width) solid var(--sb-border)', borderRight: 'none',
-            background: 'var(--sb-card)', color: 'var(--sb-ink-3)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7,
-            boxShadow: '-4px 0 14px color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
-          }}>
-          <ChevronLeft size={ICON.md} />
-          <AssistantAvatar size={24} radius="50%" name={persona.name} ring={false} />
-          {/* An answer arriving while it is put aside has to be visible, or it
-              looks as though nothing happened. */}
-          {thinking && (
-            <span style={{
-              width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)',
-              animation: 'pulse 1.2s ease-in-out infinite',
-            }} />
-          )}
-        </button>
+      {/* Collapsed, the button is the whole way back — so it has to show an answer arriving,
+          or a reply would land with no sign anything happened. */}
+      {open && minimised && thinking && (
+        <span aria-hidden style={{
+          position: 'fixed', right: 'calc(30px + env(safe-area-inset-right))', bottom: 'calc(24px + 58px + env(safe-area-inset-bottom))',
+          zIndex: 149, width: 12, height: 12, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)',
+          border: '2px solid var(--sb-overlay)', animation: 'pulse 1.2s ease-in-out infinite', pointerEvents: 'none',
+        }} />
       )}
 
       <style>{`
@@ -934,28 +1010,24 @@ interface AssistantToggleProps { open: boolean; onClick: () => void }
 
 export function AssistantToggle({ open, onClick }: AssistantToggleProps) {
   const persona = usePersona()
+  const who = labelOf(persona).replace(/^Your assistant$/, 'your assistant')
+  // `open` is "the window is on screen": pressing it then collapses the window
+  // (the conversation stays); pressing it collapsed, or never opened, brings it up.
+  const label = open ? `Collapse ${who}` : `Talk to ${who}`
   return (
     <button
+      className="ai-fab" data-assistant-fab
       onClick={onClick}
-      title={open ? 'Close the assistant' : `Talk to ${labelOf(persona).replace(/^Your assistant$/, 'your assistant')}`}
-      aria-label={open ? 'Close the assistant' : `Talk to ${labelOf(persona).replace(/^Your assistant$/, 'your assistant')}`}
+      title={label}
+      aria-label={label}
+      aria-expanded={open}
       style={{
-        position: 'fixed', bottom: 24, right: open ? 406 : 24,
-        width: 48, height: 48, borderRadius: 'var(--sb-r-card)', border: 'none', cursor: 'pointer',
-        background: open ? 'var(--sb-field)' : 'var(--sb-ink-1)',
-        boxShadow: open
-          ? '0 2px 12px color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent), inset 0 0 0 1px var(--sb-border)'
-          : '0 4px 18px color-mix(in srgb, var(--sb-ink-1) 28.0%, transparent)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 148,
-        transition: 'right 0.25s cubic-bezier(0.4,0,0.2,1), background 0.2s, box-shadow 0.2s',
+        right: 'calc(24px + env(safe-area-inset-right))', bottom: 'calc(24px + env(safe-area-inset-bottom))',
+        width: 72, height: 72, zIndex: 148,
       }}>
-      {/* The mark is drawn in the accent where the accent can be seen on the
-          fill under it, and in whatever can be seen where it cannot: on
-          `--sb-ink-1` the accent is 9:1 in Sunlit, and 2.3 in Evergreen. */}
-      {open
-        ? <X size={ICON.lg} color="var(--sb-ink-3)" />
-        : <AssistantAvatar size={44} name={persona.name} />}
+      {/* The cut-out portrait alone — no tile, no border, no fill — 72px, which is the
+          48px it was drawn at, one and a half times over. */}
+      <AssistantAvatar bare size={72} name={persona.name} />
     </button>
   )
 }

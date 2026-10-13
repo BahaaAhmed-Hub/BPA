@@ -11,11 +11,13 @@ import { useState } from 'react'
  * an icon.
  */
 const SRC = `${import.meta.env.BASE_URL}assistant-avatar.png`
+/** The same portrait with its background removed — for where it floats on its own, with no tile behind it. */
+const CUTOUT = `${import.meta.env.BASE_URL}assistant-avatar-cutout.png`
 
-function Drawn() {
+function Drawn({ bare = false }: { bare?: boolean }) {
   return (
     <svg viewBox="0 0 96 96" width="100%" height="100%" aria-hidden focusable="false" style={{ display: 'block' }}>
-      <rect width="96" height="96" fill="#F3EAD2" />
+      {!bare && <rect width="96" height="96" fill="#F3EAD2" />}
       {/* shoulders and collar */}
       <path d="M8 96c2-17 15-27 40-27s38 10 40 27z" fill="#191712" />
       <path d="M36 70l12 12 12-12-5-3H41z" fill="#F5D14E" />
@@ -36,15 +38,28 @@ function Drawn() {
   )
 }
 
-export function AssistantAvatar({ size = 48, radius = 'var(--sb-r-card)', name, ring = true }: {
+export function AssistantAvatar({ size = 48, radius = 'var(--sb-r-card)', name, ring = true, bare = false }: {
   size?: number
   /** A CSS radius: the theme's own token by default; pass '50%' for a circle. */
   radius?: string
   /** Read out by a screen reader; the picture alone says nothing. */
   name?: string
   ring?: boolean
+  /** The transparent cut-out, drawn with no tile, border or clipping — the person alone. */
+  bare?: boolean
 }) {
   const [broken, setBroken] = useState(false)
+  if (bare) {
+    return (
+      <span role="img" aria-label={name ? `${name}, your assistant` : 'Your assistant'}
+        style={{ display: 'inline-block', width: size, height: size, flexShrink: 0, position: 'relative' }}>
+        {broken
+          ? <Drawn bare />
+          : <img src={CUTOUT} alt="" width={size} height={size} draggable={false} onError={() => setBroken(true)}
+              style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain', userSelect: 'none' }} />}
+      </span>
+    )
+  }
   return (
     <span role="img" aria-label={name ? `${name}, your assistant` : 'Your assistant'}
       style={{

@@ -1239,7 +1239,7 @@ export function NewEventPanel({
           Cancel. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
-        position: 'sticky', bottom: -12, padding: '10px 44px 6px 2px', marginTop: -2,
+        position: 'sticky', bottom: -12, padding: '10px var(--ai-fab-clear) 6px 2px', marginTop: -2,
         background: C.page,
       }}>
         {editing ? (

@@ -26,6 +26,68 @@ half-typed message, staged attachments and an answer still streaming all carry
 on behind it, and the tab shows a pulsing dot while one is arriving. Closing is
 still closing: it clears the conversation.
 
+## The assistant is a floating window, and stepping away from it collapses it
+This replaces the side panel with an edge tab that "The assistant can be put aside" (above)
+describes; that section is left as it was, as the history it is.
+
+`AssistantPanel` draws **a card above the button**, not a column down the side
+(it used to be `top: 0; bottom: 0`, 390px wide, over whatever was under it). Four
+rules hold it together, measured in `scripts/assistant-window.mjs` (50 assertions,
+real pointer events, with a control for the two that are subtle):
+- **Collapse is not close.** `open` and `minimised` are still App state, and the
+  window is *faded and dropped, never unmounted* (`data-shown="false"`: opacity 0,
+  `visibility: hidden`, `pointer-events: none`) — the thread, a half-typed draft and
+  an answer still streaming all carry on. The chevron in the header, **a pointer-down
+  anywhere else on any screen**, Escape from inside it, and pressing the button while
+  it is open all collapse it. **The ✕ closes, and now actually forgets** — its tooltip
+  has always said "Close, and forget the conversation" and on `main` it kept the thread,
+  because `onClose` only flipped `open`. It calls `clearConversation()` first.
+- **One listener decides, with a 400ms guard.** A touch screen replays a tap as a
+  synthetic mousedown a moment after `pointerup`, so whatever *opened* the window (the
+  button, the search box, the name listener) would collapse it in the same gesture.
+  `openedAt` is stamped when `shown` turns true, and the callback is read through a
+  ref — otherwise every re-render of the app re-armed the guard and "click anywhere
+  else" would intermittently do nothing for 400ms. Control: with the guard line
+  removed, the 400ms assertion is the one that fails. The button is excluded by
+  `[data-assistant-fab]`, so pressing it collapses once and does not collapse-then-reopen.
+- **The width is the person's, kept per device, and never overwritten by a screen too
+  small for it.** The right edge is the fixed one, so the handle is the window's *left*
+  edge and dragging it left widens. `assistantWindow.ts`: 340–860, default 420, bent to
+  `viewport − gaps` only **when drawn** (`clampWidth(chosenW, vw)`); what is stored
+  (`assistant-window-width`) is only ever a width the person set — pointer-up, the arrow
+  keys (←widens, →narrows, Shift = 80, Home resets) or a double-click. The first version
+  clamped the stored value on load, so opening the app once on a phone turned a chosen
+  600 into 366 for ever; control: that line puts the 366 back. Per device on purpose —
+  it is not a prefSync key, because a laptop and a phone have nothing to say to each
+  other about how much of the screen a chat deserves.
+- **Opaque, and every edge drawn.** `--sb-overlay` (not `--sb-page`) with a border all
+  round and `--sb-r-card`: it is drawn over the page, and a wash that is legible only
+  when a blur lands is the reason that token exists. Height is `min(640px, 100dvh −
+  200px)`, so there is always page above it.
+
+## The button is a person, not a tile
+`.ai-fab` in `index.css`, `AssistantToggle`, `AssistantAvatar bare`. 72px — the 48px it
+was, one and a half times — with **no fill, border or box-shadow**: the transparent
+cut-out `public/assistant-avatar-cutout.png` (384px, RGBA, head and shoulders ending
+in a superellipse bowl) and a `drop-shadow` that follows its outline, since a
+`box-shadow` would shadow a rectangle that is not there.
+- **It was a dark 48px button holding a cream 44px tile holding the portrait**, which
+  is the "border" the portrait seemed to have. The cut-out removes both rather than
+  restyling them.
+- **Made from the flat cream background by colour distance, then decontaminated.** Alpha
+  from distance to (246,234,211) with a smoothstep, `(I − (1−α)·B)/α` so a soft hair edge
+  carries no cream halo on a dark ground, the matte pulled in 1px, and **interior
+  pinholes filled only inside the face box** — filling everywhere also solidified the
+  real gaps between strands of hair as cream patches, visible on a dark page. Previewed
+  on light, dark and blue grounds, not just the one it will mostly be seen on.
+- **`--ai-fab-clear: 104px`** (24 margin + 72 button + a gap) is what a footer that sits
+  in the bottom-right corner pads by; four of them (PDF reader, Add book, Reflection,
+  the event composer) used literal 44–56px for the old 48px button and now read the token.
+- Lift is gated on `hover: hover`, and `prefers-reduced-motion` stills all of it.
+- **A collapsed window with an answer on its way shows a pulse on the button**, which
+  replaced the edge tab — the button is the only way back, so it has to show a reply
+  arriving.
+
 ## The assistant takes files
 `lib/chatAttachments.ts` + the composer in `AssistantPanel`. A screenshot of an
 invoice or a PDF statement is the fastest way to tell the assistant something,
