@@ -214,6 +214,26 @@ await p.setViewportSize({ width: 1280, height: 900 }); await wait(p, 400)
 ok('back on a wide screen it is the 600 that was chosen', Math.abs((await rect(p, WIN)).w - 600) <= 1, `${(await rect(p, WIN)).w}`)
 await ctx.close()
 
+// ── 5 · the message box is as tall as its text — and gives the height back ─────
+;({ p, ctx } = await launch())
+delay = 2500
+await p.locator(FAB).click(); await wait(p, 600)
+const ta = p.locator(`${WIN} textarea`).first()
+const boxH = () => ta.evaluate(el => Math.round(el.getBoundingClientRect().height))
+const one = await boxH()
+ok('one line is exactly the height of the 32px send button beside it', one === 32, `${one}px`)
+await ta.fill('line one\nline two\nline three\nline four'); await wait(p, 100)
+const tall = await boxH()
+ok('four lines make it taller', tall > one + 40, `${one} → ${tall}`)
+await ta.press('Enter'); await wait(p, 300)
+ok('the answer is on its way (the send button is busy)', await p.locator(`${WIN} button svg.lucide-loader-circle, ${WIN} button svg.lucide-loader2`).count() > 0 || (await p.locator(WIN).innerText()).includes('line one'))
+ok('after Send the box is back to one line — not the four it held', (await boxH()) === one, `${await boxH()}px`)
+ok('and it is still usable while the answer arrives: not disabled, and you can type the next one', !(await ta.isDisabled()) && (await ta.fill('next question'), await ta.inputValue()) === 'next question')
+ok('Enter while an answer is arriving does not send a second request', (await ta.press('Enter'), await wait(p, 200), (await p.locator(WIN).innerText()).split('next question').length === 1))
+await p.waitForFunction(() => /nothing/.test(document.querySelector('[data-assistant-window]')?.textContent ?? ''), null, { timeout: 15000 })
+ok('the draft is still there when the answer lands, and the box has kept its focus', (await ta.inputValue()) === 'next question' && await ta.evaluate(el => document.activeElement === el))
+await ctx.close(); delay = 0
+
 await b.close()
 console.log(fails ? `\n${fails} FAILED` : '\nall good')
 process.exit(fails ? 1 : 0)

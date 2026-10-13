@@ -233,3 +233,13 @@ search), the mic (interim words, the name stripped, the answer spoken once with 
 ignored, hidden → stops / visible → returns, the mic and the listener sharing), iPhone's tap, a refusal not
 retried, no recogniser → no button and no pill, first use. The Today screen asks Claude things of its own, so
 the harness counts only requests carrying `tools`. The ink audit has the first-use and named panels.
+
+## The message box gives its height back, and is never disabled
+`AssistantPanel` composer. The textarea was sized by an `onInput` handler, so clearing it
+after Send (a state change — no input event) left a four-line height under an empty box,
+with the icons dropped to its bottom edge: an 81px box for a one-line placeholder. Height
+is a `useLayoutEffect` on the text now, and one line is 32px — the send button's height —
+so the clip, mic, text and button share a centre. It is **no longer `disabled` while an
+answer is arriving** (that also dropped focus after every reply): you can write the next
+message, Enter waits (`sendMessage` refuses while thinking). `assistant-window.mjs` §5;
+control with the old file: 20px / 81px / disabled / focus lost — 4 of 4 fail.
