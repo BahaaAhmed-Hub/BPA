@@ -16,7 +16,7 @@ export interface ToolContext {
   deleteTask:   (id: string) => void
   accounts:     ConnectedAccount[]
   primaryEmail: string
-  habits:       Array<{ id: string; name: string; emoji: string; frequency: string; isActive: boolean; type: string; goal?: number; unit?: string }>
+  habits:       Array<{ id: string; name: string; emoji: string; frequency: string; isActive: boolean; type: string; goal?: number; unit?: string; image?: string }>
 }
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
@@ -334,7 +334,7 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
   // ── Habits ───────────────────────────────────────────────────────────────────
   {
     name: 'list_habits',
-    description: "List all habits with today's completion status and current streak.",
+    description: "List all habits with today's completion status and current streak. A habit with a `picture` has its own photo: show it with that exact value as ![name](picture) next to the name — the app draws the real photo. Use the emoji only when there is no `picture`.",
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
   {
@@ -611,6 +611,7 @@ export async function executeTool(
         const streak    = calcStreak(habitLogs)
         return {
           id: h.id, name: h.name, emoji: h.emoji,
+          picture: h.image ? `habit:${h.id}` : undefined,
           frequency: h.frequency, type: h.type,
           goal: h.goal, unit: h.unit,
           done_today: doneToday, streak,

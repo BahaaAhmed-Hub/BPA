@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
-import ReactMarkdown, { type Components } from 'react-markdown'
+import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useHabitsStore } from '@/store/habitsStore'
 
 // The assistant writes Markdown — tables, lists, bold — and the bubble used to
 // print it as characters (`###`, `| Time | Event |`). This draws it instead.
@@ -57,11 +58,26 @@ const CSS = `
 .ai-md th { font-weight: 600; white-space: nowrap; border-bottom-color: var(--sb-border) }
 .ai-md tr:last-child td { border-bottom: 0 }
 .ai-md td { min-width: 64px }
+.ai-md img.ai-md-habit { display: inline-block; width: 28px; height: 28px; margin: 0 8px 0 0; vertical-align: middle; object-fit: cover; border-radius: var(--sb-r-chip); border: var(--sb-border-width) solid var(--sb-border) }
 .ai-md img { display: block; max-width: 100%; height: auto; border-radius: var(--sb-r-nav); margin: 4px 0 }
 `
 
+/** `![Water](habit:<id>)` — the model names a habit's picture, the app draws
+ *  it. The photo is a ~60KB data URL: handing it through the model would cost
+ *  the tokens and a model cannot be trusted to copy that many characters back
+ *  out, so what crosses is a reference of a dozen characters and the real
+ *  image is read from the store here. No photo → the habit's own emoji, never
+ *  a broken box. */
+function HabitPicture({ id, alt }: { id: string; alt?: string }) {
+  const habit = useHabitsStore(s => s.habits.find(h => h.id === id))
+  if (!habit) return <span>{alt ?? ''}</span>
+  if (habit.image) return <img className="ai-md-habit" src={habit.image} alt={alt || habit.name} />
+  return <span style={{ marginRight: 8 }} aria-label={alt || habit.name}>{habit.emoji}</span>
+}
+
 function Img({ src, alt }: { src?: string; alt?: string }) {
   const [dead, setDead] = useState(false)
+  if (src?.startsWith('habit:')) return <HabitPicture id={src.slice(6)} alt={alt} />
   // A broken picture is a grey box with no explanation; say what it was.
   if (!src || dead) return <a href={src} target="_blank" rel="noopener noreferrer">{alt || 'image'}</a>
   return <img src={src} alt={alt ?? ''} loading="lazy" referrerPolicy="no-referrer" onError={() => setDead(true)} />
@@ -77,7 +93,9 @@ export function Markdown({ text }: { text: string }) {
   return (
     <div className="ai-md">
       <style>{CSS}</style>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{text}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}
+        // `habit:` is ours and carries no URL; everything else keeps the default filter.
+        urlTransform={u => (u.startsWith('habit:') ? u : defaultUrlTransform(u))}>{text}</ReactMarkdown>
     </div>
   )
 }

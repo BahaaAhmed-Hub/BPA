@@ -4121,6 +4121,26 @@ literal `###`, `**bold**` and `| Time | Event |` rows.
   4 short columns, no `---` or `#`/`##`, an image only from a URL a tool returned.
   Your own message stays plain text. Telegram has its own prompt and a narrower
   dialect — legacy Markdown has no tables — and is a separate step.
+- **A habit's picture is drawn by the app, not carried by the model.** The photo
+  is a ~60KB data URL: through the model it costs the tokens and cannot be
+  copied back out reliably. `list_habits` returns `picture: "habit:<id>"` (a
+  dozen characters) and the model writes `![Water](habit:<id>)`; `Markdown.tsx`
+  reads the real image from `useHabitsStore`, or the habit's emoji when there is
+  none. Before this the tool returned only `emoji`, so the model could not have
+  known a photo existed. `habit:` is allowed through `urlTransform`; every other
+  URL keeps react-markdown's default filter. **Backticks inside `FORMAT_RULES`
+  close the template literal** — the same trap the Telegram prompt hit.
+- **A tool chip has a state, and nothing spins after the answer.** It was a
+  sentence with a wrench on `animation: spin infinite` and nothing ever told it
+  the tool had come back, so it went on looking busy under a finished answer.
+  `DisplayMessage.tool` + `state` (`running` → `done` | `failed`); `settleChip`
+  is called when each call returns (Claude and Groq loops, keyed by the call's
+  own id), and the turn's `finally` settles anything still `running` as failed,
+  so an error, a refused key or an abort cannot leave one spinning. Labels are
+  what it was doing (`toolLabel`: "Reading habits…" → "Read habits"), not the
+  tool's name. Measured: 2 spinning chips and 7 live animations while running;
+  **0 animations on the whole page** once settled. `prefers-reduced-motion`
+  stops the sweep and slows the ring.
 Measured in Chromium at the panel's width: no raw `###`/`|---` left, one real
 table that scrolls inside its box with no page overflow, an inert `<script>`, a
 broken image falling back to a link.
