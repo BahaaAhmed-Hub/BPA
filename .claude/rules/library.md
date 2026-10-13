@@ -986,3 +986,22 @@ well as MIME type**: Chrome/Firefox hand a picked `.heic` an empty `type`, so a
 MIME-only test called it "not an image". Used by the shelf scan, the ISBN barcode
 photo and the quote photo. Not yet measured
 in a browser against a real HEIC — only `npm run build`.
+
+## Library — making and editing happen in the right panel, on a bookcase
+`SidePanel.tsx` is the one shell (cream, white cards, docked right, whole column under
+760px, sticky footer clear of the assistant's corner). `AddBookPanel`, `ListPanel`
+(New/Edit category or list), `ShelfPhotoPanel` (Scan shelf) and `BookPanel` all use the
+same arrangement; **one panel at a time** (`panelBook` in `LibraryModule`), and the open
+book comes back when the other closes. Camera/export/reader dialogs stay dialogs.
+- **A panel must not move under the pointer.** A blur re-render that changed the status
+  line or a row hint by a line shifted the buttons between mousedown and mouseup and the
+  click landed on a `DIV` — found by logging both rects, not by reading. Status lines have
+  a minimum height, row hints are one fixed line, `scrollbar-gutter: stable`.
+- **Scan shelf looks each title up online inside the panel** (`pickMatch`, strict) and
+  fills cover, proper title/author, year, ISBN, pages; all editable, a typed year/cover is
+  never overwritten, editing title/author and tabbing away asks again; saved as shown.
+  The old post-close `enrichAndReport` path is unused.
+- **Recall**: up to 12 tiles of ≤1000px, 18% overlap, "list EVERY spine", `max_tokens`
+  6000, 150 rows. A title read in full but doubtful is `low`, not `unreadable`.
+- **The bookcase** (`Bookcase.tsx`, `.lib-case`): walnut mixed into `--sb-overlay`, ≥3 bays,
+  empty state is `EmptyShelf`; Covers view stands covers face-out on the boards.

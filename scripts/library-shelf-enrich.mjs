@@ -116,51 +116,7 @@ ok('a three-letter title with no author is too ambiguous; with an author it is f
 ok('no candidates, no title, or a title with no letters is no match', u.empty.every(x => x === null))
 ok('of several that match, the one with the most to give wins', u.richest === 5)
 
-// ── the whole path ──────────────────────────────────────────────────────────
-const SHELF = { books: [
-  { title: 'Atomic Habits', author: 'James Clear', sureness: 'high' }, { title: 'Sapiens', author: null, sureness: 'high' },
-  { title: 'Dune', author: 'Frank Herbert', sureness: 'high' }, { title: 'Emma', author: 'Jane Austen', sureness: 'high' }, { title: 'Qxzvv Unknown', author: null, sureness: 'high' },
-], unreadable: 0 }
-const png = () => p.evaluate(() => { const c = document.createElement('canvas'); c.width = 800; c.height = 600; const g = c.getContext('2d'); g.fillStyle = '#8a6f4d'; g.fillRect(0, 0, 800, 600); return c.toDataURL('image/png').split(',')[1] }).then(s => Buffer.from(s, 'base64'))
-const dlg = () => p.getByRole('dialog', { name: 'Books from a shelf photo' })
-const scan = async () => { await p.getByLabel('Choose a photo of a shelf').setInputFiles({ name: 'shelf.png', mimeType: 'image/png', buffer: await png() }); await wait(2500) }
-const state = () => p.evaluate(async () => (await import('/BPA/src/modules/library/libraryStore.ts')).useLibraryStore.getState().books.map(b => ({ title: b.title, cover: b.coverUrl ?? null, isbn: b.isbn ?? null, pages: b.pages ?? null, authors: b.authors })))
-const body = () => p.locator('body').innerText()
-// A fresh page each time: books added by the last scenario would otherwise be on the shelf and flagged as duplicates.
-const reset = async () => { bookPosts = []; catalogueCalls = []; catalogue = 'ok'; catalogueDelay = 0; T.library_books = []; await p.reload({ waitUntil: 'domcontentloaded' }); await wait(4500) }
-aiHandler = () => SHELF
-
-await reset()
-await scan()
-ok('the dialog offers to look up covers and details, on by default', await dlg().getByLabel('Look up covers and details').isChecked())
-await dlg().getByLabel('Sort into categories').uncheck()
-await dlg().getByRole('button', { name: /^Add 5 books$/ }).click(); await wait(4500)
-const s1 = await state(); const by = t => s1.find(x => x.title === t)
-ok('all five were added first (one request), then details arrived in ONE more', bookPosts.length === 2 && bookPosts[0].length === 5 && bookPosts[1].length === 2, bookPosts.map(x => x.length).join('+'))
-ok('Atomic Habits got its cover, ISBN and page count from the match', by('Atomic Habits').cover?.includes('/b/id/11') && by('Atomic Habits').isbn === '9780735211292' && by('Atomic Habits').pages === 320, JSON.stringify(by('Atomic Habits')))
-ok('Sapiens, with no author on the spine, took the exact-title match and its author', by('Sapiens').cover?.includes('/b/id/12') && by('Sapiens').authors[0] === 'Yuval Noah Harari')
-ok('Dune was NOT given Dune Messiah\'s cover, and Emma was NOT given someone else\'s', by('Dune').cover === null && by('Emma').cover === null)
-ok('a book nothing knows is left as the spine read it', by('Qxzvv Unknown').cover === null && by('Qxzvv Unknown').pages === null)
-ok('the person is told how it went', /Found covers and details for 2 of 5 books/.test(await body()), (await body()).match(/(Found|No confident|Could not reach)[^\n]*/)?.[0])
-ok('each book was asked about by title and author', catalogueCalls.some(q => /Atomic Habits James Clear/.test(q ?? '')) && catalogueCalls.length === 5, JSON.stringify(catalogueCalls))
-
-// both catalogues down
-await reset(); await scan()
-await dlg().getByLabel('Sort into categories').uncheck(); catalogue = 'down'
-await dlg().getByRole('button', { name: /^Add 5 books$/ }).click(); await wait(4500)
-ok('with both catalogues down the books are still added, untouched, and the message says why', bookPosts.length === 1 && (await state()).every(x => x.cover === null) && /Could not reach the book catalogues, so 5 books were added without covers/.test(await body()), (await body()).match(/(Found|No confident|Could not reach)[^\n]*/)?.[0])
-
-// the box unticked: no catalogue is asked at all
-await reset(); await scan()
-await dlg().getByLabel('Look up covers and details').uncheck()
-await dlg().getByRole('button', { name: /^Add \d books?$/ }).click(); await wait(2500)
-ok('unticking it asks the catalogues nothing and sends one request', catalogueCalls.length === 0 && bookPosts.length === 1)
-
-// undo while the lookup is still running
-await reset(); catalogueDelay = 1500; await scan()
-await dlg().getByRole('button', { name: /^Add \d books?$/ }).click(); await wait(300)
-await p.locator('body').click({ position: { x: 5, y: 5 } }); await p.keyboard.press('Control+z'); await wait(5500)
-ok('undoing before the lookup lands patches nothing and says nothing misleading', bookPosts.length === 1 && (await state()).length === 0 && !/Found covers|No confident|Could not reach/.test(await body()), `${bookPosts.length} posts, ${(await state()).length} books`)
+// The panel's own lookup (fills in, editable, saved as shown) is asserted in library-shelf-photo.mjs.
 
 console.log(fails ? `\n${fails} failing` : '\nall good')
 await b.close()
