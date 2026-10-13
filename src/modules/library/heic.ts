@@ -17,7 +17,15 @@ export async function heicToJpeg(file: File): Promise<File> {
   return new File([blob], (file.name || 'photo').replace(/\.hei[cf]$/i, '') + '.jpg', { type: 'image/jpeg' })
 }
 
+/** The file's own first bytes — `....ftyp` plus a HEIF brand — for a HEIC whose name
+ *  and type were lost or changed (an export renamed `.jpg`, a share sheet that blanks both). */
+async function sniffHeic(file: Blob): Promise<boolean> {
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer())
+  const text = String.fromCharCode(...head.slice(4, 12))
+  return text.startsWith('ftyp') && /^ftyp(heic|heix|hevc|hevx|heim|heis|mif1|msf1)/.test(text)
+}
+
 /** A file any canvas can draw: HEIC converted, everything else returned as it came. */
 export async function readableImage(file: File): Promise<File> {
-  return isHeic(file) ? heicToJpeg(file) : file
+  return isHeic(file) || await sniffHeic(file) ? heicToJpeg(file) : file
 }
