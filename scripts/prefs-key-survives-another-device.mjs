@@ -134,10 +134,16 @@ globalThis.__sb.from = () => ({
 await mod.pushSharedPrefs()
 ok('a refused push is retried rather than forgotten', keyOnServer() === 'sk-ant-FRESH', String(keyOnServer()))
 
-// ── Settings → AI must push the moment you save it.
+// ── Settings → AI must push on its own, not wait for the five-minute timer.
+// Held 700ms now rather than fired per keystroke: there is no Save button on
+// that field, so it writes on every change event and a 93-character key was
+// 93 concurrent pushes. "Immediately" was the right claim against a
+// five-minute timer and the wrong word for a text field.
 const settings = readFileSync('src/modules/settings/Settings.tsx', 'utf8')
-const save = settings.slice(settings.indexOf('function saveAIConfig'), settings.indexOf('function saveSettings'))
-ok('saving the AI key pushes immediately', /pushSharedPrefs\(\)/.test(save), save.replace(/\s+/g, ' ').slice(0, 80))
+const save = settings.slice(settings.indexOf('function saveAIConfig'), settings.indexOf('let onAIPush'))
+ok('saving the AI key pushes on its own', /pushSharedPrefs\(\)/.test(save), save.replace(/\s+/g, ' ').slice(0, 60))
+ok('and holds a moment rather than pushing per keystroke',
+   /setTimeout/.test(save) && /clearTimeout/.test(save))
 
 console.log(fails ? `\n${fails} failing` : '\nall good')
 process.exit(fails ? 1 : 0)

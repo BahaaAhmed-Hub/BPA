@@ -164,9 +164,42 @@ async function userId(): Promise<string | null> {
 
 /** Send this device's copy up. Last writer wins, which is why the pull below
  *  never overwrites a key that already exists here. */
-export async function pushSharedPrefs(): Promise<void> {
+/** **One push at a time, and the last value always wins.**
+ *
+ *  Every writer of a shared key calls this the moment it writes, which is
+ *  right — a five-minute timer meant a key pasted here and used by the bot a
+ *  second later was the old one. But the AI key field writes on every change
+ *  event, so typing a 93-character key by hand fired 93 of these at once, each
+ *  reading the bag, merging and writing it back. Measured with the UPDATEs
+ *  completing out of order: the server ended holding a **one-character key**,
+ *  because the first keystroke's write landed last. The browser still had the
+ *  whole key, so the screen looked right and the bots — and the next device —
+ *  got a stump.
+ *
+ *  So a push in flight is not joined by a second one: the later caller sets a
+ *  flag, and one more push runs when the first finishes, reading whatever
+ *  localStorage holds *then*. Last writer still wins; there is simply only
+ *  ever one writer. */
+let inFlight: Promise<PushResult> | null = null
+let pushAgain = false
+
+export async function pushSharedPrefs(): Promise<PushResult> {
+  if (inFlight) { pushAgain = true; return inFlight }
+  inFlight = sendSharedPrefs().finally(() => { inFlight = null })
+  const first = await inFlight
+  if (pushAgain) { pushAgain = false; return pushSharedPrefs() }
+  return first
+}
+
+/** What a push came to. `nothing` is the ordinary case — this device had no
+ *  key the server has not already got — and it is deliberately not `saved`:
+ *  a screen that says "saved" when nothing was sent is making a claim it
+ *  cannot support. */
+export type PushResult = 'saved' | 'nothing' | 'failed'
+
+async function sendSharedPrefs(): Promise<PushResult> {
   const id = await userId()
-  if (!id) return
+  if (!id) return 'failed'
 
   const seen = loadSeen()
   const mine: Record<string, string> = {}
@@ -178,7 +211,7 @@ export async function pushSharedPrefs(): Promise<void> {
     if (seen[key] === v) continue
     mine[key] = v
   }
-  if (Object.keys(mine).length === 0) return
+  if (Object.keys(mine).length === 0) return 'nothing'
 
   const { data: existing } = await supabase
     .from('users').select('schedule_rules').eq('id', id).maybeSingle()
@@ -191,8 +224,9 @@ export async function pushSharedPrefs(): Promise<void> {
     .eq('id', id)
   // Only a write that landed may be remembered as synced, or a refused push
   // is never retried and the change is lost on this device for good.
-  if (error) { console.warn('shared prefs did not save:', error.message); return }
+  if (error) { console.warn('shared prefs did not save:', error.message); return 'failed' }
   saveSeen({ ...seen, ...mine })
+  return 'saved'
 }
 
 /** Fill in whatever this device has never had. Returns the keys it restored,

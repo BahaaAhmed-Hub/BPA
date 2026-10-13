@@ -14,7 +14,7 @@ import {
   ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed, Check,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { pushSharedPrefs } from '@/lib/prefSync'
+import { pushSharedPrefs, type PushResult } from '@/lib/prefSync'
 import { notify } from '@/lib/undo'
 import { paidAtSupported } from '../finance/unpaid'
 import { todayISO } from '../finance/dates'
@@ -220,14 +220,33 @@ export function misplacedAnthropicKey(c: AIConfig): string {
 export function loadAIConfig(): AIConfig {
   return { ...AI_CONFIG_DEFAULTS, ...ls<Partial<AIConfig>>('professor-ai-config', {}) }
 }
+let aiPushTimer: ReturnType<typeof setTimeout> | null = null
 function saveAIConfig(c: AIConfig) {
   lsSet('professor-ai-config', c)
   // The bots read this key out of Postgres, not out of this browser, and the
   // ordinary push is a five-minute timer. Typing a new key and messaging the
   // bot straight away therefore asked it with the old one — which is
   // indistinguishable from the new key being wrong.
-  void pushSharedPrefs()
+  //
+  // **Held, because this is a text field.** There is no Save button here: the
+  // key saves as you type, and a push per keystroke is 93 of them for one
+  // key. `pushSharedPrefs` refuses to run two at once now, so the server can
+  // no longer end up with a stump — but 93 queued pushes to say one thing is
+  // still 92 requests nobody needs. The same 700ms the calendar composer
+  // holds words for, and a decision (the provider pills) still goes at once
+  // because `setAI` writes localStorage before this timer is armed.
+  if (aiPushTimer) clearTimeout(aiPushTimer)
+  aiPushTimer = setTimeout(() => {
+    aiPushTimer = null
+    void pushSharedPrefs().then(r => onAIPush?.(r))
+  }, 700)
 }
+/** Who to tell when the key finally reaches Postgres. There is **no Save
+ *  button** on this field — it writes as you type — so without this the only
+ *  evidence it worked was opening the app somewhere else, which is exactly
+ *  how "I changed the key and it did not save" gets reported about a key that
+ *  was, or was not, saved. The section below says which. */
+let onAIPush: ((r: PushResult) => void) | null = null
 function saveSettings(s:   AppSettings)  { lsSet('professor-settings', s) }
 function loadCompanies():  CompanyRow[]  { return ls('professor-companies', []) }
 function saveCompanies(c:  CompanyRow[]) {
@@ -2285,6 +2304,14 @@ export const GROQ_MODELS = [
 function ProfessorSection() {
   const [ai, setAIRaw] = useState<AIConfig>(loadAIConfig)
   const [showKey, setShowKey] = useState(false)
+  // 'held' is the 700ms between the last keystroke and the push, and it is
+  // worth drawing: it is the window in which somebody refreshes and concludes
+  // nothing was saved.
+  const [keySync, setKeySync] = useState<'idle' | 'held' | PushResult>('idle')
+  useEffect(() => {
+    onAIPush = r => setKeySync(r)
+    return () => { onAIPush = null }
+  }, [])
   const [autonomy, setAutonomy] = useState<'suggest' | 'draft' | 'act'>('suggest')
   const [mailDrafts, setMailDrafts] = useState(true)
   const [matrixSuggest, setMatrixSuggest] = useState(true)
@@ -2294,6 +2321,7 @@ function ProfessorSection() {
   function setAI(patch: Partial<AIConfig>) {
     const next = { ...ai, ...patch }
     setAIRaw(next)
+    setKeySync('held')
     saveAIConfig(next)
   }
 
@@ -2362,6 +2390,18 @@ function ProfessorSection() {
           </button>
         </div>
       </FieldRow>
+      {keySync !== 'idle' && (
+        <p data-key-sync={keySync} style={{
+          margin: '-6px 0 2px', textAlign: 'right', fontSize: 'var(--sb-t-micro)',
+          color: keySync === 'failed' ? 'var(--sb-negative)'
+               : keySync === 'saved'  ? 'var(--sb-positive-deep)' : 'var(--sb-ink-4)',
+        }}>
+          {keySync === 'held'    && 'Saving…'}
+          {keySync === 'saved'   && 'Saved — on this browser and on your account'}
+          {keySync === 'nothing' && 'Already saved'}
+          {keySync === 'failed'  && 'Saved here, but it could not reach your account — it will not follow you to another device or the bots yet'}
+        </p>
+      )}
 
       <div style={{ height: 6, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', marginTop: 12, marginBottom: 12 }} />
 

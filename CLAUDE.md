@@ -1920,6 +1920,38 @@ push is retried. Control, on the code before the fix: **4 failing**, the first
 being the server holding `sk-ant-REVOKED` again seconds after the phone set the
 new key.
 
+## Prefs — one push at a time, and the key field has no Save button
+"I change the AI key to a valid one and click save, and after a refresh it did
+not save." There is **no Save button** on that field — it writes as you type
+(`setAI` → `saveAIConfig`) — and `saveAIConfig` called `pushSharedPrefs()` on
+every change event. A 93-character key typed by hand was therefore **93
+concurrent pushes**, each reading the server's bag, merging and writing it
+back.
+- **Measured with the UPDATEs completing out of order: the server ended
+  holding a one-character key.** The first keystroke's write landed last, and
+  last writer wins. The browser still had the whole key, so the field looked
+  right — while the bots, and the next device, got a stump. That is "it did
+  not save", from the one angle the screen cannot show you.
+- **`pushSharedPrefs` now refuses to run two at once.** A caller arriving
+  while one is in flight sets a flag and joins it; one more push runs when the
+  first finishes, reading whatever localStorage holds *then*. Last writer
+  still wins — there is simply only ever one writer.
+- **And the field holds 700ms**, the same pause the calendar composer holds
+  words for. Serialising alone makes the data right; the debounce is so that
+  saying one thing costs one request rather than ninety-three.
+- **It says whether it landed.** `pushSharedPrefs` answers `saved` / `nothing`
+  / `failed` and the section draws it: *Saving…*, *Saved — on this browser and
+  on your account*, or that it is saved here but did not reach the account, so
+  it will not follow you to another device or to the bots. With no Save button
+  the only previous evidence was opening the app somewhere else — which is how
+  this gets reported about a key that may well have saved. `nothing` is
+  deliberately not `saved`: a screen that says saved when nothing was sent is
+  making a claim it cannot support.
+`scripts/ai-key-survives-typing.mjs [typed|pasted|control]` — 11 assertions
+over the real module with the server's completion order controlled, each batch
+landing backwards. Control, on the shipped code: the browser holds 93
+characters and **the server holds `"s"`**.
+
 ## Bots — a 401 is not an empty wallet, and the message has to name the key
 "My API ran out of credit, I paid again, and Telegram still gives me 401."
 Those are two different failures and the bot was describing neither.
