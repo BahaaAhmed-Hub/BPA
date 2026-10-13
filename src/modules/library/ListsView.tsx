@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
-import { BookOpen, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { useState } from 'react'
+import { BookOpen, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Button, Card, Segmented } from '@/components/ui'
 import { CAPS, ICON } from '@/lib/type'
 import { useInkOn } from '@/lib/ink'
 import { CoverArt } from './CoverArt'
 import { Eyebrow, Field } from './fields'
 import { inputStyle } from './fieldStyle'
+import { SidePanel } from './SidePanel'
 import { SPINE_COLORS } from './spine'
 import { useLibraryStore } from './libraryStore'
 import type { Book, LibList, ListKind } from './types'
@@ -34,8 +35,11 @@ function Thumb({ list, books }: { list: LibList; books: Book[] }) {
   )
 }
 
-function ListEditor({ initial, kind, onClose, onSaved }: {
-  initial?: LibList; kind: ListKind; onClose: () => void; onSaved?: (l: LibList) => void
+export type ListEditing = { list?: LibList; kind: ListKind }
+
+/** Make or edit a category or list, in the panel beside the shelf. */
+export function ListPanel({ initial, kind, narrow, onClose, onSaved }: {
+  initial?: LibList; kind: ListKind; narrow?: boolean; onClose: () => void; onSaved?: (l: LibList) => void
 }) {
   const addList = useLibraryStore(s => s.addList)
   const updateList = useLibraryStore(s => s.updateList)
@@ -46,12 +50,6 @@ function ListEditor({ initial, kind, onClose, onSaved }: {
   const [thumbUrl, setThumbUrl] = useState(initial?.thumbUrl ?? '')
   const [color, setColor] = useState(initial?.color ?? SPINE_COLORS[0])
 
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', esc)
-    return () => document.removeEventListener('keydown', esc)
-  }, [onClose])
-
   function save() {
     const extra = { description: description.trim() || undefined, thumbUrl: thumbUrl.trim() || undefined, color }
     if (initial) { updateList(initial.id, { name: name.trim(), kind: k, ...extra }); onClose() }
@@ -59,22 +57,16 @@ function ListEditor({ initial, kind, onClose, onSaved }: {
   }
 
   return (
-    <div onMouseDown={e => { if (e.target === e.currentTarget) onClose() }} className="sb-above-modal"
-      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--sb-scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div role="dialog" aria-modal="true" aria-label={initial ? 'Edit' : 'New'} style={{
-        width: 'min(460px, 100%)', background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)',
-        borderRadius: 'var(--sb-r-frame)', boxShadow: 'var(--sb-shadow-frame)', padding: '18px 22px 16px', display: 'flex', flexDirection: 'column', gap: 14,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, flex: 1, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em' }}>
-            {initial ? `Edit ${k}` : `New ${k}`}
-          </h2>
-          {initial && (
-            <Button variant="ghost" iconOnly title="Delete — the books stay" aria-label="Delete"
-              onClick={() => { deleteList(initial.id); onClose() }}><Trash2 size={ICON.md} /></Button>
-          )}
-          <Button variant="ghost" iconOnly title="Close" aria-label="Close" onClick={onClose}><X size={ICON.md} /></Button>
-        </div>
+    <SidePanel label={initial ? `Edit ${k}` : `New ${k}`} eyebrow={initial ? `Edit ${k}` : `New ${k}`} narrow={narrow} onClose={onClose}
+      actions={initial && (
+        <Button variant="ghost" iconOnly title="Delete — the books stay" aria-label="Delete"
+          onClick={() => { deleteList(initial.id); onClose() }}><Trash2 size={ICON.md} /></Button>
+      )}
+      footer={<>
+        <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button variant="accent" disabled={!name.trim()} onClick={save}>{initial ? 'Save' : 'Create'}</Button>
+      </>}>
+      <Card style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Segmented value={k} onChange={setK} options={[
           { value: 'category', label: 'Category', title: 'What a book is — Fiction, Business' },
           { value: 'list', label: 'List', title: 'What you are doing with it — Summer reading' },
@@ -93,20 +85,15 @@ function ListEditor({ initial, kind, onClose, onSaved }: {
             ))}
           </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingRight: 40 }}>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button variant="accent" disabled={!name.trim()} onClick={save}>{initial ? 'Save' : 'Create'}</Button>
-        </div>
-      </div>
-    </div>
+      </Card>
+    </SidePanel>
   )
 }
 
-export function ListsView({ onOpen }: { onOpen: (listId: string) => void }) {
+export function ListsView({ onOpen, onEdit }: { onOpen: (listId: string) => void; onEdit: (e: ListEditing) => void }) {
   const lists = useLibraryStore(s => s.lists)
   const books = useLibraryStore(s => s.books)
   const links = useLibraryStore(s => s.links)
-  const [editing, setEditing] = useState<{ list?: LibList; kind: ListKind } | null>(null)
 
   const booksOf = (id: string) => {
     const ids = new Set(links.filter(l => l.listId === id).map(l => l.bookId))
@@ -122,7 +109,7 @@ export function ListsView({ onOpen }: { onOpen: (listId: string) => void }) {
             <Eyebrow>{title}</Eyebrow>
             <div style={{ marginTop: -4, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>{blurb}</div>
           </div>
-          <Button size="sm" variant="secondary" onClick={() => setEditing({ kind })}><Plus size={ICON.sm} /> New {kind}</Button>
+          <Button size="sm" variant="secondary" onClick={() => onEdit({ kind })}><Plus size={ICON.sm} /> New {kind}</Button>
         </div>
         {mine.length === 0 ? (
           <Card style={{ padding: '18px 20px', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)' }}>None yet.</Card>
@@ -140,7 +127,7 @@ export function ListsView({ onOpen }: { onOpen: (listId: string) => void }) {
                     {l.description && <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.description}</span>}
                   </button>
                   <Button variant="ghost" iconOnly size="sm" title="Edit" aria-label={`Edit ${l.name}`}
-                    onClick={() => setEditing({ list: l, kind: l.kind })}
+                    onClick={() => onEdit({ list: l, kind: l.kind })}
                     style={{ position: 'absolute', top: 16, right: 16, background: 'var(--sb-overlay)' }}><Pencil size={ICON.sm} /></Button>
                 </Card>
               )
@@ -155,7 +142,6 @@ export function ListsView({ onOpen }: { onOpen: (listId: string) => void }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 26, padding: '16px 4px 40px' }}>
       {section('category', 'Categories', 'What a book is — Fiction, Business, Philosophy.')}
       {section('list', 'Lists', 'What you are doing with it — Summer reading, Lend out, Buy next.')}
-      {editing && <ListEditor initial={editing.list} kind={editing.kind} onClose={() => setEditing(null)} onSaved={() => setEditing(null)} />}
     </div>
   )
 }

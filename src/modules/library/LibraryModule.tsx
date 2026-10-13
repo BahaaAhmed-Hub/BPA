@@ -3,17 +3,16 @@ import { Camera, Plus, Search, X } from 'lucide-react'
 import { Button, Card, Pill, Segmented } from '@/components/ui'
 import { CAPS, ICON } from '@/lib/type'
 import { useFillsTheWindow } from '@/lib/fillsTheWindow'
-import { AddBookModal } from './AddBookModal'
+import { AddBookPanel } from './AddBookPanel'
 import { BookFlight } from './BookFlight'
 import { BookPanel } from './BookPanel'
 import { CoverGrid } from './CoverGrid'
 import { DiscoverView } from './DiscoverView'
 import { EmptyShelf } from './EmptyShelf'
-import { ListsView } from './ListsView'
+import { ListPanel, ListsView, type ListEditing } from './ListsView'
 import { QuoteBoard } from './QuoteBoard'
 import { Shelf } from './Shelf'
-import { ShelfPhotoDialog } from './ShelfPhotoDialog'
-import { enrichAndReport } from './shelfEnrich'
+import { ShelfPhotoPanel } from './ShelfPhotoPanel'
 import { TrackerView } from './TrackerView'
 import { inputStyle } from './fieldStyle'
 import { loadLibraryView, OPEN_BOOK_EVENT, saveLibraryView, takePendingOpen, type LibraryView } from './libraryPrefs'
@@ -52,6 +51,7 @@ export function LibraryModule() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [flight, setFlight] = useState<{ book: Book; from: DOMRect } | null>(null)
   const [adding, setAdding] = useState(false)
+  const [editingList, setEditingList] = useState<ListEditing | null>(null)
   const [shelfPhoto, setShelfPhoto] = useState<File | null>(null)
   const shelfInput = useRef<HTMLInputElement>(null)
   const [addIsbn, setAddIsbn] = useState<string | undefined>()
@@ -73,7 +73,9 @@ export function LibraryModule() {
     return () => window.removeEventListener(OPEN_BOOK_EVENT, open)
   }, [])
 
-  const setView = (v: LibraryView) => { setViewState(v); saveLibraryView(v) }
+  // One panel at a time: asking for another closes the one open (and stops a photo being read for a panel nobody can see).
+  const openAdd = () => { setShelfPhoto(null); setEditingList(null); setAdding(true) }
+  const setView = (v: LibraryView) => { setViewState(v); saveLibraryView(v); setEditingList(null) }
 
   // Derived, not reconciled in an effect: a list or a book deleted here or on
   // another device simply stops resolving, so the shelf is never left filtered
@@ -81,6 +83,8 @@ export function LibraryModule() {
   const list = listId ? lists.find(l => l.id === listId) : undefined
   const activeListId = list?.id ?? null
   const selected = books.find(b => b.id === selectedId) ?? null
+  // One panel at a time: making something new takes the place of the open book, which comes back after.
+  const panelBook = adding || editingList || shelfPhoto ? null : selected
 
   const visible = useMemo(() => {
     const needle = q.trim().toLowerCase()
@@ -99,13 +103,14 @@ export function LibraryModule() {
   }, [books])
 
   const pick = useCallback((b: Book, el: HTMLElement) => {
+    setAdding(false); setEditingList(null); setShelfPhoto(null)
     setSelectedId(b.id)
     setFlight({ book: b, from: el.getBoundingClientRect() })
   }, [])
 
   // Escape closes the panel — but not out from under a dialog, which owns it.
   useEffect(() => {
-    if (!selectedId) return
+    if (!selectedId || adding || editingList || shelfPhoto) return
     const esc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || document.querySelector('[role="dialog"]')) return
       const t = e.target as HTMLElement | null
@@ -114,7 +119,7 @@ export function LibraryModule() {
     }
     document.addEventListener('keydown', esc)
     return () => document.removeEventListener('keydown', esc)
-  }, [selectedId])
+  }, [selectedId, adding, editingList, shelfPhoto])
 
   const toBuyCount = books.filter(b => b.toBuy).length
   const filtered = status !== 'all' || !!activeListId || !!q.trim() || toBuyOnly
@@ -138,8 +143,8 @@ export function LibraryModule() {
         <Button variant="secondary" disabled={missing} onClick={() => shelfInput.current?.click()} title="Photograph a shelf and add the books on it"><Camera size={ICON.md} /> Scan shelf</Button>
         {/* No `capture`: it would force the camera and take away the photo library, where a shelf photo usually is. */}
         <input ref={shelfInput} type="file" accept="image/*,.heic,.heif" hidden aria-label="Choose a photo of a shelf"
-          onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setShelfPhoto(f) }} />
-        <Button variant="accent" disabled={missing} onClick={() => setAdding(true)}><Plus size={ICON.md} /> Add book</Button>
+          onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) { setAdding(false); setEditingList(null); setShelfPhoto(f) } }} />
+        <Button variant="accent" disabled={missing} onClick={() => openAdd()}><Plus size={ICON.md} /> Add book</Button>
       </header>
 
       {missing ? (
@@ -179,19 +184,20 @@ export function LibraryModule() {
           )}
 
           <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 14, alignItems: 'stretch' }}>
-            <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', paddingBottom: 16, display: narrow && selected ? 'none' : undefined }}>
+            <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', paddingBottom: 16, display: narrow && (panelBook || adding || editingList || shelfPhoto) ? 'none' : undefined }}>
               {loading && books.length === 0 ? (
                 <p style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>Fetching your library…</p>
               ) : view === 'tracker' ? (
                 <TrackerView onOpenBook={id => { setView('shelf'); setStatus('all'); setQ(''); setListId(null); setSelectedId(id) }} />
               ) : view === 'discover' ? (
-                <DiscoverView onAddByHand={isbn => { setAddIsbn(isbn); setAdding(true) }} onOpenBook={id => { setView('shelf'); setStatus('all'); setQ(''); setListId(null); setSelectedId(id) }} />
+                <DiscoverView onAddByHand={isbn => { setAddIsbn(isbn); openAdd() }} onOpenBook={id => { setView('shelf'); setStatus('all'); setQ(''); setListId(null); setSelectedId(id) }} />
               ) : view === 'quotes' ? (
                 <QuoteBoard onOpenBook={id => setSelectedId(id)} />
               ) : view === 'lists' ? (
-                <ListsView onOpen={id => { setListId(id); setStatus('all'); setQ(''); setView('shelf') }} />
+                <ListsView onEdit={e => { setAdding(false); setShelfPhoto(null); setEditingList(e) }}
+                  onOpen={id => { setListId(id); setStatus('all'); setQ(''); setView('shelf') }} />
               ) : books.length === 0 ? (
-                <EmptyShelf onAdd={() => setAdding(true)} />
+                <EmptyShelf onAdd={() => openAdd()} />
               ) : visible.length === 0 ? (
                 <p style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>
                   {filtered ? 'No book matches that.' : 'Nothing here.'}{' '}
@@ -199,22 +205,34 @@ export function LibraryModule() {
                     style={{ all: 'unset', cursor: 'pointer', textDecoration: 'underline' }}>Clear filters</button>}
                 </p>
               ) : view === 'shelf' ? (
-                <Shelf books={visible} pickedId={selected?.id ?? null} onPick={pick} />
+                <Shelf books={visible} pickedId={panelBook?.id ?? null} onPick={pick} />
               ) : (
-                <CoverGrid books={visible} pickedId={selected?.id ?? null} onPick={pick} />
+                <CoverGrid books={visible} pickedId={panelBook?.id ?? null} onPick={pick} />
               )}
             </div>
 
-            {selected && (
-              <BookPanel key={selected.id} book={selected} narrow={narrow} flying={!!flight && flight.book.id === selected.id}
-                onOpenReader={() => setReadingId(selected.id)}
+            {adding && (
+              <AddBookPanel narrow={narrow} defaultListIds={activeListId ? [activeListId] : []} initialIsbn={addIsbn} onClose={() => { setAdding(false); setAddIsbn(undefined) }}
+                onAdded={() => { setAdding(false); setAddIsbn(undefined); setView(view === 'lists' || view === 'quotes' || view === 'discover' || view === 'tracker' ? 'shelf' : view) }} />
+            )}
+            {shelfPhoto && !adding && !editingList && (
+              <ShelfPhotoPanel file={shelfPhoto} narrow={narrow} onClose={() => setShelfPhoto(null)}
+                onAdded={() => { setShelfPhoto(null); setStatus('all'); setQ(''); setListId(null); setView('shelf') }} />
+            )}
+            {editingList && !adding && (
+              <ListPanel key={editingList.list?.id ?? `new-${editingList.kind}`} initial={editingList.list} kind={editingList.kind} narrow={narrow}
+                onClose={() => setEditingList(null)} onSaved={() => setEditingList(null)} />
+            )}
+            {panelBook && (
+              <BookPanel key={panelBook.id} book={panelBook} narrow={narrow} flying={!!flight && flight.book.id === panelBook.id}
+                onOpenReader={() => setReadingId(panelBook.id)}
                 onClose={() => setSelectedId(null)} onManageLists={() => { setSelectedId(null); setView('lists') }} />
             )}
           </div>
         </>
       )}
 
-      {flight && selected && (
+      {flight && panelBook && (
         <BookFlight key={flight.book.id} book={flight.book} from={flight.from}
           onDone={() => setFlight(f => (f && f.book.id === flight.book.id ? null : f))} />
       )}
@@ -228,14 +246,6 @@ export function LibraryModule() {
           </Suspense>
         )
       })()}
-      {shelfPhoto && (
-        <ShelfPhotoDialog file={shelfPhoto} onClose={() => setShelfPhoto(null)}
-          onAdded={(ids, enrich) => { setShelfPhoto(null); setStatus('all'); setQ(''); setListId(null); setView('shelf'); if (enrich) void enrichAndReport(ids) }} />
-      )}
-      {adding && (
-        <AddBookModal defaultListIds={activeListId ? [activeListId] : []} initialIsbn={addIsbn} onClose={() => { setAdding(false); setAddIsbn(undefined) }}
-          onAdded={() => { setAdding(false); setAddIsbn(undefined); setView(view === 'lists' || view === 'quotes' || view === 'discover' || view === 'tracker' ? 'shelf' : view) }} />
-      )}
     </div>
   )
 }
