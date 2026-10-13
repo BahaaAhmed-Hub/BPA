@@ -66,6 +66,11 @@ await ctx.route('**://www.googleapis.com/**', r => {
   }
   return j({})
 })
+// A derived thumbnail is a real cross-origin image. Served here so the
+// positive claim ('the picture the id names') is measurable; unstubbed it
+// 404s and the card falls back, which the dead-thumb mode next door measures.
+await ctx.route('**://i.ytimg.com/**', r => r.fulfill({ status: 200, contentType: 'image/png',
+  body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR4nGP8z4AATAxQxhAUAACZbgMVIsjK1QAAAABJRU5ErkJggg==', 'base64') }))
 await ctx.route('**://oauth2.googleapis.com/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
 await ctx.addInitScript(([s, cos]) => { try {
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
@@ -119,6 +124,34 @@ const dialog = p.locator('[role="dialog"][aria-label*="Weekly Sync"]')
 ok('the prompt opened', await dialog.count() === 1)
 ok('and the event is already done', (await statuses())['ev-sync-1'] === 'done', JSON.stringify(await statuses()))
 ok('it names the meeting and whose it was', /What came out of it\?/.test(await text()) && /Teradix/.test(await text()))
+
+// ── MODE === 'links' ────────────────────────────────────────────────────────
+// A conclusion is often a link — a recording, a doc, a notebook — and a row of
+// characters is something you have to read to recognise. The same card the
+// notes boxes draw is drawn here, under the same box.
+if (MODE === 'links') {
+  const YT = 'https://www.youtube.com/watch?v=ZvDkJsKE80k'
+  const NB = 'https://notebook.google.com/notebook/c26de4d8-340b-42c4-9247-9c82c0fddbdf'
+  const box = p.locator('textarea[aria-label="The outputs of the meeting, one per line"]')
+  ok('the outputs box is there', await box.count() === 1)
+  await box.fill(`${YT}\n${NB}`)
+  await p.waitForTimeout(2400)
+
+  const cards = await p.evaluate(() => [...document.querySelectorAll('[data-link-card]')].map(a => ({
+    href: a.getAttribute('href'), from: a.dataset.from, img: a.querySelector('img')?.getAttribute('src') ?? null })))
+  ok('both links drew a card', cards.length === 2, JSON.stringify(cards))
+  ok('the video card carries the thumbnail its own id names',
+    cards.find(c => c.href === YT)?.img === 'https://i.ytimg.com/vi/ZvDkJsKE80k/hqdefault.jpg',
+    cards.find(c => c.href === YT)?.img ?? '')
+  ok('the other link is still a card', !!cards.find(c => c.href === NB))
+
+  // A card is a thing to look at, never a thing that edits what you typed:
+  // the lines are the tasks, and a preview must not add, reword or drop one.
+  ok('and the lines are untouched — two outputs, still two tasks',
+    /2 lines/.test(await text()), (await text()).match(/\d+ lines?/)?.[0] ?? '')
+  await b.close()
+  process.exit(process.exitCode ?? 0)
+}
 
 // The Budget drill-down lesson: a panel can be present in the DOM and not be
 // the thing a finger would hit. Measure the primary action, not the text.

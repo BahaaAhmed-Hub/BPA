@@ -4014,3 +4014,84 @@ swapping one hex for one token:
   are unchanged by construction.
 Four themes, 22 screens, 0 failing pairs after — and the behaviour suites that
 drive that file (meeting outcome 65, booking hours 46) re-run unchanged.
+
+## Links — a pasted URL should show what it is
+`lib/linkPreview.ts` + `components/LinkPreviews.tsx`, under three boxes: the
+event composer's **Notes and more**, a task's **Notes**, and the meeting
+outcome's **Outputs**. All three are places people paste a recording, a doc or
+a notebook, and all three drew 94 characters of query string you have to read
+to recognise.
+
+Two answers, and **which one is in force is on the card** (`data-from`):
+- **Derived** — a pure function of the URL. A YouTube thumbnail is
+  `i.ytimg.com/vi/<id>/hqdefault.jpg`, which the id in the link already names,
+  so the picture is there the instant you stop typing, with **no request of any
+  kind**. There is no CORS question to lose, because an `<img>` *renders* a
+  cross-origin image without permission to *read* it — and that is the whole
+  reason the derived set is expressed as a URL rather than as a lookup. Google
+  Drive is the other one (`drive.google.com/thumbnail?id=`).
+- **Read** — the `link-preview` edge function fetches the page and returns its
+  `og:` tags. A browser cannot do this; the same-origin policy is strictest
+  about exactly this, and no care in the client changes it. Anything that is
+  not a derivable id needs a server or it gets a favicon and its host.
+- **Nothing is invented.** No title is guessed from a path and no description
+  is written for a page nobody has read: a link that answers neither way is
+  drawn as its host and its own last path segment, which is true. A pasted
+  NotebookLM link is that case even *with* the server — the page needs a
+  sign-in, so there are no `og:` tags for anyone to read.
+- **A derived URL is a guess the image settles for itself.** `onError` swaps
+  the card to the site's mark rather than leaving a 76px grey rectangle, which
+  is what lets the derivation be bold without a request first.
+- **Words are held, pictures are not.** The derived half is a pure function of
+  the text and appears as you type; only the half that needs the server waits
+  700ms — the pause the calendar composer already holds words for.
+- **A card never edits what you typed.** In the outcome box the lines *are* the
+  tasks, so a preview that reworded, added or dropped one would be writing
+  tasks nobody asked for. Asserted: two links, two cards, still two lines.
+
+**`alive.current` was set false by StrictMode and never set back.** The ref was
+written as `useEffect(() => () => { alive.current = false }, [])` — cleanup
+only. StrictMode mounts, unmounts and mounts again, so from the second mount on
+it was false for the life of the component and **every answer the server sent
+was dropped on the floor**: the request went out, the reply came back, the card
+never changed. Invisible to `npm run build`, invisible to a reading of the file,
+and found on the first browser run.
+
+### The fetcher is an SSRF hole unless it is nailed shut
+`link-preview` fetches a URL somebody hands it, from inside the project's
+network, beside a service-role database. Five guards, in order:
+1. **It is not open** — a valid signed-in user or nothing happens, and it keeps
+   the gateway's JWT check in `deploy-functions.yml` (the only function there
+   that does), because `--no-verify-jwt` would publish a fetch proxy at a
+   guessable address.
+2. **http(s) only.**
+3. **No private ground** — loopback, link-local, the three RFC1918 blocks,
+   CGNAT, multicast, `.local`/`.internal`, and `169.254.169.254`, the metadata
+   address that turns a preview card into credentials. Checked on the literal
+   host and on the resolved A records where the runtime allows a lookup; a
+   lookup that is refused leaves the literal guards standing rather than
+   refusing everything.
+4. **Redirects are walked by hand** (`redirect: 'manual'`, 3 hops, each one
+   re-guarded). Following them automatically hands the guard's answer to
+   whoever controls the first hop: a public URL that 302s to the metadata
+   address sails through a check made only on what was typed.
+5. **Bounded** — 6s, 256KB, `text/html` only, and the read stops at `</head>`.
+
+**`[::ffff:127.0.0.1]` walked straight through on the first run.** `new URL()`
+rewrites a v4-mapped address into hex before anything sees it — the hostname
+arrives as `[::ffff:7f00:1]` — so the dotted-quad branch could never fire. The
+guard reads both forms now. That is a hole a reading of the code does not show,
+because the code looks exactly right.
+
+`scripts/link-preview-is-not-a-proxy.mjs [addresses|dns|redirect|control]` —
+the guards **lifted out of the real file** by regex and de-typed with `tsc`
+(there is no Deno here), 18 private addresses refused and 5 public ones
+allowed, a public name resolving to loopback refused, and the redirect walk
+stopping at 3 hops without ever fetching the inward one. Control: a
+scheme-only guard refuses **2 of 18** and reaches the metadata address.
+`scripts/pasted-link-shows-itself.mjs [task|event|meeting|dead-thumb]` — 10
+assertions in a real browser, and the claim that matters is a **pair**: the
+YouTube link draws its picture and **the server is never asked about it**,
+while the link no browser can read is the one that asks. Either half alone
+proves nothing. `meeting-outcome-becomes-tasks.mjs links` measures picture 2
+through the real door and re-runs its other four modes at 65.

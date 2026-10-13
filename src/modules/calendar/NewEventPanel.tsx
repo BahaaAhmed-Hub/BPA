@@ -29,6 +29,7 @@ import { loadDynamicCompanies } from '@/types'
 import { isMyCalendar, myCalendarAddresses } from '@/lib/calendarEvents'
 import { toRecurrence, presetRecur, type Recur } from './recurrence'
 import { useInkOn } from '@/lib/ink'
+import LinkPreviews from '../../components/LinkPreviews'
 
 // ─── The palette, once ───────────────────────────────────────────────────────
 
@@ -1139,6 +1140,8 @@ export function NewEventPanel({
                 borderRadius: 'var(--sb-r-nav)', background: C.inset, border: `1px solid ${C.border}`,
                 fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: C.text, outline: 'none', lineHeight: 1.55,
               }} />
+
+            <LinkPreviews text={notes} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={MONO}>Attachments</span>
