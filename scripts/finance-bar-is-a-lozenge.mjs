@@ -18,6 +18,7 @@
 import { chromium } from 'playwright-core'
 import { user, session } from './session.mjs'
 
+import { watchTraffic, settled } from './settled.mjs'
 const MODE = process.argv[2] ?? 'shape'
 const THEME = process.env.INK_THEME ?? 'sunlit-bento'
 
@@ -45,9 +46,13 @@ await ctx.addInitScript(([s, theme]) => { try {
 } catch {} }, [session, THEME])
 
 const p = await ctx.newPage()
+
+// Installed before the first navigation, or the counter misses the boot.
+
+const traffic = watchTraffic(p)
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 160)))
 await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' })
-await p.waitForTimeout(6500)
+await settled(p, traffic, 6500)
 
 let fails = 0
 const ok = (n, c, x = '') => {

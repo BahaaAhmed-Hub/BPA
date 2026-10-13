@@ -13,6 +13,7 @@
 // up by one for a task you deleted.
 import { chromium } from 'playwright-core'
 import { session, user } from './session.mjs'
+import { watchTraffic, settled } from './settled.mjs'
 const U = user.id
 const iso = (d) => d.toISOString().slice(0, 10)
 const today = new Date()
@@ -64,9 +65,11 @@ await ctx.addInitScript(s=>{try{
   localStorage.setItem('task-view-mode','list')
 }catch{}},session)
 const p = await ctx.newPage()
+// Installed before the first navigation, or the counter misses the boot.
+const traffic = watchTraffic(p)
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0,160)))
 p.on('dialog', d => d.accept())
-await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(6000)
+await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await settled(p, traffic, 6000)
 let fails=0
 const ok=(n,c,x='')=>{console.log(`${c?'PASS':'*** FAIL ***'}  [${MODE}] ${n}${x?'  '+x:''}`); if(!c)fails++}
 

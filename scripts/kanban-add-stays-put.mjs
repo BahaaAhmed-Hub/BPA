@@ -9,6 +9,7 @@
 // joined no column anywhere.
 import { chromium } from 'playwright-core'
 import { session, user } from './session.mjs'
+import { watchTraffic, settled } from './settled.mjs'
 const BOARD = process.argv[2] ?? 'status'
 const U = user.id
 const TITLE = 'CTC - KFAS Big Picture Slides'
@@ -34,8 +35,10 @@ await ctx.addInitScript(([s,board])=>{try{
   ]))
 }catch{}},[session,BOARD])
 const p = await ctx.newPage()
+// Installed before the first navigation, or the counter misses the boot.
+const traffic = watchTraffic(p)
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0,160)))
-await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(5000)
+await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await settled(p, traffic, 5000)
 let fails=0
 const ok=(n,c,x='')=>{console.log(`${c?'PASS':'*** FAIL ***'}  [${BOARD}] ${n}${x?'  '+x:''}`); if(!c)fails++}
 

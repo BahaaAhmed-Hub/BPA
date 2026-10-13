@@ -21,6 +21,7 @@
 import { chromium } from 'playwright-core'
 import { user, session } from './session.mjs'
 
+import { watchTraffic, settled } from './settled.mjs'
 const MODE = process.argv[2] ?? 'bars'
 
 const BARS = [
@@ -52,6 +53,10 @@ await ctx.addInitScript(s => { try {
 } catch {} }, session)
 
 const p = await ctx.newPage()
+
+// Installed before the first navigation, or the counter misses the boot.
+
+const traffic = watchTraffic(p)
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 140)))
 
 let fails = 0
@@ -88,7 +93,7 @@ async function go(mod) {
       ...ui, state: { ...(ui.state || {}), activeModule: m, themeId: 'sunlit-bento' }, version: 0 }))
   } catch {} }, mod)
   await p.goto(BASE, { waitUntil: 'domcontentloaded' })
-  await p.waitForTimeout(5600)
+  await settled(p, traffic, 5600)
 }
 
 if (MODE === 'bars' || MODE === 'control') {

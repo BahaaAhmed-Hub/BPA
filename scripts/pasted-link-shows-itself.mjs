@@ -20,6 +20,7 @@
 import { chromium } from 'playwright-core'
 import { user, session } from './session.mjs'
 
+import { watchTraffic, settled } from './settled.mjs'
 const MODE = process.argv[2] ?? 'task'
 const YT   = 'https://www.youtube.com/watch?v=ZvDkJsKE80k&t=34s'
 const NB   = 'https://notebook.google.com/notebook/c26de4d8-340b-42c4-9247-9c82c0fddbdf'
@@ -92,9 +93,13 @@ await ctx.addInitScript(([s, mod]) => { try {
 } catch {} }, [session, START])
 
 const p = await ctx.newPage()
+
+// Installed before the first navigation, or the counter misses the boot.
+
+const traffic = watchTraffic(p)
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 160)))
 await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' })
-await p.waitForTimeout(6500)
+await settled(p, traffic, 6500)
 
 let fails = 0
 const ok = (n, c, x = '') => {

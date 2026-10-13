@@ -9,6 +9,7 @@
 // a click, and seventy-eight rows still sitting there.
 import { chromium } from 'playwright-core'
 import { session, user } from './session.mjs'
+import { watchTraffic, settled } from './settled.mjs'
 const ME = 'a@x.com'   // the signed-in mailbox, so `accounts` really holds it
 const N = 78
 const DAY = 86400000
@@ -58,8 +59,10 @@ await ctx.addInitScript(s=>{try{
   localStorage.setItem('mail-smart-view','fyi')
 }catch{}},session)
 const p = await ctx.newPage()
+// Installed before the first navigation, or the counter misses the boot.
+const traffic = watchTraffic(p)
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0,160)))
-await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(7000)
+await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await settled(p, traffic, 7000)
 let fails=0
 const ok=(n,c,x='')=>{console.log(`${c?'PASS':'*** FAIL ***'}  ${n}${x?'  '+x:''}`); if(!c)fails++}
 
@@ -116,17 +119,17 @@ const back = await act('^Put \\d+ back$')
 ok('Put back takes the marked-done rows out of FYI', back.ran && back.after === N / 2,
    `${back.before} → ${back.after}`)
 
-await p.reload({waitUntil:'domcontentloaded'}); await p.waitForTimeout(7000)
+await p.reload({waitUntil:'domcontentloaded'}); await settled(p, traffic, 7000)
 const arch = await act('^Archive$')
 ok('Archive empties the view', arch.ran && arch.after === 0, `${arch.before} → ${arch.after}`)
 
-await p.reload({waitUntil:'domcontentloaded'}); await p.waitForTimeout(7000)
+await p.reload({waitUntil:'domcontentloaded'}); await settled(p, traffic, 7000)
 const mute = await act('^Mute$')
 ok('Mute empties the view', mute.ran && mute.after === 0, `${mute.before} → ${mute.after}`)
 
 // ── 4. The other views keep the full bar — the narrowing is FYI's alone ────
 await p.evaluate(() => localStorage.setItem('mail-smart-view','action'))
-await p.reload({waitUntil:'domcontentloaded'}); await p.waitForTimeout(7000)
+await p.reload({waitUntil:'domcontentloaded'}); await settled(p, traffic, 7000)
 console.log(fails ? `\n${fails} failing` : '\nall good')
 await b.close()
 process.exit(fails?1:0)

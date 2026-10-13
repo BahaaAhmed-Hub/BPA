@@ -10,6 +10,7 @@
 // and the tick is a no-op with nothing on screen to say so.
 import { chromium } from 'playwright-core'
 import { session, user } from './session.mjs'
+import { watchTraffic, settled } from './settled.mjs'
 const HOW = process.argv[2] ?? 'dismiss'
 // `typed` is the control that stops this fix from being a deletion: a task
 // somebody actually filed as `do` must still be asked for its deliverable.
@@ -41,9 +42,13 @@ await ctx.addInitScript(s => { try {
 } catch {} }, session)
 
 const p = await ctx.newPage()
+
+// Installed before the first navigation, or the counter misses the boot.
+
+const traffic = watchTraffic(p)
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 160)))
 await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' })
-await p.waitForTimeout(6500)
+await settled(p, traffic, 6500)
 
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) fails++ }

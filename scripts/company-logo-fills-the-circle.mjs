@@ -21,6 +21,7 @@
 import { chromium } from 'playwright-core'
 import { session, user } from './session.mjs'
 
+import { watchTraffic, settled } from './settled.mjs'
 const MODE = process.argv[2] ?? 'opaque'
 const U = user.id
 
@@ -69,10 +70,14 @@ await ctx.addInitScript(([s, cos]) => { try {
 } catch { /* quota */ } }, [session, COMPANIES])
 
 const p = await ctx.newPage()
+
+// Installed before the first navigation, or the counter misses the boot.
+
+const traffic = watchTraffic(p)
 p.on('dialog', d => d.accept())
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
 await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' })
-await p.waitForTimeout(6000)
+await settled(p, traffic, 6000)
 
 let code = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  [${MODE}] ${n}${x ? '  ' + x : ''}`); if (!c) code = 1 }
