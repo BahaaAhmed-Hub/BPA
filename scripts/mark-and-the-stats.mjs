@@ -78,80 +78,63 @@ async function go(mod) {
 }
 
 /* ── the mark ──────────────────────────────────────────────────────────────── */
+// It owns the window's top-left corner, **over the nav rail**: centred on the
+// rail's own pill, inside the rail's column, on the same centre line as the
+// controls across the window. Each is its own claim — a size alone passes with
+// the mark floating off the rail, which is what was reported.
 if (MODE === 'mark' || MODE === 'control') {
   await go('morning')
   if (MODE === 'control') {
-    // The arrangement as it was, restored on the very same elements: 51px, at
-    // the *end* of a 60px row. One property each — size, order, the auto
-    // margin that pushes the controls away, and the row's height.
+    // The arrangement as it was, restored on the very same element: moved into
+    // the content column's row, 76px, at that row's 18px padding.
     await p.evaluate(() => {
       const row  = document.querySelector('[data-you]')
       const mark = document.querySelector('[data-be-mark]')
       if (!row || !mark) return
-      row.style.height = '60px'
-      mark.style.order = '9'
-      mark.style.marginRight = '0'
-      mark.style.marginLeft = '4px'
+      row.prepend(mark)
+      row.style.height = '84px'
+      mark.style.marginRight = 'auto'
       const art = mark.firstElementChild
-      if (art) { art.style.width = '51px'; art.style.height = '51px' }
+      if (art) { art.style.width = '76px'; art.style.height = '76px' }
     })
     await p.waitForTimeout(200)
   }
-
   const m = await p.evaluate(() => {
     const row  = document.querySelector('[data-you]')
     const mark = document.querySelector('[data-be-mark]')
-    if (!row || !mark) return null
-    const rr = row.getBoundingClientRect()
-    const mr = mark.getBoundingClientRect()
-    // Everything in the row that is a real control, by its own box.
-    const items = [...row.children].filter(el => el !== mark).map(el => {
-      const r = el.getBoundingClientRect()
-      return { w: Math.round(r.width), h: Math.round(r.height), mid: +(r.top + r.height / 2).toFixed(1) }
-    }).filter(i => i.w > 0)
+    const pill = document.querySelector('[data-side-rail] > div > div')
+    const rail = document.querySelector('[data-side-rail]')
+    if (!row || !mark || !pill || !rail) return null
+    const art = mark.firstElementChild.getBoundingClientRect()
+    const pr  = pill.getBoundingClientRect()
+    const rr  = rail.getBoundingClientRect()
+    const yr  = row.getBoundingClientRect()
+    const mid = r => +(r.left + r.width / 2).toFixed(1)
+    const ctrls = [...row.children].filter(el => el !== mark && el.getBoundingClientRect().width > 0)
+      .map(el => { const r = el.getBoundingClientRect(); return +(r.top + r.height / 2).toFixed(1) })
     return {
-      markW: Math.round(mr.width), markH: Math.round(mr.height),
-      markMid: +(mr.top + mr.height / 2).toFixed(1),
-      rowTop: Math.round(rr.top), rowBottom: Math.round(rr.bottom), rowH: Math.round(rr.height),
-      markTop: Math.round(mr.top), markBottom: Math.round(mr.bottom),
-      leftGap: Math.round(mr.left - rr.left),
-      rightGap: Math.round(rr.right - mr.right),
-      items,
-      // Is anything drawn to the left of it? (It owns the corner, so: none.)
-      leftOf: [...document.querySelectorAll('[data-you] *')]
-        .filter(el => {
-          const r = el.getBoundingClientRect()
-          return r.width > 0 && r.right <= mr.left - 1
-        }).length,
+      w: Math.round(art.width), h: Math.round(art.height),
+      inRow: row.contains(mark),
+      xOff: +(mid(art) - mid(pr)).toFixed(1),
+      pillW: Math.round(pr.width),
+      aboveRail: art.bottom <= rr.top + 0.5 || art.bottom <= pr.top,
+      markMid: +(art.top + art.height / 2).toFixed(1),
+      ctrlMids: ctrls, rowMid: +(yr.top + yr.height / 2).toFixed(1),
+      top: Math.round(art.top), left: Math.round(art.left),
     }
   })
-  if (!m) { ok('the mark is on screen', false); }
+  if (!m) { ok('the mark and the rail are on screen', false) }
   else {
     console.log('   ' + JSON.stringify(m))
-    const ctrl = m.items[0]
-    ok('the mark is drawn', m.markW > 0, `${m.markW}x${m.markH}`)
-    ok('it is 76px', m.markW === 76, `${m.markW}`)
-    // 1.5 x 51 is 76.5; 76 is the whole pixel under it.
-    ok('which is 1.5x the 51 it was', Math.abs(m.markW - 51 * 1.5) <= 0.5, `${m.markW} vs 76.5`)
-    ok('it is square', m.markW === m.markH)
-    ok('the controls beside it are still 34px', ctrl?.h === 34, `${ctrl?.h}`)
-
-    // Vertical: one centre line through every item in the row.
-    const offs = m.items.map(i => Math.abs(i.mid - m.markMid))
-    ok('every item shares its centre line', Math.max(...offs) <= 1,
-      `worst ${Math.max(...offs).toFixed(1)}px`)
-    ok('and it sits inside the row, not through it',
-      m.markTop >= m.rowTop && m.markBottom <= m.rowBottom,
-      `mark ${m.markTop}–${m.markBottom} in row ${m.rowTop}–${m.rowBottom}`)
-    ok('the row grew to hold it', m.rowH === 84, `${m.rowH}px`)
-
-    // Horizontal: it owns the **left** corner now.
-    ok('nothing is drawn to the left of it', m.leftOf === 0, `${m.leftOf} elements`)
-    ok('it sits on the row’s own left padding', m.leftGap === 18, `${m.leftGap}px`)
-    // …and the controls still own the other end, or "moved left" would be
-    // satisfied by a row with everything piled on one side.
-    ok('and the controls still reach the right edge', m.rightGap > 300,
-      `${m.rightGap}px of row to its right`)
+    ok('the mark is drawn, square', m.w > 0 && m.w === m.h, `${m.w}x${m.h}`)
+    ok('it is not in the content column\'s row', !m.inRow)
+    ok('it is centred over the rail’s pill', Math.abs(m.xOff) <= 1, `${m.xOff}px off`)
+    ok('and no wider than the pill', m.w <= m.pillW, `${m.w} in ${m.pillW}`)
+    ok('and above the rail, not over it', m.aboveRail)
+    ok('on the window’s top-left, not mid-page', m.left < 80 && m.top < 40, `${m.left},${m.top}`)
+    ok('sharing a centre line with the controls',
+      m.ctrlMids.length > 0 && Math.max(...m.ctrlMids.map(c => Math.abs(c - m.markMid))) <= 1,
+      `mark ${m.markMid} vs ${m.ctrlMids.join(',')}`)
   }
 }
 

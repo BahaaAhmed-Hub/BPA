@@ -545,6 +545,10 @@ const KIND_COLOR: Record<string, string> = {
 //
 // It is its own component because it belongs to the **content column** rather
 // than beside the rail.
+/** The height of the top row, in both columns: the mark's, over the rail, and
+ *  the controls' (YouCluster), so the two centre on one line. */
+const MARK_ROW = 64
+
 function YouCluster() {
   const activeModule    = useUIStore(s => s.activeModule)
   const setActiveModule = useUIStore(s => s.setActiveModule)
@@ -574,34 +578,11 @@ function YouCluster() {
 
   return (
     <div data-you style={{
-      // **84px, for the mark.** It is 76px, and a 76px object in a 60px row
-      // overflows it by 8px at each end. The row is the thing that gives way:
-      // `alignItems: center` then centres every item on one line, the mark and
-      // the 34px controls alike, which is what "aligned vertically" has to mean
-      // when the items are different heights. The two paddings are equal, so
-      // the mark's left edge sits the same distance off its end of the row as
-      // the account menu does off the other.
-      flexShrink: 0, height: 84, paddingRight: 18, paddingLeft: 18,
+      // **64px, the same height as the mark's row** in the rail's column, so
+      // the mark and these controls share one centre line across the window.
+      flexShrink: 0, height: MARK_ROW, paddingRight: 18, paddingLeft: 18,
       display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
     }}>
-      {/* ─── The mark, and the top-left corner it owns ──────────────────────
-          It was on the sign-in screen and nowhere else, so the app itself wore
-          no badge. It is the **first** item in the row now — the top-left
-          corner of the content column, which is the one spot nothing else
-          claims and where a badge has always gone. `marginRight: auto` pushes
-          the three controls back to their own end rather than a spacer
-          element: the same thing said with one property instead of a node.
-          76px is 1.5x the 51 it was — sized to the empty space it sits in
-          rather than to the 34px controls — and the row grew 60 → 84 to hold
-          it, because an object taller than its row hangs out of both ends of
-          it. `amber` is the colourway the sign-in screen already uses, so the
-          two are one object at two sizes rather than two marks. It is
-          decoration beside controls that do things, so no `title`: a screen
-          reader announcing "Be" before the search button adds a stop and no
-          information. */}
-      <div data-be-mark aria-hidden style={{ flexShrink: 0, display: 'flex', alignItems: 'center', marginRight: 'auto' }}>
-        <BeLogo variant="amber" size={76} />
-      </div>
       {/* Search sits with them rather than in the rail: it is a thing you
           reach for, not a place you go. It keeps ⌘K and loses its box —
           beside two round controls a worded field is a third kind of
@@ -1383,7 +1364,20 @@ function App() {
         minHeight: 0,
         background: 'var(--sb-page)',
       }}>
-        <TopNav />
+        {/* ─── The mark owns the corner above the rail ───────────────────────
+            The window's top-left, centred over the nav rail's own column and
+            sized to fit it (52px in a ~60px pill). It was the first item of
+            the content column, which left it floating off both the rail and
+            the cards, over neither. Decoration beside controls that do
+            things, so no `title`. `amber` is the sign-in screen's colourway. */}
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+          <div data-be-mark aria-hidden style={{ height: MARK_ROW, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BeLogo variant="amber" size={52} />
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <TopNav />
+          </div>
+        </div>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           <YouCluster />
           <SyncGapBanner />
