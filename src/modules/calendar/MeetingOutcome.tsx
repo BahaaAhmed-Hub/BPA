@@ -40,6 +40,7 @@ import { loadDynamicCompanies, getVisibleUsers } from '@/types'
 import type { DynamicCompany, Priority, Quadrant, Task } from '@/types'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
+import LinkPreviews from '../../components/LinkPreviews'
 
 /** The meeting this is about. Only what the question needs. */
 export interface OutcomeEvent {
@@ -470,6 +471,7 @@ export function MeetingOutcome({ event, onClose, onFollowUp }: {
                   ? '⌘↵ to review · pasted notes can be read for you below'
                   : `${typed.length} ${typed.length === 1 ? 'line' : 'lines'} · ⌘↵ to review them`}
               </p>
+              <div style={{ marginTop: 9 }}><LinkPreviews text={text} /></div>
               {error && (
                 <p style={{
                   margin: '9px 0 0', padding: '8px 11px', borderRadius: 'var(--sb-r-sm)',

@@ -1,0 +1,151 @@
+---
+paths:
+  - "src/modules/assistant/**"
+  - "src/lib/assistantTools.ts"
+  - "src/lib/chatAttachments.ts"
+  - "src/lib/assistantPersona.ts"
+  - "src/lib/assistantName.ts"
+  - "src/lib/assistantBridge.ts"
+  - "src/lib/callName.ts"
+  - "src/lib/speech.ts"
+  - "supabase/functions/_shared/persona.ts"
+---
+
+# The assistant panel
+
+Loaded when a file this rule's `paths` names is read or edited — it is not
+in context on every turn, which is the whole point. The root `CLAUDE.md`
+holds what is true everywhere; this holds what is true here.
+
+## The assistant can be put aside
+An arrow in the panel header slides it out and leaves a tab on the right edge;
+the tab, or the floating button, brings it back. `minimised` lives in **App**
+beside `open`, because the floating button has to return to its "open me" state
+while it is aside. The panel is **slid out, never unmounted** — the thread, a
+half-typed message, staged attachments and an answer still streaming all carry
+on behind it, and the tab shows a pulsing dot while one is arriving. Closing is
+still closing: it clears the conversation.
+
+## The assistant takes files
+`lib/chatAttachments.ts` + the composer in `AssistantPanel`. A screenshot of an
+invoice or a PDF statement is the fastest way to tell the assistant something,
+and it had no way to receive one. Three ways in — the clip, a paste (a
+screenshot goes straight from the clipboard), a drop on the composer — and three
+kinds out, because there are three things a model can be given:
+- **image** — Anthropic base64 blocks; Groq a data URL, vision models only.
+  Anything longer than 1568px on an edge is drawn down a canvas to JPEG first,
+  which is Anthropic's own ceiling and takes the token cost with it. A small PNG
+  keeps its encoding: re-encoding a screenshot as JPEG smears the text in it.
+- **pdf** — a `document` block. **Groq cannot read one at all**, so
+  `unsupported()` says so before the request rather than dropping it silently,
+  which would read as the model ignoring what you just handed it.
+- **text** (CSV, MD, JSON, logs) — inlined into the message between
+  `--- name ---` fences so the model knows what it is looking at, truncated at
+  200 KB and told when it was.
+Caps: 5 MB an image after scaling, 24 MB a PDF, 24 MB the message. A file with
+no message is a message — dropping a receipt in asks the obvious question — so
+Send is live with an empty box. The chips above the input remove one at a time,
+and the sent bubble lists what went with it, or the thread shows a question
+about a document nobody can see was handed over. Verified by intercepting the
+API: image, document and text blocks all arrive, the tools still ride along, and
+the reply renders (the mock has to *stream*, or the SDK ends "without sending
+any chunks").
+
+## The assistant panel — answers are Markdown, drawn as Markdown
+`modules/assistant/Markdown.tsx` (react-markdown + remark-gfm). The bubble used
+to print the model's reply with `white-space: pre-wrap`, so a day came back as
+literal `###`, `**bold**` and `| Time | Event |` rows.
+- **No raw HTML.** No `rehype-raw`, so a tag in a reply is text; links and images
+  go through react-markdown's own URL filter. A model's output is a stranger's
+  input as far as the page is concerned.
+- **Every colour is a token**, so the four themes need nothing. The panel is
+  ~390px: a table scrolls sideways **inside its own box** (`.ai-md-table`) rather
+  than stretching the bubble, and headings step down to body size.
+- **A global reset strips list markers** — bullets and numbers were missing until
+  `list-style` was set explicitly. Found by looking at a screenshot, not by the
+  DOM assertions, which all passed.
+- **The model is told how to write for it** (`FORMAT_RULES`, shared by both
+  tones): answer first, a table only for 3+ items with 2+ attributes and at most
+  4 short columns, no `---` or `#`/`##`, an image only from a URL a tool returned.
+  Your own message stays plain text. Telegram has its own prompt and a narrower
+  dialect — legacy Markdown has no tables — and is a separate step.
+- **A habit's picture is drawn by the app, not carried by the model.** The photo
+  is a ~60KB data URL: through the model it costs the tokens and cannot be
+  copied back out reliably. `list_habits` returns `picture: "habit:<id>"` (a
+  dozen characters) and the model writes `![Water](habit:<id>)`; `Markdown.tsx`
+  reads the real image from `useHabitsStore`, or the habit's emoji when there is
+  none. Before this the tool returned only `emoji`, so the model could not have
+  known a photo existed. `habit:` is allowed through `urlTransform`; every other
+  URL keeps react-markdown's default filter. **Backticks inside `FORMAT_RULES`
+  close the template literal** — the same trap the Telegram prompt hit.
+- **A tool chip has a state, and nothing spins after the answer.** It was a
+  sentence with a wrench on `animation: spin infinite` and nothing ever told it
+  the tool had come back, so it went on looking busy under a finished answer.
+  `DisplayMessage.tool` + `state` (`running` → `done` | `failed`); `settleChip`
+  is called when each call returns (Claude and Groq loops, keyed by the call's
+  own id), and the turn's `finally` settles anything still `running` as failed,
+  so an error, a refused key or an abort cannot leave one spinning. Labels are
+  what it was doing (`toolLabel`: "Reading habits…" → "Read habits"), not the
+  tool's name. Measured: 2 spinning chips and 7 live animations while running;
+  **0 animations on the whole page** once settled. `prefers-reduced-motion`
+  stops the sweep and slows the ring.
+Measured in Chromium at the panel's width: no raw `###`/`|---` left, one real
+table that scrolls inside its box with no page overflow, an inert `<script>`, a
+broken image falling back to a link.
+
+## The assistant has a face, a name, and an ear
+`AssistantAvatar.tsx`, `lib/assistantPersona.ts` + `assistantName.ts`, `lib/callName.ts`, `lib/speech.ts`,
+`lib/assistantBridge.ts`, `NameListener.tsx`, `_shared/persona.ts`. The brain icon is gone from the
+floating button, the panel header, every reply, the tab it leaves when put aside and the Settings → AI
+rail entry; one component draws all of them, from `public/assistant-avatar.png`.
+- **The picture is a person, with a drawn stand-in.** Until the file exists (or if it fails to load) an
+  SVG portrait is shown, never an empty box. **`public/assistant-avatar.png` is the chosen portrait**
+  (384px, cropped to the head and shoulders so the face reads in the 28px header circle); the drawing
+  only shows if that file fails to load.
+- **The name is the person's** (Settings → AI, or asked once on first use — "What would you like to call
+  me?", with ideas and *Not now*, never asked twice). It is a shared pref, `assistant-persona`
+  (`{name, listen, speak, lang, asked}`), **not** a field of `professor-ai-config`: that holds credentials,
+  and a rename must never be able to trip the key-sync rules. Until named, it is "Your assistant".
+- **A name goes into prompts and a matcher, so it is cleaned on the way in** (`cleanName`): letters of any
+  script, digits, spaces, hyphen, apostrophe, full stop; 24 characters. The bots' copy
+  (`_shared/persona.ts`) is run against it over 17 awkward inputs (`assistant-name-agrees.mjs`), including a
+  name with a newline and an instruction in it.
+- **Being called** (`callName.ts`, pure, 19 assertions in `scripts/call-name.mjs`). Typed in the search
+  box an address must be *marked* — a comma/colon after it, a greeting before it, or the name alone — so
+  "Theo meeting notes" stays a search for notes; a trailing ", Beau" needs its comma; a name mid-sentence is
+  never an address. Spoken there is no punctuation, so the name at the start is enough, and a speech engine's
+  slip is allowed **only behind a greeting** and never for a common word ("then" is one edit from "Theo").
+  Folds case, accents and Arabic letter variants (أ إ آ → ا, ى → ي, ة → ه).
+- **The bridge** (`askAssistant` / `takePendingAsk`) parks the request so the search box and the listener
+  can reach a panel that is closed or not yet mounted; App opens it, the panel takes it when it is free.
+- **iPhone and iPad, honestly.** A web page cannot listen with the screen locked or the tab hidden, so
+  there are three layers and Settings says so: **type or say "Name, …"** anywhere; **tap the mic** (one
+  phrase; the answer is spoken back if the question was spoken); **"Listen for its name while the app is
+  open"** (opt-in, foreground only, with a visible pill the whole time); and the **Siri Shortcut named after
+  the assistant**, which is the only hands-free route with the app closed ("Hey Siri, Beau").
+  `speech.ts` is written around Safari: a session ends by itself, so continuous listening is a restart loop
+  with a back-off (400 ms doubling to 5 s, six failures and it stops and says so); it stops the moment the
+  page is hidden and comes back when visible; **it never restarts after a refusal** (`not-allowed` is
+  named, `service-not-allowed` — Safari declining to start without a tap — turns the pill into "Tap to
+  listen for Beau"); speaking is unlocked from a tap (`unlockSpeech`); **it ignores speech heard while the
+  assistant is speaking and for 700 ms after** so it does not answer itself; the panel's mic and the
+  listener share one microphone, the listener waiting and then taking it back.
+- **A session we ended must not report later.** Aborting a recogniser fires its `end` *after* a newer
+  session has begun, which switched the "listening" indicator off while it was on (StrictMode's double effect
+  found it). `stop()` detaches the handlers first.
+- **Chromium has a native `SpeechRecognition`**, and the code prefers the unprefixed name, so a test that
+  fakes only `webkitSpeechRecognition` is not testing the fake — the first run "started" a real session in
+  headless Chromium and the fake saw nothing.
+- **Where the audio goes is the platform's**, and the Settings text says so before the switch is on (Apple's
+  speech service in Safari, Google's in Chrome). The **speech language** is a choice with "same as this
+  browser" as the default; a junk tag falls back to English.
+- **Telegram and Siri use the same name** (`assistantNameFor` reads the prefs row of the user already
+  resolved, once per message, never throws; absent → "Professor AI" as before), and the Settings → Siri block
+  names the Shortcut after it. The bots' own prompts say who they are.
+`scripts/assistant-voice.mjs` — 30 assertions with a fake `SpeechRecognition`, a fake `speechSynthesis` and
+Claude faked as a **stream**: the search box (offers it first, sends only what follows the name, unmarked is a
+search), the mic (interim words, the name stripped, the answer spoken once with the markup removed, bare name
+→ listens again, blocked mic named), listening (a mention does nothing, "hey Beau" asks it, its own voice
+ignored, hidden → stops / visible → returns, the mic and the listener sharing), iPhone's tap, a refusal not
+retried, no recogniser → no button and no pill, first use. The Today screen asks Claude things of its own, so
+the harness counts only requests carrying `tools`. The ink audit has the first-use and named panels.

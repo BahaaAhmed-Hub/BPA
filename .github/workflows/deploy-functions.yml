@@ -146,3 +146,14 @@ jobs:
             --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      # link-preview keeps the gateway's JWT check — deliberately, and unlike
+      # every other function here. It fetches a URL somebody hands it, so
+      # `--no-verify-jwt` would publish an open proxy at a guessable address.
+      # Its own door checks the user too; the gateway is the cheaper refusal.
+      - name: Deploy link-preview
+        run: |
+          supabase functions deploy link-preview \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

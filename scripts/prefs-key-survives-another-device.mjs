@@ -39,7 +39,7 @@ function device(seed = {}) {
 globalThis.__sb = {
   from: () => ({
     select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { schedule_rules: server } }) }) }),
-    update: payload => ({ eq: async () => { server = payload.schedule_rules; return { error: null } } }),
+    update: payload => ({ eq: () => { server = payload.schedule_rules; const r = { error: null, data: [{ id: 'u1' }] }; return Object.assign(Promise.resolve(r), { select: async () => r }) } }),
   }),
   auth: {
     getUser:    async () => ({ data: { user: { id: 'u1' } } }),
@@ -124,20 +124,61 @@ await mod.pullSharedPrefs()
 d2.setItem(KEY, NEWK)
 globalThis.__sb.from = () => ({
   select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { schedule_rules: server } }) }) }),
-  update: () => ({ eq: async () => ({ error: { message: 'offline' } }) }),
+  update: () => ({ eq: () => { const r = { error: { message: 'offline' } }; return Object.assign(Promise.resolve(r), { select: async () => r }) } }),
 })
 await mod.pushSharedPrefs()
 globalThis.__sb.from = () => ({
   select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { schedule_rules: server } }) }) }),
-  update: payload => ({ eq: async () => { server = payload.schedule_rules; return { error: null } } }),
+  update: payload => ({ eq: () => { server = payload.schedule_rules; const r = { error: null, data: [{ id: 'u1' }] }; return Object.assign(Promise.resolve(r), { select: async () => r }) } }),
 })
 await mod.pushSharedPrefs()
 ok('a refused push is retried rather than forgotten', keyOnServer() === 'sk-ant-FRESH', String(keyOnServer()))
 
-// ── Settings → AI must push the moment you save it.
+// ── Settings → AI must push on its own, not wait for the five-minute timer.
+// Held 700ms now rather than fired per keystroke: there is no Save button on
+// that field, so it writes on every change event and a 93-character key was
+// 93 concurrent pushes. "Immediately" was the right claim against a
+// five-minute timer and the wrong word for a text field.
 const settings = readFileSync('src/modules/settings/Settings.tsx', 'utf8')
-const save = settings.slice(settings.indexOf('function saveAIConfig'), settings.indexOf('function saveSettings'))
-ok('saving the AI key pushes immediately', /pushSharedPrefs\(\)/.test(save), save.replace(/\s+/g, ' ').slice(0, 80))
+const save = settings.slice(settings.indexOf('function saveAIConfig'), settings.indexOf('let onAIPush'))
+ok('saving the AI key pushes on its own', /pushSharedPrefs\(\)/.test(save), save.replace(/\s+/g, ' ').slice(0, 60))
+ok('and holds a moment rather than pushing per keystroke',
+   /setTimeout/.test(save) && /clearTimeout/.test(save))
+
+// ── A write is not saved until it is read back ─────────────────────────────
+// (a) No `users` row: `update … eq` succeeds with zero rows. It used to say
+//     "saved" about a key that went nowhere.
+{
+  let row = null            // no row yet
+  const d = device({ [KEY]: NEWK }); globalThis.localStorage = d
+  const mk = (r) => Object.assign(Promise.resolve(r), { select: async () => r })
+  globalThis.__sb.from = () => ({
+    select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: row ? { schedule_rules: row } : null }) }) }),
+    update: () => ({ eq: () => mk({ error: null, data: [] }) }),
+    upsert: payload => { row = payload.schedule_rules; return Promise.resolve({ error: null }) },
+  })
+  const r = await mod.pushSharedPrefs()
+  ok('a missing users row is created, not reported as saved', r === 'saved' && row?.shared_prefs?.[KEY] === NEWK, `${r} ${JSON.stringify(row)?.slice(0, 50)}`)
+}
+// (b) Another writer (profile autosave) rewrites schedule_rules without our
+//     key between our read and our write. The push must notice and go again.
+{
+  let row = { shared_prefs: {} }
+  const d = device({ [KEY]: NEWK }); globalThis.localStorage = d
+  let clobbers = 1
+  const mk = (r) => Object.assign(Promise.resolve(r), { select: async () => r })
+  globalThis.__sb.from = () => ({
+    select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { schedule_rules: row } }) }) }),
+    update: payload => ({ eq: () => {
+      row = payload.schedule_rules
+      if (clobbers-- > 0) row = { timezone: 'x' }   // somebody else's whole-object write lands on top
+      return mk({ error: null, data: [{ id: 'u1' }] })
+    } }),
+  })
+  const r = await mod.pushSharedPrefs()
+  ok('a push clobbered by another writer is sent again', r === 'saved' && row?.shared_prefs?.[KEY] === NEWK, `${r} ${JSON.stringify(row)?.slice(0, 60)}`)
+  ok('…and the other writer\'s field survives', row?.timezone === undefined || row?.timezone === 'x')
+}
 
 console.log(fails ? `\n${fails} failing` : '\nall good')
 process.exit(fails ? 1 : 0)

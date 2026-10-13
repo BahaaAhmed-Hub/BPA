@@ -10,6 +10,7 @@
 // the deleted habit is back in the stats.
 import { chromium } from 'playwright-core'
 import { session, user } from './session.mjs'
+import { watchTraffic, settled } from './settled.mjs'
 const U = user.id
 const MODE = process.argv[2] ?? 'refused'
 const PUSH = MODE === 'push'
@@ -56,9 +57,11 @@ await ctx.addInitScript(s=>{try{
   localStorage.setItem('professor-ui', JSON.stringify({state:{activeModule:'habits',themeId:'sunlit-bento'},version:0}))
 }catch{}},session)
 const p = await ctx.newPage()
+// Installed before the first navigation, or the counter misses the boot.
+const traffic = watchTraffic(p)
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0,160)))
 p.on('dialog', d => d.accept())
-await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(6500)
+await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await settled(p, traffic, 6500)
 let fails=0
 const ok=(n,c,x='')=>{console.log(`${c?'PASS':'*** FAIL ***'}  [${MODE}] ${n}${x?'  '+x:''}`); if(!c)fails++}
 
@@ -67,7 +70,15 @@ const names = () => p.evaluate(() => {
 })
 // The headline: "N% of today done" — the stat a deleted habit must leave.
 const pct = () => p.evaluate(() => {
-  const m = (document.body.innerText||'').match(/(\d+)%\s+of\s+today\s+done/)
+  // **The header that said "N% of today done" is gone** — it repeated the
+  // summary card a line below it. The card draws the same share, from the same
+  // `habitProgress` code, and carries it as `data-day-pct` — read as a number
+  // rather than out of the sentence, because that sentence is "All habits
+  // complete! 🎉" at 100 and "Nothing logged yet today" at 0. A text match
+  // worked only through the middle of the range, which is not where this
+  // suite's assertions sit.
+  const el = document.querySelector('[data-day-pct]')
+  const m = el ? [null, el.getAttribute('data-day-pct')] : null
   return m ? Number(m[1]) : -1
 })
 

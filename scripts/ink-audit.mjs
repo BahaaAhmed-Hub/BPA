@@ -321,8 +321,31 @@ const LIBRARY = {
   library_list_books: [0, 1, 2].map(i => ({ list_id: 'l2', book_id: `00000000-0000-4000-8000-00000000000${i}`, user_id: SU, sort_order: 0, added_at: '2026-09-01T00:00:00Z' })),
 }
 
-const THEMES = process.env.INK_THEME ? [process.env.INK_THEME]
-  : ['sunlit-bento', 'warm-minimal', 'glass-depth', 'evergreen']
+const ALL_THEMES = ['sunlit-bento', 'warm-minimal', 'glass-depth', 'evergreen']
+// **A theme id nobody has is not a theme to audit.** `INK_THEME` was taken on
+// trust and written into `professor-ui`, where an id the app does not know
+// falls back to Sunlit — so `INK_THEME=glass-and-depth` (the theme's *name*,
+// not its id: it is `glass-depth`) audited Sunlit four screens at a time and
+// reported it under a Glass label. Clean, and about the wrong theme. The exact
+// vacuous result this file's own note was written about, arrived at from a new
+// direction: it is not enough for a screen to be reached, the theme on it has
+// to be the one asked for.
+// Each theme's own `--sb-page`, as Chrome reports it. Written out rather than
+// imported because this script does not run through Vite and cannot read
+// `themes.ts`; a value that drifts fails the run loudly, which is the point.
+const GROUNDS = {
+  'sunlit-bento':  'rgb(247, 244, 234)',
+  'warm-minimal':  'rgb(244, 241, 234)',
+  'glass-depth':   'rgb(11, 10, 18)',
+  'evergreen':     'rgb(245, 247, 246)',
+}
+const THEMES = process.env.INK_THEME ? [process.env.INK_THEME] : ALL_THEMES
+for (const t of THEMES) {
+  if (!ALL_THEMES.includes(t)) {
+    console.error(`INK_THEME=${t} is not a theme id. One of: ${ALL_THEMES.join(', ')}`)
+    process.exit(2)
+  }
+}
 const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] })
 
 for (const theme of THEMES) {
@@ -403,7 +426,20 @@ for (const theme of THEMES) {
     localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
     localStorage.setItem('cal-intel-cals-cache', JSON.stringify(cs))
     localStorage.setItem('cal-view', 'week')
-    localStorage.setItem('professor-ui', JSON.stringify({ state: { themeId: th }, version: 0 }))
+    // **Merged, never replaced.** An init script runs before *every*
+    // navigation, so writing this whole key again wiped whatever the run had
+    // just put in it — and the Settings visit reaches its module by setting
+    // `activeModule` and reloading. The reload re-ran this line, the app came
+    // back up on the default module, and `Settings`, `Settings · Appearance`
+    // and `Settings · Accounts & companies` measured nothing from the day this
+    // file was written. The note under the count said that predated the rail
+    // work, which was true, and the cause was this line all along.
+    const prevUi = (() => {
+      try { return JSON.parse(localStorage.getItem('professor-ui') ?? '{}') } catch { return {} }
+    })()
+    localStorage.setItem('professor-ui', JSON.stringify({
+      ...prevUi, state: { ...(prevUi.state ?? {}), themeId: th }, version: 0,
+    }))
     // The Shopping screen is behind a switch, and so is its tab in Finance.
     localStorage.setItem('shopping-settings', JSON.stringify({
       enabled: true, viewMode: 'byWeek', priceWatchFrequency: 'off',
@@ -414,6 +450,13 @@ for (const theme of THEMES) {
 
   await page.goto(`http://localhost:${process.argv[2]}/BPA/`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3400)
+  // Measured, not assumed: a theme that did not apply is a run about another
+  // theme's colours. `--sb-page` differs in all four, so it answers this.
+  const ground = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
+  if (!GROUNDS[theme] || ground !== GROUNDS[theme]) {
+    console.error(`${theme} did not apply — body is ${ground}, expected ${GROUNDS[theme] ?? '(unknown)'}`)
+    process.exit(2)
+  }
   await page.getByText('Skip for now').first().click().catch(() => {})
   await page.waitForTimeout(700)
 
@@ -438,9 +481,9 @@ for (const theme of THEMES) {
     for (const f of rows) found.push({ ...f, screen: label })
   }
 
-  await visit('Today', async () => { await page.locator('header nav button', { hasText: /^Today$/ }).first().click() })
+  await visit('Today', async () => { await page.locator('[data-side-rail] button[aria-label="Today"]').click() })
   await visit('Calendar + event panel', async () => {
-    await page.locator('header nav button', { hasText: /^Calendar$/ }).first().click()
+    await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
     await page.waitForTimeout(1600)
     await page.locator('.event-card').first().click()
   })
@@ -449,7 +492,7 @@ for (const theme of THEMES) {
   // the sign-in gate, with no session — so it is audited by its own file
   // rather than from in here.
   await visit('Calendar · booking panel', async () => {
-    await page.locator('header nav button', { hasText: /^Calendar$/ }).first().click()
+    await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
     await page.waitForTimeout(1400)
     await page.getByRole('button', { name: /^Booking$/ }).click()
     await page.waitForTimeout(900)
@@ -458,14 +501,14 @@ for (const theme of THEMES) {
     const mark = page.getByRole('button', { name: /Mark hours on the week/i })
     if (await mark.count()) { await mark.click(); await page.waitForTimeout(800) }
   })
-  await visit('Mail', async () => { await page.locator('header nav button', { hasText: /^Mail$/ }).first().click() })
-  await visit('Tasks', async () => { await page.locator('header nav button', { hasText: /^Tasks$/ }).first().click() })
-  await visit('Habits', async () => { await page.locator('header nav button', { hasText: /^Habits$/ }).first().click() })
-  await visit('Finance', async () => { await page.locator('header nav button', { hasText: /^Finance$/ }).first().click() })
+  await visit('Mail', async () => { await page.locator('[data-side-rail] button[aria-label="Mail"]').click() })
+  await visit('Tasks', async () => { await page.locator('[data-side-rail] button[aria-label="Tasks"]').click() })
+  await visit('Habits', async () => { await page.locator('[data-side-rail] button[aria-label="Habits"]').click() })
+  await visit('Finance', async () => { await page.locator('[data-side-rail] button[aria-label="Finance"]').click() })
   // Shopping: the list with an item open (every field of the editor), the board
   // (cards on a column ground), and the stores page with one opened.
   const shoppingTab = async () => {
-    await page.locator('header nav button', { hasText: /^Finance$/ }).first().click()
+    await page.locator('[data-side-rail] button[aria-label="Finance"]').click()
     await page.waitForTimeout(1200)
     await page.locator('button', { hasText: /^Shopping$/ }).first().click()
     await page.waitForTimeout(1400)
@@ -492,7 +535,7 @@ for (const theme of THEMES) {
   // Library: spines on a shelf, covers face-out, lists, a book open beside the
   // shelf, and the add dialog with a lookup typed into it.
   const libraryTab = async () => {
-    await page.locator('header nav button', { hasText: /^Library$/ }).first().click()
+    await page.locator('[data-side-rail] button[aria-label="Library"]').click()
     await page.waitForTimeout(1200)
   }
   await visit('Library · shelf', libraryTab)
@@ -639,7 +682,7 @@ for (const theme of THEMES) {
   await page.evaluate(() => localStorage.removeItem('professor-ai-config'))
   await page.waitForTimeout(300)
 
-  await visit('Dashboard', async () => { await page.locator('header nav button', { hasText: /^Dashboard$/ }).first().click() })
+  await visit('Dashboard', async () => { await page.locator('[data-side-rail] button[aria-label="Dashboard"]').click() })
   // Settings is behind the avatar menu, and carries every colour picker there
   // is — the company swatches, the habit colours, the category palette.
   await visit('Settings', async () => {
@@ -673,7 +716,10 @@ for (const theme of THEMES) {
   // morning page under an Admin label. Clicking is also the only version that
   // proves the menu row exists at all.
   const goAdmin = async () => {
-    await page.locator('header button', { hasText: /^(BA|A)$/ }).last().click({ timeout: 4000 })
+    // The avatar is top right now, not in the rail. Scoped to the menu it
+    // opens rather than to where it happens to sit, so moving it again does
+    // not quietly turn this screen into one that measures nothing.
+    await page.locator('button[aria-haspopup="menu"]').click({ timeout: 4000 })
     await page.waitForTimeout(400)
     await page.locator('button[role="menuitem"]', { hasText: 'Admin' }).first().click({ timeout: 4000 })
     await page.waitForTimeout(1400)

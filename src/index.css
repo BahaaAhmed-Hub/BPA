@@ -625,17 +625,22 @@ img { max-width: 100%; }
 .sb-fin-row:focus-within .sb-row-tools { opacity: 1 !important; }
 
 /* ─── Calendar shell ──────────────────────────────────────────────────────────
-   The calendar is not a dashboard page. It is one framed panel floating on a
-   ground a step deeper than the page, holding white cards whose separation is
-   that ground rather than a rule. The route therefore owns its own background
-   and its own gutter, and nothing on it sits outside the panel.
+   **The calendar has no ground of its own.** It used to paint
+   `--sb-cal-ground`, "a step deeper than the page" — a different tone across
+   the whole module. Nothing else in the app did that, and because the rail
+   sits *outside* this element the effect was a big tinted box holding every
+   component with the menu stranded beside it: the one thing that most made
+   the app look like a frame in a window. The separation between the white
+   cards inside is the page's own colour, which is what every other module
+   already relies on.
 
-   These four rules are here rather than inline because each carries a media
-   query, and a width watched in JavaScript reports a number that lags the
-   layout by a frame.
+   It keeps the gutter and the column, which are layout and not decoration.
+   These rules are here rather than inline because each carries a media query,
+   and a width watched in JavaScript reports a number that lags the layout by
+   a frame.
    ──────────────────────────────────────────────────────────────────────────── */
 .cal-ground {
-  background: var(--sb-cal-ground);
+  background: transparent;
   padding: 20px;
   height: 100%;
   box-sizing: border-box;
@@ -644,19 +649,26 @@ img { max-width: 100%; }
 }
 @media (max-width: 900px) { .cal-ground { padding: 14px; } }
 
+/* **Not a slab.** This used to be a page-coloured box with a 28px radius and
+   `0 30px 80px -30px rgba(25,23,18,.5)` under it — the same colour as the
+   ground it sat on, lifted off it by a heavy shadow, so the whole screen read
+   as a framed card floating in a window. It is the page: the rail, the module
+   and everything in it share one continuous background, and the only things
+   that carry an edge are the cards that genuinely are cards.
+   The padding stays — content still needs air — and `overflow: hidden` stays,
+   because the grid inside scrolls against it. */
 .cal-panel {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: var(--sb-page);
-  border-radius: 28px;
-  padding: 24px 22px 22px;
+  background: transparent;
+  /* The ground above already provides the gutter; two nested paddings were
+     two boxes' worth of inset for a module that now draws neither. */
+  padding: 0;
   overflow: hidden;
-  box-shadow: 0 30px 80px -30px rgba(25, 23, 18, .5);
 }
-@media (max-width: 900px) { .cal-panel { border-radius: 22px; padding: 18px 14px 14px; } }
 
 /* The view on the left, the day rail on the right. Under 1180px the rail goes
    below the grid at full width rather than squeezing to nothing. */
@@ -1013,3 +1025,34 @@ img { max-width: 100%; }
 .lib-textlayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
 .lib-textlayer ::selection { background: rgba(var(--sb-accent-rgb), .5); }
 .lib-textlayer .markedContent { display: contents; }
+/* ── Out of focus ───────────────────────────────────────────────────────────
+   One rule owns what "not this company" looks like, everywhere. Dimmed and
+   desaturated rather than removed: a filtered screen that hid the rest would
+   be indistinguishable from an empty one, and the shape of the week behind
+   the company you are reading is most of why you looked.
+   Still reachable — it is a lens, not a lock — so no `pointer-events: none`;
+   hovering one brings it back, because the thing you reach for is the thing
+   you want to read.
+
+   **`!important`, and it is the one place that earns it.** A card sets its
+   own opacity inline — an event dims to 0.35 while it is the source of a
+   drag, a task while it is finished — and an inline style beats every
+   stylesheet rule, so without this the class landed on the right cards and
+   changed nothing on screen. (Measured exactly that way: the class was on the
+   element, the rule was in the sheet, and the computed opacity was still 1.)
+   A lens is by definition an override of what each card says about itself,
+   and it lives in this one rule rather than being multiplied into every
+   module's own number. */
+.sb-out-of-focus {
+  opacity: 0.26 !important;
+  filter: saturate(0.45);
+  transition: opacity 0.16s ease, filter 0.16s ease;
+}
+.sb-out-of-focus:hover,
+.sb-out-of-focus:focus-within {
+  opacity: 0.72 !important;
+  filter: saturate(0.8);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-out-of-focus { transition: none; }
+}

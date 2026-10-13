@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { AssistantPanel, AssistantToggle } from './modules/assistant/AssistantPanel'
+import { SideRail } from './components/SideRail'
 import { ExecutiveDashboard } from './modules/dashboard/ExecutiveDashboard'
 import { TaskCommand } from './modules/tasks/TaskCommand'
 import { CalendarModule } from './modules/calendar/CalendarModule'
@@ -17,7 +18,6 @@ import { ASK_EVENT } from './lib/assistantBridge'
 import { NameListener } from './modules/assistant/NameListener'
 import { useLibraryStore } from './modules/library/libraryStore'
 import { libraryIsOff, useLibraryOff } from './modules/library/libraryPrefs'
-import { NavRow } from './components/ui'
 import { useUIStore } from './store/uiStore'
 import { cachedModules, fetchModules, forgetEntitlements, moduleIsOff, useModules } from './lib/entitlements'
 import { amIAdmin } from './lib/admin'
@@ -363,23 +363,6 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
  *  themselves against it read it the same way. */
 export const NAV_H = 'var(--sb-h-header)'
 
-/** True while the viewport is narrower than `px`. The header is the only place
- *  that needs this: its three sections do not share space, so the right-hand
- *  group is drawn *over* the nav rather than pushing it — "Dashboard" is
- *  unreachable from 1100px down, and "Finance" from 800px. Both are ordinary
- *  laptop-window widths, not edge cases. */
-function useNarrowerThan(px: number): boolean {
-  const [hit, setHit] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia(`(max-width: ${px}px)`).matches)
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${px}px)`)
-    const on = () => setHit(mq.matches)
-    on()
-    mq.addEventListener('change', on)
-    return () => mq.removeEventListener('change', on)
-  }, [px])
-  return hit
-}
 
 /** The gate for a nav id. Library has a second switch of its own; every other
  *  module answers to the server alone. */
@@ -568,18 +551,177 @@ const KIND_COLOR: Record<string, string> = {
   decision: 'var(--sb-negative)', conflict: 'var(--sb-accent)', habit: 'var(--sb-positive)', review: 'var(--sb-accent)',
 }
 
-function TopNav() {
+// ─── You, top right ──────────────────────────────────────────────────────────
+// Search, the bell and the avatar: what you reach for, and what has just
+// happened, in the corner the eye goes to for status.
+//
+// **A row in the layout, not an overlay.** `position: fixed` drew it on top of
+// whatever each page happened to put in its own top-right corner — Today's
+// dark banner, most visibly — and no z-index fixes that, because the problem
+// is two things wanting the same box. Owning a row means nothing can be under
+// it on any page, including ones nobody has written yet. It costs 48px, which
+// is less than the header this replaced.
+//
+// It is its own component because it belongs to the **content column** rather
+// than beside the rail.
+function YouCluster() {
   const activeModule    = useUIStore(s => s.activeModule)
   const setActiveModule = useUIStore(s => s.setActiveModule)
-  // The menu row is drawn for an admin only — but that is politeness, not the
-  // gate: `public.admins` hands out own-row-only and every table behind the
-  // panel answers to its own policy, so forcing the route gets empty lists.
+  // Drawn for an admin only — politeness, not the gate: `public.admins` hands
+  // out own-row-only and every table behind the panel answers to its own
+  // policy, so forcing the route gets empty lists.
   const [isAdmin, setIsAdmin] = useState(false)
   useEffect(() => {
     let live = true
     void amIAdmin().then(v => { if (live) setIsAdmin(v) })
     return () => { live = false }
   }, [])
+  const user = useAuthStore(s => s.user)
+  const initials = user?.name
+    ? user.name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
+    : user?.email?.slice(0, 2).toUpperCase() ?? '?'
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!menuOpen) return
+    const away = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false) }
+    const esc  = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
+  }, [menuOpen])
+
+  return (
+    <div data-you style={{
+      // **84px, for the mark.** It is 76px, and a 76px object in a 60px row
+      // overflows it by 8px at each end. The row is the thing that gives way:
+      // `alignItems: center` then centres every item on one line, the mark and
+      // the 34px controls alike, which is what "aligned vertically" has to mean
+      // when the items are different heights. The two paddings are equal, so
+      // the mark's left edge sits the same distance off its end of the row as
+      // the account menu does off the other.
+      flexShrink: 0, height: 84, paddingRight: 18, paddingLeft: 18,
+      display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
+    }}>
+      {/* ─── The mark, and the top-left corner it owns ──────────────────────
+          It was on the sign-in screen and nowhere else, so the app itself wore
+          no badge. It is the **first** item in the row now — the top-left
+          corner of the content column, which is the one spot nothing else
+          claims and where a badge has always gone. `marginRight: auto` pushes
+          the three controls back to their own end rather than a spacer
+          element: the same thing said with one property instead of a node.
+          76px is 1.5x the 51 it was — sized to the empty space it sits in
+          rather than to the 34px controls — and the row grew 60 → 84 to hold
+          it, because an object taller than its row hangs out of both ends of
+          it. `amber` is the colourway the sign-in screen already uses, so the
+          two are one object at two sizes rather than two marks. It is
+          decoration beside controls that do things, so no `title`: a screen
+          reader announcing "Be" before the search button adds a stop and no
+          information. */}
+      <div data-be-mark aria-hidden style={{ flexShrink: 0, display: 'flex', alignItems: 'center', marginRight: 'auto' }}>
+        <BeLogo variant="amber" size={76} />
+      </div>
+      {/* Search sits with them rather than in the rail: it is a thing you
+          reach for, not a place you go. It keeps ⌘K and loses its box —
+          beside two round controls a worded field is a third kind of
+          object. */}
+      <button
+        onClick={() => window.dispatchEvent(new Event('professor:openSearch'))}
+        title="Search everything (⌘K)"
+        aria-label="Search everything"
+        style={{
+          width: 34, height: 34, flexShrink: 0, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: 'var(--sb-r-pill)', border: 'none',
+          background: 'transparent', color: 'var(--sb-ink-3)',
+        }}>
+        <Search size={ICON.md} />
+      </button>
+      <NotificationBell />
+
+      {/* You, and what is behind you. */}
+      <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
+        <button
+          onClick={() => setMenuOpen(o => !o)}
+          title={user?.email ?? 'Your account'}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          style={{
+            width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', padding: 0, margin: '3px 0',
+            background: 'var(--sb-ink-1)', border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', overflow: 'hidden',
+          }}>
+          {user?.avatarUrl ? (
+            <img src={user.avatarUrl} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-on-dark)', letterSpacing: '0.02em' }}>
+              {initials}
+            </span>
+          )}
+        </button>
+        {menuOpen && (
+              <div role="menu" style={{
+                position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120, minWidth: 216,
+                background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
+                boxShadow: 'var(--sb-shadow-frame)',
+              }}>
+                <div style={{ padding: '8px 10px 10px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', marginBottom: 5 }}>
+                  <p style={{
+                    margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{user?.name ?? 'Your account'}</p>
+                  <p style={{
+                    margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{user?.email}</p>
+                </div>
+                <button
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); setActiveModule('settings') }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
+                    padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
+                    background: activeModule === 'settings' ? 'var(--sb-accent-tint)' : 'transparent',
+                    color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
+                  }}>
+                  <Settings size={ICON.md} color="var(--sb-ink-3)" /> Settings
+                </button>
+                {isAdmin && (
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenuOpen(false); setActiveModule('admin') }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
+                      padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
+                      background: activeModule === 'admin' ? 'var(--sb-accent-tint)' : 'transparent',
+                      color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
+                    }}>
+                    <ShieldCheck size={ICON.md} color="var(--sb-ink-3)" /> Admin
+                  </button>
+                )}
+                <button
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); void googleSignOut() }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
+                    padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
+                    background: 'transparent', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body)',
+                    fontFamily: 'inherit', textAlign: 'left',
+                  }}>
+                  <LogOut size={ICON.md} color="var(--sb-negative)" /> Sign out
+                </button>
+              </div>
+        )}
+      </div>
+
+    </div>
+  )
+}
+
+function TopNav() {
+  const activeModule    = useUIStore(s => s.activeModule)
+  const setActiveModule = useUIStore(s => s.setActiveModule)
   // Drawn, not enforced — the bundle is public, so this is for the person
   // reading it. RLS is what actually answers.
   useModules()
@@ -591,179 +733,13 @@ function TopNav() {
   useEffect(() => {
     if (offHere(activeModule) && navItems.length) setActiveModule(navItems[0].id)
   }, [activeModule, navItems, setActiveModule])
-  const user            = useAuthStore(s => s.user)
-
-  const initials = user?.name
-    ? user.name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
-    : user?.email?.slice(0, 2).toUpperCase() ?? '?'
-
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-  // Measured, not guessed: the search box starts covering "Dashboard" at
-  // 1100px and "Finance" at 800px. Dropping the search wording buys ~70px,
-  // which clears the first; below that the nav labels have to go too.
-  const tightSearch = useNarrowerThan(1180)
-  const tightNav = useNarrowerThan(1080)
-  useEffect(() => {
-    if (!menuOpen) return
-    const away = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false) }
-    const esc  = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
-    document.addEventListener('mousedown', away)
-    document.addEventListener('keydown', esc)
-    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
-  }, [menuOpen])
 
   return (
-    <header style={{
-      height: NAV_H, flexShrink: 0,
-      background: 'var(--sb-header)',
-      borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
-      display: 'flex', alignItems: 'center',
-      padding: '0 22px', gap: 16,
-    }}>
-      {/* Product mark — left 1/3 */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-        {/* The mark alone. The handoff is explicit about this — "never restate
-            the word beside the mark", because the mark already contains it —
-            and at this size the wordmark beside it was competing with it. */}
-        <BeLogo variant="amber" size={60} title="Be" />
-      </div>
-
-      {/* Nav pills — center.
-          `collapsed` is NavRow's own answer to not having the room: the label
-          goes, the icon centres, and the label becomes the button's title so it
-          is still announced and still shown on hover. Seven labelled pills need
-          about 660px and simply do not fit beside a search box on a 1000px
-          window — and what happened instead was that they were covered by it,
-          which is worse than small, because a covered button cannot be
-          clicked. */}
-      <nav style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-        {navItems.map(item => {
-          const active = activeModule === item.id
-          return (
-            <NavRow
-              key={item.id}
-              onClick={() => setActiveModule(item.id)}
-              active={active}
-              collapsed={tightNav}
-              icon={NAV_ICONS[item.id]}
-              label={item.label}
-              // `width: auto` is what lets a labelled pill size to its word.
-              // Collapsed, NavRow wants its own square instead — forcing auto
-              // there shrinks the button to the glyph and leaves nothing to
-              // aim at.
-              style={tightNav ? undefined : { width: 'auto' }}
-            />
-          )
-        })}
-      </nav>
-
-      {/* Right — search + icon buttons + avatar */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 9, minWidth: 0 }}>
-        {/* Search — opens the platform-wide palette */}
-        <div
-          onClick={() => window.dispatchEvent(new Event('professor:openSearch'))}
-          title="Search everything (⌘K)"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 7,
-            padding: '6px 12px',
-            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-            borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
-          }}>
-          <Search size={ICON.sm} color="var(--sb-ink-3)" />
-          {/* The word and the shortcut go before the nav does: the magnifier
-              says the same thing in 70px less, and ⌘K still works. */}
-          {!tightSearch && (
-            <>
-              <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', userSelect: 'none' }}>Search</span>
-              <span style={{
-                marginLeft: 4,
-                fontSize: 'var(--sb-t-micro)', fontFamily: 'var(--sb-font-mono)',
-                color: 'var(--sb-ink-4)', opacity: 0.7,
-              }}>⌘K</span>
-            </>
-          )}
-        </div>
-
-        <NotificationBell />
-
-        {/* Avatar — and what is behind it */}
-        <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
-          <button
-            onClick={() => setMenuOpen(o => !o)}
-            title={user?.email ?? 'Your account'}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            style={{
-              width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', padding: 0,
-              background: 'var(--sb-ink-1)', border: 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', overflow: 'hidden',
-            }}>
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-on-dark)', letterSpacing: '0.02em' }}>
-                {initials}
-              </span>
-            )}
-          </button>
-          {menuOpen && (
-            <div role="menu" style={{
-              position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120, minWidth: 216,
-              background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
-              boxShadow: 'var(--sb-shadow-frame)',
-            }}>
-              <div style={{ padding: '8px 10px 10px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', marginBottom: 5 }}>
-                <p style={{
-                  margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{user?.name ?? 'Your account'}</p>
-                <p style={{
-                  margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{user?.email}</p>
-              </div>
-              <button
-                role="menuitem"
-                onClick={() => { setMenuOpen(false); setActiveModule('settings') }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
-                  padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
-                  background: activeModule === 'settings' ? 'var(--sb-accent-tint)' : 'transparent',
-                  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
-                }}>
-                <Settings size={ICON.md} color="var(--sb-ink-3)" /> Settings
-              </button>
-              {isAdmin && (
-                <button
-                  role="menuitem"
-                  onClick={() => { setMenuOpen(false); setActiveModule('admin') }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
-                    padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
-                    background: activeModule === 'admin' ? 'var(--sb-accent-tint)' : 'transparent',
-                    color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
-                  }}>
-                  <ShieldCheck size={ICON.md} color="var(--sb-ink-3)" /> Admin
-                </button>
-              )}
-              <button
-                role="menuitem"
-                onClick={() => { setMenuOpen(false); void googleSignOut() }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
-                  padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
-                  background: 'transparent', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body)',
-                  fontFamily: 'inherit', textAlign: 'left',
-                }}>
-                <LogOut size={ICON.md} color="var(--sb-negative)" /> Sign out
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </header>
+    <SideRail
+      items={navItems.map(item => ({ id: item.id, label: item.label, icon: NAV_ICONS[item.id] }))}
+      activeModule={activeModule}
+      onPick={setActiveModule}
+    />
   )
 }
 
@@ -1428,20 +1404,26 @@ function App() {
     }}>
       {/* The shell owns the viewport: the nav stays put and only the module
           below it scrolls. */}
+      {/* The rail is a column beside the page, not a bar above it, so the
+          shell is a row. It keeps its own height and only the module scrolls
+          — the same contract the header had, turned ninety degrees. */}
       <div style={{
         width: '100%',
         maxWidth: 1560,
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         height: '100%',
         minHeight: 0,
         background: 'var(--sb-page)',
       }}>
         <TopNav />
-        <SyncGapBanner />
-        <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', background: 'var(--sb-page)' }}>
-          <ActiveModule />
-        </main>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+          <YouCluster />
+          <SyncGapBanner />
+          <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', background: 'var(--sb-page)' }}>
+            <ActiveModule />
+          </main>
+        </div>
       </div>
       <UndoBar />
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />

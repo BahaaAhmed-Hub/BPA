@@ -15,7 +15,7 @@ import {
   Library as LibraryIcon,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { pushSharedPrefs } from '@/lib/prefSync'
+import { pushSharedPrefs, lastPushError, type PushResult } from '@/lib/prefSync'
 import { useHeldText } from '@/lib/useHeldText'
 import { cleanName, loadPersona, NAME_MAX, savePersona, usePersona, type Persona } from '@/lib/assistantPersona'
 import { speechSupported } from '@/lib/speech'
@@ -55,7 +55,7 @@ import { HABIT_VIEWS, loadHabitView, saveHabitView, EmojiBtn, type HabitView } f
 import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore'
 import { loadAccounts, removeAccount, getProviderTokenForAccount, setAccountScopes, loadHiddenAccounts, saveHiddenAccounts, loadAccountsFromServer, type ConnectedAccount, type ServerAccount } from '@/lib/multiAccount'
 import {
-  saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB,
+  saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB, mergeCompanies,
   saveHabitsToDB, saveHabitLogsToDB, loadSettingsFromDB,
   saveAccountsToDB, loadAccountsFromDB,
   type CompanyRow as DbSyncCompanyRow,
@@ -105,11 +105,15 @@ interface AppSettings {
 
 interface CompanyUser { id: string; name: string; email?: string }
 
+import { CompanyMark } from '@/components/CompanyMark'
+import { logoFromFile, imageFrom, LOGO_ACCEPT } from '@/lib/companyLogo'
+
 interface CompanyRow {
   id: string; name: string; color: string
   calendarId: string; emailDomain: string; accountId: string; isActive: boolean
   hidden?: boolean
   users: CompanyUser[]
+  logoUrl?: string
 }
 
 const SECTION_IDS = ['profile','billing','schedule','companies','habits','tasks','accounts','professor','automation','notifications','appearance','blocking','behavioral','finance','library'] as const
@@ -221,17 +225,47 @@ export function misplacedAnthropicKey(c: AIConfig): string {
   return stray.startsWith('sk-ant-') ? stray : ''
 }
 
-export function loadAIConfig(): AIConfig {
-  return { ...AI_CONFIG_DEFAULTS, ...ls<Partial<AIConfig>>('professor-ai-config', {}) }
+/** An API key never contains whitespace, and a paste very often carries some —
+ *  a trailing newline from a terminal, a space from a chat. It saved fine and
+ *  then went out as an invalid header, so the key "saved" and was "rejected". */
+export const cleanKey = (k: string | undefined): string => (k ?? '').replace(/\s+/g, '')
+
+/** What was actually presented, without printing it: first 11, last 4, length. */
+export function maskKey(k: string): string {
+  return k.length > 18 ? `${k.slice(0, 11)}…${k.slice(-4)} (${k.length} characters)` : `${k ? '…' : 'empty'} (${k.length} characters)`
 }
+
+export function loadAIConfig(): AIConfig {
+  const c = { ...AI_CONFIG_DEFAULTS, ...ls<Partial<AIConfig>>('professor-ai-config', {}) }
+  return { ...c, anthropicKey: cleanKey(c.anthropicKey), groqKey: cleanKey(c.groqKey) }
+}
+let aiPushTimer: ReturnType<typeof setTimeout> | null = null
 function saveAIConfig(c: AIConfig) {
   lsSet('professor-ai-config', c)
   // The bots read this key out of Postgres, not out of this browser, and the
   // ordinary push is a five-minute timer. Typing a new key and messaging the
   // bot straight away therefore asked it with the old one — which is
   // indistinguishable from the new key being wrong.
-  void pushSharedPrefs()
+  //
+  // **Held, because this is a text field.** There is no Save button here: the
+  // key saves as you type, and a push per keystroke is 93 of them for one
+  // key. `pushSharedPrefs` refuses to run two at once now, so the server can
+  // no longer end up with a stump — but 93 queued pushes to say one thing is
+  // still 92 requests nobody needs. The same 700ms the calendar composer
+  // holds words for, and a decision (the provider pills) still goes at once
+  // because `setAI` writes localStorage before this timer is armed.
+  if (aiPushTimer) clearTimeout(aiPushTimer)
+  aiPushTimer = setTimeout(() => {
+    aiPushTimer = null
+    void pushSharedPrefs().then(r => onAIPush?.(r))
+  }, 700)
 }
+/** Who to tell when the key finally reaches Postgres. There is **no Save
+ *  button** on this field — it writes as you type — so without this the only
+ *  evidence it worked was opening the app somewhere else, which is exactly
+ *  how "I changed the key and it did not save" gets reported about a key that
+ *  was, or was not, saved. The section below says which. */
+let onAIPush: ((r: PushResult) => void) | null = null
 function saveSettings(s:   AppSettings)  { lsSet('professor-settings', s) }
 function loadCompanies():  CompanyRow[]  { return ls('professor-companies', []) }
 function saveCompanies(c:  CompanyRow[]) {
@@ -240,6 +274,14 @@ function saveCompanies(c:  CompanyRow[]) {
   const usersMap: Record<string, CompanyUser[]> = {}
   c.forEach(co => { if (co.users?.length) usersMap[co.id] = co.users })
   lsSet('professor-company-users', usersMap)
+  // **The one writer announces the write.** `professor-companies` is read by
+  // the rail's tiles, the calendar's company resolution and `mailCompany`'s
+  // cache, each of which listens for this event — and Settings, the one screen
+  // that edits companies, never fired it. `storage` does not fire in the tab
+  // that wrote, so a rename, a colour, a link or a logo set here reached
+  // nothing until a reload. The same shape as `saveRules` →
+  // `finance:budgetRulesChanged` one module along.
+  window.dispatchEvent(new Event('professor:companiesUpdated'))
 }
 function loadSectionOrder(): SectionId[] {
   const saved = ls<SectionId[]>('professor-section-order', [])
@@ -615,7 +657,13 @@ function ScheduleSection({
                 padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 500,
                 background: s.bufferMins === n ? 'rgba(var(--sb-accent-rgb),0.12)' : 'var(--sb-field)',
                 border: `var(--sb-border-width) solid ${s.bufferMins === n ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
-                color: s.bufferMins === n ? 'var(--sb-accent)' : 'var(--sb-ink-3)',
+                // `--sb-accent-deep`, never `--sb-accent`: the fill behind a
+                // chosen pill is the accent at 12%, and the accent itself on
+                // that tint measures **1.42:1** — a label that is not there.
+                // The border stays the accent, which is a line rather than
+                // text and holds no contrast duty. Found the day the ink audit
+                // could finally reach this screen at all.
+                color: s.bufferMins === n ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
@@ -628,7 +676,7 @@ function ScheduleSection({
                 padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 500,
                 background: s.physicalBufferMins === n ? 'rgba(var(--sb-accent-rgb),0.12)' : 'var(--sb-field)',
                 border: `var(--sb-border-width) solid ${s.physicalBufferMins === n ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
-                color: s.physicalBufferMins === n ? 'var(--sb-accent)' : 'var(--sb-ink-3)',
+                color: s.physicalBufferMins === n ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
@@ -644,6 +692,102 @@ function ScheduleSection({
 }
 
 // ─── CHUNK 4: Companies + Habits sections ────────────────────────────────────
+
+/**
+ *  The company's logo, where the company is edited.
+ *
+ *  It is **the rail's own tile** (`CompanyMark`) rather than a second drawing
+ *  of one, so what you set here is the thing you press over there — and the
+ *  circle you are looking at while you choose a file is the circle the choice
+ *  produces.
+ *
+ *  - **The tile is the control.** A separate "Upload" button beside a preview
+ *    makes the preview furniture; pressing the mark is the gesture, and a drop
+ *    or a paste on it does the same thing, because a logo is usually already
+ *    on the clipboard.
+ *  - **Remove is a word, in the caption's slot** — never a ✕ pinned to the
+ *    corner of the picture. That arrangement put the destructive control where
+ *    the eye goes and left Close as a hairline glyph, which is the mistake the
+ *    habit record made and had to undo.
+ *  - **A refusal is said out loud, next to the control.** `logoFromFile`
+ *    throws sentences — "that file is not an image", "that image is 61KB even
+ *    shrunk to 128px" — and a picker that drops them is indistinguishable from
+ *    one that is not wired up.
+ */
+function CompanyLogoPicker({ co, onPick }: {
+  co: CompanyRow
+  onPick: (logoUrl: string | undefined) => void
+}) {
+  const file = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [why, setWhy]   = useState<string | null>(null)
+  const [over, setOver] = useState(false)
+
+  async function take(f: File | null) {
+    if (!f) return
+    setBusy(true); setWhy(null)
+    try {
+      onPick(await logoFromFile(f))
+    } catch (e) {
+      setWhy(e instanceof Error ? e.message : 'That image could not be used')
+    } finally {
+      setBusy(false)
+      if (file.current) file.current.value = ''
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0, width: 46 }}>
+      <button
+        onClick={() => file.current?.click()}
+        onDragOver={e => { e.preventDefault(); setOver(true) }}
+        onDragLeave={() => setOver(false)}
+        onDrop={e => { e.preventDefault(); setOver(false); void take(imageFrom(e.dataTransfer)) }}
+        onPaste={e => { const f = imageFrom(e.clipboardData); if (f) { e.preventDefault(); void take(f) } }}
+        title={co.logoUrl ? `Change ${co.name}'s logo — or drop one here` : `Add a logo for ${co.name} — drop or paste one here`}
+        aria-label={co.logoUrl ? `Change the logo for ${co.name}` : `Add a logo for ${co.name}`}
+        data-logo-pick={co.id}
+        style={{
+          width: 38, height: 38, padding: 0, borderRadius: '50%', cursor: 'pointer',
+          background: 'transparent', border: 'none', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          opacity: busy ? 0.5 : 1,
+          boxShadow: over
+            ? `0 0 0 2px var(--sb-page), 0 0 0 4px ${co.color}`
+            : `0 0 0 1px color-mix(in srgb, ${co.color} 38%, transparent)`,
+          transition: 'box-shadow 0.12s, opacity 0.12s',
+        }}>
+        <CompanyMark co={co} size={38} />
+      </button>
+      <input
+        ref={file} type="file" accept={LOGO_ACCEPT} hidden
+        aria-label={`Logo image for ${co.name}`}
+        onChange={e => void take(e.target.files?.[0] ?? null)} />
+      {co.logoUrl ? (
+        <button
+          onClick={() => { setWhy(null); onPick(undefined) }}
+          data-logo-remove={co.id}
+          aria-label={`Remove the logo for ${co.name}`}
+          style={{
+            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)',
+          }}>
+          Remove
+        </button>
+      ) : (
+        <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>Logo</span>
+      )}
+      {why && (
+        <span data-logo-why style={{
+          position: 'absolute', marginTop: 54, maxWidth: 240, zIndex: 3,
+          fontSize: 'var(--sb-t-micro)', color: 'var(--sb-negative)', lineHeight: 1.3,
+          background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)',
+          borderRadius: 'var(--sb-r-sm)', padding: '5px 8px', boxShadow: 'var(--sb-shadow-hover)',
+        }}>{why}</span>
+      )}
+    </div>
+  )
+}
 
 function CompanyCard({
   co, accounts, onUpdate, onDelete,
@@ -707,9 +851,14 @@ function CompanyCard({
   return (
     <div style={{ background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', marginBottom: 8, overflow: 'visible', opacity: co.hidden ? 0.55 : 1, transition: 'opacity 0.15s' }}>
       {/* Company header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', position: 'relative' }}>
 
-        {/* Color circle → color picker */}
+        {/* The logo — the rail's own tile, and the way to set it */}
+        <CompanyLogoPicker co={co} onPick={logoUrl => onUpdate({ logoUrl })} />
+
+        {/* Color circle → color picker. It stays beside the logo: the colour is
+            still this company's identity on every 6px dot and chip in the app,
+            and a dot cannot hold a mark. */}
         <div ref={colorRef} style={{ position: 'relative', flexShrink: 0 }}>
           <button
             onClick={() => setColorOpen(o => !o)}
@@ -1987,7 +2136,10 @@ function AccountsSection({
           </div>
         </div>
         <BusinessToggle email={primaryEmail} />
-        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)', color: 'var(--sb-positive)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 20.0%, transparent)' }}>
+        {/* `--sb-positive-deep` on the 10% tint: the plain positive reads
+            4.06:1 there at 10px, and every theme carries a deep sibling for
+            exactly this pairing (Glass's is #22C55E on its own dark wash). */}
+        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)', color: 'var(--sb-positive-deep)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 20.0%, transparent)' }}>
           Active
         </span>
         {primaryToken && (
@@ -2232,6 +2384,14 @@ function AssistantVoiceRows() {
 function ProfessorSection() {
   const [ai, setAIRaw] = useState<AIConfig>(loadAIConfig)
   const [showKey, setShowKey] = useState(false)
+  // 'held' is the 700ms between the last keystroke and the push, and it is
+  // worth drawing: it is the window in which somebody refreshes and concludes
+  // nothing was saved.
+  const [keySync, setKeySync] = useState<'idle' | 'held' | PushResult>('idle')
+  useEffect(() => {
+    onAIPush = r => setKeySync(r)
+    return () => { onAIPush = null }
+  }, [])
   const [autonomy, setAutonomy] = useState<'suggest' | 'draft' | 'act'>('suggest')
   const [mailDrafts, setMailDrafts] = useState(true)
   const [matrixSuggest, setMatrixSuggest] = useState(true)
@@ -2241,6 +2401,7 @@ function ProfessorSection() {
   function setAI(patch: Partial<AIConfig>) {
     const next = { ...ai, ...patch }
     setAIRaw(next)
+    setKeySync('held')
     saveAIConfig(next)
   }
 
@@ -2305,7 +2466,17 @@ function ProfessorSection() {
       <FieldRow label={keyLabel} sub={keyHint}>
         <div style={{ display: 'flex', gap: 6, width: '100%' }}>
           <input type={showKey ? 'text' : 'password'} value={activeKey}
-            onChange={e => setAI(ai.provider === 'groq' ? { groqKey: e.target.value } : { anthropicKey: e.target.value })}
+            // **Not a login.** A password-typed box is offered to the browser's
+            // password manager, which autofills the key it remembered on page
+            // load — firing this handler with the OLD key, saving it, and
+            // pushing it over the new one ("Saved" appearing on a refresh with
+            // nothing pasted). Autofill is not focused; typing and pasting are.
+            autoComplete="new-password" name="api-key-not-a-login" spellCheck={false}
+            data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"
+            onChange={e => {
+              if (document.activeElement !== e.target) return
+              setAI(ai.provider === 'groq' ? { groqKey: cleanKey(e.target.value) } : { anthropicKey: cleanKey(e.target.value) })
+            }}
             placeholder={ai.provider === 'groq' ? 'gsk_...' : 'sk-ant-...'}
             style={{ ...inputStyle, flex: 1, fontFamily: 'monospace', fontSize: 'var(--sb-t-meta)' }} />
           <button onClick={() => setShowKey(v => !v)} style={{ background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 8px', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', flexShrink: 0 }}>
@@ -2313,6 +2484,18 @@ function ProfessorSection() {
           </button>
         </div>
       </FieldRow>
+      {keySync !== 'idle' && (
+        <p data-key-sync={keySync} style={{
+          margin: '-6px 0 2px', textAlign: 'right', fontSize: 'var(--sb-t-micro)',
+          color: keySync === 'failed' ? 'var(--sb-negative)'
+               : keySync === 'saved'  ? 'var(--sb-positive-deep)' : 'var(--sb-ink-4)',
+        }}>
+          {keySync === 'held'    && 'Saving…'}
+          {keySync === 'saved'   && 'Saved — on this browser and on your account'}
+          {keySync === 'nothing' && 'Already saved'}
+          {keySync === 'failed'  && `Saved here, but it could not reach your account${lastPushError ? ` (${lastPushError})` : ''} — it will not follow you to another device or the bots yet`}
+        </p>
+      )}
 
       <div style={{ height: 6, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', marginTop: 12, marginBottom: 12 }} />
 
@@ -4474,7 +4657,9 @@ function IntegrationsSection() {
                   fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em',
                   padding: '2px 7px', borderRadius: 'var(--sb-r-chip)',
                   background: 'color-mix(in srgb, var(--sb-positive) 10%, transparent)',
-                  color: 'var(--sb-positive)', textTransform: 'uppercase',
+                  // 4.06:1 as `--sb-positive` on its own tint, at 10px. The
+                  // deep sibling exists for this and reads 5.5.
+                  color: 'var(--sb-positive-deep)', textTransform: 'uppercase',
                 }}>Active</span>
                 <button onClick={() => void handleRevokeTelegram(link.chat_id)} style={{
                   flexShrink: 0, padding: '4px 10px', borderRadius: 'var(--sb-r-chip)',
@@ -4806,7 +4991,10 @@ function DataPrivacySection() {
           <button style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)',
             background: 'color-mix(in srgb, var(--sb-negative) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)',
-            fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-negative)', cursor: 'pointer',
+            // Evergreen's negative (#B4574A) on its own 8% tint reads 4.1:1
+            // at 12.5px, which WCAG counts as normal text. The deep sibling
+            // is what that pairing is for.
+            fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-negative-deep)', cursor: 'pointer',
           }}>
             <Trash2 size={ICON.sm} /> Delete account
           </button>
@@ -5051,17 +5239,29 @@ export function Settings() {
         setSettings(dbSettings)
         saveSettings(dbSettings)
 
-        // Companies (full — with users, emailDomain, accountId)
+        // Companies — through `mergeCompanies`, which is the one answer.
+        //
+        // This used to be a **second** merge, written by hand here, and it
+        // carried only `users` and `hidden` forward from the browser: a
+        // database missing a column answers it empty, so opening Settings
+        // wrote that blank over `account_id`, `email_domain`, `calendar_id`
+        // and now `logo_url`. That is the exact failure `mergeCompanies`
+        // exists to stop — link an account, refresh, gone — surviving in a
+        // copy one file along, and App's own loader was protecting the key
+        // that this screen then overwrote. Two answers to one question.
+        //
+        // The users *backup* stays on top of it: that is a different
+        // question (a separate localStorage key, for a list the DB may never
+        // have held) rather than a second field merge.
         const dbCompanies = await loadCompaniesFromDB()
         if (dbCompanies.length > 0) {
-          // Merge: DB wins for metadata, but preserve localStorage-only fields
           const localBackup: Record<string, CompanyUser[]> = ls('professor-company-users', {})
-          const localMap: Record<string, CompanyRow> = Object.fromEntries(companies.map(c => [c.id, c]))
-          const merged = dbCompanies.map(c => ({
-            ...c,
+          const merged = mergeCompanies(
+            dbCompanies as unknown as DbSyncCompanyRow[],
+            companies as unknown as DbSyncCompanyRow[],
+          ).map(c => ({
+            ...(c as unknown as CompanyRow),
             users: c.users?.length ? c.users : (localBackup[c.id] ?? []),
-            // hidden may not be in DB yet — fall back to local value
-            hidden: c.hidden || localMap[c.id]?.hidden || false,
           }))
           setCompanies(merged)
           saveCompanies(merged)

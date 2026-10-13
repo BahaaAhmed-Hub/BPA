@@ -27,7 +27,7 @@ export interface CompanyUser { id: string; name: string; email?: string }
 export interface CompanyRow {
   id: string; name: string; color: string
   calendarId: string; emailDomain: string; accountId: string; isActive: boolean
-  users: CompanyUser[]; hidden?: boolean
+  users: CompanyUser[]; hidden?: boolean; logoUrl?: string
 }
 
 export interface TaskRow {
@@ -236,6 +236,7 @@ type DbCompanyExtended = DbCompany & {
   email_domain?: string | null
   account_id?: string | null
   users_data?: CompanyUser[] | null
+  logo_url?: string | null
 }
 
 export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> {
@@ -264,6 +265,7 @@ export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> 
       account_id:   c.accountId || null,
       users_data:   c.users ?? [],
       hidden:       c.hidden ?? false,
+      logo_url:     c.logoUrl || null,
     }))
 
     // Drop only the column the error names, and remember it.
@@ -292,7 +294,7 @@ export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> 
 
 /** Columns a database that has not been migrated may not have. Everything else
  *  is required, and a failure naming one of those is a real failure. */
-const COMPANY_OPTIONAL = ['hidden', 'users_data', 'email_domain', 'account_id']
+const COMPANY_OPTIONAL = ['hidden', 'users_data', 'email_domain', 'account_id', 'logo_url']
 const absentCompanyColumns = new Set<string>()
 
 function missingColumn(error: { message?: string }): string | null {
@@ -330,6 +332,10 @@ export function mergeCompanies(server: CompanyRow[], local: CompanyRow[]): Compa
       calendarId:  row.calendarId  || had.calendarId,
       users:       row.users?.length ? row.users : (had.users ?? []),
       hidden:      row.hidden ?? had.hidden,
+      // A project without `20260025` answers this empty for ever, so the
+      // browser's own copy has to win a blank — the same rule the account and
+      // the domain are here for.
+      logoUrl:     row.logoUrl || had.logoUrl,
     }
   })
 }
@@ -350,6 +356,7 @@ export async function loadCompaniesFromDB(): Promise<CompanyRow[]> {
     isActive:    r.is_active ?? true,
     users:       (r.users_data as CompanyUser[]) ?? [],
     hidden:      (r as unknown as { hidden?: boolean }).hidden ?? false,
+    logoUrl:     r.logo_url ?? undefined,
   }))
 }
 

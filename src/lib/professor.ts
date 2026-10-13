@@ -51,8 +51,8 @@ function getAIConfig(): AIConfig {
     const saved = raw ? JSON.parse(raw) as Partial<AIConfig> : {}
     return {
       provider: saved.provider ?? 'anthropic',
-      anthropicKey: saved.anthropicKey ?? '',
-      groqKey: saved.groqKey ?? '',
+      anthropicKey: (saved.anthropicKey ?? '').replace(/\s+/g, ''),
+      groqKey: (saved.groqKey ?? '').replace(/\s+/g, ''),
       groqModel: saved.groqModel ?? 'llama-3.3-70b-versatile',
     }
   } catch {
@@ -252,7 +252,7 @@ export async function call(system: string, userMessage: string): Promise<string>
     if (err instanceof ProfessorError) throw err
     const msg = err instanceof Error ? err.message : String(err)
     const is401 = msg.includes('401') || msg.includes('authentication_error') || msg.includes('invalid x-api-key')
-    if (is401) throw new ProfessorError('Invalid Anthropic API key. Check Settings → Professor AI.', 'config_error')
+    if (is401) throw new ProfessorError(`Anthropic refused the key (${apiKey.slice(0, 11)}…${apiKey.slice(-4)}, ${apiKey.length} characters). Check Settings → AI. Anthropic said: ${msg.slice(0, 200)}`, 'config_error')
     throw new ProfessorError(`Anthropic request failed: ${msg}`, 'api_error', err)
   }
 }

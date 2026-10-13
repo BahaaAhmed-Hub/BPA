@@ -13,7 +13,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Check, Copy, ExternalLink, Link2, Loader2, Plus, Trash2, X,
+  Check, Copy, ExternalLink, Link2, Loader2, Plus, Repeat, Trash2, X,
 } from 'lucide-react'
 import { ComposerShell, type ComposerCalendar } from '@/modules/calendar/NewEventPanel'
 import { notify } from '@/lib/undo'
@@ -21,7 +21,8 @@ import { ICON, STROKE } from '@/lib/type'
 import {
   bookingUrl, decideBooking, deletePlan, loadBookings, loadBookingProfile, loadPlans,
   manageUrl, savePlan, saveBookingProfile, slugify, suggestHandle,
-  type BookingProfileRow, type BookingRow, type PlanRow,
+  hhmmOf, nextDatesOf, loadPublicProfile,
+  type BookingProfileRow, type BookingRow, type PlanRow, type WindowRow,
 } from '@/lib/booking'
 
 // ─── Shared looks ────────────────────────────────────────────────────────────
@@ -113,8 +114,15 @@ function PlanCard({ plan, handle, calendars, onSave, onDelete }: {
           <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {d.title || 'Untitled call'}
           </span>
-          <span style={{ display: 'block', marginTop: 2, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
-            {d.duration_minutes} min{d.requires_approval ? ' · you approve' : ''}{d.active ? '' : ' · off'}
+          <span style={{ display: 'block', marginTop: 2, fontSize: 'var(--sb-t-meta)', color: d.id ? 'var(--sb-ink-3)' : 'var(--sb-negative-deep)', fontWeight: d.id ? 400 : 700 }}>
+            {/* **An unsaved plan says so.** It is drawn from local state, so
+                until Save lands there is no row — and the visitor's page,
+                which reads the table, says "nothing can be booked here" while
+                this panel shows a call sitting right there. Two screens
+                disagreeing with nothing to explain it is the whole failure. */}
+            {d.id
+              ? <>{d.duration_minutes} min{d.requires_approval ? ' · you approve' : ''}{d.active ? '' : ' · off'}</>
+              : <>Not saved yet — press Save, or nobody can book it</>}
           </span>
         </button>
         {handle && d.id && (
@@ -123,8 +131,16 @@ function PlanCard({ plan, handle, calendars, onSave, onDelete }: {
             <Link2 size={ICON.sm} />
           </button>
         )}
-        <Switch on={d.active} label={`${d.title} can be booked`}
-          onChange={v => { set({ active: v }); void onSave({ ...d, active: v }) }} />
+        {/* On an unsaved plan this switch has nothing to write to, and its
+            error used to be discarded (`void onSave(...)`) — so a refused
+            write was silent, which is indistinguishable from a successful
+            one. It only acts on a saved row, and it says why when it fails. */}
+        <Switch on={d.active} label={`${d.title || 'This call'} can be booked`}
+          onChange={v => {
+            set({ active: v })
+            if (!d.id) { setWhy('Save it first — there is nothing to switch on yet'); setOpen(true); return }
+            void onSave({ ...d, active: v }).then(e => { if (e) setWhy(e) })
+          }} />
       </div>
 
       {open && (
@@ -265,16 +281,29 @@ function PlanCard({ plan, handle, calendars, onSave, onDelete }: {
 
 // ─── The panel ───────────────────────────────────────────────────────────────
 
-export function BookingPanel({ userId, userName, calendars, windowCount, openHours, onOpenHours, onClose }: {
+export function BookingPanel({ userId, userName, calendars, windows, openHours, onOpenHours, onPickWindow, onDeleteWindow, onClose }: {
   userId: string
   userName?: string
   calendars: ComposerCalendar[]
-  /** How many hours have been opened — nothing can be booked without any. */
-  windowCount: number
+  /** The hours that are open. Nothing can be booked without any, and the
+   *  panel lists them rather than counting them: "3 windows" cannot be
+   *  checked against what you meant to open, and a wrong one is only ever
+   *  found by reading it. */
+  windows: WindowRow[]
   openHours: boolean
   onOpenHours: (on: boolean) => void
+  /** Take the week to the day a window falls on, so the list and the grid
+   *  are one thing rather than two views that have to be reconciled. */
+  onPickWindow: (date: string) => void
+  /** Take a window away. The calendar owns the list, so the write and the
+   *  state both live there. */
+  onDeleteWindow: (id: string) => void | Promise<void>
   onClose: () => void
 }) {
+  // Closing hours is cheap to redo and expensive to do by accident: a repeating
+  // window is every week at once. One press arms it, a second confirms, and
+  // moving on disarms it.
+  const [confirming, setConfirming] = useState<string | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
   const [prof, setProf] = useState<BookingProfileRow | null>(null)
   const [plans, setPlans] = useState<PlanRow[] | null>(null)
@@ -318,6 +347,28 @@ export function BookingPanel({ userId, userName, calendars, windowCount, openHou
   }
 
   const live = prof?.handle && prof.active
+
+  // ── What a visitor actually gets ─────────────────────────────────────────
+  //
+  // The owner's panel reads the tables as their own signed-in self; the
+  // stranger's page reads the `book-me` function, which answers from the
+  // service role with its own filters (`active`, and only plans that are
+  // `active`). Those two can disagree — a plan still in local state, a page
+  // not switched on, hours that no longer have a date to come — and when they
+  // do, this panel was the one screen that could not say so. So it **asks the
+  // same public endpoint the visitor's browser asks** and reports the answer
+  // verbatim. A claim about what a stranger sees is worth nothing beside a
+  // measurement of it.
+  const [seen, setSeen] = useState<{ plans: number; why: string | null } | null>(null)
+  const [checking, setChecking] = useState(false)
+  async function checkAsVisitor() {
+    if (!prof?.handle) return
+    setChecking(true); setSeen(null)
+    const r = await loadPublicProfile(prof.handle)
+    setChecking(false)
+    setSeen(r.ok ? { plans: r.value.plans.length, why: null } : { plans: 0, why: r.why })
+  }
+
   const pending = (booked ?? []).filter(b => b.status === 'pending')
   const upcoming = (booked ?? []).filter(b => b.status === 'confirmed')
   const planTitle = (id: string) => plans?.find(p => p.id === id)?.title ?? 'A call'
@@ -369,16 +420,109 @@ export function BookingPanel({ userId, userName, calendars, windowCount, openHou
             Nothing is reachable until the page has an address and is switched on.
           </p>
         )}
+
+        {/* The one thing this panel could not do: say what a stranger gets. */}
+        {prof?.handle && (
+          <>
+            <button onClick={() => void checkAsVisitor()} disabled={checking} style={GHOST}>
+              {checking ? <Loader2 size={ICON.sm} /> : <ExternalLink size={ICON.sm} />} Check what a visitor sees
+            </button>
+            {seen && (
+              <p style={{
+                margin: 0, fontSize: 'var(--sb-t-meta)', lineHeight: 1.45,
+                color: seen.why || seen.plans === 0 ? 'var(--sb-negative-deep)' : 'var(--sb-positive-deep)',
+              }}>
+                {seen.why
+                  ? `The page could not be read: ${seen.why}`
+                  : seen.plans === 0
+                    ? windows.length === 0
+                      ? 'A visitor sees "nothing can be booked here just now" — there is no saved call yet, and no hours are open either.'
+                      : 'A visitor sees "nothing can be booked here just now" — no saved, switched-on call came back. A call that still says "not saved yet" below is not one.'
+                    : `A visitor is offered ${seen.plans} ${seen.plans === 1 ? 'call' : 'calls'}${windows.length === 0 ? ', but no hours are open, so there will be no times to pick' : '.'}`}
+              </p>
+            )}
+          </>
+        )}
       </div>
 
-      {/* ── The hours ──────────────────────────────────────────────────────── */}
-      <div style={{ ...WHITE, background: windowCount ? 'var(--sb-card)' : 'var(--sb-accent-tint)' }}>
+      {/* ── The hours ──────────────────────────────────────────────────────────
+          Listed, not counted. "3 windows open" cannot be checked against what
+          you meant to open; a wrong one is only ever found by reading it. Each
+          row says when it repeats and the next date it actually falls on —
+          walked through `skips` the way the server walks it, because "every
+          week from the 14th" does not say when it next opens. */}
+      <div data-booking-hours style={{ ...WHITE, background: windows.length ? 'var(--sb-card)' : 'var(--sb-accent-tint)' }}>
         <p style={EYEBROW}>Open hours</p>
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.45 }}>
-          {windowCount
-            ? `${windowCount} ${windowCount === 1 ? 'window' : 'windows'} open. Nothing is offered outside them, and never an hour that is already taken.`
-            : 'Nothing is open yet, so nobody can book anything. Mark the hours on the week — drag across a morning the way you would draw an event.'}
-        </p>
+        {windows.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.45 }}>
+            Nothing is open yet, so nobody can book anything. Mark the hours on the week — drag across a morning the way you would draw an event.
+          </p>
+        ) : (
+          <>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
+              Nothing is offered outside these, and never an hour already taken.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {[...windows]
+                .sort((a, b) => (a.on_date === b.on_date ? a.start_min - b.start_min : a.on_date < b.on_date ? -1 : 1))
+                .map(w => {
+                  const repeats = (w.repeat?.kind ?? 'none') === 'weekly'
+                  const next = nextDatesOf(w, new Date(), 1)[0] ?? null
+                  const day = new Date(`${w.on_date}T12:00:00`)
+                  const weekday = day.toLocaleDateString(undefined, { weekday: 'short' })
+                  return (
+                    <div key={w.id} style={{ display: 'flex', alignItems: 'stretch', gap: 4 }}>
+                    <button onClick={() => onPickWindow(next ?? w.on_date)}
+                      title={next ? `Next on ${next} — show me that week` : 'This one has no date still to come'}
+                      aria-label={`Open hours ${hhmmOf(w.start_min)} to ${hhmmOf(w.end_min)}, ${repeats ? `every ${weekday}` : w.on_date}${next ? `, next on ${next}` : ', none still to come'}`}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0,
+                        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                        borderLeft: 'var(--sb-border-emphasis) solid var(--sb-positive)',
+                        borderRadius: 'var(--sb-r-nav)', padding: '6px 9px', cursor: 'pointer',
+                        fontFamily: 'inherit', textAlign: 'left',
+                      }}>
+                      <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
+                        {hhmmOf(w.start_min)}–{hhmmOf(w.end_min)}
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {repeats ? `every ${weekday}` : weekday}
+                        {next ? ` · next ${next.slice(5)}` : ' · none to come'}
+                      </span>
+                      {repeats && <Repeat size={ICON.sm} strokeWidth={STROKE.active} style={{ color: 'var(--sb-positive-deep)', flexShrink: 0 }} />}
+                    </button>
+                    {confirming === w.id ? (
+                      <button autoFocus
+                        onClick={() => { setConfirming(null); void onDeleteWindow(w.id) }}
+                        onBlur={() => setConfirming(null)}
+                        aria-label={`Confirm: close open hours ${hhmmOf(w.start_min)} to ${hhmmOf(w.end_min)}${repeats ? ' every week' : ''}`}
+                        style={{
+                          flexShrink: 0, padding: '0 10px', cursor: 'pointer', fontFamily: 'inherit',
+                          fontSize: 'var(--sb-t-meta)', fontWeight: 600, whiteSpace: 'nowrap',
+                          background: 'var(--sb-negative-tint)', color: 'var(--sb-negative-deep)',
+                          border: 'var(--sb-border-width) solid var(--sb-negative)', borderRadius: 'var(--sb-r-nav)',
+                        }}>
+                        {repeats ? 'Close every week?' : 'Close?'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setConfirming(w.id)}
+                        title="Close these hours"
+                        aria-label={`Close open hours ${hhmmOf(w.start_min)} to ${hhmmOf(w.end_min)}, ${repeats ? `every ${weekday}` : w.on_date}`}
+                        style={{
+                          flexShrink: 0, width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', background: 'var(--sb-field)', color: 'var(--sb-ink-3)',
+                          border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+                        }}>
+                        <Trash2 size={ICON.sm} strokeWidth={STROKE.active} />
+                      </button>
+                    )}
+                    </div>
+                  )
+                })}
+            </div>
+          </>
+        )}
         <button onClick={() => onOpenHours(!openHours)} style={openHours ? INK : GHOST} aria-pressed={openHours}>
           {openHours ? <><Check size={ICON.sm} strokeWidth={STROKE.active} /> Marking hours — done</> : <><Plus size={ICON.sm} /> Mark hours on the week</>}
         </button>

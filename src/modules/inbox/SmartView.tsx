@@ -7,8 +7,11 @@ import { accountLabel } from './mailAccounts'
 import type { SmartThread, PassResult } from '@/lib/mailSmartSync'
 import type { SmartSection } from '@/lib/mailSmart'
 import { canNeedAction, type MailKind } from '@/lib/mailKinds'
-import { tagOfMail } from '@/lib/mailCompany'
+import { tagOfMail, companyOfMail } from '@/lib/mailCompany'
+import { useFocusClass } from '@/lib/companyFocus'
 import { isBusinessAccount } from '@/lib/businessAccounts'
+import { useRailOverflow } from '@/lib/railOverflow'
+import { LOZENGE } from '../../components/SideRail'
 
 // ─── The smart view ──────────────────────────────────────────────────────────
 //
@@ -76,11 +79,6 @@ function SectionDot({ id }: { id: SmartSection }) {
       background: META[id].dot, alignSelf: 'center',
     }} />
   )
-}
-
-const EYEBROW: React.CSSProperties = {
-  fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
-  textTransform: 'uppercase', color: 'var(--sb-ink-3)',
 }
 
 function when(ms: number): string {
@@ -229,8 +227,12 @@ export function SmartView({
   // you are holding up first, then newest — so a row does not move because you
   // changed which view you were reading it in.
   // Unanswered, over a day old, and actually addressed to you.
-  const holdingUp = useMemo(() => threads.filter(t => t.bottleneck && !t.handled).length, [threads])
   const here = view === 'all' ? META.action : META[view]
+  // The fade at the rail's right edge — it is in the bar now, so it is a box
+  // that can genuinely run out of room. `lib/railOverflow.ts`, the same
+  // measurement the flat list's identical rail uses.
+  const railRef = useRailOverflow(`${view}|${threads.length}`)
+
   const shown = view === 'all' ? threads : grouped[view]
   const sel = pickedIn(shown)
   // Of the selection, how many are in FYI *because somebody marked them done*
@@ -242,35 +244,54 @@ export function SmartView({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* ── What the last pass did. A line, not a spinner: the interesting
-             thing is how much of this was already known. ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-        padding: '10px 14px', borderRadius: 'var(--sb-r-nav)',
-        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-hairline)',
+      {/* ── The module's bar: which view, and a way to look again ───────────
+             It takes the rail's shape like the other five bars — it was a
+             `--sb-field` box with a 10px radius, which is a *card* rather than
+             a menu.
+
+             **The four views live in it.** They were a rail of their own
+             underneath, while the bar carried a LAST 30 DAYS eyebrow and a
+             sentence about the pass — so the row that decides what you are
+             looking at sat *below* a row that decides nothing, and the bar
+             itself was mostly empty. The views are the control this screen is
+             steered with, so they get the bar; what the pass is doing is said
+             in the one place that is about the pass, which is the spinner on
+             **Check now**.
+
+             The statement that went with them said how many people are waiting
+             on you — true, and the one thing the counts in the rail do not
+             say. It is gone rather than moved: there is no room for both, and
+             a view you have to scroll to find is worse than a fact you have to
+             open a view to read.
+
+             `flexWrap` goes too. The rail scrolls sideways inside its own box
+             (`flex: 1` with `minWidth: 0`, which is what stops a flex item
+             refusing to shrink below its content), so the bar is one line at
+             every width rather than two whenever the pills are many — and its
+             `useRailOverflow` is what draws the fade saying there is more.
+          ── */}
+      <div data-mail-bar style={{
+        ...LOZENGE,
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '8px 14px',
       }}>
-        <span style={EYEBROW}>Last 30 days</span>
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
-          {/* The rail below counts each group, so repeating those here was the
-              same four numbers twice. This says the thing none of them does:
-              **how many people are actually waiting on you**, which is the
-              question the whole screen exists to answer. */}
-          {loading ? 'Reading…'
-            : !result ? 'Not read yet.'
-            : holdingUp > 0
-              ? `${holdingUp} ${holdingUp === 1 ? 'person is' : 'people are'} waiting on you`
-              : threads.length > 0 ? 'Nobody is waiting on you.'
-              : 'Nothing in the last thirty days.'}
-        </span>
-        {result && !loading && (
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
-            {result.analysed === 0
-              ? 'nothing new since the last look'
-              : `${result.analysed} new or changed`}
-          </span>
-        )}
-        <span style={{ flex: 1 }} />
-        <Button size="sm" onClick={() => onRefresh(false)} disabled={loading}>
+        <div className="mail-filter-rail" ref={railRef} style={{ flex: 1, minWidth: 0 }}>
+          <Pill on={view === 'all'} onClick={() => choose('all')}
+            title="Everything, in the order it matters">
+            All <Count n={threads.length} on={view === 'all'} />
+          </Pill>
+          {SECTIONS.map(s => (
+            <Pill key={s.id} on={view === s.id} onClick={() => choose(s.id)}
+              title={grouped[s.id].length === 0 ? s.empty : s.blurb}>
+              <span aria-hidden style={{
+                width: 6, height: 6, borderRadius: '50%', background: s.dot, flexShrink: 0,
+              }} />
+              {s.title} <Count n={grouped[s.id].length} on={view === s.id} />
+            </Pill>
+          ))}
+        </div>
+        <Button size="sm" onClick={() => onRefresh(false)} disabled={loading}
+          title="Read anything new or changed since the last look">
           <RefreshCw size={ICON.sm} strokeWidth={STROKE.rest}
             style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> Check now
         </Button>
@@ -320,34 +341,6 @@ export function SmartView({
           summaries and drafts are missing: {result.aiError}
         </div>
       )}
-
-      {/* ── The views ────────────────────────────────────────────────────
-          Four sections stacked down the page meant scrolling past the three
-          you were not working on to reach the one you were, and folding them
-          away only traded that for four headers and a memory of which you had
-          shut. They are **views** now — one at a time, chosen from a rail, in
-          the app's own filter component, the same one the ordinary mail list
-          filters by class with.
-
-          **All** is a real answer rather than a fallback: it is the whole of
-          the last thirty days in one list, in the order the sections would
-          have put it — what you are holding up first, then newest — so a row
-          keeps its place whichever view you came from. */}
-      <div className="mail-filter-rail">
-        <Pill on={view === 'all'} onClick={() => choose('all')}
-          title="Everything, in the order it matters">
-          All <Count n={threads.length} on={view === 'all'} />
-        </Pill>
-        {SECTIONS.map(s => (
-          <Pill key={s.id} on={view === s.id} onClick={() => choose(s.id)}
-            title={grouped[s.id].length === 0 ? s.empty : s.blurb}>
-            <span aria-hidden style={{
-              width: 6, height: 6, borderRadius: '50%', background: s.dot, flexShrink: 0,
-            }} />
-            {s.title} <Count n={grouped[s.id].length} on={view === s.id} />
-          </Pill>
-        ))}
-      </div>
 
       <Card style={{ padding: 0, overflow: 'hidden' }}>
         {/* The bulk bar appears only when there is a selection to act on. */}
@@ -532,6 +525,13 @@ function Row({
   // Whether words back are the thing this thread wants. Everything a row does
   // differently for a machine's notice hangs off this one question.
   const answerable = canNeedAction(t.kind)
+  // Whose mail this is, under the company lens. `companyOfMail` is the same
+  // counterparty-first resolver the chip beside the sender already uses — the
+  // chip wants a label, the lens wants an id, and both come from one answer.
+  const focusClass = useFocusClass()
+  const lensCompany = useMemo(
+    () => companyOfMail({ fromEmail: t.fromEmail, accountEmail: t.accountEmail })?.id,
+    [t.fromEmail, t.accountEmail])
   // A stored row carries the sender and the mailbox, which is enough: the
   // company is resolved from those the same way the flat list resolves it.
   const company = useMemo(
@@ -554,7 +554,7 @@ function Row({
     return label === company?.label ? '' : label
   }, [manyAccounts, t.accountEmail, company?.label])
   return (
-    <div style={{
+    <div className={focusClass(lensCompany)} style={{
       // `flex-start`, not the default stretch: a stretched checkbox centres its
       // own glyph against the whole row and drifts away from the title it
       // selects.

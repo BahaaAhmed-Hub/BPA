@@ -3,8 +3,9 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Trash2, Check, Clock, CalendarDays, Paperclip, Flame, User } from 'lucide-react'
 import type { Task, TaskType, Priority } from '@/types'
-import { TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies, isOnFire } from '@/types'
+import { TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies, isOnFire, companyIdOfTask } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { useFocusClass } from '@/lib/companyFocus'
 import { useDeliverableGate } from './DeliverablePrompt'
 import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
 import type { ExtractedTask } from '@/lib/professor'
@@ -84,6 +85,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   const { TypeIcon } = v
   const allUsers = getVisibleUsers()
   const companies = loadVisibleCompanies()
+  const focusClass = useFocusClass()
   const users = task.companyId ? allUsers.filter(u => u.companyId === task.companyId) : allUsers
   const attachmentCount = task.attachments?.length ?? 0
 
@@ -95,6 +97,10 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   return (
     <div
       data-task-node
+      // Whose task this is, under the company lens. `companyIdOfTask` is the
+      // one resolver: `companyId` alone is empty for every task filed under a
+      // static tag, which dimmed them all.
+      className={focusClass(companyIdOfTask(task))}
       ref={setNodeRef}
       {...listeners}
       {...attributes}

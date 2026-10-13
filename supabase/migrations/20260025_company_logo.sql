@@ -1,0 +1,12 @@
+-- A company's logo, as pixels in the row.
+--
+-- `logo_url` holds a data URL that `lib/companyLogo.ts` produced: a PNG or
+-- WebP of at most 128px, capped at 48KB of text. Not a link to somebody
+-- else's server — that is a request on every render and a dead mark the day
+-- their path changes — and not a storage bucket, which would be a second
+-- public surface to police for a thing that is 4KB.
+--
+-- It is in `COMPANY_OPTIONAL`, so a project that has not run this keeps the
+-- logo in the browser and still writes every other column; `mergeCompanies`
+-- then refuses to let the server's blank beat it.
+alter table public.companies add column if not exists logo_url text;

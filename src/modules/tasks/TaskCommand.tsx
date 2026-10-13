@@ -21,6 +21,7 @@ import { TaskListView } from './TaskListView'
 import { TaskBanner } from './TaskBanner'
 import { TASK_TYPE_ICON, TASK_TYPE_ORDER } from './taskVisuals'
 import { ICON, STROKE } from '@/lib/type'
+import { LOZENGE } from '../../components/SideRail'
 
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 const TASKS_CONFIG_KEY = 'task-command-config'
@@ -258,8 +259,16 @@ export function TaskCommand() {
         <TaskBanner tasks={tasks} />
       </div>
 
-      <div style={{ padding: '18px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
+      {/* The view switcher and the two actions floated loose on the page with
+          no shape of their own — a row of controls that reads as the module's
+          menu, so it takes the rail's lozenge like the calendar's and the
+          finance tabs'. */}
+      <div data-tasks-bar style={{
+        ...LOZENGE,
+        margin: '14px 26px', padding: '9px 14px',
+        display: 'flex', alignItems: 'center', gap: 20,
+      }}>
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* Filter button */}
           <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
             <button onClick={() => setFilterOpen(o => !o)}

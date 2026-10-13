@@ -18,6 +18,7 @@ import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 import { resolveTaskCalendar, verifyTaskEvent } from '@/lib/taskCalendar'
 import { SchedulePopover } from './SchedulePopover'
 import { ICON, STROKE } from '@/lib/type'
+import LinkPreviews from '../../components/LinkPreviews'
 
 const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
 
@@ -540,6 +541,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               fontFamily: 'inherit', lineHeight: 1.5,
             }}
           />
+          <div style={{ marginTop: 8 }}><LinkPreviews text={task.description ?? ''} /></div>
         </div>
 
         {/* Attachments — only when the task actually has some */}

@@ -11,6 +11,7 @@ import {
 import { ICON } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { dayProgress, dayTotals, spanTotals } from '@/lib/habitProgress'
+import { LOZENGE } from '../../components/SideRail'
 
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -999,9 +1000,9 @@ export function HabitsModule() {
   // Today's completion stats. Every percentage counts part-days — six glasses
   // of eight moves it — while "done" stays the number actually finished.
   const totalActive = activeHabits.length
+  // Still read by the all-done banner at the foot of the page, which fires on
+  // the *share* rather than the tally — six glasses of eight moves it.
   const todayTotals = dayTotals(activeHabits, today, logs, qtyLogs)
-  const todayDone = todayTotals.done
-  const completionPct = todayTotals.pct
 
   // Week completion stats
   const weekDayKeys = days
@@ -1064,52 +1065,17 @@ export function HabitsModule() {
   return (
     <div style={{ padding: '22px 26px 60px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* ─── Page header ───────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)' }}>HABITS TRACKER</span>
-          {/* The headline is the share of the day, not the count of habits
-              that happen to have crossed their own line. Six glasses of eight
-              is most of a habit and the tally called it nothing; the share
-              calls it three quarters, which is what the day actually was. The
-              tally is still true and still here, one line down. */}
-          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-display)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
-            {completionPct}% of today done
-          </span>
-          <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', paddingTop: 3 }}>
-            {todayDone} of {totalActive} finished
-            {bestStreak > 0 ? ` · ${bestStreak}d streak` : coldDays > 0 ? ` · ${coldDays} days cold` : ' · no streak yet'}
-            {' · '}{weekPct}% this week
-          </span>
-        </div>
-
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9, paddingBottom: 3 }}>
-          {/* View toggle */}
-          <Segmented
-            aria-label="Habits view"
-            value={view}
-            onChange={v => { setView(v); saveHabitView(v) }}
-            options={[
-              { value: 'table' as const, label: 'Table' },
-              { value: 'wall'  as const, label: 'Wall' },
-              { value: 'fill'  as const, label: 'Fill' },
-            ]}
-          />
-          {/* New habit CTA */}
-          <Button variant="accent" onClick={createHabit} style={{ boxSizing: 'border-box', flexShrink: 0 }}>
-            <Plus size={ICON.md} />
-            New habit
-          </Button>
-        </span>
-      </div>
-
       {/* ─── Summary card ──────────────────────────────────────────────────── */}
       <div style={{ flexShrink: 0, background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
         {/* Progress ring — for the day you are looking at */}
         <ProgressRing fraction={dayTotal.fraction} />
 
-        {/* Status text */}
-        <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0, minWidth: 0 }}>
+        {/* Status text. `data-day-pct` carries the share as a number in every
+            state: the sentence beside it says "All habits complete! 🎉" at 100
+            and "Nothing logged yet today" at 0, so the figure is only *in* the
+            words in the middle of the range — which made it unreadable to
+            anything measuring the share at either end. */}
+        <span data-day-pct={dayTotal.pct} style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0, minWidth: 0 }}>
           <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap' }}>
             {totalActive === 0 ? 'No habits yet'
               : dayTotal.pct >= 100 ? 'All habits complete! 🎉'
@@ -1203,6 +1169,39 @@ export function HabitsModule() {
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>{totalActive}</span>
           <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-2)' }}>Active habits</span>
           <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>{activeHabits.filter(h => h.frequency === 'weekdays').length} weekday-only</span>
+        </span>
+      </div>
+
+      {/* ─── The controls ──────────────────────────────────────────────────── */}
+      {/* **The title and the stats are gone from here.** They said the same
+          thing the card above already says — "33% of today done · 3 of 9
+          finished · 1d streak · 5% this week" sat directly over a card drawing
+          33% as a ring, 3 of 9 in words, the streak and the week. One
+          question, answered twice, a line apart. The card is the better of the
+          two (it *draws* the week rather than stating it), so it goes first and
+          this keeps only what it alone has: how you are looking, and the way to
+          add one. */}
+      <div data-habits-bar style={{
+        ...LOZENGE,
+        display: 'flex', alignItems: 'center', gap: 20, padding: '12px 18px',
+      }}>
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9 }}>
+          {/* View toggle */}
+          <Segmented
+            aria-label="Habits view"
+            value={view}
+            onChange={v => { setView(v); saveHabitView(v) }}
+            options={[
+              { value: 'table' as const, label: 'Table' },
+              { value: 'wall'  as const, label: 'Wall' },
+              { value: 'fill'  as const, label: 'Fill' },
+            ]}
+          />
+          {/* New habit CTA */}
+          <Button variant="accent" onClick={createHabit} style={{ boxSizing: 'border-box', flexShrink: 0 }}>
+            <Plus size={ICON.md} />
+            New habit
+          </Button>
         </span>
       </div>
 

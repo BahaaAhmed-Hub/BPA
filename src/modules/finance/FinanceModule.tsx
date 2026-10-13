@@ -15,6 +15,7 @@ import { useFinanceLock } from './useFinanceLock'
 import { NavRow, Button } from '@/components/ui'
 import { lockNow } from './lock'
 import { useFillsTheWindow } from '@/lib/fillsTheWindow'
+import { LOZENGE } from '../../components/SideRail'
 
 // ─── Nav icon SVGs ────────────────────────────────────────────────────────────
 
@@ -251,12 +252,21 @@ export function FinanceModule() {
       {/* Layer 1 — main app header (64px): aligns with sidebar logo */}
 
       {/* Layer 2 — Finance sub-nav (44px): module-specific tabs */}
-      <div style={{
+      {/* **A lozenge on the page's own ground, not a strip across it.** This was
+          a full-bleed `--sb-header` bar with square corners and a rule under
+          it, running edge to edge — the one thing left on screen still drawn
+          as a slab after `.cal-panel` and the rail gave theirs up. Beside two
+          floating pills it reads as broken rather than as part of the page.
+          It is the rail's own `LOZENGE` now, imported rather than retyped, so
+          the module's tabs and the main menu cannot drift apart. The rule
+          goes with the slab: a floating object does not draw a line across
+          the page, the gap under it is the separation. */}
+      <div data-finance-tabs style={{
+        ...LOZENGE,
         height: 44, flexShrink: 0,
-        background: 'var(--sb-header)',
-        borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
+        margin: '2px 14px 10px',
         display: 'flex', alignItems: 'center',
-        padding: '0 12px', gap: 2,
+        padding: '0 10px', gap: 2,
       }}>
         {/* Nav tabs — draggable to reorder */}
         <div style={{ flex: 1, display: 'flex', gap: 1, overflowX: 'auto' }}>

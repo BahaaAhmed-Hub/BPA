@@ -55,6 +55,8 @@ import {
   type WindowRow,
 } from '@/lib/booking'
 import type { OutcomeEvent } from './MeetingOutcome'
+import { useFocusClass, useCompanyFocus } from '@/lib/companyFocus'
+import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
 import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
 import { syncTaskToEvent } from '@/lib/taskEventLink'
@@ -68,6 +70,7 @@ import {
   loadApplied, saveApplied, type AppliedBlocksMap, type SourceEvent,
 } from '@/lib/blockingRules'
 import IdealWeekModal from './IdealWeekModal'
+import { LOZENGE } from '../../components/SideRail'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const HOUR_PX  = 64     // pixels per hour (Calendar 1.6: 64px/hr)
@@ -90,7 +93,14 @@ const GRID_H   = HOUR_PX * 24  // total grid height (24h)
 type GCalEventExt = GCalEvent & { calendarId?: string; calendarColor?: string }
 type EventStatus  = 'done' | 'cancelled'
 type DragMode     = 'move' | 'resize-top' | 'resize-bottom'
-interface EventLayout { left: number; width: number; lane?: number; lanes?: number; level?: number }
+interface EventLayout {
+  left: number; width: number; lane?: number; lanes?: number; level?: number
+  /** Pixels to pull both edges in by, so a booking drawn over an open-hours
+   *  box sits visibly *inside* that box's border rather than across it. The
+   *  percentage pair stays the lane's; this is the nesting, and nothing else
+   *  about the layout knows about booking. */
+  inset?: number
+}
 interface CreatingEvt  { dateStr: string; originMin: number; currentMin: number }
 interface NewEventDraft { dateStr: string; startMin: number; endMin: number; anchorX: number; anchorY: number }
 interface NewEventData {
@@ -747,7 +757,7 @@ function ResizeHandle({ eventId, edge }: { eventId: string; edge: 'top' | 'botto
 }
 
 // ─── EventBlock (draggable, positioned in time grid) ─────────────────────────
-function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, onStatusToggle, onClick, onContextMenu }: {
+function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, focusClass, onStatusToggle, onClick, onContextMenu }: {
   event: GCalEventExt
   layout: EventLayout
   status: EventStatus | undefined
@@ -755,6 +765,10 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   isDragSrc: boolean
   isDragOverlay?: boolean
   colorOverride?: string
+  /** '' while this event's company is the one being looked at (or no company
+   *  is), the out-of-focus class when it is not. Decided at the call site,
+   *  which is where the calendar→company map lives. */
+  focusClass?: string
   onStatusToggle: (s: EventStatus) => void
   onClick: (e: React.MouseEvent) => void
   onContextMenu?: (e: React.MouseEvent) => void
@@ -910,12 +924,14 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
       {...(isDragOverlay ? {} : attributes)}
       onClick={onClick}
       onContextMenu={isDragOverlay ? undefined : onContextMenu}
-      className="event-card"
+      className={`event-card ${focusClass ?? ''}`.trim()}
       style={{
         position: isDragOverlay ? 'relative' : 'absolute',
         top:    isDragOverlay ? undefined : top,
-        left:   isDragOverlay ? undefined : `${layout.left}%`,
-        width:  isDragOverlay ? 130 : `${layout.width}%`,
+        // The lane is a percentage of the column; the inset is the nesting
+        // inside an open-hours box, in pixels, so the two cannot be one value.
+        left:   isDragOverlay ? undefined : `calc(${layout.left}% + ${layout.inset ?? 0}px)`,
+        width:  isDragOverlay ? 130 : `calc(${layout.width}% - ${(layout.inset ?? 0) * 2}px)`,
         height: isDragOverlay ? Math.max(38, height) : height,
         background: evBg,
         borderRadius: 12,
@@ -1375,17 +1391,72 @@ export function CalendarIntelligence() {
   const [showBooking, setShowBooking] = useState(false)
   const [openHours, setOpenHours] = useState(false)
   const [windows, setWindows] = useState<WindowRow[] | null>(null)
+
+  // ── Whose event is this ───────────────────────────────────────────────────
+  // A company owns a calendar, so an event's company is its calendar's. The
+  // map is rebuilt when Settings changes the companies, and the class comes
+  // from `companyFocus` so the fade is the same one tasks and mail wear.
+  const focusClass = useFocusClass()
+  const [lensCompany] = useCompanyFocus()
+  const [focusCompanies, setFocusCompanies] = useState<DynamicCompany[]>(
+    () => loadDynamicCompanies().filter(c => !c.hidden))
+  useEffect(() => {
+    const read = () => setFocusCompanies(loadDynamicCompanies().filter(c => !c.hidden))
+    window.addEventListener('professor:companiesUpdated', read)
+    window.addEventListener('storage', read)
+    return () => {
+      window.removeEventListener('professor:companiesUpdated', read)
+      window.removeEventListener('storage', read)
+    }
+  }, [])
+  // Three ways a company owns an event, in order, because **`calendarId` is
+  // optional on a company and most are linked by account instead**. Matching
+  // only on an exact calendar id answered "nobody" for nearly every real
+  // event, so a lens dimmed the whole week and looked broken rather than
+  // empty — which is exactly how it was reported.
+  const companyOfCalendar = useMemo(() => {
+    const byCal = new Map<string, string>()      // the company names this calendar
+    const byAccount = new Map<string, string>()  // …or owns the account it is on
+    const byName = new Map<string, string>()     // …or the calendar is named for it
+    for (const c of focusCompanies) {
+      if (c.calendarId) byCal.set(c.calendarId, c.id)
+      if (c.accountId) byAccount.set(c.accountId, c.id)
+      byName.set(c.name.trim().toLowerCase(), c.id)
+    }
+    const calById = new Map(allCalendars.map(c => [c.id, c]))
+    return (calendarId: string | undefined) => {
+      if (!calendarId) return undefined
+      const direct = byCal.get(calendarId)
+      if (direct) return direct
+      const cal = calById.get(calendarId)
+      if (!cal) return undefined
+      if (cal.accountId) {
+        const byAcc = byAccount.get(cal.accountId)
+        if (byAcc) return byAcc
+      }
+      // A calendar literally called "Teradix Ltd" is Teradix's, whether or not
+      // anybody has linked the two in Settings.
+      return byName.get((cal.summary ?? '').trim().toLowerCase())
+    }
+  }, [focusCompanies, allCalendars])
+  const lensName = lensCompany
+    ? focusCompanies.find(c => c.id === lensCompany)?.name ?? null
+    : null
   const [editWin, setEditWin] = useState<{ w: WindowRow; date: string; x: number; y: number } | null>(null)
   const openHoursRef = useRef(false)
   useEffect(() => { openHoursRef.current = openHours }, [openHours])
 
-  // Read only when they are wanted: a stranger's hours are nobody's business
-  // on a boot that is going straight to the grid.
+  // **Read once with the grid, not when the panel opens.** These used to be
+  // fetched lazily, which was right while they were drawn only in marking
+  // mode — now that an open hour is a standing box on the week, deferring the
+  // read means "always drawn" really means "drawn after you have opened the
+  // booking panel once", which is worse than not drawing them at all: the
+  // week looks like nothing is offered. It is one request, for the owner's
+  // own rows, in the module they are already looking at.
   useEffect(() => {
-    if (!openHours && !showBooking) return
     if (windows !== null) return
     void loadWindows().then(rows => setWindows(rows ?? []))
-  }, [openHours, showBooking, windows])
+  }, [windows])
 
   useEffect(() => {
     if (!creatingEvt) return
@@ -1771,6 +1842,28 @@ export function CalendarIntelligence() {
       const o = outcomeOf(eventId)
       if (o) askAboutOutcome(o)
     }
+  }
+
+  // ── An event that sits inside an open hour belongs inside its box ─────────
+  //
+  // Open hours are a container, so what was booked into one is drawn nested in
+  // it rather than straddling its border. "Inside" is the event's own minutes
+  // falling within the window's, with a minute of slack either side — a 30-min
+  // booking at the top of a 09:00 window is inside it, and a meeting that runs
+  // past the end is not, because it is not a thing that window offered.
+  const INSET_PX = 7
+  function insetFor(dateStr: string, ev: GCalEventExt): number {
+    if (!ev.start.dateTime || !ev.end?.dateTime) return 0
+    const list = windowsOnDate(windows ?? [], dateStr)
+    if (!list.length) return 0
+    const s = new Date(ev.start.dateTime)
+    const e = new Date(ev.end.dateTime)
+    // Only an event on this very day, read on the grid's own clock.
+    if (localDateStr(s) !== dateStr) return 0
+    const sMin = s.getHours() * 60 + s.getMinutes()
+    const eMin = e.getHours() * 60 + e.getMinutes()
+    const within = list.some(w => sMin >= w.start_min - 1 && eMin <= w.end_min + 1)
+    return within ? INSET_PX : 0
   }
 
   // ── Open hours, written where they were drawn ─────────────────────────────
@@ -2378,32 +2471,6 @@ export function CalendarIntelligence() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [railDateStr, displayedEvents, allCalendars, eventStatuses])
 
-  const clashCount = useMemo(() => {
-    const ms = (v?: string) => (v ? new Date(v).getTime() : 0)
-    const timed = railEvents
-      .filter(r => r.event.start?.dateTime && r.event.end?.dateTime)
-      .sort((a, b) => ms(a.event.start.dateTime) - ms(b.event.start.dateTime))
-    let n = 0
-    for (let i = 0; i < timed.length; i++) {
-      for (let j = i + 1; j < timed.length; j++) {
-        if (ms(timed[j].event.start.dateTime) < ms(timed[i].event.end.dateTime)) { n++; break }
-      }
-    }
-    return n
-  }, [railEvents])
-
-  /** Minutes until the next event that has not started, or null when the rest
-   *  of the day is empty — a "next in" that has nothing to point at is worse
-   *  than saying nothing. */
-  const nextInMin = useMemo(() => {
-    const now = Date.now()
-    const ups = railEvents
-      .map(r => (r.event.start?.dateTime ? new Date(r.event.start.dateTime).getTime() : 0))
-      .filter(t => t > now)
-      .sort((a, b) => a - b)
-    return ups.length ? Math.max(1, Math.round((ups[0] - now) / 60000)) : null
-  }, [railEvents])
-
   // ── Where the grid opens ────────────────────────────────────────────────────
   //
   // It used to open at 07:00 always, which quietly hid anything earlier: a task
@@ -2549,7 +2616,16 @@ export function CalendarIntelligence() {
           on the right. The route's name was an overline above it, which named
           the page you had just navigated to and were already looking at. */}
       <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '0 4px' }}>
+        {/* **The header is a lozenge, like the rail and the finance tabs.**
+            It was a bare row on the page with 4px of padding, so the title and
+            every control floated loose against the grid below them. One
+            object, with the shape `SideRail` exports, and the title sits in it
+            rather than above it. */}
+        <div data-cal-header style={{
+          ...LOZENGE,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 14, flexWrap: 'wrap', padding: '12px 18px',
+        }}>
           {/* Which stretch of time you are looking at */}
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span className="cal-display" style={{
@@ -2560,23 +2636,30 @@ export function CalendarIntelligence() {
                 : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
                 : fmtDayRange(weekDays)}
             </span>
-            {/* One live sentence, not a row of labels. Anything it cannot
-                honestly say, it leaves out rather than printing a zero. */}
-            <span style={{ fontSize: 14, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
-              {(() => {
-                const scope = calView === 'month' ? monthCells : weekDays
-                const keys = new Set(scope.map(localDateStr))
-                const inScope = displayedEvents.filter(e => keys.has((e.start?.dateTime ?? e.start?.date ?? '').slice(0, 10)))
-                const bits = [`${inScope.length} event${inScope.length === 1 ? '' : 's'}`]
-                if (clashCount > 0) bits.push(`${clashCount} clash${clashCount === 1 ? '' : 'es'}`)
-                if (nextInMin !== null) {
-                  bits.push(nextInMin < 60
-                    ? `next in ${nextInMin} min`
-                    : `next in ${Math.round(nextInMin / 60)}h`)
-                }
-                return bits.join(' · ')
-              })()}
-            </span>
+            {/* **The counts are gone; the lens sentence is not.** "32 events ·
+                2 clashes · next in 1h" is a row of numbers nobody acts on — the
+                grid underneath draws every one of those events, and a clash is
+                already drawn on the two cards it is between. What is left is
+                the one thing no other pixel on this screen can say: *why* has
+                three-quarters of the week gone quiet. A company whose events
+                this app cannot resolve is otherwise indistinguishable from a
+                company with nothing on this week, which is how that was
+                reported once already. So it draws only while a lens is on, and
+                it is about the lens rather than about the week. */}
+            {lensName && (
+              <span style={{ fontSize: 14, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
+                {(() => {
+                  const scope = calView === 'month' ? monthCells : weekDays
+                  const keys = new Set(scope.map(localDateStr))
+                  const inScope = displayedEvents.filter(e => keys.has((e.start?.dateTime ?? e.start?.date ?? '').slice(0, 10)))
+                  const mine = inScope.filter(e =>
+                    companyOfCalendar((e as GCalEventExt).calendarId) === lensCompany).length
+                  return mine > 0
+                    ? `${mine} of ${inScope.length} here ${mine === 1 ? 'is' : 'are'} ${lensName}'s`
+                    : `none here is ${lensName}'s`
+                })()}
+              </span>
+            )}
           </div>
 
           {/* ── Control cluster ────────────────────────────────────────────────
@@ -3210,48 +3293,78 @@ export function CalendarIntelligence() {
                     )}
 
                     {/* ── The hours that are open on this day ──────────────
-                        Drawn behind the events, in the positive tint rather
-                        than a calendar colour — they are not appointments.
-                        Where one overlaps something real the overlap is struck
-                        out, because that hour is already gone and the function
-                        will not offer it: the screen says what the server
-                        computes. */}
-                    {openHours && (windows ?? []).length > 0 && windowsOnDate(windows ?? [], ds).map(w => {
+                        **Always drawn, not only while marking.** An open hour
+                        is a standing fact about the week — leaving the mode
+                        used to make every one of them invisible, so the one
+                        screen that could answer "what am I offering?" showed
+                        nothing unless you happened to be editing.
+                        It is drawn as a **box like an event's**, because that
+                        is what it is on this grid: the card's own radius and
+                        border weight, in the positive tint so it reads as a
+                        container rather than an appointment. What was booked
+                        into it is inset inside this border (`insetFor`).
+                        Out of the mode it is **inert** (`pointerEvents:
+                        none`): a box lying across the column would otherwise
+                        swallow the drag that draws an event over those hours,
+                        which is the one gesture the grid exists for. */}
+                    {(windows ?? []).length > 0 && windowsOnDate(windows ?? [], ds).map(w => {
                       const top = w.start_min / 60 * HOUR_PX
-                      const h = Math.max(10, (w.end_min - w.start_min) / 60 * HOUR_PX)
+                      const h = Math.max(12, (w.end_min - w.start_min) / 60 * HOUR_PX)
                       const repeats = (w.repeat?.kind ?? 'none') === 'weekly'
+                      const marking = openHours
                       return (
                         <button
                           key={w.id}
                           data-open-hours={w.id}
-                          onPointerDown={e => e.stopPropagation()}
-                          onClick={e => {
+                          tabIndex={marking ? 0 : -1}
+                          onPointerDown={marking ? (e => e.stopPropagation()) : undefined}
+                          onClick={marking ? (e => {
                             e.stopPropagation()
                             const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
                             setEditWin({ w, date: ds, x: r.left, y: r.top })
-                          }}
-                          title={`Open ${hhmmOf(w.start_min)} – ${hhmmOf(w.end_min)}${repeats ? ', every week' : ''}`}
+                          }) : undefined}
+                          title={marking
+                            ? `Open ${hhmmOf(w.start_min)} – ${hhmmOf(w.end_min)}${repeats ? ', every week' : ''} — click to change`
+                            : `Open to book — people can book a call or meeting here, ${hhmmOf(w.start_min)} – ${hhmmOf(w.end_min)}${repeats ? ', every week' : ''}`}
                           aria-label={`Open hours ${hhmmOf(w.start_min)} to ${hhmmOf(w.end_min)} on ${ds}`}
                           style={{
-                            position: 'absolute', top, left: 0, right: 0, height: h, zIndex: 1,
+                            position: 'absolute', top, left: 0, right: 0, height: h, zIndex: 0,
                             background: 'var(--sb-positive-tint)',
-                            borderTop: 'var(--sb-border-emphasis) solid var(--sb-positive)',
-                            borderBottom: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 40%, transparent)',
-                            cursor: 'pointer', textAlign: 'left', padding: '2px 5px', boxSizing: 'border-box',
+                            // **Dashed: space on offer, not a thing scheduled.** An
+                            // event is a solid card; an open hour is a gap somebody
+                            // can still take, and the border says so before a word is read.
+                            border: `var(--sb-border-width) dashed color-mix(in srgb, var(--sb-positive) 55%, transparent)`,
+                            borderLeft: `var(--sb-border-emphasis) solid var(--sb-positive)`,
+                            borderRadius: 'var(--sb-r-card)',
+                            cursor: marking ? 'pointer' : 'default',
+                            pointerEvents: marking ? 'auto' : 'none',
+                            textAlign: 'left', padding: '3px 7px', boxSizing: 'border-box',
                             fontFamily: 'inherit', overflow: 'hidden',
+                            // A button centres its content; a tall box wants it at the top.
+                            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start',
                           }}>
                           <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 3,
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
                             fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-positive-deep)',
                             fontVariantNumeric: 'tabular-nums',
                           }}>
+                            <CalendarPlus size={10} strokeWidth={STROKE.active} aria-hidden />
                             {hhmmOf(w.start_min)}–{hhmmOf(w.end_min)}
                             {repeats && <Repeat size={9} strokeWidth={STROKE.active} />}
                           </span>
+                          {h >= 40 && (
+                            <span style={{ display: 'block', marginTop: 1, fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '.04em', color: 'var(--sb-positive-deep)' }}>
+                              Open to book
+                            </span>
+                          )}
+                          {h >= 64 && (
+                            <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 500, color: 'var(--sb-positive-deep)' }}>
+                              Calls &amp; meetings
+                            </span>
+                          )}
                         </button>
                       )
                     })}
-
                     {/* Creation ghost block */}
                     {creatingEvt?.dateStr === ds && (() => {
                       const sMin = Math.min(creatingEvt.originMin, creatingEvt.currentMin)
@@ -3291,7 +3404,9 @@ export function CalendarIntelligence() {
                     {/* Events */}
                     {dayEvents.map(ev => {
                       if (!ev.start.dateTime) return null
-                      const layout = layouts.get(ev.id) ?? { left: 0, width: 99 }
+                      const base   = layouts.get(ev.id) ?? { left: 0, width: 99 }
+                      // Nested inside its open-hours box where it sits in one.
+                      const layout = { ...base, inset: insetFor(ds, ev as GCalEventExt) }
                       const cal    = allCalendars.find(c => c.id === (ev as GCalEventExt).calendarId)
                       return (
                         <EventBlock
@@ -3302,6 +3417,7 @@ export function CalendarIntelligence() {
                           isSelected={selectedEvent?.id === ev.id}
                           isDragSrc={draggingEvt?.id === ev.id && dragMode === 'move'}
                           colorOverride={cal ? calEffectiveColor(cal) : undefined}
+                          focusClass={focusClass(companyOfCalendar((ev as GCalEventExt).calendarId))}
                           onStatusToggle={s => {
                             toggleStatus(ev.id, s)
                           }}
@@ -3557,9 +3673,11 @@ export function CalendarIntelligence() {
           userId={user.id}
           userName={user.email?.split('@')[0]}
           calendars={allCalendars}
-          windowCount={(windows ?? []).length}
+          windows={windows ?? []}
           openHours={openHours}
           onOpenHours={on => { setOpenHours(on); if (!on) setEditWin(null) }}
+          onPickWindow={date => { setAnchorDate(new Date(`${date}T12:00:00`)); setOpenHours(true) }}
+          onDeleteWindow={dropWindow}
           onClose={() => setShowBooking(false)} />
       )}
 
