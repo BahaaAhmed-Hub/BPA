@@ -15,7 +15,7 @@ import { ShelfPhotoDialog } from './ShelfPhotoDialog'
 import { enrichAndReport } from './shelfEnrich'
 import { TrackerView } from './TrackerView'
 import { inputStyle } from './fieldStyle'
-import { loadLibraryView, saveLibraryView, type LibraryView } from './libraryPrefs'
+import { loadLibraryView, OPEN_BOOK_EVENT, saveLibraryView, takePendingOpen, type LibraryView } from './libraryPrefs'
 import { useLibraryStore } from './libraryStore'
 import { STATUS_LABEL, type Book, type BookStatus } from './types'
 
@@ -60,6 +60,17 @@ export function LibraryModule() {
 
   // Switched on while the app was open: nothing has loaded yet, so ask.
   useEffect(() => { if (useLibraryStore.getState().loading) void useLibraryStore.getState().loadFromDB() }, [])
+  // A book asked for from another module (Today's quote of the day). Taken on mount, for a Library not yet
+  // opened, and on the event, for one already open behind another tab.
+  useEffect(() => {
+    const open = () => {
+      const id = takePendingOpen()
+      if (id) { setViewState('shelf'); saveLibraryView('shelf'); setStatus('all'); setQ(''); setListId(null); setSelectedId(id) }
+    }
+    open()
+    window.addEventListener(OPEN_BOOK_EVENT, open)
+    return () => window.removeEventListener(OPEN_BOOK_EVENT, open)
+  }, [])
 
   const setView = (v: LibraryView) => { setViewState(v); saveLibraryView(v) }
 

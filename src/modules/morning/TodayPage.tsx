@@ -41,6 +41,7 @@ import type { Task } from '@/types'
 import type { DbUser, DbCompany } from '@/types/database'
 import { ICON, STROKE } from '@/lib/type'
 import { dayTotals, spanTotals } from '@/lib/habitProgress'
+import { DailyQuoteCard } from '@/modules/library/DailyQuoteCard'
 
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 
@@ -2126,6 +2127,8 @@ export function TodayPage() {
               </div>
             )}
           </div>
+
+          <DailyQuoteCard />
 
           <MailCard
             rows={mail}

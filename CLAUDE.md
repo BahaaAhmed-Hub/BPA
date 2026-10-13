@@ -4347,3 +4347,32 @@ batch POST, the categories made and the links, one undo, three pieces for a wide
 photo, a piece failing, a refused key, no key, nothing readable, not JSON, not an image,
 corrupt, cancel/Escape. `scripts/library-shelf-enrich.mjs` (25) — the matcher's refusals
 and the whole path with faked catalogues. The ink audit has the dialog (39 screens).
+
+## Library 7a — a quote of the day, on Today
+`dailyQuote.ts` (pure), `DailyQuoteCard.tsx` — one import and one line in
+`TodayPage`, between the brief and the mail. No migration, nothing stored.
+- **Deterministic, so every device agrees without storing anything**: the quotes with
+  words are put in a fixed order (`createdAt`, ties by `id` — the server's order is
+  irrelevant) and the day number picks the place. **Walking the order, not hashing the
+  date**, so every quote comes round once before any repeats; a random pick shows the
+  same line twice in a week and never shows another. Days are counted by calendar date
+  (`daysBetween`, noon-local), so a clock change cannot skip or repeat a day; the year
+  turning is just another day.
+- **A quote with no words is never picked**: a photographed page with nothing typed
+  (`kind: 'image'`) and a blank body have no sentence to show.
+- **It draws nothing unless there is something to show**: Library off (server plan *or*
+  the person's switch), the person said no to this alone, or no quote with words. No
+  empty card, no "save a quote" nag — a home screen should not grow one. With a single
+  quote there is no *Another* button, since there is nothing to go to.
+- **Another is for the visit only** — a session-local step past today's, wrapping both
+  ways; reload and it is today's again. Row breaks in a quote are kept.
+- **The title opens that book**, in a Library that may never have been opened this
+  session (modules mount on first visit and the selection is state inside it). So the
+  request is *parked* (`requestOpenBook` / `takePendingOpen` in `libraryPrefs`) and taken
+  on mount **and** on `professor:libraryOpenBook` for one already open behind a tab.
+- **Settings → Library → "A quote on Today"** (`library-settings.dailyQuote`; absent =
+  on, only *off* is written, and a junk value reads as "not said no"). It appears only
+  while the Library is on, and pushes to the other devices at once like the main switch.
+`scripts/library-daily-quote.mjs` — 25 assertions. The expected pick is computed a
+**different way** (civil date → `Date.UTC` → days since 1970) from the module, so the
+test is not marking its own homework; the card is driven on the real Today screen.

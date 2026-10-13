@@ -16,6 +16,8 @@ export interface LibrarySettings {
   enabled: boolean
   /** ISO 3166 region the buy links point at. Absent = read it from the browser. */
   country?: string
+  /** Today's quote of the day. Absent = on: an unopened Settings has not said no. */
+  dailyQuote?: boolean
 }
 export type LibraryView = 'shelf' | 'covers' | 'lists' | 'quotes' | 'discover' | 'tracker'
 
@@ -25,7 +27,11 @@ export function loadLibrarySettings(): LibrarySettings {
     // Absent means on: a person who has never opened Settings has not said no.
     if (!raw) return { enabled: true }
     const p = JSON.parse(raw) as Partial<LibrarySettings>
-    return { enabled: p.enabled !== false, ...(typeof p.country === 'string' && /^[A-Z]{2}$/.test(p.country) ? { country: p.country } : {}) }
+    return {
+      enabled: p.enabled !== false,
+      ...(typeof p.country === 'string' && /^[A-Z]{2}$/.test(p.country) ? { country: p.country } : {}),
+      ...(p.dailyQuote === false ? { dailyQuote: false } : {}),
+    }
   } catch { return { enabled: true } }
 }
 
@@ -42,6 +48,26 @@ export function loadLibraryView(): LibraryView {
 }
 export function saveLibraryView(v: LibraryView): void {
   try { localStorage.setItem(VIEW_KEY, v) } catch { /* private window */ }
+}
+
+/** Is the quote of the day wanted on Today? Off when the Library is, or when the person said no to this alone. */
+export function dailyQuoteWanted(): boolean {
+  return !libraryIsOff() && loadLibrarySettings().dailyQuote !== false
+}
+
+// ─── Opening a book from another module ──────────────────────────────────────
+// The selection is state inside the Library, which may not even be mounted yet (modules mount on first
+// visit). So a request is parked here and taken by whoever is listening — now, or on mount.
+export const OPEN_BOOK_EVENT = 'professor:libraryOpenBook'
+let pendingOpen: string | null = null
+export function requestOpenBook(bookId: string): void {
+  pendingOpen = bookId
+  window.dispatchEvent(new Event(OPEN_BOOK_EVENT))
+}
+export function takePendingOpen(): string | null {
+  const id = pendingOpen
+  pendingOpen = null
+  return id
 }
 
 /** Off for either reason. Synchronous, for the nav and the loaders. */
