@@ -983,6 +983,6 @@ real Open Library from this machine.
 `heic.ts` — `readableImage(file)` converts HEIC/HEIF to JPEG (`heic2any`, imported
 lazily) before the tiles are cut and the preview drawn. Detected by **extension as
 well as MIME type**: Chrome/Firefox hand a picked `.heic` an empty `type`, so a
-MIME-only test called it "not an image". Only the shelf scan uses it; the barcode
-and quote-photo pickers still take whatever the browser can draw. Not yet measured
+MIME-only test called it "not an image". Used by the shelf scan, the ISBN barcode
+photo and the quote photo. Not yet measured
 in a browser against a real HEIC — only `npm run build`.

@@ -6,6 +6,7 @@ import { CAPS, ICON } from '@/lib/type'
 import { Eyebrow, Field } from './fields'
 import { inputStyle } from './fieldStyle'
 import { uploadQuoteImage } from './libraryFiles'
+import { isHeic, readableImage } from './heic'
 import { useLibraryStore } from './libraryStore'
 import { readPassage, PassageError } from './readPassage'
 
@@ -55,9 +56,9 @@ export function QuotePhotoDialog({ bookId, file, onClose }: { bookId: string; fi
   useEffect(() => {
     let live = true
     void (async () => {
-      if (!file.type.startsWith('image/')) { setFatal(`${file.name || 'That file'} is not an image.`); setPhase('ready'); return }
+      if (!file.type.startsWith('image/') && !isHeic(file)) { setFatal(`${file.name || 'That file'} is not an image.`); setPhase('ready'); return }
       try {
-        const a = await readAttachment(file)
+        const a = await readAttachment(await readableImage(file))
         if (!live) return
         setAtt(a)
         await read(a)

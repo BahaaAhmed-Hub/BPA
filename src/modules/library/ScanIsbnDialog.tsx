@@ -8,6 +8,7 @@ import { firstIsbn, makeScanner, readIsbnFromImage, type Scanner } from './barco
 import { CoverArt } from './CoverArt'
 import { inputStyle } from './fieldStyle'
 import { parseIsbn } from './isbn'
+import { readableImage } from './heic'
 import { useLibraryStore } from './libraryStore'
 
 type Cam = 'starting' | 'on' | 'denied' | 'none' | 'insecure' | 'error'
@@ -128,7 +129,7 @@ export function ScanIsbnDialog({ onClose, onOpenBook, onAddByHand }: {
     setPhotoNote(null)
     try {
       scanner.current ??= await makeScanner()
-      const isbn = await readIsbnFromImage(file, scanner.current)
+      const isbn = await readIsbnFromImage(await readableImage(file), scanner.current)
       if (isbn) void handle(isbn); else setPhotoNote('No ISBN barcode could be read in that photo. Fill the frame with the barcode, in good light — or type the number.')
     } catch { setPhotoNote('That photo could not be read.') }
   }
@@ -225,7 +226,7 @@ export function ScanIsbnDialog({ onClose, onOpenBook, onAddByHand }: {
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', textDecoration: 'underline', alignSelf: 'flex-start' }}>
               <Camera size={ICON.sm} /> Use a photo of the barcode instead
               {/* No `capture`: it forces the camera and takes the photo library away. */}
-              <input type="file" accept="image/*" hidden aria-label="Choose a photo of a barcode" onChange={e => { void onPhoto(e.target.files?.[0]); e.target.value = '' }} />
+              <input type="file" accept="image/*,.heic,.heif" hidden aria-label="Choose a photo of a barcode" onChange={e => { void onPhoto(e.target.files?.[0]); e.target.value = '' }} />
             </label>
             {photoNote && <div role="alert" style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)' }}>{photoNote}</div>}
           </div>
