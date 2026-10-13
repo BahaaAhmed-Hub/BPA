@@ -245,6 +245,14 @@ ok('a matched book is filled in the panel: proper title, author and year, before
 ok('its cover is drawn from the catalogue', await dlg().locator('img[src*="covers.openlibrary.org"]').count() === 1)
 ok('a book the catalogues do not know is left as read and says so', await dlg().getByLabel('Title 2').inputValue() === 'Zzzz Unknown Thing' && /No match online/.test(await dlg().innerText()))
 await dlg().getByLabel('Published 1').fill('1999'); await dlg().getByLabel('Author 1').fill('J. Clear'); await wait(200)
+// ── the footer stays inside the panel at the narrowest width, however crowded ───────────
+for (const w of [900, 1280, 1400]) {
+  await p.setViewportSize({ width: w, height: 900 }); await wait(400)
+  const m = await dlg().evaluate(a => { const pr = a.getBoundingClientRect(); return [...a.querySelectorAll('button')].filter(b => /Read again|Cancel|^Add/.test(b.textContent)).map(b => { const r = b.getBoundingClientRect(); return [b.textContent.trim(), r.left >= pr.left - 0.5, r.right <= pr.right + 0.5, r.width > 0] }) })
+  ok(`footer buttons are whole and inside the panel at ${w}px`, m.length === 3 && m.every(x => x[1] && x[2] && x[3]), JSON.stringify(m))
+}
+
+await p.setViewportSize({ width: 1280, height: 1400 })
 await dlg().getByRole('button', { name: /^Add \d books?$/ }).click(); await wait(1800)
 const lk = (bookPosts[0] ?? []).find(r => r.title === 'Atomic Habits')
 ok('what is saved is what the panel shows: the edited year and author, the cover, the ISBN and page count from the match', lk?.published_year === 1999 && lk?.authors?.[0] === 'J. Clear' && /covers\.openlibrary\.org/.test(lk?.cover_url ?? '') && lk?.isbn === '9780735211292' && lk?.pages === 320, JSON.stringify(lk))
