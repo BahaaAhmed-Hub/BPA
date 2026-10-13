@@ -4130,3 +4130,48 @@ and the same figure on a book panel cannot disagree.
 edge, clock changes, every streak case, inclusive period totals, buckets) and the
 view (streak tile, filters, 12 columns, opening a book, the missing migration).
 The ink audit has the Tracker.
+
+## Library 4c — a reading plan
+`20260031_library_plans.sql` (`library_plans`), `planStats.ts` (pure), `PlanCard.tsx`
+(a **Plan** card under Progress in the book panel) and a **Plans** list in the Tracker.
+**One plan per book** (`unique (book_id)`): a finish-by date, a time budget
+(`minutes`, `per` day or week), or both. Multi-book timelines are the Tracker's
+list of single-book plans, not a second kind of object.
+- **A plan stores the intention and nothing it implies.** Pages a day, the pace
+  you are keeping, the date you are heading for and whether that is on time are
+  all derived from the session log (`planStatus`), so they cannot drift from what
+  was read — the rule progress already follows.
+- **Pace is over the days the book has existed, up to 14.** `pacePerDay` divides
+  by `min(14, days since the first sitting + 1)`: a book begun yesterday
+  averaged over two weeks it did not exist for reads as a crawl, and "behind"
+  about a book that is going well. A future-dated sitting and a listening
+  session (no pages) add nothing.
+- **Six states, and one is deliberately "I can't tell".** `ahead` (pace ≥ 1.25×
+  needed), `on`, `behind` (the pace lands after the date — or **stalled**: read
+  before, nothing in the window), `late` (date passed, not done), `done`, and
+  `unknown`. **Nothing read yet is `unknown`, never `behind`**: judging a book
+  you have not opened is a verdict nobody earned. No date, or no page count,
+  is `unknown` too and says which is missing. The finish day itself still counts
+  as a day left.
+- **Minutes are a period, not a total.** A day plan counts today's sittings, a
+  week plan Monday–Sunday (`weekStart`, the Tracker's definition), reading and
+  listening both. `left` never goes negative.
+- **Pre-answered.** "Make a plan" opens already holding `suggestedFinish` —
+  where the current pace lands the book, or a month out with no pace — so the
+  work is editing. Every control writes straight through; the minutes box is
+  held 700ms by `NumField`.
+- **A plan that says nothing is not a plan.** Clearing both the date and the
+  minutes deletes it (the table's CHECK would refuse the row), and `0` minutes
+  clears the target rather than writing a violation. Undo restores either.
+- **A finished book's plan is history**: the Tracker lists live plans only.
+  Deleting a book takes its plan, and ⌘Z puts it back.
+- Read separately (`plansMissing`): without 20260031 the card names the
+  migration and the rest of the module is unaffected.
+- **Not built here, on purpose:** putting plan time on the calendar is 4d, and
+  yearly goals are 4e.
+`scripts/library-plans.mjs` — 53 assertions: the pure maths (pace edge cases,
+every state, the minutes periods, other books' sessions, the suggested date, the
+sentences) and the UI against a fake that enforces the CHECKs and the unique —
+make, edit date/minutes/per, zero minutes, clearing, undo, the Tracker list,
+trash, replace-not-duplicate, book delete + undo, and the missing migration.
+The ink audit carries a live and a past-its-date plan.

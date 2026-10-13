@@ -296,6 +296,12 @@ const LIBRARY = {
     { id: 's1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'read', on_date: '2026-10-10', minutes: 40, pages: 60, to_page: 60, created_at: '2026-10-10T20:00:00Z' },
     { id: 's2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'listen', on_date: '2026-10-11', minutes: 25, pages: null, to_page: null, created_at: '2026-10-11T08:00:00Z' },
   ],
+  // Plans: one live (a state in the accent-deep ink) and one past its date (the negative ink), so
+  // both state colours are measured on the panel and in the Tracker's list.
+  library_plans: [
+    { id: 'pl1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', finish_by: '2026-10-20', minutes: 30, per: 'day', created_at: '2026-10-09T00:00:00Z' },
+    { id: 'pl2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000001', finish_by: '2026-10-01', minutes: null, per: 'day', created_at: '2026-09-20T00:00:00Z' },
+  ],
   library_list_books: [0, 1, 2].map(i => ({ list_id: 'l2', book_id: `00000000-0000-4000-8000-00000000000${i}`, user_id: SU, sort_order: 0, added_at: '2026-09-01T00:00:00Z' })),
 }
 

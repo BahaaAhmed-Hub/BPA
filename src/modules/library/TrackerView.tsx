@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Card, Segmented } from '@/components/ui'
 import { Eyebrow } from './fields'
 import { useLibraryStore } from './libraryStore'
+import { niceDay, planSentence, planStatus, STATE_INK, STATE_LABEL } from './planStats'
 import { fmtMinutes, todayISO } from './readingStats'
 import { addDays, byDay, dayRange, finishedIn, periodTotals, streaks, total, weekBuckets, weekStart, type Minutes } from './trackerStats'
 import type { ReadingSession } from './types'
@@ -61,6 +62,7 @@ export function TrackerView({ onOpenBook }: { onOpenBook: (id: string) => void }
   const sessions = useLibraryStore(s => s.sessions)
   const books = useLibraryStore(s => s.books)
   const missing = useLibraryStore(s => s.sessionsMissing)
+  const plans = useLibraryStore(s => s.plans)
   const [kind, setKind] = useState<Kind>('all')
   const [span, setSpan] = useState<Span>('week')
   const today = todayISO()
@@ -80,6 +82,13 @@ export function TrackerView({ onOpenBook }: { onOpenBook: (id: string) => void }
   const byId = new Map(books.map(b => [b.id, b]))
   const recent: ReadingSession[] = sessions.filter(s => kind === 'all' || s.kind === kind).slice(0, 12)
   const delta = total(t.week) - total(t.prev)
+  // A finished book's plan is history, not a thing to act on: only the live ones are listed.
+  const plannedBooks = plans.flatMap(plan => {
+    const book = byId.get(plan.bookId)
+    if (!book) return []
+    const st = planStatus(book, sessions, plan, today)
+    return st.state === 'done' ? [] : [{ book, plan, st }]
+  })
 
   if (missing) {
     return <Card style={{ padding: '20px 22px', maxWidth: 560, marginTop: 12 }}>The tracker needs migration <code>20260030_library_sessions.sql</code>. Once it has run, reload.</Card>
@@ -115,6 +124,21 @@ export function TrackerView({ onOpenBook }: { onOpenBook: (id: string) => void }
         </div>
         <Bars cols={span === 'week' ? t.cols : t.weeks} kind={kind} />
       </Card>
+
+      {plannedBooks.length > 0 && (
+        <Card style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <Eyebrow>Plans</Eyebrow>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' }}>
+            {plannedBooks.map(({ book, plan, st }) => (
+              <li key={plan.id} style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap', padding: '8px 0', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', fontSize: 'var(--sb-t-body-s)' }}>
+                <button type="button" onClick={() => onOpenBook(book.id)} style={{ all: 'unset', cursor: 'pointer', flex: '1 1 160px', minWidth: 0, fontWeight: 600, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.title}</button>
+                <span style={{ fontWeight: 600, color: STATE_INK[st.state] }}>{STATE_LABEL[st.state]}{plan.finishBy && st.state !== 'done' ? ` · by ${niceDay(plan.finishBy)}` : ''}</span>
+                <span style={{ flex: '1 1 100%', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)' }}>{planSentence(st)}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Card style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
         <Eyebrow>Latest sessions</Eyebrow>

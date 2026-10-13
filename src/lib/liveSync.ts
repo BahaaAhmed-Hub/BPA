@@ -45,6 +45,7 @@ const DOMAIN_OF_TABLE: Record<string, LiveDomain> = {
   library_bookmarks:        'library',
   library_follows:          'library',
   library_sessions:         'library',
+  library_plans:            'library',
 }
 
 const DOMAINS = ['habits', 'tasks', 'finance', 'library'] as const

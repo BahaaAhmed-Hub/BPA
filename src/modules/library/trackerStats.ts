@@ -11,6 +11,9 @@ import type { ReadingSession } from './types'
 
 const at = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d, 12) }
 
+/** Whole calendar days from `from` to `to` (negative if `to` is earlier). */
+export const daysBetween = (from: string, to: string): number => Math.round((at(to).getTime() - at(from).getTime()) / 86_400_000)
+
 export function addDays(iso: string, n: number): string {
   const d = at(iso); d.setDate(d.getDate() + n); return todayISO(d)
 }

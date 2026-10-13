@@ -150,3 +150,20 @@ export interface Bookmark {
 /** Where a thing sits in a book, for display: "p. 42 · line 3". */
 export const placeOf = (x: { page?: number; line?: number }): string =>
   [x.page != null ? `p. ${x.page}` : '', x.line != null ? `line ${x.line}` : ''].filter(Boolean).join(' · ')
+
+// ─── Phase 4c: reading plans ────────────────────────────────────────────────
+
+export type PlanPer = 'day' | 'week'
+
+/** What you mean to do with a book. Pace and status are derived (`planStats`). */
+export interface ReadingPlan {
+  id: string
+  bookId: string
+  /** The day you want to be done by, YYYY-MM-DD (local). */
+  finishBy?: string
+  /** Minutes you mean to give it … */
+  minutes?: number
+  /** … each day or each week. */
+  per: PlanPer
+  createdAt: string
+}

@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
 import type {
   Book, BookFormat, BookSource, BookStatus, Bookmark, BookmarkKind, LibList, ListBook, ListKind,
-  Follow, FollowKind, Note, ReadingSession, SessionKind, NoteScope, Quote, QuoteKind,
+  Follow, FollowKind, Note, PlanPer, ReadingPlan, ReadingSession, SessionKind, NoteScope, Quote, QuoteKind,
 } from './types'
 
 interface BookRow {
@@ -267,6 +267,32 @@ export async function saveSession(s: ReadingSession): Promise<void> {
 export async function removeSession(id: string): Promise<void> {
   markLocalWrite('library')
   const { error } = await supabase.from('library_sessions').delete().eq('id', id)
+  fail(error)
+}
+
+interface PlanRow { id: string; user_id: string; book_id: string; finish_by: string | null; minutes: number | null; per: string; created_at: string }
+const toPlan = (r: PlanRow): ReadingPlan => ({
+  id: r.id, bookId: r.book_id, finishBy: opt(r.finish_by), minutes: opt(r.minutes), per: r.per as PlanPer, createdAt: r.created_at,
+})
+// `?? null`: undefined is dropped on the way to JSON, so a cleared date would never be cleared.
+const fromPlan = (p: ReadingPlan, userId: string) => ({
+  id: p.id, user_id: userId, book_id: p.bookId, finish_by: p.finishBy ?? null, minutes: p.minutes ?? null, per: p.per, created_at: p.createdAt,
+})
+
+/** Read on its own like sessions: without 20260031 the shelf is untouched. */
+export async function loadPlans(): Promise<ReadingPlan[] | null | 'missing'> {
+  const r = await supabase.from('library_plans').select('*')
+  if (r.error) return r.error.code === '42P01' || r.error.code === 'PGRST205' ? 'missing' : null
+  return (r.data as PlanRow[]).map(toPlan)
+}
+export async function savePlan(p: ReadingPlan): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_plans').upsert(fromPlan(p, await uid()), { onConflict: 'id' })
+  fail(error)
+}
+export async function removePlan(id: string): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_plans').delete().eq('id', id)
   fail(error)
 }
 
