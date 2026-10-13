@@ -10,6 +10,7 @@ import { canNeedAction, type MailKind } from '@/lib/mailKinds'
 import { tagOfMail, companyOfMail } from '@/lib/mailCompany'
 import { useFocusClass } from '@/lib/companyFocus'
 import { isBusinessAccount } from '@/lib/businessAccounts'
+import { LOZENGE } from '../../components/SideRail'
 
 // ─── The smart view ──────────────────────────────────────────────────────────
 //
@@ -245,10 +246,13 @@ export function SmartView({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* ── What the last pass did. A line, not a spinner: the interesting
              thing is how much of this was already known. ── */}
-      <div style={{
+      {/* The module's own bar, so it takes the rail's shape like the other
+          four — it was a `--sb-field` box with a 10px radius, which is a
+          *card* rather than a menu. */}
+      <div data-mail-bar style={{
+        ...LOZENGE,
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-        padding: '10px 14px', borderRadius: 'var(--sb-r-nav)',
-        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-hairline)',
+        padding: '10px 16px',
       }}>
         <span style={EYEBROW}>Last 30 days</span>
         <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>

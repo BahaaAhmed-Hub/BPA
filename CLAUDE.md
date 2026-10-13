@@ -4258,3 +4258,68 @@ count" / "no next in" all passed against an empty string. The positive
 assertions beside them — the date range is still there, the controls are still
 there — are the only reason it showed, and the suite now asserts the element
 exists **before** testing what it does not contain.
+
+## The mark, the mail switch, and two screens that said it twice
+Four changes that are really one idea: a screen should say each thing once,
+and the app should wear its own badge.
+
+### Mail is one view, and its bar is a lozenge
+- **The `Mail / Smart` switch is gone** and Smart is the view. The flat list's
+  branch is still in `InboxModule` and is now **unreachable from the screen** —
+  the folders, the class filters, sort, swipe and the bulk bar went with the
+  switch. It is left standing rather than deleted in the same breath: taking a
+  thousand lines out is its own decision and this one was about the control.
+  `mode` is `'smart' as const` rather than state nothing can change, and
+  `mail-mode` is no longer read or written.
+- The **Last 30 days** bar was a `--sb-field` box at `--sb-r-nav` — a *card*
+  shape for a menu — and is now the rail's `LOZENGE` like the other five.
+  `data-mail-bar`.
+
+### Habits said the day twice, a line apart
+The header read `HABITS TRACKER · 33% of today done · 3 of 9 finished · 1d
+streak · 5% this week` and the card **directly beneath it** drew 33% as a ring,
+3 of 9 in words, the streak, and the week as seven bars. One question, two
+answers, 60px apart.
+- The card is the better of the two — it *draws* the week rather than stating
+  it — so it moves **above** the controls, and the bar keeps only what it alone
+  has: how you are looking, and the way to add one.
+- `todayDone` / `completionPct` were read by that sentence and nothing else, so
+  both went; `todayTotals` stayed, because the all-done banner at the foot of
+  the page still fires on it.
+
+### The mark owns the top-right corner
+`BeLogo` existed and was drawn **once, on the sign-in screen** — the app itself
+wore no badge. It is now the last item in `YouCluster`, which is the top-right
+corner of the content column, in the same `amber` colourway the sign-in screen
+uses so the two are one object at two sizes.
+- **51px: 1.5× the 34px controls beside it** — and the row grew **48 → 60px**,
+  because a 51px object in a 48px row hangs a pixel and a half out of each end.
+  The row is what gives way; `alignItems: center` then puts every item on one
+  centre line, which is what "aligned vertically" has to mean when the items
+  are three different heights.
+- `aria-hidden`, no `title`: it is decoration between two controls that do
+  things, and a screen reader announcing "Be" there is a stop with no
+  information in it.
+
+`scripts/mark-and-the-stats.mjs [mark|mail|habits|control]` — the mark is
+measured as **two** claims, since a size assertion alone passes with the mark
+hanging out of the row: 51 = 1.5 × 34, every item in the row sharing a centre
+line to **0.0px**, the mark inside the row's own bounds, nothing drawn to its
+right, and its right edge on the row's 18px padding. **Control: the row put
+back to 48px on that very element** — the mark then runs −1 → 50 against a row
+of 0 → 48, and only that assertion fails. Mail asserts the switch's absence
+**and** that the Smart view is what draws, because an absence is also true of a
+blank page. Habits reads the two rects' own y order (card 82, bar 179) rather
+than source order. `flying-bars-match-the-rail.mjs` covers six bars now.
+
+**Two fixtures were wrong before the code was.** The habits mode seeded no
+habits at all, so there was no stats card to be above anything and the case
+failed about an empty page; and the card was selected on the text `of the day
+done`, which it only says **through the middle of the range** — at 0 it reads
+"Nothing logged yet today" and at 100 "All habits complete! 🎉". That second
+one also broke `deleted-habit-stays-deleted.mjs`, whose whole measurement is
+the share before and after a delete: it read the removed header's sentence, and
+repointing it at the card's words then failed at exactly 100%, which is where
+two of its three assertions sit. The card carries `data-day-pct` now and the
+suite reads the **number**, which is stated in every state. 0 failing pairs
+over 22 screens in four themes.

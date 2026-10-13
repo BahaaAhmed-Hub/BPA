@@ -574,7 +574,12 @@ function YouCluster() {
 
   return (
     <div data-you style={{
-      flexShrink: 0, height: 48, paddingRight: 18, paddingLeft: 12,
+      // **60px, not 48.** The mark is 1.5x the 34px controls beside it — 51px —
+      // and a 51px object in a 48px row overflows it by a pixel and a half at
+      // each end. The row is the thing that gives way: `alignItems: center`
+      // then centres every item on one line, the mark included, which is what
+      // "aligned vertically" has to mean when the items are different heights.
+      flexShrink: 0, height: 60, paddingRight: 18, paddingLeft: 12,
       display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
     }}>
       {/* Search sits with them rather than in the rail: it is a thing you
@@ -669,6 +674,19 @@ function YouCluster() {
                 </button>
               </div>
         )}
+      </div>
+
+      {/* ─── The mark ─────────────────────────────────────────────────────────
+          It was on the sign-in screen and nowhere else, so the app itself wore
+          no badge. Here it is the last item in the row, which puts it in the
+          top-right corner of the content column — the one spot nothing else
+          claims. `amber` is the colourway the sign-in screen already uses, so
+          the two are the same object at two sizes rather than two marks.
+          It is decoration beside controls that do things, so no `title`: a
+          screen reader announcing "Be" between the bell and your account menu
+          adds a stop and no information. */}
+      <div data-be-mark aria-hidden style={{ flexShrink: 0, display: 'flex', alignItems: 'center', marginLeft: 4 }}>
+        <BeLogo variant="amber" size={51} />
       </div>
     </div>
   )

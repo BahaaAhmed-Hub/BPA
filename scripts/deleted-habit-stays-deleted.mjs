@@ -67,7 +67,15 @@ const names = () => p.evaluate(() => {
 })
 // The headline: "N% of today done" — the stat a deleted habit must leave.
 const pct = () => p.evaluate(() => {
-  const m = (document.body.innerText||'').match(/(\d+)%\s+of\s+today\s+done/)
+  // **The header that said "N% of today done" is gone** — it repeated the
+  // summary card a line below it. The card draws the same share, from the same
+  // `habitProgress` code, and carries it as `data-day-pct` — read as a number
+  // rather than out of the sentence, because that sentence is "All habits
+  // complete! 🎉" at 100 and "Nothing logged yet today" at 0. A text match
+  // worked only through the middle of the range, which is not where this
+  // suite's assertions sit.
+  const el = document.querySelector('[data-day-pct]')
+  const m = el ? [null, el.getAttribute('data-day-pct')] : null
   return m ? Number(m[1]) : -1
 })
 

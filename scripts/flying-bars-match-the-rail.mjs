@@ -29,6 +29,7 @@ const BARS = [
   ['tasks',    '[data-tasks-bar]',   'the Tasks controls'],
   ['habits',   '[data-habits-bar]',  'the Habits header'],
   ['finance',  '[data-finance-tabs]','the Finance tabs'],
+  ['inbox',    '[data-mail-bar]',    'the Mail bar'],
 ]
 
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium',

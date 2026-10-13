@@ -375,9 +375,9 @@ export function InboxModule() {
   //  The normal view answers "what is in my mail". The smart one answers "what
   //  is waiting on me". Neither replaces the other, so the choice is kept:
   //  whichever you were last in is the one that opens.
-  const [mode, setMode] = useState<'normal' | 'smart'>(() => {
-    try { return localStorage.getItem('mail-mode') === 'smart' ? 'smart' : 'normal' } catch { return 'normal' }
-  })
+  // One view, so this is a constant rather than state nothing can change.
+  // `mail-mode` is no longer read or written.
+  const mode = 'smart' as const
   const [smart, setSmart] = useState<PassResult | null>(null)
   const [smartLoading, setSmartLoading] = useState(false)
   // Which folder. Unread-in-inbox is what this module was, and stays the
@@ -2323,27 +2323,12 @@ export function InboxModule() {
 
       <div style={{ padding: '24px 28px' }}>
 
-        {/* ── Which view ──────────────────────────────────────────────────────
-            Two readings of the same mailbox, so the switch sits above
-            everything either of them draws rather than inside one of them. */}
-        {!noAuth && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <Segmented
-              size="md"
-              aria-label="How to read the mail"
-              value={mode}
-              onChange={m => {
-                setMode(m); setSelectedId(null)
-                try { localStorage.setItem('mail-mode', m) } catch { /* quota */ }
-              }}
-              options={[
-                { value: 'normal', label: 'Mail',  title: 'Every message, newest first' },
-                { value: 'smart',  label: 'Smart', title: 'What is waiting on you, in three groups' },
-              ]}
-            />
-          </div>
-        )}
-
+        {/* **There is no Mail / Smart switch any more.** Smart is the view.
+            The flat list's own branch is still below and is now unreachable
+            from the screen — folders, the class filters, sort, swipe and the
+            bulk bar went with the switch. It is left in place rather than
+            deleted in the same breath: taking a thousand lines out is its own
+            decision, and this one was about the control. */}
         {mode === 'smart' && !noAuth ? (
           /* The list, and the thread you are reading beside it. `align-items:
              start` so the panel sticks to the top of the column rather than
