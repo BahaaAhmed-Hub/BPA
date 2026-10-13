@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Anthropic from '@anthropic-ai/sdk'
-import { X, Send, Loader2, ChevronDown, ChevronRight, ChevronLeft, Wrench, Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
+import { Mic, X, Send, Loader2, ChevronDown, ChevronRight, ChevronLeft, Wrench, Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHabitsStore } from '@/store/habitsStore'
@@ -13,8 +13,11 @@ import { loadAIConfig, type AIConfig } from '@/modules/settings/Settings'
 import { loadAccounts } from '@/lib/multiAccount'
 import { useBehavioralStore } from '@/store/behavioralStore'
 import { ICON } from '@/lib/type'
+import { addressedTo } from '@/lib/callName'
+import { recognitionLang, speak, speechSupported, startListening, stopSpeaking, unlockSpeech, type Listening, type ListenError } from '@/lib/speech'
 import { cleanName, labelOf, loadPersona as loadPersonaNow, NAME_MAX, savePersona, usePersona } from '@/lib/assistantPersona'
 import { AssistantAvatar } from './AssistantAvatar'
+import { ASK_EVENT, takePendingAsk } from '@/lib/assistantBridge'
 
 // ─── Groq types (OpenAI-compatible) ──────────────────────────────────────────
 
@@ -131,7 +134,7 @@ Guidelines:
 - Be concise and action-oriented. When asked to do something, use the right tool immediately — don't explain how.
 - After using a tool, summarize findings clearly. Format lists with line breaks.
 - If you need clarification before acting, ask one focused question.
-- Refer to the user by first name only. Keep tone warm but professional.`
+- Refer to the user by first name only. Keep tone warm but professional.${called}`
 }
 
 // ─── Message bubble ───────────────────────────────────────────────────────────
@@ -275,6 +278,13 @@ interface AssistantPanelProps {
 
 export function AssistantPanel({ open, onClose, minimised = false, onMinimise, onRestore }: AssistantPanelProps) {
   const persona = usePersona()
+  // ── Voice: tap the mic, say it, hear it back ──────────────────────────────
+  const [listening, setListening] = useState(false)
+  const [interim, setInterim] = useState('')
+  const [voiceNote, setVoiceNote] = useState<string | null>(null)
+  const micRef = useRef<Listening | null>(null)
+  /** The question in flight was spoken, so its answer is read aloud (if the person has that on). */
+  const spokenRef = useRef(false)
   const user          = useAuthStore(s => s.user)
   const tasks         = useTaskStore(s => s.tasks)
   const addTask       = useTaskStore(s => s.addTask)
@@ -444,6 +454,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     if ((!trimmed && attachments.length === 0) || thinking) return
 
     const cfg = loadAIConfig()
+    stopSpeaking()
 
     // What this provider cannot take is said before the request, not after it
     // fails — and never by quietly dropping the thing you just attached.
@@ -499,6 +510,68 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anthropicMsgs, groqMsgs, thinking, user, tasks, attachments])
+
+  // A request parked by the search box (or the voice listener): taken when it arrives, and when the panel opens
+  // after it. If an answer is still being written the question waits its turn rather than being lost.
+  const sendRef = useRef(sendMessage)
+  sendRef.current = sendMessage
+  useEffect(() => {
+    if (!open || thinking) return
+    const take = () => {
+      const r = takePendingAsk()
+      if (!r) return
+      if (r.spoken) spokenRef.current = true
+      if (r.text) void sendRef.current(r.text)
+      else if (r.spoken && speechSupported()) talkRef.current()
+    }
+    take()
+    window.addEventListener(ASK_EVENT, take)
+    return () => window.removeEventListener(ASK_EVENT, take)
+  }, [open, thinking])
+
+  const voiceError = (e: ListenError): string => ({
+    denied: 'The microphone is switched off for this page. Allow it in your browser’s site settings to talk.',
+    blocked: 'The browser would not start listening without a tap. Tap the microphone.',
+    unsupported: 'This browser cannot listen. Typing works everywhere; on iPhone and iPad, Safari can.',
+    failed: 'Listening kept stopping, so I gave up. Tap the microphone to try again.',
+  }[e])
+
+  const talk = useCallback(() => {
+    unlockSpeech()
+    stopSpeaking()
+    micRef.current?.stop()
+    setVoiceNote(null)
+    micRef.current = startListening({
+      lang: recognitionLang(persona.lang), loop: false,
+      onInterim: setInterim,
+      onFinal: heard => {
+        // Said as "Beau, add milk", or just "add milk": either is a request. Only the name is "I'm here".
+        const a = persona.name ? addressedTo(heard, persona.name, { voice: true }) : null
+        const text = a?.addressed ? a.rest : heard
+        if (!text) { setVoiceNote(`I’m listening${persona.name ? `, ${persona.name} here` : ''} — go ahead.`); setTimeout(() => talkRef.current(), 250); return }
+        spokenRef.current = true
+        setInterim('')
+        void sendRef.current(text)
+      },
+      onState: on => { setListening(on); if (!on) setInterim('') },
+      onError: e => setVoiceNote(voiceError(e)),
+    })
+  }, [persona.lang, persona.name])
+  const talkRef = useRef(talk)
+  talkRef.current = talk
+
+  // Answer aloud when the question was spoken. Typed questions are answered in writing.
+  useEffect(() => {
+    if (thinking || !spokenRef.current) return
+    const last = displayMessages[displayMessages.length - 1]
+    if (last?.role !== 'assistant') return
+    spokenRef.current = false
+    if (persona.speak) speak(last.content, recognitionLang(persona.lang))
+  }, [thinking, displayMessages, persona.speak, persona.lang])
+
+  // Closing the panel ends the conversation's ears and voice.
+  useEffect(() => { if (!open) { micRef.current?.stop(); stopSpeaking() } }, [open])
+  useEffect(() => () => { micRef.current?.stop(); stopSpeaking() }, [])
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(input) }
@@ -638,6 +711,11 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
             </p>
           )}
 
+          {(listening || voiceNote) && (
+            <p role="status" style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', color: voiceNote && !listening ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)' }}>
+              {listening ? (interim ? `“${interim}”` : `Listening${persona.name ? ` — say what you need, ${persona.name} is here` : ''}…`) : voiceNote}
+            </p>
+          )}
           <div style={{
             display: 'flex', alignItems: 'flex-end', gap: 8,
             background: 'var(--sb-field)',
@@ -661,6 +739,21 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
                 background: 'none', color: 'var(--sb-ink-3)', cursor: thinking ? 'default' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               }}><Paperclip size={ICON.md} /></button>
+            {speechSupported() && (
+              <button
+                type="button"
+                onClick={() => { if (listening) micRef.current?.stop(); else talk() }}
+                disabled={thinking}
+                aria-pressed={listening}
+                aria-label={listening ? 'Stop listening' : `Talk to ${persona.name || 'your assistant'}`}
+                title={listening ? 'Stop listening' : `Talk to ${persona.name || 'your assistant'}`}
+                style={{
+                  width: 26, height: 26, padding: 0, borderRadius: 'var(--sb-r-pill)', border: 'none', flexShrink: 0,
+                  background: listening ? 'var(--sb-accent)' : 'none', color: listening ? 'var(--sb-accent-ink)' : 'var(--sb-ink-3)',
+                  cursor: thinking ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  animation: listening ? 'pulse 1.2s ease-in-out infinite' : undefined,
+                }}><Mic size={ICON.md} /></button>
+            )}
             <textarea
               ref={inputRef}
               value={input}

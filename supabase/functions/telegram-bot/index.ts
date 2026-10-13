@@ -18,6 +18,7 @@
  * and each message is answered with the recent thread in front of the model.
  */
 
+import { calledLine, personaName } from '../_shared/persona.ts'
 import { CalendarHub, eventLine } from '../_shared/googleCalendars.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -1228,8 +1229,17 @@ async function anthropicKeyFor(userId: string): Promise<{ key: string; from: str
   return { key: ANTHROPIC_KEY, from: 'secret' }
 }
 
+/** What the person has called the assistant (Settings → AI). Read from the same prefs row as the key; never throws. */
+async function assistantNameFor(userId: string): Promise<string> {
+  try {
+    const { data } = await sb.from('users').select('schedule_rules').eq('id', userId).maybeSingle()
+    return personaName((data as { schedule_rules?: { shared_prefs?: Record<string, string> } } | null)?.schedule_rules?.shared_prefs)
+  } catch { return '' }
+}
+
 async function runAgent(userId: string, userMessage: string, history: Turn[] = []): Promise<string> {
   const { key: anthropicKey, from: keyFrom } = await anthropicKeyFor(userId)
+  const assistantName = await assistantNameFor(userId)
   if (!anthropicKey) {
     return fallbackProcess(userId, userMessage)
   }
@@ -1242,7 +1252,7 @@ async function runAgent(userId: string, userMessage: string, history: Turn[] = [
 - User writes English → reply in English
 - This overrides everything. Check the language of the user's message first, before doing anything else.
 
-You are Professor AI, a personal assistant. You live in Telegram and the user talks to you naturally — like texting a smart friend, not filling out a form.
+You are ${assistantName || 'Professor AI'}, a personal assistant.${calledLine(assistantName)} You live in Telegram and the user talks to you naturally — like texting a smart friend, not filling out a form.
 
 Today is ${today}. Yesterday was ${yesterday}.
 

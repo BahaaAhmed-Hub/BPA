@@ -7,8 +7,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { moduleIsOff } from '@/lib/entitlements'
 import {
   Search, CheckSquare, CalendarDays, Repeat, Wallet, Settings as SettingsIcon,
-  Plus, CornerDownLeft,
+  Plus, CornerDownLeft, MessageCircle,
 } from 'lucide-react'
+import { addressedTo } from '@/lib/callName'
+import { askAssistant } from '@/lib/assistantBridge'
+import { usePersona } from '@/lib/assistantPersona'
 import { useTaskStore } from '@/store/taskStore'
 import { useHabitsStore } from '@/store/habitsStore'
 import { useUIStore } from '@/store/uiStore'
@@ -57,6 +60,7 @@ const SETTINGS_TARGETS: { id: string; label: string; words: string }[] = [
 ]
 
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const persona = usePersona()
   const [q, setQ] = useState('')
   const [cursor, setCursor] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -166,6 +170,19 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     }
 
     // ── Actions — what the query itself implies ───────────────────────────────
+    // Calling the assistant by name comes first — typed, an address is marked (a comma, a greeting, or the name alone),
+    // so a plain search for somebody called the same thing is left alone.
+    const call = persona.name ? addressedTo(q, persona.name) : null
+    if (call?.addressed) {
+      out.unshift({
+        id: 'act-assistant',
+        group: 'Actions',
+        title: call.bare ? `Talk to ${persona.name}` : `Ask ${persona.name}: “${call.rest}”`,
+        meta: 'your assistant',
+        icon: MessageCircle,
+        run: () => { askAssistant({ text: call.rest, spoken: false }); onClose() },
+      })
+    }
     const firstCompany = companies[0]
     out.push({
       id: 'act-task',
@@ -194,7 +211,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       Tasks: 'tasks', Calendar: 'calendar', Habits: 'habits', Finance: 'finance', Mail: 'inbox',
     }
     return out.filter(h => !moduleIsOff(GROUP_MODULE[h.group] ?? ''))
-  }, [query, q, tasks, habits, addTask, setActiveModule, onClose])
+  }, [query, q, tasks, habits, addTask, setActiveModule, onClose, persona.name])
 
   // Keep the cursor inside the list as results change
   useEffect(() => { setCursor(c => Math.min(c, Math.max(0, hits.length - 1))) }, [hits.length])

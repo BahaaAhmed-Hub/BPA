@@ -14,6 +14,7 @@
 // is not a name.
 import { useEffect, useState } from 'react'
 import { pushSharedPrefs } from '@/lib/prefSync'
+import { cleanName, NAME_MAX } from '@/lib/assistantName'
 
 export interface Persona {
   /** What the person calls it. Empty until they say. */
@@ -22,32 +23,29 @@ export interface Persona {
   listen: boolean
   /** Read answers aloud when the question was spoken. */
   speak: boolean
+  /** Language to listen in, as a BCP-47 tag; empty follows the browser. */
+  lang: string
   /** The first-use "what would you like to call me?" has been answered or waved away; never asked twice. */
   asked: boolean
 }
 
 const KEY = 'assistant-persona'
 export const PERSONA_EVENT = 'professor:personaChanged'
-export const NAME_MAX = 24
-const DEFAULTS: Persona = { name: '', listen: false, speak: true, asked: false }
+const DEFAULTS: Persona = { name: '', listen: false, speak: true, lang: '', asked: false }
 
-/** Letters (any script), digits, space, hyphen, apostrophe, full stop — nothing else survives. */
-export function cleanName(raw: string): string {
-  const t = (raw ?? '').normalize('NFKC').replace(/[^\p{L}\p{N}\s'’.-]/gu, '').replace(/\s+/g, ' ').trim()
-  return t.slice(0, NAME_MAX).trim()
-}
+export { cleanName, NAME_MAX }
 
 export function loadPersona(): Persona {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return DEFAULTS
     const p = JSON.parse(raw) as Partial<Persona>
-    return { name: cleanName(typeof p.name === 'string' ? p.name : ''), listen: p.listen === true, speak: p.speak !== false, asked: p.asked === true }
+    return { name: cleanName(typeof p.name === 'string' ? p.name : ''), listen: p.listen === true, speak: p.speak !== false, lang: typeof p.lang === 'string' && /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(p.lang) ? p.lang : '', asked: p.asked === true }
   } catch { return DEFAULTS }
 }
 
 export function savePersona(next: Persona): void {
-  const clean: Persona = { name: cleanName(next.name), listen: !!next.listen, speak: next.speak !== false, asked: !!next.asked || !!cleanName(next.name) }
+  const clean: Persona = { name: cleanName(next.name), listen: !!next.listen, speak: next.speak !== false, lang: next.lang ?? '', asked: !!next.asked || !!cleanName(next.name) }
   try { localStorage.setItem(KEY, JSON.stringify(clean)) } catch { /* private window */ }
   window.dispatchEvent(new Event(PERSONA_EVENT))
   // The bots read this out of Postgres, and the ordinary push is a five-minute timer.

@@ -13,6 +13,8 @@ import { BehavioralOS } from './modules/behavioral/BehavioralOS'
 import { PlanningAssistant } from './modules/planning/PlanningAssistant'
 import { FinanceModule } from './modules/finance/FinanceModule'
 import { LibraryModule } from './modules/library/LibraryModule'
+import { ASK_EVENT } from './lib/assistantBridge'
+import { NameListener } from './modules/assistant/NameListener'
 import { useLibraryStore } from './modules/library/libraryStore'
 import { libraryIsOff, useLibraryOff } from './modules/library/libraryPrefs'
 import { NavRow } from './components/ui'
@@ -1351,6 +1353,12 @@ function App() {
   }, [user, categoryKey, financeLoading])
 
   const [assistantOpen, setAssistantOpen] = useState(false)
+  // Somebody asked it something — from the search box, or by voice. Open it; the panel takes the request.
+  useEffect(() => {
+    const on = () => { setAssistantOpen(true); setAssistantAside(false) }
+    window.addEventListener(ASK_EVENT, on)
+    return () => window.removeEventListener(ASK_EVENT, on)
+  }, [])
   // Put aside, not closed: the thread survives and the tab brings it back.
   const [assistantAside, setAssistantAside] = useState(false)
   // A dated task belongs on the calendar wherever it was given its date — the
@@ -1437,6 +1445,7 @@ function App() {
       </div>
       <UndoBar />
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <NameListener />
       <AssistantPanel
         open={assistantOpen}
         minimised={assistantAside}

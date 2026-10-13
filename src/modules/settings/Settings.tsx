@@ -17,7 +17,8 @@ import {
 import { supabase } from '@/lib/supabase'
 import { pushSharedPrefs } from '@/lib/prefSync'
 import { useHeldText } from '@/lib/useHeldText'
-import { cleanName, loadPersona, NAME_MAX, savePersona, usePersona } from '@/lib/assistantPersona'
+import { cleanName, loadPersona, NAME_MAX, savePersona, usePersona, type Persona } from '@/lib/assistantPersona'
+import { speechSupported } from '@/lib/speech'
 import { AssistantAvatar } from '@/modules/assistant/AssistantAvatar'
 import { notify } from '@/lib/undo'
 import { paidAtSupported } from '../finance/unpaid'
@@ -2195,6 +2196,39 @@ function AssistantNameRow() {
   )
 }
 
+const SPEECH_LANGS = ['en-US', 'en-GB', 'ar-EG', 'ar-SA', 'fr-FR', 'de-DE', 'es-ES', 'it-IT', 'pt-BR', 'tr-TR', 'ru-RU', 'hi-IN', 'ja-JP', 'zh-CN']
+const langName = (tag: string): string => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(tag) ?? tag } catch { return tag } }
+
+/** How it listens, and whether it talks back. Honest about what a browser can and cannot do. */
+function AssistantVoiceRows() {
+  const persona = usePersona()
+  const can = speechSupported()
+  const set = (patch: Partial<Persona>) => savePersona({ ...loadPersona(), ...patch })
+  return (
+    <>
+      <FieldRow label="Listen for its name" sub="While the app is open on screen">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, maxWidth: 380 }}>
+          <Toggle checked={persona.listen && can} onChange={(v: boolean) => { if (can) set({ listen: v }) }} />
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: can ? 'var(--sb-ink-3)' : 'var(--sb-accent-deep)', lineHeight: 1.45 }}>
+            {can
+              ? 'A web page cannot listen with the screen locked or the tab hidden, and on iPhone and iPad you may need to tap once each time. For hands-free with the app closed, use the Siri Shortcut below. Your browser or phone’s speech service hears the audio while this is on.'
+              : 'This browser cannot listen. On iPhone and iPad, Safari can; elsewhere, Chrome and Edge can.'}
+          </p>
+        </div>
+      </FieldRow>
+      <FieldRow label="Speak answers" sub="When you spoke the question">
+        <Toggle checked={persona.speak} onChange={(v: boolean) => set({ speak: v })} />
+      </FieldRow>
+      <FieldRow label="Speech language" sub="What it listens for and speaks in">
+        <select value={persona.lang} onChange={e => set({ lang: e.target.value })} aria-label="Speech language" style={{ ...pillSelectStyle }}>
+          <option value="">Same as this browser</option>
+          {SPEECH_LANGS.map(t => <option key={t} value={t}>{langName(t)}</option>)}
+        </select>
+      </FieldRow>
+    </>
+  )
+}
+
 function ProfessorSection() {
   const [ai, setAIRaw] = useState<AIConfig>(loadAIConfig)
   const [showKey, setShowKey] = useState(false)
@@ -2218,6 +2252,7 @@ function ProfessorSection() {
     <div>
       {/* ── Name ── */}
       <AssistantNameRow />
+      <AssistantVoiceRows />
 
       {/* ── Model ── */}
       <FieldRow label="Model" sub="Handles the brief, drafts and matrix suggestions">
@@ -4192,6 +4227,8 @@ const DEFAULT_INTEGRATIONS: Integration[] = [
 ]
 
 function IntegrationsSection() {
+  // The Shortcut is named after the assistant, so "Hey Siri, <name>" is how you call it with the app shut.
+  const siriName = usePersona().name || 'Ask Professor'
   const [integrations, setIntegrations] = useState<Integration[]>(DEFAULT_INTEGRATIONS)
   const [tokens, setTokens] = useState<UserToken[]>([])
   const [creatingToken, setCreatingToken] = useState(false)
@@ -4479,7 +4516,7 @@ function IntegrationsSection() {
         <div style={{ marginBottom: 12 }}>
           <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Siri Shortcuts</p>
           <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
-            Say "Hey Siri, ask Professor" and talk to your AI naturally — add tasks, log habits, check your calendar, and more.
+            Say "Hey Siri, {siriName}" and talk to your AI naturally — add tasks, log habits, check your calendar, and more. This is the hands-free way, and the only one that works with the app closed or the screen locked.
           </p>
         </div>
 
@@ -4543,15 +4580,15 @@ function IntegrationsSection() {
                 background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-border)', borderStyle: 'dashed',
               }}>
                 <p style={{ margin: '0 0 8px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
-                  Set up "Ask Professor" shortcut
+                  Set up the "{siriName}" shortcut
                 </p>
                 <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {[
-                    <>On iPhone, open <b>Shortcuts</b> → <b>+</b> → name it <em>Ask Professor</em></>,
-                    <>Add action: <b>Ask for Input</b> — prompt "Ask Professor anything"</>,
+                    <>On iPhone or iPad, open <b>Shortcuts</b> → <b>+</b> → name it <em>{siriName}</em> — Siri answers to the shortcut’s name</>,
+                    <>Add action: <b>Ask for Input</b> — prompt "What do you want to ask {siriName}?"</>,
                     <>Add action: <b>Get Contents of URL</b> → paste the URL above (replace <code style={{ fontFamily: 'monospace', fontSize: 10 }}>{'{ShortcutInput}'}</code> with the "Provided Input" variable)</>,
                     <>Add action: <b>Speak Text</b> — set input to the result from the previous step</>,
-                    <>Optionally: set a <b>Siri Phrase</b> like "Ask Professor" in the shortcut details</>,
+                    <>Then say <b>"Hey Siri, {siriName}"</b>. Its name is the phrase; no extra setting is needed</>,
                   ].map((step, i) => (
                     <li key={i} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>{step}</li>
                   ))}

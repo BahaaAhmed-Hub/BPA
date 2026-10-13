@@ -694,6 +694,18 @@ for (const theme of THEMES) {
     await page.waitForTimeout(700)
   })
 
+  // ── The assistant: its face, the first-use question, and named ─────────────
+  await visit('Assistant · first use (asks for a name)', async () => {
+    await page.evaluate(() => { localStorage.setItem('assistant-persona', JSON.stringify({ name: '', asked: false })); window.dispatchEvent(new Event('professor:personaChanged')) })
+    await page.getByRole('button', { name: /Talk to/ }).first().click({ timeout: 5000 })
+    await page.getByText('What would you like to call me?').waitFor({ timeout: 5000 })
+  })
+  await visit('Assistant · named', async () => {
+    await page.getByRole('button', { name: 'Hadi', exact: true }).click({ timeout: 5000 })
+    await page.waitForTimeout(600)
+  })
+  await page.getByRole('button', { name: 'Close the assistant' }).last().click({ timeout: 3000 }).catch(() => {})
+
   // ── The page a stranger sees ───────────────────────────────────────────────
   // Its own document: `?book=` renders above the sign-in gate, so this is a
   // navigation rather than a click. It is measured last, because it leaves the
