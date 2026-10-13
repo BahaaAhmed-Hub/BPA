@@ -54,11 +54,21 @@ export { initialsOf } from './CompanyMark'
  *
  *  Fully round ends (`borderRadius: 999`), so the shape is a lozenge rather
  *  than a rounded rectangle: at this width the two read quite differently. */
-const PILL: React.CSSProperties = {
+/** The shape alone, with no layout in it — exported because the rail is not
+ *  the only lozenge in the app. A module's own tab bar is the same object on
+ *  the same ground, and a second copy of four values is how two things that
+ *  must match stop matching. Layout (direction, padding, gap) belongs to
+ *  whoever is drawing, since a column of icons and a row of tabs want
+ *  different ones. */
+export const LOZENGE: React.CSSProperties = {
   background: 'var(--sb-overlay)',
   border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 7%, transparent)',
   borderRadius: 999,
   boxShadow: '0 2px 10px -4px rgba(25, 23, 18, .16), 0 10px 30px -18px rgba(25, 23, 18, .22)',
+}
+
+const PILL: React.CSSProperties = {
+  ...LOZENGE,
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',

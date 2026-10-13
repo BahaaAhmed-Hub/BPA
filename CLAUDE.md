@@ -4095,3 +4095,30 @@ YouTube link draws its picture and **the server is never asked about it**,
 while the link no browser can read is the one that asks. Either half alone
 proves nothing. `meeting-outcome-becomes-tasks.mjs links` measures picture 2
 through the real door and re-runs its other four modes at 65.
+
+## Finance — the tab bar was the last slab on the page
+A full-bleed `--sb-header` strip with square corners, running edge to edge
+under a rule. It is the one thing left on screen still drawn as a slab after
+`.cal-panel` gave its frame up and the rail became two floating pills — and
+beside those pills a square strip reads as broken rather than as part of the
+page, which is how it was reported.
+- **It is the rail's own shape, imported rather than retyped.** `LOZENGE` is
+  exported from `SideRail.tsx` — the four properties that are the *shape*
+  (ground, border, `borderRadius: 999`, shadow) with no layout in them, since a
+  column of icons and a row of tabs want different directions and padding.
+  `PILL` spreads it. A hard-coded `borderRadius: 999` in the finance module
+  would have looked identical today and drifted the day the rail's changed.
+- **`--sb-overlay`, for the reason the rail has it**: it is the one surface
+  token opaque in every theme. In Glass `--sb-header` is
+  `rgba(255,255,255,.035)`, a wash that leaves the bar all but the page itself.
+- **The rule goes with the slab.** A floating object does not draw a line
+  across the page; the gap under it is the separation, so the border is now
+  the lozenge's own, all the way round.
+`scripts/finance-bar-is-a-lozenge.mjs [shape|floats|control]` — and the claim
+is about **two** elements, so it reads radius, ground, shadow and border off
+the tab bar *and* off the rail's lozenge and asserts they are equal; a
+one-sided assertion passes with the two already drifted. Control, the old
+values restored on the very same element: radius `0px`, ground `#FCFAF4`, no
+shadow, a bottom rule, and the bar spanning 90→1500 — the full width of
+`<main>`, which is the screenshot. The labels changed ground, so the ink audit
+re-ran: **0 failing pairs over 22 screens in all four themes.**
