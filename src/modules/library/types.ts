@@ -173,3 +173,18 @@ export interface ReadingPlan {
   blockSig?: string
   createdAt: string
 }
+
+// ─── Phase 4e: yearly goals and challenges ──────────────────────────────────
+
+export type GoalKind = 'books' | 'pages' | 'minutes'
+
+/** A target for one calendar year. With a `listId` it is a challenge: the same
+ *  count, narrowed to the books on that list or category. */
+export interface ReadingGoal {
+  id: string
+  year: number
+  kind: GoalKind
+  target: number
+  listId?: string
+  createdAt: string
+}

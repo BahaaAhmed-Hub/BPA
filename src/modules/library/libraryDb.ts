@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
 import type {
   Book, BookFormat, BookSource, BookStatus, Bookmark, BookmarkKind, LibList, ListBook, ListKind,
-  Follow, FollowKind, Note, PlanPer, ReadingPlan, ReadingSession, SessionKind, NoteScope, Quote, QuoteKind,
+  Follow, FollowKind, Note, PlanPer, ReadingGoal, GoalKind, ReadingPlan, ReadingSession, SessionKind, NoteScope, Quote, QuoteKind,
 } from './types'
 
 interface BookRow {
@@ -293,6 +293,27 @@ export async function loadPlans(): Promise<ReadingPlan[] | null | 'missing'> {
   if (rows.some(x => 'block_event_id' in x)) blockColumns = true
   return rows.map(toPlan)
 }
+interface GoalRow { id: string; user_id: string; year: number; kind: string; target: number; list_id: string | null; created_at: string }
+const toGoal = (r: GoalRow): ReadingGoal => ({ id: r.id, year: r.year, kind: r.kind as GoalKind, target: r.target, listId: opt(r.list_id), createdAt: r.created_at })
+const fromGoal = (g: ReadingGoal, userId: string) => ({ id: g.id, user_id: userId, year: g.year, kind: g.kind, target: g.target, list_id: g.listId ?? null, created_at: g.createdAt })
+
+/** Read on its own like plans: without 20260033 the shelf is untouched. */
+export async function loadGoals(): Promise<ReadingGoal[] | null | 'missing'> {
+  const r = await supabase.from('library_goals').select('*').order('year', { ascending: false })
+  if (r.error) return r.error.code === '42P01' || r.error.code === 'PGRST205' ? 'missing' : null
+  return (r.data as GoalRow[]).map(toGoal)
+}
+export async function saveGoal(g: ReadingGoal): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_goals').upsert(fromGoal(g, await uid()), { onConflict: 'id' })
+  fail(error)
+}
+export async function removeGoal(id: string): Promise<void> {
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_goals').delete().eq('id', id)
+  fail(error)
+}
+
 /** Does this project have the 20260032 columns? Asked once: a block written to a project without them
  *  would create the calendar event and then fail to remember it, leaving an event nothing can find. */
 let blockProbe: Promise<boolean> | null = null

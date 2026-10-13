@@ -4234,3 +4234,44 @@ stored, stale on edit, PATCH not a second POST, the deleted-in-Google fallback,
 refused delete keeps the id, already-gone is success, refused POST stores nothing,
 removing a plan with a block, both undo rules, no minutes → no controls, and the
 missing migration). The ink audit's first plan carries a stale block.
+
+## Library 4e — yearly goals and challenges
+`20260033_library_goals.sql` (`library_goals`), `goalStats.ts` (pure), `GoalsCard.tsx`
+at the top of the Tracker. A goal is a **year, a kind (books finished · pages read ·
+hours spent) and a target**; a **challenge is the same row with a `list_id`**, counting
+only the books on that list or category. One table and one set of controls, not two.
+- **Progress is counted, never stored.** Books = those with a `finishedOn` inside the
+  year (Dec 31 and Jan 1 fall on the right sides); pages = `read` sessions' *new
+  ground* in the year, as everywhere else; time = both kinds. A corrected finish date
+  or a deleted session moves the bar on every device by itself. A challenge narrows all
+  three to its list's books.
+- **One goal per (year, kind, scope).** The unique index coalesces a null `list_id` to a
+  fixed uuid — a plain unique treats two nulls as different and would let the whole
+  library carry any number of identical goals. The store refuses a duplicate first and
+  the card says which one exists ("change its target instead").
+- **The year's line is straight, with two honest exceptions.** `expected = target ×
+  days elapsed ÷ days in year` (leap years included; today counts as a day elapsed *and*
+  a day left). Ahead ≥ 110%, on ≥ 90%, else behind — except **a book is a lump**: being
+  under a whole book short of the line is `on`, because 0.68 of a book is not a thing
+  you can be behind by. And **the first 14 days of the year are "just started"**, not
+  judged: a Jan 3 verdict on a year-long goal is noise either way.
+- **Exceeding a goal is a full bar with the real figure beside it**, not 125%. `done`
+  stays `done` after the year ends; short at year end is `missed`; before Jan 1 is
+  `upcoming`. The year stepper shows any year, so last year's result stays readable.
+- **The pace is in the kind's own unit**: a book goal slower than a book a week reads
+  "one every 11 days" (0.09 of a book a day is not a pace anyone feels), pages "55
+  pages a day", time "33 min a day". The projection is shown only when behind.
+- **Hours are typed, minutes are stored.** The Hours tab and the target field talk in
+  hours; the row holds minutes like every other duration here. Zero, blanks and
+  non-digits never reach the table (its CHECKs would refuse them); a zero in the target
+  box is ignored rather than written.
+- **Deleting a list takes its challenge** (the server cascades it) and ⌘Z brings both
+  back, via the list's own undo. A removed goal is undoable on its own.
+- **The progress line puts the unit once, at the end** — `3 of 24 books`,
+  `1 h 35 min of 100 h`. The first draft read "3 books of 24 books".
+- Read separately (`goalsMissing`): without 20260033 the card names the migration
+  and the rest of the Tracker still draws.
+`scripts/library-goals.mjs` — 49 assertions: the pure maths with the clock fixed
+(every state and its boundaries, the lump rule, the grace period, year edges, leap
+years, scope, units, sentences) and the card against a fake that enforces the
+CHECKs, the coalesced unique and the cascade.

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Card, Segmented } from '@/components/ui'
 import { Eyebrow } from './fields'
 import { useLibraryStore } from './libraryStore'
+import { GoalsCard } from './GoalsCard'
 import { niceDay, planSentence, planStatus, STATE_INK, STATE_LABEL } from './planStats'
 import { fmtMinutes, todayISO } from './readingStats'
 import { addDays, byDay, dayRange, finishedIn, periodTotals, streaks, total, weekBuckets, weekStart, type Minutes } from './trackerStats'
@@ -95,15 +96,19 @@ export function TrackerView({ onOpenBook }: { onOpenBook: (id: string) => void }
   }
   if (sessions.length === 0) {
     return (
-      <Card style={{ padding: '26px 24px', maxWidth: 520, marginTop: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 12, maxWidth: 900 }}>
+      <GoalsCard />
+      <Card style={{ padding: '26px 24px', maxWidth: 520 }}>
         <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 6 }}>Nothing logged yet</div>
         <p style={{ margin: 0, color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>Open a book and start the timer when you sit down with it, or log a session after. Your week, your streak and your pace gather here.</p>
       </Card>
+      </div>
     )
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 12, maxWidth: 900 }}>
+      <GoalsCard />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
         <Tile label="Streak" value={`${t.streak.current} day${t.streak.current === 1 ? '' : 's'}`}
           sub={t.streak.today ? `Done today · longest ${t.streak.longest}` : t.streak.current ? `Not yet today · longest ${t.streak.longest}` : `Longest ${t.streak.longest}`} />

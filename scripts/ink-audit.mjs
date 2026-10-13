@@ -303,6 +303,13 @@ const LIBRARY = {
     { id: 'pl1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', finish_by: '2026-10-20', minutes: 30, per: 'day', created_at: '2026-10-09T00:00:00Z', block_at: '20:00', block_event_id: 'ev-fixture', block_sig: 'stale' },
     { id: 'pl2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000001', finish_by: '2026-10-01', minutes: null, per: 'day', created_at: '2026-09-20T00:00:00Z' },
   ],
+  // Goals for the current year: a whole-library one that is behind (the accent-deep state ink), a
+  // challenge on a list, and a time goal — so the card's three shapes and its add form are measured.
+  library_goals: [
+    { id: 'gl1', user_id: SU, year: new Date().getFullYear(), kind: 'books', target: 24, list_id: null, created_at: '2026-01-02T00:00:00Z' },
+    { id: 'gl2', user_id: SU, year: new Date().getFullYear(), kind: 'books', target: 5, list_id: 'l2', created_at: '2026-01-03T00:00:00Z' },
+    { id: 'gl3', user_id: SU, year: new Date().getFullYear(), kind: 'minutes', target: 6000, list_id: null, created_at: '2026-01-04T00:00:00Z' },
+  ],
   library_list_books: [0, 1, 2].map(i => ({ list_id: 'l2', book_id: `00000000-0000-4000-8000-00000000000${i}`, user_id: SU, sort_order: 0, added_at: '2026-09-01T00:00:00Z' })),
 }
 

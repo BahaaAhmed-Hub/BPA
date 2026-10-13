@@ -3,9 +3,9 @@ import { pushUndo, notify, suppressUndo } from '@/lib/undo'
 import { markLocalWrite } from '@/lib/liveSync'
 import {
   loadLibrary, saveBooks, removeBook, saveList, removeList, setBookLists,
-  loadLibraryExtras, loadFollows, saveFollow, removeFollow, loadSessions, saveSession, removeSession, loadPlans, savePlan, removePlan, saveQuote, removeQuote, saveNote, removeNote, saveBookmark, removeBookmark,
+  loadLibraryExtras, loadFollows, saveFollow, removeFollow, loadSessions, saveSession, removeSession, loadPlans, savePlan, removePlan, loadGoals, saveGoal, removeGoal, saveQuote, removeQuote, saveNote, removeNote, saveBookmark, removeBookmark,
 } from './libraryDb'
-import type { Book, Bookmark, Follow, LibList, ListBook, ListKind, Note, Quote, ReadingPlan, ReadingSession } from './types'
+import type { Book, Bookmark, Follow, LibList, ListBook, ListKind, Note, Quote, ReadingGoal, ReadingPlan, ReadingSession } from './types'
 
 // ─── Library store ───────────────────────────────────────────────────────────
 // Authoritative-from-the-server, like Finance: `loadFromDB` replaces the lists
@@ -39,6 +39,9 @@ interface LibraryState {
   plans: ReadingPlan[]
   /** 20260031 has not run: plans cannot be made. */
   plansMissing: boolean
+  goals: ReadingGoal[]
+  /** 20260033 has not run: goals cannot be set. */
+  goalsMissing: boolean
   /** 20260029 has not run: following cannot be saved. */
   followsMissing: boolean
   /** 20260026 has not run: the shelf works, quotes and notes cannot be saved. */
@@ -82,6 +85,11 @@ interface LibraryState {
   setPlanBlock: (bookId: string, block: Pick<ReadingPlan, 'blockAt' | 'blockEventId' | 'blockSig'>) => void
   deletePlan: (bookId: string) => void
 
+  /** Refuses a second goal for the same year, kind and scope — the table's unique would anyway. */
+  addGoal: (g: Omit<ReadingGoal, 'id' | 'createdAt'>) => ReadingGoal | null
+  updateGoalTarget: (id: string, target: number) => void
+  deleteGoal: (id: string) => void
+
   addFollow: (f: Omit<Follow, 'id' | 'createdAt'>) => Follow
   /** Widens what counts as already seen — never narrows it. */
   markSeen: (id: string, keys: string[]) => void
@@ -102,7 +110,7 @@ function failed(what: string, reload: () => Promise<void>) {
 }
 
 export const useLibraryStore = create<LibraryState>()((set, get) => ({
-  books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, extrasMissing: false, loading: true, missing: false,
+  books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, goals: [], goalsMissing: false, extrasMissing: false, loading: true, missing: false,
 
   async loadFromDB() {
     const data = await loadLibrary()
@@ -128,9 +136,13 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const plans = await loadPlans()
     if (plans === 'missing') set({ plansMissing: true })
     else if (plans) set({ plans, plansMissing: false })
+
+    const goals = await loadGoals()
+    if (goals === 'missing') set({ goalsMissing: true })
+    else if (goals) set({ goals, goalsMissing: false })
   },
 
-  clearAll() { set({ books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, extrasMissing: false, loading: true, missing: false }) },
+  clearAll() { set({ books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, goals: [], goalsMissing: false, extrasMissing: false, loading: true, missing: false }) },
 
   addSession(input) {
     const s: ReadingSession = { ...input, id: crypto.randomUUID(), createdAt: nowISO() }
@@ -159,6 +171,32 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       else get().deletePlan(bookId)
     }))
     void savePlan(next).catch(failed('save the plan', get().loadFromDB))
+  },
+
+  addGoal(input) {
+    if (get().goals.some(g => g.year === input.year && g.kind === input.kind && (g.listId ?? '') === (input.listId ?? ''))) return null
+    const g: ReadingGoal = { ...input, id: crypto.randomUUID(), createdAt: nowISO() }
+    set(st => ({ goals: [...st.goals, g] }))
+    pushUndo('Set a goal', () => suppressUndo(() => get().deleteGoal(g.id)))
+    void saveGoal(g).catch(failed('save the goal', get().loadFromDB))
+    return g
+  },
+
+  updateGoalTarget(id, target) {
+    const old = get().goals.find(g => g.id === id)
+    if (!old || old.target === target) return
+    const next = { ...old, target }
+    set(st => ({ goals: st.goals.map(g => (g.id === id ? next : g)) }))
+    pushUndo('Change goal', () => suppressUndo(() => { set(st => ({ goals: st.goals.map(g => (g.id === id ? old : g)) })); void saveGoal(old).catch(failed('restore that', get().loadFromDB)) }))
+    void saveGoal(next).catch(failed('save the goal', get().loadFromDB))
+  },
+
+  deleteGoal(id) {
+    const old = get().goals.find(g => g.id === id)
+    if (!old) return
+    set(st => ({ goals: st.goals.filter(g => g.id !== id) }))
+    pushUndo('Remove goal', () => suppressUndo(() => { set(st => ({ goals: [...st.goals, old] })); void saveGoal(old).catch(failed('restore that', get().loadFromDB)) }))
+    void removeGoal(id).catch(failed('remove the goal', get().loadFromDB))
   },
 
   setPlanBlock(bookId, block) {
@@ -305,12 +343,15 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const list = lists.find(l => l.id === id)
     if (!list) return
     const mine = links.filter(l => l.listId === id)
-    set(s => ({ lists: s.lists.filter(l => l.id !== id), links: s.links.filter(l => l.listId !== id) }))
+    // A challenge on this list goes with it (the server cascades it), and comes back with it on undo.
+    const myGoals = get().goals.filter(g => g.listId === id)
+    set(s => ({ lists: s.lists.filter(l => l.id !== id), links: s.links.filter(l => l.listId !== id), goals: s.goals.filter(g => g.listId !== id) }))
     // The books stay: deleting a list takes the grouping, never the books in it.
     pushUndo(`Delete “${list.name}”`, () => {
-      set(s => ({ lists: [...s.lists, list], links: [...s.links, ...mine] }))
+      set(s => ({ lists: [...s.lists, list], links: [...s.links, ...mine], goals: [...s.goals, ...myGoals] }))
       void saveList(list).then(async () => {
         for (const l of mine) await setBookLists(l.bookId, [id], [])
+        for (const g of myGoals) await saveGoal(g)
       }).catch(failed('restore the list', get().loadFromDB))
     })
     void removeList(id).catch(failed('delete the list', get().loadFromDB))
