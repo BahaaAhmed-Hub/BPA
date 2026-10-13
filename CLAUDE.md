@@ -16,7 +16,8 @@ rather than 4,392.
 | habits, logs, the record, Apple Health | `.claude/rules/habits.md` |
 | edge functions, the bots, migrations, the deploy workflows | `.claude/rules/server.md` |
 | Settings, accounts, prefs sync, entitlements, automation | `.claude/rules/settings.md` |
-| the assistant panel | `.claude/rules/assistant.md` |
+| the assistant panel, its face, name and voice | `.claude/rules/assistant.md` |
+| the Library — shelf, quotes, reader, discover, tracker, releases | `.claude/rules/library.md` |
 | the rail, one ground, ink, overlays, companies, the lens, link previews | `.claude/rules/shell.md` |
 
 **If you are about to work in one of those areas and its file is not already in

@@ -44,6 +44,7 @@ const SHARED_KEYS = [
   'professor-notif-events',
   'professor-review-hours',
   'professor-ai-config',
+  'assistant-persona',           // what you call the assistant, and how it listens
   'mail-business-accounts',      // which mailboxes are work, not personal
   'professor-display-name',
   'professor-week-start',        // which day your week starts on
@@ -51,6 +52,7 @@ const SHARED_KEYS = [
   'professor-compact',
   'task-board-col-order',
   'task-board-type',
+  'library-settings',            // whether the Library is on for you
   'finance-budget-rules',
   'finance-money-reminders',
   'finance-credit-limits',

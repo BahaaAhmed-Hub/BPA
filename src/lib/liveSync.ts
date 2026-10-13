@@ -22,7 +22,7 @@
 
 import { supabase } from '@/lib/supabase'
 
-export type LiveDomain = 'habits' | 'tasks' | 'finance'
+export type LiveDomain = 'habits' | 'tasks' | 'finance' | 'library'
 
 /** Every table whose changes anyone here cares about, and who to tell. */
 const DOMAIN_OF_TABLE: Record<string, LiveDomain> = {
@@ -37,16 +37,28 @@ const DOMAIN_OF_TABLE: Record<string, LiveDomain> = {
   finance_cell_comments:    'finance',
   finance_goals:            'finance',
   finance_budgets:          'finance',
+  library_books:            'library',
+  library_lists:            'library',
+  library_list_books:       'library',
+  library_quotes:           'library',
+  library_notes:            'library',
+  library_bookmarks:        'library',
+  library_follows:          'library',
+  library_follow_news:      'library',
+  library_sessions:         'library',
+  library_plans:            'library',
+  library_goals:            'library',
+  library_quote_reviews:    'library',
 }
 
-const DOMAINS = ['habits', 'tasks', 'finance'] as const
+const DOMAINS = ['habits', 'tasks', 'finance', 'library'] as const
 
 type Refetch = () => void | Promise<void>
 
 const refetchers = new Map<LiveDomain, Refetch>()
 const pending  = new Map<LiveDomain, ReturnType<typeof setTimeout>>()
-const lastRun  : Record<LiveDomain, number> = { habits: 0, tasks: 0, finance: 0 }
-const lastWrite: Record<LiveDomain, number> = { habits: 0, tasks: 0, finance: 0 }
+const lastRun  : Record<LiveDomain, number> = { habits: 0, tasks: 0, finance: 0, library: 0 }
+const lastWrite: Record<LiveDomain, number> = { habits: 0, tasks: 0, finance: 0, library: 0 }
 
 /** A row change rarely arrives alone — one edit can touch a habit and three of
  *  its logs — so let the burst finish before reading. */
@@ -101,6 +113,8 @@ export interface LiveSyncHandlers {
   habits:  Refetch
   tasks:   Refetch
   finance: Refetch
+  /** Optional so a caller that predates the Library keeps compiling. */
+  library?: Refetch
 }
 
 /** Returns the teardown. Safe to call again after sign-out and back in. */
@@ -108,6 +122,7 @@ export function startLiveSync(userId: string, handlers: LiveSyncHandlers): () =>
   refetchers.set('habits',  handlers.habits)
   refetchers.set('tasks',   handlers.tasks)
   refetchers.set('finance', handlers.finance)
+  if (handlers.library) refetchers.set('library', handlers.library)
 
   // ── Push ───────────────────────────────────────────────────────────────────
   // One channel, one listener per table. The user_id filter is what keeps a

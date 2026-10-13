@@ -21,6 +21,8 @@
 //   on where the glyph falls, so that is left out rather than guessed at, and
 //   `aria-hidden` decoration is exempt under WCAG and skipped.
 //
+import { PDF as LIB_PDF } from './pdf-fixture.mjs'
+const LIB_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
 import { chromium } from 'playwright-core'
 
 const b64u = o => Buffer.from(JSON.stringify(o)).toString('base64url')
@@ -137,6 +139,12 @@ const AUDIT = () => {
     // Decoration is exempt by WCAG, and `aria-hidden` is how a component says
     // so — the same mark that keeps a screen reader from announcing it.
     if (el.closest('[aria-hidden="true"]')) continue
+    // The reader's text layer is transparent by design: pdf.js lays the page's
+    // words over the canvas so they can be selected and read aloud, and what is
+    // SEEN is the PDF's own picture of them underneath — the document's ink, not
+    // the app's. It cannot be aria-hidden (that would take the words from a
+    // screen reader), so it is named here instead.
+    if (el.closest('.lib-textlayer')) continue
 
     const fgRaw = px(svg ? (cs.stroke !== 'none' ? cs.stroke : cs.color) : cs.color)
     if (!fgRaw) continue
@@ -239,6 +247,80 @@ const ADMIN_T = {
   ],
 }
 
+// The Library: books across every status, with and without a cover, one of them
+// carrying a long title — a spine's label is drawn on a colour nobody chose
+// from the theme, so each of those colours has to be measured.
+const LIB_BOOK = (i, title, authors, status, extra = {}) => ({
+  id: `00000000-0000-4000-8000-00000000000${i}`, user_id: SU, title, subtitle: null, authors, isbn: null, publisher: null,
+  published_year: null, pages: 180 + i * 60, language: null, description: 'A book about ideas worth keeping.', cover_url: null,
+  source: 'manual', source_key: null, status, format: 'print', rating: i % 6, review: null, spine_color: null, file_path: null,
+  shelf_order: i, started_on: null, finished_on: null, added_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z', ...extra,
+})
+const LIBRARY = {
+  library_books: [
+    LIB_BOOK(0, 'Atomic Habits', ['James Clear'], 'reading', { watch_item_id: 'si1', to_buy: true, file_path: 'u1/00000000-0000-4000-8000-000000000000/book.pdf', pages: 3 }),
+    LIB_BOOK(1, 'Deep Work', ['Cal Newport'], 'finished', { started_on: '2026-09-02', finished_on: '2026-09-20', paid_amount: 249.5, paid_currency: 'EGP', bought_on: '2026-09-01', bought_at: 'Diwan' }),
+    LIB_BOOK(2, 'The Almanack of Naval Ravikant', ['Eric Jorgenson'], 'want'),
+    LIB_BOOK(3, 'Sapiens', ['Yuval Noah Harari'], 'paused'),
+    LIB_BOOK(4, 'Meditations', ['Marcus Aurelius'], 'finished', { finished_on: '2026-10-01' }),
+    LIB_BOOK(5, 'Man\u2019s Search for Meaning', ['Viktor Frankl'], 'want'),
+    LIB_BOOK(6, 'Antifragile', ['Nassim Taleb'], 'reading'),
+    LIB_BOOK(7, 'Dune', ['Frank Herbert'], 'abandoned'),
+  ],
+  library_lists: [
+    { id: 'l1', user_id: SU, name: 'Philosophy', kind: 'category', description: null, thumb_url: null, color: 'var(--sb-cat-5)', sort_order: 0, created_at: '2026-09-01T00:00:00Z' },
+    { id: 'l2', user_id: SU, name: 'Summer reading', kind: 'list', description: 'Easy ones for the beach.', thumb_url: null, color: null, sort_order: 1, created_at: '2026-09-01T00:00:00Z' },
+  ],
+  // Quotes, a note on one, a page note and a bookmark, so the panel's second half
+  // is measured with something in it rather than as an empty form.
+  library_quotes: [
+    { id: 'q1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'text', body: 'We are what we repeatedly do.', image_path: null, page: 12, line: 4, color: 'var(--sb-cat-3)', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
+    { id: 'q2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'text', body: 'Habits are the compound interest of self-improvement.', image_path: null, page: null, line: null, color: null, explanation: JSON.stringify({ meaning: 'Small gains repeat, and what repeats grows.', apply: ['Pick one tiny habit and do it daily', 'Track it for a week'] }), created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
+    { id: 'q3', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'image', body: null, image_path: 'u1/00000000-0000-4000-8000-000000000000/quotes/x.png', page: 40, line: null, color: null, created_at: '2026-09-03T00:00:00Z', updated_at: '2026-09-03T00:00:00Z' },
+  ],
+  // One quote already in review and overdue (so "1 due · 1 new"), one never asked.
+  library_quote_reviews: [
+    { quote_id: 'q2', user_id: SU, due_on: '2026-09-30', interval_days: 3, ease: 2.5, reps: 2, lapses: 0, first_on: '2026-09-20', last_on: '2026-09-27' },
+  ],
+  // A quote made from a photo with no words typed yet: its own row, its own ink.
+  library_notes: [
+    { id: 'n1', user_id: SU, scope: 'quote', book_id: null, quote_id: 'q1', list_id: null, page: null, line: null, body: 'Aristotle, really.', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
+    { id: 'n2', user_id: SU, scope: 'page', book_id: '00000000-0000-4000-8000-000000000000', quote_id: null, list_id: null, page: 30, line: null, body: 'Revisit this chapter.', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' },
+  ],
+  library_bookmarks: [
+    { id: 'b1', user_id: SU, kind: 'quote', book_id: '00000000-0000-4000-8000-000000000000', quote_id: 'q1', page: null, line: null, label: null, created_at: '2026-09-02T00:00:00Z' },
+  ],
+  library_follows: [
+    { id: 'f1', user_id: SU, kind: 'author', name: 'Cal Newport', query: 'author_key:OL123A', author_key: 'OL123A', seen_keys: ['/works/OL1W'], created_at: '2026-09-01T00:00:00Z', last_checked_at: '2026-10-12T05:40:00Z', last_check_ok: true },
+    { id: 'f2', user_id: SU, kind: 'series', name: 'The Expanse', query: 'title:"The Expanse"', author_key: null, seen_keys: ['/works/OL1W', '/works/OL2W'], created_at: '2026-09-02T00:00:00Z', last_checked_at: '2026-10-12T05:40:00Z', last_check_ok: false },
+  ],
+  // What the daily check found overnight: drawn on the Following cards beside the live results.
+  library_follow_news: [
+    { id: 'n1', user_id: SU, follow_id: 'f1', work_key: '/works/OL9W', title: 'Slow Productivity', authors: ['Cal Newport'], isbn: null, published_year: 2024, cover_url: null, found_at: '2026-10-12T05:41:00Z', read_at: null },
+  ],
+  // Sessions on the first book (3 pages long in the fixture's PDF, 300 in the row), so the
+  // progress bar, the totals and the recent list are on screen when the panel is.
+  library_sessions: [
+    { id: 's1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'read', on_date: '2026-10-10', minutes: 40, pages: 60, to_page: 60, created_at: '2026-10-10T20:00:00Z' },
+    { id: 's2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'listen', on_date: '2026-10-11', minutes: 25, pages: null, to_page: null, created_at: '2026-10-11T08:00:00Z' },
+  ],
+  // Plans: one live (a state in the accent-deep ink) and one past its date (the negative ink), so
+  // both state colours are measured on the panel and in the Tracker's list. The first also carries a (stale)
+  // calendar block, so the 4d line and its Update button are on screen.
+  library_plans: [
+    { id: 'pl1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', finish_by: '2026-10-20', minutes: 30, per: 'day', created_at: '2026-10-09T00:00:00Z', block_at: '20:00', block_event_id: 'ev-fixture', block_sig: 'stale' },
+    { id: 'pl2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000001', finish_by: '2026-10-01', minutes: null, per: 'day', created_at: '2026-09-20T00:00:00Z' },
+  ],
+  // Goals for the current year: a whole-library one that is behind (the accent-deep state ink), a
+  // challenge on a list, and a time goal — so the card's three shapes and its add form are measured.
+  library_goals: [
+    { id: 'gl1', user_id: SU, year: new Date().getFullYear(), kind: 'books', target: 24, list_id: null, created_at: '2026-01-02T00:00:00Z' },
+    { id: 'gl2', user_id: SU, year: new Date().getFullYear(), kind: 'books', target: 5, list_id: 'l2', created_at: '2026-01-03T00:00:00Z' },
+    { id: 'gl3', user_id: SU, year: new Date().getFullYear(), kind: 'minutes', target: 6000, list_id: null, created_at: '2026-01-04T00:00:00Z' },
+  ],
+  library_list_books: [0, 1, 2].map(i => ({ list_id: 'l2', book_id: `00000000-0000-4000-8000-00000000000${i}`, user_id: SU, sort_order: 0, added_at: '2026-09-01T00:00:00Z' })),
+}
+
 const ALL_THEMES = ['sunlit-bento', 'warm-minimal', 'glass-depth', 'evergreen']
 // **A theme id nobody has is not a theme to audit.** `INK_THEME` was taken on
 // trust and written into `professor-ui`, where an id the app does not know
@@ -280,9 +362,12 @@ for (const theme of THEMES) {
       if (action === 'slots') return r.fulfill({ json: BOOKING_SLOTS })
       return r.fulfill({ json: {} })
     }
+    // The reader downloads the book's file through Storage.
+    if (u.includes('/storage/v1/object/library/')) return u.endsWith('.png') ? r.fulfill({ status: 200, contentType: 'image/png', body: LIB_PNG }) : r.fulfill({ status: 200, contentType: 'application/pdf', body: LIB_PDF })
     const t = /\/rest\/v1\/([a-z_]+)/.exec(u)?.[1]
     const GET = r.request().method() === 'GET'
     if (t && SHOPPING[t] && GET) return r.fulfill({ json: SHOPPING[t] })
+    if (t && LIBRARY[t] && GET) return r.fulfill({ json: LIBRARY[t] })
     if (t === 'rpc' || u.includes('/rpc/has_module')) {
       const b = (() => { try { return r.request().postDataJSON() } catch { return {} } })()
       const m = A_MODULES.find(x => x.id === b.mod)
@@ -309,6 +394,31 @@ for (const theme of THEMES) {
     const id = u.match(/threads\/([^?]+)/)?.[1]
     if (id && T[id]) return r.fulfill({ json: { id, messages: [msg(id)] } })
     return r.fulfill({ json: { items: [], threads: [] } })
+  })
+  // Discover: the two catalogues (a later route wins over the blanket
+  // googleapis one above) — one book on the shelf already, one not, and an author.
+  // Claude, for the shelf-photo dialog only: it answers a spine-reading request with a row of each kind
+  // (clear, small print, unsure, already on the shelf, a new category) and everything else with nothing.
+  await page.route('https://api.anthropic.com/**', async r => {
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' }
+    if (r.request().method() === 'OPTIONS') return r.fulfill({ status: 204, headers: cors })
+    const spine = /read book spines/.test(r.request().postData() ?? '')
+    const text = spine ? JSON.stringify({ unreadable: 2, books: [
+      { title: 'Meditations', author: 'Marcus Aurelius', sureness: 'high', category: 'Philosophy' },
+      { title: 'The Odyssey', author: null, sureness: 'medium', category: 'Epic Poetry' },
+      { title: 'Blurry Title', author: null, sureness: 'low', category: null },
+      { title: 'Atomic Habits', author: 'James Clear', sureness: 'high', category: 'Self-help' },
+    ] }) : '{}'
+    return r.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-sonnet-4-6', stop_reason: 'end_turn', stop_sequence: null, content: [{ type: 'text', text }], usage: { input_tokens: 1, output_tokens: 1 } }) })
+  })
+  await page.route('https://www.googleapis.com/books/**', r => r.fulfill({ json: { items: [
+    { id: 'g9', volumeInfo: { title: 'Digital Minimalism', authors: ['Cal Newport'], publishedDate: '2019-02-05' } }] }, headers: { 'access-control-allow-origin': '*' } }))
+  await page.route('https://openlibrary.org/**', r => {
+    const cors = { 'access-control-allow-origin': '*' }
+    if (r.request().url().includes('/search/authors.json')) return r.fulfill({ headers: cors, json: { docs: [{ key: 'OL123A', name: 'Cal Newport', top_work: 'Deep Work', work_count: 12, birth_date: '1982' }] } })
+    return r.fulfill({ headers: cors, json: { docs: [
+      { key: '/works/OL1W', title: 'Atomic Habits', author_name: ['James Clear'], first_publish_year: 2018 },
+      { key: '/works/OL2W', title: 'Deep Work', author_name: ['Cal Newport'], first_publish_year: 2016 }] } })
   })
   await page.addInitScript(([s, cs, th]) => {
     localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
@@ -422,6 +532,156 @@ for (const theme of THEMES) {
     })
   })
 
+  // Library: spines on a shelf, covers face-out, lists, a book open beside the
+  // shelf, and the add dialog with a lookup typed into it.
+  const libraryTab = async () => {
+    await page.locator('[data-side-rail] button[aria-label="Library"]').click()
+    await page.waitForTimeout(1200)
+  }
+  await visit('Library · shelf', libraryTab)
+  await visit('Library · covers', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Covers' }).click()
+  })
+  await visit('Library · lists', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Lists' }).click()
+  })
+  // The quote board: a wall of cards, one poster, and the explain view with a
+  // stored explanation on q2 (the AI label and the "try this" list).
+  for (const [label, mode] of [['cards', 'Cards'], ['poster', 'Poster'], ['explain', 'Explain']]) {
+    await visit(`Library · quote board · ${label}`, async () => {
+      await libraryTab()
+      await page.getByRole('tab', { name: 'Quotes' }).click()
+      await page.waitForTimeout(500)
+      await page.getByRole('tab', { name: mode }).click()
+      await page.waitForTimeout(500)
+    })
+  }
+  // Reviewing quotes: the idle screen (counts, the start button), a card with its words hidden, and the same
+  // card revealed with the four answers and the intervals they promise.
+  await visit('Library · quote review · waiting', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Quotes' }).click()
+    await page.waitForTimeout(500)
+    await page.getByRole('tab', { name: /^Review/ }).click()
+    await page.waitForTimeout(600)
+  })
+  await visit('Library · quote review · a card', async () => {
+    await page.getByRole('button', { name: /^Start/ }).click()
+    await page.waitForTimeout(500)
+  })
+  await visit('Library · quote review · answered', async () => {
+    await page.keyboard.press('Space')
+    await page.waitForTimeout(500)
+  })
+  await page.getByRole('tab', { name: 'Cards' }).click()
+  await page.waitForTimeout(300)
+  // The export dialog over the board: format switch, options, the monospace
+  // preview on --sb-field, and the disabled Copy beside the live Download.
+  await visit('Library · export', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Quotes' }).click()
+    await page.waitForTimeout(400)
+    await page.getByRole('tab', { name: 'Cards' }).click()
+    await page.getByRole('button', { name: /Export/ }).click()
+    await page.waitForTimeout(400)
+    await page.getByRole('tab', { name: 'Obsidian' }).click()
+    await page.waitForTimeout(300)
+  })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+  await visit('Library · discover', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Discover' }).click()
+    await page.getByRole('tab', { name: 'Books' }).click()
+    await page.getByLabel('Search online').fill('newport')
+    await page.waitForTimeout(1500)
+  })
+  await visit('Library · discover authors', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Discover' }).click()
+    await page.getByRole('tab', { name: 'Authors' }).click()
+    await page.getByLabel('Search online').fill('newport')
+    await page.waitForTimeout(1500)
+  })
+  // The scanner dialog. Headless Chromium has no camera, so what is measured is
+  // the "camera unavailable" notice, a typed ISBN's result card, and the form.
+  await visit('Library · scan an ISBN', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Discover' }).click()
+    await page.getByRole('button', { name: /Scan ISBN/ }).click()
+    await page.getByLabel('Or type the ISBN').fill('9781612680194')
+    await page.getByRole('button', { name: 'Look up' }).click()
+    await page.waitForTimeout(1500)
+  })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+  // Following: a followed author with a new release (the stub's search returns two
+  // books, one of them unseen) and a series, so the badge, the cards and the form
+  // are all on screen.
+  await visit('Library · following', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Discover' }).click()
+    await page.getByRole('tab', { name: 'Following' }).click()
+    await page.getByRole('button', { name: /Follow a series/ }).click()
+    await page.waitForTimeout(1800)
+  })
+  await visit('Library · tracker', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Tracker' }).click()
+    await page.waitForTimeout(800)
+  })
+  await visit('Library · a book open', async () => {
+    await libraryTab()
+    await page.getByRole('tab', { name: 'Shelf' }).click()
+    await page.getByRole('button', { name: /Atomic Habits by/ }).click()
+    await page.waitForTimeout(900)
+  })
+  await visit('Library · add a book', async () => {
+    await libraryTab()
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: /Add book/ }).first().click()
+    await page.waitForTimeout(300)
+  })
+  // The reader: toolbar, a page drawn from a real PDF, and its bookmarks menu
+  // open over it with a page bookmark and a quote in it.
+  await page.keyboard.press('Escape')   // the add dialog above is still open
+  await page.waitForTimeout(300)
+  await visit('Library · the reader', async () => {
+    await libraryTab()
+    await page.getByRole('button', { name: /Atomic Habits by/ }).click()
+    await page.waitForTimeout(700)
+    await page.getByRole('button', { name: /Open and read/ }).click()
+    await page.waitForTimeout(2200)
+    await page.getByRole('button', { name: 'Bookmarks and quotes' }).click()
+    await page.waitForTimeout(300)
+  })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+  // A photographed page: the dialog with no AI key saved (the warning ink on the
+  // overlay), over the panel that carries a photo-only quote.
+  await visit('Library · quote from a photo', async () => {
+    await page.getByLabel('Choose a photo of a page').setInputFiles({ name: 'page.png', mimeType: 'image/png', buffer: LIB_PNG })
+    await page.waitForTimeout(1500)
+  })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+  // The dialog is a scrim over the whole page; the next screen's nav click
+  // would land on it.
+  await page.keyboard.press('Escape')
+
+  // A photographed shelf: every row kind — clear, small print, unsure, a book already on the shelf, an
+  // existing category and a new one — plus the toolbar and the "makes N new categories" line.
+  await visit('Library · books from a shelf photo', async () => {
+    await page.evaluate(() => localStorage.setItem('professor-ai-config', JSON.stringify({ provider: 'anthropic', anthropicKey: 'sk-ant-audit' })))
+    await page.getByLabel('Choose a photo of a shelf').setInputFiles({ name: 'shelf.png', mimeType: 'image/png', buffer: LIB_PNG })
+    await page.waitForTimeout(2500)
+  })
+  await page.keyboard.press('Escape')
+  await page.evaluate(() => localStorage.removeItem('professor-ai-config'))
+  await page.waitForTimeout(300)
+
   await visit('Dashboard', async () => { await page.locator('[data-side-rail] button[aria-label="Dashboard"]').click() })
   // Settings is behind the avatar menu, and carries every colour picker there
   // is — the company swatches, the habit colours, the category palette.
@@ -479,6 +739,18 @@ for (const theme of THEMES) {
     await page.locator('button', { hasText: /^Audit/ }).first().click({ timeout: 4000 }).catch(() => {})
     await page.waitForTimeout(700)
   })
+
+  // ── The assistant: its face, the first-use question, and named ─────────────
+  await visit('Assistant · first use (asks for a name)', async () => {
+    await page.evaluate(() => { localStorage.setItem('assistant-persona', JSON.stringify({ name: '', asked: false })); window.dispatchEvent(new Event('professor:personaChanged')) })
+    await page.getByRole('button', { name: /Talk to/ }).first().click({ timeout: 5000 })
+    await page.getByText('What would you like to call me?').waitFor({ timeout: 5000 })
+  })
+  await visit('Assistant · named', async () => {
+    await page.getByRole('button', { name: 'Hadi', exact: true }).click({ timeout: 5000 })
+    await page.waitForTimeout(600)
+  })
+  await page.getByRole('button', { name: 'Close the assistant' }).last().click({ timeout: 3000 }).catch(() => {})
 
   // ── The page a stranger sees ───────────────────────────────────────────────
   // Its own document: `?book=` renders above the sign-in gate, so this is a

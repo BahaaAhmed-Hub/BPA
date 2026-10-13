@@ -12,9 +12,14 @@ import {
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
   Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard, Sparkles,
   ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed, Check,
+  Library as LibraryIcon,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { pushSharedPrefs, lastPushError, type PushResult } from '@/lib/prefSync'
+import { useHeldText } from '@/lib/useHeldText'
+import { cleanName, loadPersona, NAME_MAX, savePersona, usePersona, type Persona } from '@/lib/assistantPersona'
+import { speechSupported } from '@/lib/speech'
+import { AssistantAvatar } from '@/modules/assistant/AssistantAvatar'
 import { notify } from '@/lib/undo'
 import { paidAtSupported } from '../finance/unpaid'
 import { todayISO } from '../finance/dates'
@@ -76,6 +81,8 @@ import {
   type MoneyReminder,
 } from '@/modules/finance/reminders'
 import { alpha } from '@/lib/alpha'
+import { loadLibrarySettings, saveLibrarySettings } from '@/modules/library/libraryPrefs'
+import { useLibraryStore } from '@/modules/library/libraryStore'
 import { SearchSelect } from '@/components/SearchSelect'
 import { listUserTokens, createUserToken, revokeUserToken, type UserToken } from '@/lib/userTokens'
 import { getTelegramLinks, revokeTelegramLink, type TelegramLink } from '@/lib/telegramLink'
@@ -109,7 +116,7 @@ interface CompanyRow {
   logoUrl?: string
 }
 
-const SECTION_IDS = ['profile','billing','schedule','companies','habits','tasks','accounts','professor','automation','notifications','appearance','blocking','behavioral','finance'] as const
+const SECTION_IDS = ['profile','billing','schedule','companies','habits','tasks','accounts','professor','automation','notifications','appearance','blocking','behavioral','finance','library'] as const
 type SectionId = typeof SECTION_IDS[number]
 
 interface SectionMeta { id: SectionId; title: string; icon: React.ElementType; description: string }
@@ -117,7 +124,7 @@ const SECTION_META: SectionMeta[] = [
   { id: 'profile',       title: 'Profile',              icon: User,        description: 'Name, timezone, work week & framework' },
   { id: 'billing',       title: 'Billing',              icon: CreditCard,  description: 'Plan, payment method and invoices' },
   { id: 'accounts',      title: 'Accounts & companies', icon: Building2,   description: 'Connected Google accounts, and the companies that use them' },
-  { id: 'professor',     title: 'AI',                   icon: Brain,       description: 'Model, autonomy and what the assistant may write for you' },
+  { id: 'professor',     title: 'AI',                   icon: AssistantNavIcon, description: 'Its name, model, autonomy and what the assistant may write for you' },
   { id: 'schedule',      title: 'Schedule rules',       icon: Clock,       description: 'Focus hours, buffers, meeting protections' },
   { id: 'blocking',      title: 'Integrations',         icon: Link,        description: 'Notion, Asana, Trello, Apple Notes and calendar sync' },
   { id: 'tasks',         title: 'Tasks',                icon: CheckSquare, description: 'Board statuses and task types' },
@@ -128,13 +135,14 @@ const SECTION_META: SectionMeta[] = [
   { id: 'behavioral',    title: 'Behavioral OS',        icon: Brain,       description: 'Rank scoring, operating mode and tone' },
   { id: 'companies',     title: 'Data & privacy',       icon: Shield,      description: 'Where your data sits and how long it stays' },
   { id: 'finance',       title: 'Finance',              icon: Hash,        description: 'Envelope style, figures, dates & alerts' },
+  { id: 'library',       title: 'Library',              icon: LibraryIcon, description: 'Turn the book shelf on or off, and what it holds' },
 ]
 
 // Grouped nav — matches 11A Sunlit Bento design
 const NAV_GROUPS: { label: string; ids: SectionId[] }[] = [
   { label: 'YOU',       ids: ['profile', 'billing'] },
   { label: 'WORKSPACE', ids: ['accounts', 'professor', 'schedule', 'blocking'] },
-  { label: 'WORK',      ids: ['tasks', 'habits'] },
+  { label: 'WORK',      ids: ['tasks', 'habits', 'library'] },
   { label: 'SYSTEM',    ids: ['automation', 'notifications', 'appearance', 'behavioral', 'companies', 'finance'] },
 ]
 
@@ -335,6 +343,11 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       }} />
     </button>
   )
+}
+
+/** The assistant's face where a lucide icon is expected (the rail and the card header). */
+function AssistantNavIcon({ size = 15 }: { size?: number; strokeWidth?: number; color?: string; style?: React.CSSProperties }) {
+  return <span style={{ display: 'inline-flex', flexShrink: 0 }}><AssistantAvatar size={size + 5} radius="50%" ring={false} /></span>
 }
 
 function FieldRow({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
@@ -2312,6 +2325,62 @@ export const GROQ_MODELS = [
   { value: 'mixtral-8x7b-32768',       label: 'Mixtral 8x7B'                  },
 ]
 
+/** What the person calls the assistant. Saved as they type (held briefly), and shared with every device and bot. */
+function AssistantNameRow() {
+  const persona = usePersona()
+  const { text, onChange, onBlur } = useHeldText(persona.name, v => savePersona({ ...loadPersona(), name: v }))
+  const bad = text.trim() !== '' && cleanName(text) === ''
+  return (
+    <FieldRow label="Its name" sub="Type it or say it to get its attention">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <AssistantAvatar size={44} radius="50%" name={persona.name} />
+          <input value={text} maxLength={NAME_MAX} aria-label="Your assistant’s name" placeholder="Give it a name"
+            onChange={e => onChange(e.target.value)} onBlur={onBlur}
+            onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+            style={{ ...inputStyle, width: 190 }} />
+        </div>
+        <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: bad ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)', lineHeight: 1.4 }}>
+          {bad ? 'A name can use letters, numbers, spaces, hyphens and apostrophes.' : 'Shown on the assistant, and used by the Telegram bot and Siri too.'}
+        </p>
+      </div>
+    </FieldRow>
+  )
+}
+
+const SPEECH_LANGS = ['en-US', 'en-GB', 'ar-EG', 'ar-SA', 'fr-FR', 'de-DE', 'es-ES', 'it-IT', 'pt-BR', 'tr-TR', 'ru-RU', 'hi-IN', 'ja-JP', 'zh-CN']
+const langName = (tag: string): string => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(tag) ?? tag } catch { return tag } }
+
+/** How it listens, and whether it talks back. Honest about what a browser can and cannot do. */
+function AssistantVoiceRows() {
+  const persona = usePersona()
+  const can = speechSupported()
+  const set = (patch: Partial<Persona>) => savePersona({ ...loadPersona(), ...patch })
+  return (
+    <>
+      <FieldRow label="Listen for its name" sub="While the app is open on screen">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, maxWidth: 380 }}>
+          <Toggle checked={persona.listen && can} onChange={(v: boolean) => { if (can) set({ listen: v }) }} />
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: can ? 'var(--sb-ink-3)' : 'var(--sb-accent-deep)', lineHeight: 1.45 }}>
+            {can
+              ? 'A web page cannot listen with the screen locked or the tab hidden, and on iPhone and iPad you may need to tap once each time. For hands-free with the app closed, use the Siri Shortcut below. Your browser or phone’s speech service hears the audio while this is on.'
+              : 'This browser cannot listen. On iPhone and iPad, Safari can; elsewhere, Chrome and Edge can.'}
+          </p>
+        </div>
+      </FieldRow>
+      <FieldRow label="Speak answers" sub="When you spoke the question">
+        <Toggle checked={persona.speak} onChange={(v: boolean) => set({ speak: v })} />
+      </FieldRow>
+      <FieldRow label="Speech language" sub="What it listens for and speaks in">
+        <select value={persona.lang} onChange={e => set({ lang: e.target.value })} aria-label="Speech language" style={{ ...pillSelectStyle }}>
+          <option value="">Same as this browser</option>
+          {SPEECH_LANGS.map(t => <option key={t} value={t}>{langName(t)}</option>)}
+        </select>
+      </FieldRow>
+    </>
+  )
+}
+
 function ProfessorSection() {
   const [ai, setAIRaw] = useState<AIConfig>(loadAIConfig)
   const [showKey, setShowKey] = useState(false)
@@ -2342,6 +2411,10 @@ function ProfessorSection() {
 
   return (
     <div>
+      {/* ── Name ── */}
+      <AssistantNameRow />
+      <AssistantVoiceRows />
+
       {/* ── Model ── */}
       <FieldRow label="Model" sub="Handles the brief, drafts and matrix suggestions">
         <Segmented
@@ -2935,6 +3008,54 @@ function BlockingRulesSection() {
 }
 
 // ─── Behavioral OS Section ────────────────────────────────────────────────────
+
+function LibrarySection() {
+  const [enabled, setEnabled] = useState(() => loadLibrarySettings().enabled)
+  const [dailyQuote, setDailyQuote] = useState(() => loadLibrarySettings().dailyQuote !== false)
+  const books = useLibraryStore(s => s.books.length)
+  const lists = useLibraryStore(s => s.lists.length)
+  const missing = useLibraryStore(s => s.missing)
+
+  function flip(v: boolean) {
+    setEnabled(v)
+    saveLibrarySettings({ ...loadLibrarySettings(), enabled: v })
+    // Pushed now rather than on the five-minute timer: switching it off on the
+    // laptop and opening the iPad a minute later should not still show it.
+    void pushSharedPrefs()
+  }
+
+  function flipQuote(v: boolean) {
+    setDailyQuote(v)
+    // Absent means on, so only "off" is written: the stored settings stay as small as the person's choices.
+    const next = { ...loadLibrarySettings() }
+    if (v) delete next.dailyQuote
+    else next.dailyQuote = false
+    saveLibrarySettings(next)
+    void pushSharedPrefs()
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <FieldRow label="Show the Library" sub="Your books, quotes, reading plans and listening — a shelf in the top menu. Off hides it and stops it loading; nothing is deleted.">
+        <Toggle checked={enabled} onChange={flip} />
+      </FieldRow>
+      {enabled && (
+        <FieldRow label="A quote on Today" sub="One of your saved quotes, a different one each day. Nothing is shown if you have none yet.">
+          <Toggle checked={dailyQuote} onChange={flipQuote} />
+        </FieldRow>
+      )}
+      {missing ? (
+        <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)' }}>
+          The Library's tables are not on this account yet — migration <code>20260025_library.sql</code> has not run.
+        </div>
+      ) : (
+        <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
+          {books} book{books === 1 ? '' : 's'} · {lists} list{lists === 1 ? '' : 's'} &amp; categories
+        </div>
+      )}
+    </div>
+  )
+}
 
 function BehavioralSection() {
   const { enabled, mode, setEnabled, setMode } = useBehavioralStore()
@@ -4289,6 +4410,8 @@ const DEFAULT_INTEGRATIONS: Integration[] = [
 ]
 
 function IntegrationsSection() {
+  // The Shortcut is named after the assistant, so "Hey Siri, <name>" is how you call it with the app shut.
+  const siriName = usePersona().name || 'Ask Professor'
   const [integrations, setIntegrations] = useState<Integration[]>(DEFAULT_INTEGRATIONS)
   const [tokens, setTokens] = useState<UserToken[]>([])
   const [creatingToken, setCreatingToken] = useState(false)
@@ -4578,7 +4701,7 @@ function IntegrationsSection() {
         <div style={{ marginBottom: 12 }}>
           <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Siri Shortcuts</p>
           <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
-            Say "Hey Siri, ask Professor" and talk to your AI naturally — add tasks, log habits, check your calendar, and more.
+            Say "Hey Siri, {siriName}" and talk to your AI naturally — add tasks, log habits, check your calendar, and more. This is the hands-free way, and the only one that works with the app closed or the screen locked.
           </p>
         </div>
 
@@ -4642,15 +4765,15 @@ function IntegrationsSection() {
                 background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-border)', borderStyle: 'dashed',
               }}>
                 <p style={{ margin: '0 0 8px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
-                  Set up "Ask Professor" shortcut
+                  Set up the "{siriName}" shortcut
                 </p>
                 <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {[
-                    <>On iPhone, open <b>Shortcuts</b> → <b>+</b> → name it <em>Ask Professor</em></>,
-                    <>Add action: <b>Ask for Input</b> — prompt "Ask Professor anything"</>,
+                    <>On iPhone or iPad, open <b>Shortcuts</b> → <b>+</b> → name it <em>{siriName}</em> — Siri answers to the shortcut’s name</>,
+                    <>Add action: <b>Ask for Input</b> — prompt "What do you want to ask {siriName}?"</>,
                     <>Add action: <b>Get Contents of URL</b> → paste the URL above (replace <code style={{ fontFamily: 'monospace', fontSize: 10 }}>{'{ShortcutInput}'}</code> with the "Provided Input" variable)</>,
                     <>Add action: <b>Speak Text</b> — set input to the result from the previous step</>,
-                    <>Optionally: set a <b>Siri Phrase</b> like "Ask Professor" in the shortcut details</>,
+                    <>Then say <b>"Hey Siri, {siriName}"</b>. Its name is the phrase; no extra setting is needed</>,
                   ].map((step, i) => (
                     <li key={i} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>{step}</li>
                   ))}
@@ -4985,7 +5108,7 @@ const SECTION_TO_PAGE: Record<SectionId, PageKey> = {
   accounts: 'connected', schedule: 'connected',
   professor: 'ai',
   blocking: 'integrations',
-  tasks: 'work',    habits: 'work',
+  tasks: 'work',    habits: 'work',  library: 'work',
   automation: 'system', notifications: 'system',
   appearance: 'display', behavioral: 'display', companies: 'display',
   finance: 'finance',
@@ -5378,6 +5501,9 @@ export function Settings() {
           </SectionCard>
           <SectionCard id="habits" active={activeSection === 'habits'} actions={<SaveBtn id="habits" />}>
             <HabitsSection />
+          </SectionCard>
+          <SectionCard id="library" active={activeSection === 'library'}>
+            <LibrarySection />
           </SectionCard>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Anthropic from '@anthropic-ai/sdk'
-import { Brain, X, Send, Loader2, ChevronDown, ChevronRight, ChevronLeft, Check, CircleAlert, Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
+import { Mic, X, Send, Loader2, ChevronDown, ChevronRight, ChevronLeft, Check, CircleAlert, Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHabitsStore } from '@/store/habitsStore'
@@ -14,7 +14,11 @@ import { loadAIConfig, maskKey, type AIConfig } from '@/modules/settings/Setting
 import { loadAccounts } from '@/lib/multiAccount'
 import { useBehavioralStore } from '@/store/behavioralStore'
 import { ICON } from '@/lib/type'
-import { useInkOnKeeping } from '@/lib/ink'
+import { addressedTo } from '@/lib/callName'
+import { recognitionLang, speak, speechSupported, startListening, stopSpeaking, unlockSpeech, type Listening, type ListenError } from '@/lib/speech'
+import { cleanName, labelOf, loadPersona as loadPersonaNow, NAME_MAX, savePersona, usePersona } from '@/lib/assistantPersona'
+import { AssistantAvatar } from './AssistantAvatar'
+import { ASK_EVENT, takePendingAsk } from '@/lib/assistantBridge'
 
 // ─── Groq types (OpenAI-compatible) ──────────────────────────────────────────
 
@@ -106,7 +110,8 @@ How to format answers (they are drawn as Markdown in a narrow side panel):
 - Show an image only when a tool gave you its URL, as ![what it is](url). Never invent a URL. If a diagram would genuinely help, describe the structure in a short indented list instead.
 - If a list is long, show the top items and say how many more there are.`
 
-function buildSystemPrompt(userName: string, today: string, samuraiMode = false): string {
+function buildSystemPrompt(userName: string, today: string, samuraiMode = false, assistantName = ''): string {
+  const called = assistantName ? ` The user calls you ${assistantName}; answer to that name and, if asked who you are, say it.` : ''
   if (samuraiMode) {
     return `You are operating in Samurai Mode as a calm tactical advisor to ${userName}.
 
@@ -134,10 +139,10 @@ You have tools to:
 
 Use tools immediately when action is required. Summarize results with minimal words. Ask one focused question when clarification is needed.
 ${FORMAT_RULES}
-In this mode use no emoji at all.`
+In this mode use no emoji at all.${called}`
   }
 
-  return `You are Professor AI — ${userName}'s personal executive assistant with live access to their Gmail, task board, Google Calendar, and Google Drive.
+  return `You are ${assistantName || 'Professor AI'} — ${userName}'s personal executive assistant with live access to their Gmail, task board, Google Calendar, and Google Drive.
 
 Today's date: ${today}
 
@@ -173,12 +178,43 @@ Guidelines:
 - If you need clarification before acting, ask one focused question.
 - Refer to the user by first name only. Keep tone warm but professional.
 ${FORMAT_RULES}
-- One emoji per section label at most, and only where it helps scanning (📅 schedule, ✅ tasks, ✉️ mail); none inside table cells except a status mark.`
+- One emoji per section label at most, and only where it helps scanning (📅 schedule, ✅ tasks, ✉️ mail); none inside table cells except a status mark.${called}`
 }
 
 // ─── Message bubble ───────────────────────────────────────────────────────────
 
+const NAME_IDEAS = ['Beau', 'Hadi', 'Ezra', 'Theo', 'Nour']
+
+/** Asked once, the first time the panel is opened with nothing to say yet. Skipping is an answer too. */
+function NamePrompt() {
+  const [text, setText] = useState('')
+  const name = cleanName(text)
+  const save = (n: string) => { const c = cleanName(n); if (c) savePersona({ ...loadPersonaNow(), name: c, asked: true }) }
+  return (
+    <div style={{ margin: '0 0 22px' }}>
+      <p style={{ margin: '0 0 4px', fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>What would you like to call me?</p>
+      <p style={{ margin: '0 0 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>I’ll answer to it — typed or spoken. You can change it any time in Settings → AI.</p>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+        <input value={text} maxLength={NAME_MAX} aria-label="A name for your assistant" placeholder="A name…" onChange={e => setText(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') save(text) }}
+          style={{ width: 170, padding: '8px 10px', borderRadius: 'var(--sb-r-nav)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-field)', color: 'var(--sb-ink-1)', fontSize: 16 }} />
+        <button type="button" disabled={!name} onClick={() => save(text)}
+          style={{ padding: '8px 14px', borderRadius: 'var(--sb-r-nav)', border: 'none', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', fontWeight: 600, cursor: name ? 'pointer' : 'default', opacity: name ? 1 : .5 }}>Save</button>
+      </div>
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap', marginTop: 10 }}>
+        {NAME_IDEAS.map(n => (
+          <button key={n} type="button" onClick={() => save(n)}
+            style={{ padding: '4px 11px', borderRadius: 'var(--sb-r-pill)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer' }}>{n}</button>
+        ))}
+        <button type="button" onClick={() => savePersona({ ...loadPersonaNow(), asked: true })}
+          style={{ padding: '4px 11px', border: 'none', background: 'none', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', textDecoration: 'underline' }}>Not now</button>
+      </div>
+    </div>
+  )
+}
+
 function MessageBubble({ msg }: { msg: DisplayMessage }) {
+  const assistantName = usePersona().name
   if (msg.role === 'tool') {
     const state = msg.state ?? 'done'
     const label = msg.tool ? toolLabel(msg.tool) : { running: msg.content, done: msg.content }
@@ -228,13 +264,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
   return (
     <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', margin: '6px 12px' }}>
       {!isUser && (
-        <div style={{
-          width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginRight: 8, marginTop: 2,
-          background: 'linear-gradient(135deg, var(--sb-info) 0%, color-mix(in srgb, var(--sb-info) 58%, var(--sb-ink-on-fill)) 100%)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Brain size={ICON.sm} color="var(--sb-ink-on-fill)" />
-        </div>
+        <span style={{ marginRight: 8, marginTop: 2, flexShrink: 0 }}><AssistantAvatar size={28} radius="50%" name={assistantName} /></span>
       )}
       <div style={{
         // The assistant's bubble carries tables, so it takes the width; yours
@@ -275,15 +305,10 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
 }
 
 function ThinkingDot() {
+  const assistantName = usePersona().name
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start', margin: '6px 12px', alignItems: 'center', gap: 8 }}>
-      <div style={{
-        width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-        background: 'linear-gradient(135deg, var(--sb-info) 0%, color-mix(in srgb, var(--sb-info) 58%, var(--sb-ink-on-fill)) 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Brain size={ICON.sm} color="var(--sb-ink-on-fill)" />
-      </div>
+      <AssistantAvatar size={28} radius="50%" name={assistantName} />
       <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip) var(--sb-r-card) var(--sb-r-card) var(--sb-r-card)' }}>
         {[0, 1, 2].map(i => (
           <div key={i} style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)', animation: `aiWave 1.3s ease-in-out ${i * 0.16}s infinite` }} />
@@ -312,6 +337,14 @@ interface AssistantPanelProps {
 }
 
 export function AssistantPanel({ open, onClose, minimised = false, onMinimise, onRestore }: AssistantPanelProps) {
+  const persona = usePersona()
+  // ── Voice: tap the mic, say it, hear it back ──────────────────────────────
+  const [listening, setListening] = useState(false)
+  const [interim, setInterim] = useState('')
+  const [voiceNote, setVoiceNote] = useState<string | null>(null)
+  const micRef = useRef<Listening | null>(null)
+  /** The question in flight was spoken, so its answer is read aloud (if the person has that on). */
+  const spokenRef = useRef(false)
   const user          = useAuthStore(s => s.user)
   const tasks         = useTaskStore(s => s.tasks)
   const addTask       = useTaskStore(s => s.addTask)
@@ -492,6 +525,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     if ((!trimmed && attachments.length === 0) || thinking) return
 
     const cfg = loadAIConfig()
+    stopSpeaking()
 
     // What this provider cannot take is said before the request, not after it
     // fails — and never by quietly dropping the thing you just attached.
@@ -500,11 +534,11 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
 
     // Validate key for selected provider
     if (cfg.provider === 'anthropic' && !cfg.anthropicKey) {
-      setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'error', content: 'No Anthropic API key set. Go to Settings → Professor AI.' }])
+      setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'error', content: 'No Anthropic API key set. Go to Settings → AI.' }])
       return
     }
     if (cfg.provider === 'groq' && !cfg.groqKey) {
-      setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'error', content: 'No Groq API key set. Go to Settings → Professor AI.' }])
+      setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'error', content: 'No Groq API key set. Go to Settings → AI.' }])
       return
     }
 
@@ -517,7 +551,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
 
     const today    = new Date().toISOString().slice(0, 10)
     const userName = user?.name?.split(' ')[0] ?? user?.email ?? 'there'
-    const system   = buildSystemPrompt(userName, today, samuraiActive)
+    const system   = buildSystemPrompt(userName, today, samuraiActive, persona.name)
 
     const sending = attachments
     setInput('')
@@ -554,6 +588,68 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anthropicMsgs, groqMsgs, thinking, user, tasks, attachments])
 
+  // A request parked by the search box (or the voice listener): taken when it arrives, and when the panel opens
+  // after it. If an answer is still being written the question waits its turn rather than being lost.
+  const sendRef = useRef(sendMessage)
+  sendRef.current = sendMessage
+  useEffect(() => {
+    if (!open || thinking) return
+    const take = () => {
+      const r = takePendingAsk()
+      if (!r) return
+      if (r.spoken) spokenRef.current = true
+      if (r.text) void sendRef.current(r.text)
+      else if (r.spoken && speechSupported()) talkRef.current()
+    }
+    take()
+    window.addEventListener(ASK_EVENT, take)
+    return () => window.removeEventListener(ASK_EVENT, take)
+  }, [open, thinking])
+
+  const voiceError = (e: ListenError): string => ({
+    denied: 'The microphone is switched off for this page. Allow it in your browser’s site settings to talk.',
+    blocked: 'The browser would not start listening without a tap. Tap the microphone.',
+    unsupported: 'This browser cannot listen. Typing works everywhere; on iPhone and iPad, Safari can.',
+    failed: 'Listening kept stopping, so I gave up. Tap the microphone to try again.',
+  }[e])
+
+  const talk = useCallback(() => {
+    unlockSpeech()
+    stopSpeaking()
+    micRef.current?.stop()
+    setVoiceNote(null)
+    micRef.current = startListening({
+      lang: recognitionLang(persona.lang), loop: false,
+      onInterim: setInterim,
+      onFinal: heard => {
+        // Said as "Beau, add milk", or just "add milk": either is a request. Only the name is "I'm here".
+        const a = persona.name ? addressedTo(heard, persona.name, { voice: true }) : null
+        const text = a?.addressed ? a.rest : heard
+        if (!text) { setVoiceNote(`I’m listening${persona.name ? `, ${persona.name} here` : ''} — go ahead.`); setTimeout(() => talkRef.current(), 250); return }
+        spokenRef.current = true
+        setInterim('')
+        void sendRef.current(text)
+      },
+      onState: on => { setListening(on); if (!on) setInterim('') },
+      onError: e => setVoiceNote(voiceError(e)),
+    })
+  }, [persona.lang, persona.name])
+  const talkRef = useRef(talk)
+  talkRef.current = talk
+
+  // Answer aloud when the question was spoken. Typed questions are answered in writing.
+  useEffect(() => {
+    if (thinking || !spokenRef.current) return
+    const last = displayMessages[displayMessages.length - 1]
+    if (last?.role !== 'assistant') return
+    spokenRef.current = false
+    if (persona.speak) speak(last.content, recognitionLang(persona.lang))
+  }, [thinking, displayMessages, persona.speak, persona.lang])
+
+  // Closing the panel ends the conversation's ears and voice.
+  useEffect(() => { if (!open) { micRef.current?.stop(); stopSpeaking() } }, [open])
+  useEffect(() => () => { micRef.current?.stop(); stopSpeaking() }, [])
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(input) }
   }
@@ -589,18 +685,9 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '14px 16px', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0,
         }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 'var(--sb-r-sm)',
-            background: 'linear-gradient(135deg, var(--sb-info) 0%, color-mix(in srgb, var(--sb-info) 58%, var(--sb-ink-on-fill)) 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            // The indigo glow belongs to the gradient under it — a colour, not
-            // a height, and the reason this is not one of the shadow tokens.
-            boxShadow: '0 0 12px color-mix(in srgb, var(--sb-info) 35.0%, transparent)',
-          }}>
-            <Brain size={ICON.md} color="var(--sb-ink-on-fill)" />
-          </div>
+          <AssistantAvatar size={38} radius="50%" name={persona.name} />
           <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Professor AI</p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{labelOf(persona)}</p>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-info)' }}>{providerLabel(cfg)}</p>
           </div>
           {!isEmpty && (
@@ -627,17 +714,14 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 0' }}>
           {isEmpty ? (
             <div style={{ padding: '32px 20px', textAlign: 'center' }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: 'var(--sb-r-card)', margin: '0 auto 16px',
-                background: 'linear-gradient(135deg, color-mix(in srgb, var(--sb-info) 20.0%, transparent) 0%, color-mix(in srgb, var(--sb-info) 10.0%, transparent) 100%)',
-                border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Brain size={26} color="var(--sb-info)" />
-              </div>
-              <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>How can I help?</p>
+              <div style={{ margin: '0 auto 14px', width: 88 }}><AssistantAvatar size={88} radius="50%" name={persona.name} /></div>
+              {!persona.name && !persona.asked ? <NamePrompt /> : (
+                <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+                  {persona.name ? `I’m ${persona.name}. How can I help?` : 'How can I help?'}
+                </p>
+              )}
               <p style={{ margin: '0 0 24px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
-                I can read your emails, check your calendar, manage tasks, and search Drive files.
+                {persona.name ? `You can call me ${persona.name} any time. ` : ''}I can read your emails, check your calendar, manage tasks, and search Drive files.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {SUGGESTIONS.map(s => (
@@ -704,6 +788,11 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
             </p>
           )}
 
+          {(listening || voiceNote) && (
+            <p role="status" style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', color: voiceNote && !listening ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)' }}>
+              {listening ? (interim ? `“${interim}”` : `Listening${persona.name ? ` — say what you need, ${persona.name} is here` : ''}…`) : voiceNote}
+            </p>
+          )}
           <div style={{
             display: 'flex', alignItems: 'flex-end', gap: 8,
             background: 'var(--sb-field)',
@@ -727,6 +816,21 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
                 background: 'none', color: 'var(--sb-ink-3)', cursor: thinking ? 'default' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               }}><Paperclip size={ICON.md} /></button>
+            {speechSupported() && (
+              <button
+                type="button"
+                onClick={() => { if (listening) micRef.current?.stop(); else talk() }}
+                disabled={thinking}
+                aria-pressed={listening}
+                aria-label={listening ? 'Stop listening' : `Talk to ${persona.name || 'your assistant'}`}
+                title={listening ? 'Stop listening' : `Talk to ${persona.name || 'your assistant'}`}
+                style={{
+                  width: 26, height: 26, padding: 0, borderRadius: 'var(--sb-r-pill)', border: 'none', flexShrink: 0,
+                  background: listening ? 'var(--sb-accent)' : 'none', color: listening ? 'var(--sb-accent-ink)' : 'var(--sb-ink-3)',
+                  cursor: thinking ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  animation: listening ? 'pulse 1.2s ease-in-out infinite' : undefined,
+                }}><Mic size={ICON.md} /></button>
+            )}
             <textarea
               ref={inputRef}
               value={input}
@@ -791,7 +895,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
             boxShadow: '-4px 0 14px color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
           }}>
           <ChevronLeft size={ICON.md} />
-          <Brain size={ICON.sm} color="var(--sb-info)" />
+          <AssistantAvatar size={24} radius="50%" name={persona.name} ring={false} />
           {/* An answer arriving while it is put aside has to be visible, or it
               looks as though nothing happened. */}
           {thinking && (
@@ -829,11 +933,12 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
 interface AssistantToggleProps { open: boolean; onClick: () => void }
 
 export function AssistantToggle({ open, onClick }: AssistantToggleProps) {
-  const ink2 = useInkOnKeeping()
+  const persona = usePersona()
   return (
     <button
       onClick={onClick}
-      title={open ? 'Close Assistant' : 'Open Professor AI'}
+      title={open ? 'Close the assistant' : `Talk to ${labelOf(persona).replace(/^Your assistant$/, 'your assistant')}`}
+      aria-label={open ? 'Close the assistant' : `Talk to ${labelOf(persona).replace(/^Your assistant$/, 'your assistant')}`}
       style={{
         position: 'fixed', bottom: 24, right: open ? 406 : 24,
         width: 48, height: 48, borderRadius: 'var(--sb-r-card)', border: 'none', cursor: 'pointer',
@@ -850,7 +955,7 @@ export function AssistantToggle({ open, onClick }: AssistantToggleProps) {
           `--sb-ink-1` the accent is 9:1 in Sunlit, and 2.3 in Evergreen. */}
       {open
         ? <X size={ICON.lg} color="var(--sb-ink-3)" />
-        : <Brain size={ICON.lg} color={ink2('var(--sb-accent)', 'var(--sb-ink-1)')} />}
+        : <AssistantAvatar size={44} name={persona.name} />}
     </button>
   )
 }

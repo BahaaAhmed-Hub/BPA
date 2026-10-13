@@ -31,7 +31,7 @@ export function anthropicKey(): string {
   return getAIConfig().anthropicKey
 }
 
-function anthropic(): Anthropic {
+export function anthropic(): Anthropic {
   const apiKey = anthropicKey()
   if (!apiKey) throw new ProfessorError(
     'No Anthropic API key. Go to Settings → AI and enter one, or switch to Groq.',

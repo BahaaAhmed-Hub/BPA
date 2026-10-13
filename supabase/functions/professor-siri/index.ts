@@ -17,6 +17,7 @@
  * Response: Content-Type: text/plain, always HTTP 200 (errors spoken by Siri too).
  */
 
+import { calledLine, personaName } from '../_shared/persona.ts'
 import { CalendarHub, eventLine } from '../_shared/googleCalendars.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -1126,8 +1127,17 @@ async function anthropicKeyFor(userId: string): Promise<{ key: string; from: str
   return { key: ANTHROPIC_KEY, from: 'secret' }
 }
 
+/** What the person has called the assistant (Settings → AI). Read from the same prefs row as the key; never throws. */
+async function assistantNameFor(userId: string): Promise<string> {
+  try {
+    const { data } = await sb.from('users').select('schedule_rules').eq('id', userId).maybeSingle()
+    return personaName((data as { schedule_rules?: { shared_prefs?: Record<string, string> } } | null)?.schedule_rules?.shared_prefs)
+  } catch { return '' }
+}
+
 async function runAgent(userId: string, userMessage: string): Promise<string> {
   const { key: anthropicKey, from: keyFrom } = await anthropicKeyFor(userId)
+  const assistantName = await assistantNameFor(userId)
   if (!anthropicKey) return fallbackProcess(userId, userMessage)
 
   const today     = todayISO()
@@ -1139,7 +1149,7 @@ async function runAgent(userId: string, userMessage: string): Promise<string> {
 - User writes English → reply in English
 - This overrides everything. Check the language of the user's message first.
 
-You are Professor AI. Keep responses SHORT — one to three sentences or a short list. Siri will speak your response aloud, so use NO markdown, NO asterisks, NO headers, NO backticks, NO bold, NO italic. Use plain language. Use • for list items.
+You are ${assistantName || 'Professor AI'}.${calledLine(assistantName)} Keep responses SHORT — one to three sentences or a short list. Siri will speak your response aloud, so use NO markdown, NO asterisks, NO headers, NO backticks, NO bold, NO italic. Use plain language. Use • for list items.
 
 Today is ${today}. Yesterday was ${yesterday}.
 

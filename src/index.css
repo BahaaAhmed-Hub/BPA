@@ -337,8 +337,15 @@ textarea:focus,
 /* A disabled control is still text somebody has to read. Half-opacity grey on
    cream is 2.2:1, and it was the only signal that the control was off; muted
    ink on the field colour is 4.7:1, and aria-disabled says it out loud. */
+/* `[data-variant]` is in the selector for specificity, not for meaning: the
+   variants below are `.sb-btn[data-variant=…]`, the same weight as `.sb-btn:
+   disabled`, and come later — so a disabled accent or primary button kept its
+   fill and read as live. Measured: Save-as-quote was amber with nothing
+   selected. */
 .sb-btn:disabled,
-.sb-btn[aria-disabled="true"] {
+.sb-btn[data-variant]:disabled,
+.sb-btn[aria-disabled="true"],
+.sb-btn[data-variant][aria-disabled="true"] {
   background: var(--sb-field);
   border-color: var(--sb-border);
   color: var(--sb-ink-3);
@@ -958,6 +965,66 @@ img { max-width: 100%; }
 .sb-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .sb-no-scrollbar::-webkit-scrollbar { width: 0; height: 0; }
 
+/* ─── Library — the shelf ─────────────────────────────────────────────────────
+   A book is picked off a shelf, so it has to behave like one: it leans out when
+   the pointer is on it, and once it is picked the slot it left is drawn empty.
+   Lift is gated on `hover: hover` because a finger has no hover — a tap would
+   otherwise leave the first book touched stuck halfway out. Every movement is
+   a transform, so `prefers-reduced-motion` can still it with one rule. */
+.lib-spine {
+  position: relative; flex: 0 0 auto; display: flex; align-items: stretch; justify-content: center;
+  padding: 0; border: none; border-radius: 3px 3px 2px 2px; cursor: pointer;
+  font-family: inherit; text-align: center;
+  box-shadow: inset -3px 0 0 rgba(0,0,0,.12), inset 2px 0 0 rgba(255,255,255,.18), 0 1px 2px rgba(48,40,20,.28);
+  transform-origin: 50% 100%;
+  transition: transform .22s cubic-bezier(.2,.8,.2,1), opacity .18s ease, box-shadow .22s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .lib-spine:hover { transform: translateY(-10px) rotate(-1.2deg); box-shadow: inset -3px 0 0 rgba(0,0,0,.12), inset 2px 0 0 rgba(255,255,255,.18), var(--sb-shadow-hover); }
+}
+.lib-spine:focus-visible { outline: 2px solid var(--sb-ink-1); outline-offset: 2px; transform: translateY(-10px); }
+.lib-spine:active { transform: translateY(-4px) scale(.985); }
+/* The slot a picked book left. */
+.lib-spine[data-picked] {
+  opacity: .22; transform: none; box-shadow: none; pointer-events: none;
+  outline: 1.5px dashed var(--sb-border); outline-offset: -1.5px;
+}
+.lib-board {
+  height: 12px; margin-top: -1px; border-radius: 0 0 var(--sb-r-chip) var(--sb-r-chip);
+  background: linear-gradient(to bottom, var(--sb-border), var(--sb-field));
+  box-shadow: 0 6px 10px -8px rgba(48,40,20,.45);
+}
+.lib-cover {
+  position: relative; display: flex; flex-direction: column; padding: 0; border: none; background: none;
+  cursor: pointer; font-family: inherit; text-align: left; color: inherit;
+  transition: transform .22s cubic-bezier(.2,.8,.2,1), opacity .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) { .lib-cover:hover { transform: translateY(-4px); } }
+.lib-cover:focus-visible { outline: 2px solid var(--sb-ink-1); outline-offset: 3px; border-radius: var(--sb-r-chip); }
+.lib-cover[data-picked] { opacity: .3; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .lib-spine, .lib-cover { transition: none; }
+  .lib-spine:hover, .lib-spine:focus-visible, .lib-spine:active, .lib-cover:hover { transform: none; }
+}
+
+/* ─── Library — the reader's text layer ───────────────────────────────────────
+   pdf.js draws a page to a canvas and lays its words over it as transparent
+   spans, which is what makes the text selectable. Its own stylesheet is global
+   (`.page`, `.pdfViewer`, `:root` variables) and would reach the rest of the
+   app, so the few rules the text layer actually needs are written here, under
+   one class. `--total-scale-factor` is set by the reader: every span's
+   font-size is a calc() of it, so without it the words are the wrong size and
+   the selection rectangles miss the printed words. */
+.lib-textlayer {
+  position: absolute; inset: 0; overflow: clip; line-height: 1; text-align: initial;
+  text-size-adjust: none; -webkit-text-size-adjust: none; transform-origin: 0 0; z-index: 1;
+  forced-color-adjust: none; -webkit-user-select: text; user-select: text;
+}
+.lib-textlayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+.lib-textlayer ::selection { background: rgba(var(--sb-accent-rgb), .5); }
+.lib-textlayer .markedContent { display: contents; }
 /* ── Out of focus ───────────────────────────────────────────────────────────
    One rule owns what "not this company" looks like, everywhere. Dimmed and
    desaturated rather than removed: a filtered screen that hid the rest would

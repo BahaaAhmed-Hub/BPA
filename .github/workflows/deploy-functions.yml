@@ -92,6 +92,18 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      # Daily new-release check for followed authors and series. `--no-verify-jwt`
+      # for the same reason as mail-smart-run: the caller is pg_cron, which has no
+      # session. The function does its own auth — CRON_SECRET or a signed-in
+      # user, and 401 for anything else.
+      - name: Deploy library-follow-check
+        run: |
+          supabase functions deploy library-follow-check \
+            --no-verify-jwt \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
       # ── The bots ────────────────────────────────────────────────────────────
       # These two were never in any workflow, so every change to them since they
       # were written has been deployed by hand or not at all — which is why a

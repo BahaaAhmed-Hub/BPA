@@ -3,6 +3,12 @@ paths:
   - "src/modules/assistant/**"
   - "src/lib/assistantTools.ts"
   - "src/lib/chatAttachments.ts"
+  - "src/lib/assistantPersona.ts"
+  - "src/lib/assistantName.ts"
+  - "src/lib/assistantBridge.ts"
+  - "src/lib/callName.ts"
+  - "src/lib/speech.ts"
+  - "supabase/functions/_shared/persona.ts"
 ---
 
 # The assistant panel
@@ -86,3 +92,60 @@ literal `###`, `**bold**` and `| Time | Event |` rows.
 Measured in Chromium at the panel's width: no raw `###`/`|---` left, one real
 table that scrolls inside its box with no page overflow, an inert `<script>`, a
 broken image falling back to a link.
+
+## The assistant has a face, a name, and an ear
+`AssistantAvatar.tsx`, `lib/assistantPersona.ts` + `assistantName.ts`, `lib/callName.ts`, `lib/speech.ts`,
+`lib/assistantBridge.ts`, `NameListener.tsx`, `_shared/persona.ts`. The brain icon is gone from the
+floating button, the panel header, every reply, the tab it leaves when put aside and the Settings → AI
+rail entry; one component draws all of them, from `public/assistant-avatar.png`.
+- **The picture is a person, with a drawn stand-in.** Until the file exists (or if it fails to load) an
+  SVG portrait is shown, never an empty box. **`public/assistant-avatar.png` is the chosen portrait**
+  (384px, cropped to the head and shoulders so the face reads in the 28px header circle); the drawing
+  only shows if that file fails to load.
+- **The name is the person's** (Settings → AI, or asked once on first use — "What would you like to call
+  me?", with ideas and *Not now*, never asked twice). It is a shared pref, `assistant-persona`
+  (`{name, listen, speak, lang, asked}`), **not** a field of `professor-ai-config`: that holds credentials,
+  and a rename must never be able to trip the key-sync rules. Until named, it is "Your assistant".
+- **A name goes into prompts and a matcher, so it is cleaned on the way in** (`cleanName`): letters of any
+  script, digits, spaces, hyphen, apostrophe, full stop; 24 characters. The bots' copy
+  (`_shared/persona.ts`) is run against it over 17 awkward inputs (`assistant-name-agrees.mjs`), including a
+  name with a newline and an instruction in it.
+- **Being called** (`callName.ts`, pure, 19 assertions in `scripts/call-name.mjs`). Typed in the search
+  box an address must be *marked* — a comma/colon after it, a greeting before it, or the name alone — so
+  "Theo meeting notes" stays a search for notes; a trailing ", Beau" needs its comma; a name mid-sentence is
+  never an address. Spoken there is no punctuation, so the name at the start is enough, and a speech engine's
+  slip is allowed **only behind a greeting** and never for a common word ("then" is one edit from "Theo").
+  Folds case, accents and Arabic letter variants (أ إ آ → ا, ى → ي, ة → ه).
+- **The bridge** (`askAssistant` / `takePendingAsk`) parks the request so the search box and the listener
+  can reach a panel that is closed or not yet mounted; App opens it, the panel takes it when it is free.
+- **iPhone and iPad, honestly.** A web page cannot listen with the screen locked or the tab hidden, so
+  there are three layers and Settings says so: **type or say "Name, …"** anywhere; **tap the mic** (one
+  phrase; the answer is spoken back if the question was spoken); **"Listen for its name while the app is
+  open"** (opt-in, foreground only, with a visible pill the whole time); and the **Siri Shortcut named after
+  the assistant**, which is the only hands-free route with the app closed ("Hey Siri, Beau").
+  `speech.ts` is written around Safari: a session ends by itself, so continuous listening is a restart loop
+  with a back-off (400 ms doubling to 5 s, six failures and it stops and says so); it stops the moment the
+  page is hidden and comes back when visible; **it never restarts after a refusal** (`not-allowed` is
+  named, `service-not-allowed` — Safari declining to start without a tap — turns the pill into "Tap to
+  listen for Beau"); speaking is unlocked from a tap (`unlockSpeech`); **it ignores speech heard while the
+  assistant is speaking and for 700 ms after** so it does not answer itself; the panel's mic and the
+  listener share one microphone, the listener waiting and then taking it back.
+- **A session we ended must not report later.** Aborting a recogniser fires its `end` *after* a newer
+  session has begun, which switched the "listening" indicator off while it was on (StrictMode's double effect
+  found it). `stop()` detaches the handlers first.
+- **Chromium has a native `SpeechRecognition`**, and the code prefers the unprefixed name, so a test that
+  fakes only `webkitSpeechRecognition` is not testing the fake — the first run "started" a real session in
+  headless Chromium and the fake saw nothing.
+- **Where the audio goes is the platform's**, and the Settings text says so before the switch is on (Apple's
+  speech service in Safari, Google's in Chrome). The **speech language** is a choice with "same as this
+  browser" as the default; a junk tag falls back to English.
+- **Telegram and Siri use the same name** (`assistantNameFor` reads the prefs row of the user already
+  resolved, once per message, never throws; absent → "Professor AI" as before), and the Settings → Siri block
+  names the Shortcut after it. The bots' own prompts say who they are.
+`scripts/assistant-voice.mjs` — 30 assertions with a fake `SpeechRecognition`, a fake `speechSynthesis` and
+Claude faked as a **stream**: the search box (offers it first, sends only what follows the name, unmarked is a
+search), the mic (interim words, the name stripped, the answer spoken once with the markup removed, bare name
+→ listens again, blocked mic named), listening (a mention does nothing, "hey Beau" asks it, its own voice
+ignored, hidden → stops / visible → returns, the mic and the listener sharing), iPhone's tap, a refusal not
+retried, no recogniser → no button and no pill, first use. The Today screen asks Claude things of its own, so
+the harness counts only requests carrying `tools`. The ink audit has the first-use and named panels.
