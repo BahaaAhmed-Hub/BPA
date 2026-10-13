@@ -4570,8 +4570,9 @@ real Open Library from this machine.
 floating button, the panel header, every reply, the tab it leaves when put aside and the Settings → AI
 rail entry; one component draws all of them, from `public/assistant-avatar.png`.
 - **The picture is a person, with a drawn stand-in.** Until the file exists (or if it fails to load) an
-  SVG portrait is shown, never an empty box. **The chosen image still has to be dropped into
-  `public/assistant-avatar.png`**: the session's network policy blocked the host it was generated on.
+  SVG portrait is shown, never an empty box. **`public/assistant-avatar.png` is the chosen portrait**
+  (384px, cropped to the head and shoulders so the face reads in the 28px header circle); the drawing
+  only shows if that file fails to load.
 - **The name is the person's** (Settings → AI, or asked once on first use — "What would you like to call
   me?", with ideas and *Not now*, never asked twice). It is a shared pref, `assistant-persona`
   (`{name, listen, speak, lang, asked}`), **not** a field of `professor-ai-config`: that holds credentials,
