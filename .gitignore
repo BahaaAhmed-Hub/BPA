@@ -24,4 +24,12 @@ dist-ssr
 *.sw?
 .env.local
 supabase/.temp/
-.claude/
+# Claude Code's own directory is local — settings.local.json, caches, anything
+# a session happens to leave here. But `.claude/rules/` is **project memory**:
+# it is most of what used to be CLAUDE.md, split out so it loads per area
+# instead of on every turn. Ignored, it existed only in one container — every
+# other clone and every cloud session would have read the 219-line root and
+# none of the other 123 sections, with nothing anywhere saying so.
+# `scripts/memory-is-all-there.mjs` run against a fresh clone is what caught it.
+.claude/*
+!.claude/rules/

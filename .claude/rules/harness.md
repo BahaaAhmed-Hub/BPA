@@ -1,0 +1,90 @@
+---
+paths:
+  - "scripts/**"
+---
+
+# The harnesses — how a claim is measured here
+
+Loaded when a file in `scripts/` is read or edited. The root `CLAUDE.md` holds
+the discipline; this holds the machinery.
+
+## The shape of one
+`playwright-core` (not `playwright` — it is what is installed), Chromium at
+`/opt/pw-browsers/chromium` with `--no-sandbox`, against a **dev server on
+5199**: `npx vite --port 5199 --strictPort`. Never `pkill -f vite` — it matches
+the shell running the command and kills it (exit 144).
+
+- `scripts/session.mjs` exports the stub `user` and `session`.
+- `ctx.route('**://placeholder.supabase.co/**', …)` is the server. A stub reply
+  needs `Access-Control-Allow-Origin` and an OPTIONS branch, or
+  `functions.invoke` cannot read it.
+- `**://www.googleapis.com/**` is Google; intercepting it is how a write to a
+  calendar is proven to have gone to the right one, by bearer token.
+- `addInitScript` runs **in the page**. A Node variable is not in scope there —
+  a `MODE` branch inside one throws, seeds nothing, and the case passes by
+  testing the same path twice. Pass what it needs as an argument.
+- `localStorage` belongs to an origin, and `about:blank` has none. A `go()`
+  helper that writes `professor-ui` before its first navigation throws into its
+  own try/catch and the app comes up on the default module — which is how a
+  mode once passed every assertion against an empty string.
+- The app hydrates and **replaces** each store's list, so seed the shape the
+  **server** sends, not the store's persisted copy, or the screen empties a few
+  seconds after it settles.
+
+## Waiting: `scripts/settled.mjs`, not a number
+Every harness used to sleep 5–7s after boot — **354 seconds of fixed
+`waitForTimeout` across the directory**, about eleven of a twelve-second mode.
+A number is too long on a fast boot and, on a slow one, is a vacuous pass: the
+assertions run against a page that has not arrived.
+
+`settled(page, traffic, cap, { shell, want })` waits for the condition instead —
+the shell, then what the suite is about, then the boot's own reads having
+**stopped arriving**. `watchTraffic(page)` must be installed *before* the first
+navigation, or the counter misses the boot. `cap` is the old sleep kept as a
+ceiling, so no suite can become slower than it was; `SETTLE_DEBUG=1` prints
+what it waited for and whether it hit the cap.
+
+- **A request that never finishes must not define "settled".** The first
+  version sat on the full cap every time, and it was
+  `oauth2.googleapis.com/tokeninfo` — `googleScopes` asking Google what a token
+  may do, a host these harnesses do not stub, hanging against the egress proxy.
+  A Realtime websocket and any long-poll are the same shape, so a request older
+  than `STALE_MS` stops counting.
+- `shell` defaults to `[data-side-rail]`, which is on every signed-in screen. A
+  harness measuring the sign-in gate or the **public booking page** must pass
+  its own, or `shell: null` — that page deliberately makes no request at all,
+  and `seen === 0` answers at once, which is the right answer.
+- Four scripts still carry their own sleep: `accounts-come-back`,
+  `planner-leaves-no-events`, `planner-my-calendars` (each builds its page
+  differently) and `mail-action-sticks` (its wait is not after a navigation).
+  Converting them is the same two lines when somebody wants it.
+
+## The ink audit
+`node scripts/ink-audit.mjs 5199` — 22 screens x 4 themes. `INK_THEME=<id>` for
+one; the ids are `sunlit-bento`, `warm-minimal`, `evergreen`, `glass-depth`, and
+a wrong id used to run Sunlit under another theme's name and report it clean, so
+the id is checked and the **ground is measured on the page**.
+- It navigates by `[data-side-rail] button[aria-label="<module>"]`, which
+  depends on neither an icon nor the rail's position. It reported *0 failing
+  pairs over 22 screens* once while **15 never opened**; every visit now records
+  what it looked at and a screen that came up empty is named under the count.
+
+## Lifting a Deno file
+There is no Deno here, so an edge function's own code is **lifted out of the
+real file by regex and de-typed with `tsc`** rather than restated — a second
+copy is the thing being tested. `declare const Deno: {…}` satisfies the type
+checker and emits nothing, so the runtime stub is still what runs. **The first
+assertion is that the file parses at all**: a backtick inside a template
+literal once closed the system prompt and turned the rest of a bot into
+nonsense, which `npm run build` cannot see because no edge function is in the
+Vite build.
+
+## Is the memory still all there?
+`node scripts/memory-is-all-there.mjs` — every `##` section of the old
+4,392-line `CLAUDE.md` must appear **verbatim, exactly once**, across the root
+file and `.claude/rules/`. It reads the old file out of git history at
+`f2c2ef6`, the last commit that held all 132 of them. **A sha, not a tag**: a
+tag reads better and this session's git proxy refuses to push one, so from a
+fresh clone the check would fail for a reason that has nothing to do with the
+memory. Run it after moving anything between the root and a rule file, and
+pass another ref to compare against a different point in history.
