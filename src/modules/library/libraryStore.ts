@@ -3,11 +3,11 @@ import { pushUndo, notify, suppressUndo } from '@/lib/undo'
 import { markLocalWrite } from '@/lib/liveSync'
 import {
   loadLibrary, saveBooks, removeBook, saveList, removeList, setBookLists,
-  loadLibraryExtras, loadFollows, saveFollow, removeFollow, loadSessions, saveSession, removeSession, loadPlans, savePlan, removePlan, loadGoals, saveGoal, removeGoal, loadReviews, saveReview, removeReview, saveQuote, removeQuote, saveNote, removeNote, saveBookmark, removeBookmark,
+  loadLibraryExtras, loadFollows, saveFollow, removeFollow, loadNews, markNewsRead, removeNews, loadSessions, saveSession, removeSession, loadPlans, savePlan, removePlan, loadGoals, saveGoal, removeGoal, loadReviews, saveReview, removeReview, saveQuote, removeQuote, saveNote, removeNote, saveBookmark, removeBookmark,
 } from './libraryDb'
 import { schedule } from './srs'
 import { todayISO } from './readingStats'
-import type { Book, Bookmark, Follow, LibList, ListBook, ListKind, Note, Quote, Grade, QuoteReview, ReadingGoal, ReadingPlan, ReadingSession } from './types'
+import type { Book, Bookmark, Follow, FollowNews, LibList, ListBook, ListKind, Note, Quote, Grade, QuoteReview, ReadingGoal, ReadingPlan, ReadingSession } from './types'
 
 // ─── Library store ───────────────────────────────────────────────────────────
 // Authoritative-from-the-server, like Finance: `loadFromDB` replaces the lists
@@ -35,6 +35,10 @@ interface LibraryState {
   notes: Note[]
   bookmarks: Bookmark[]
   follows: Follow[]
+  /** Releases the scheduled check found while the app was closed. */
+  news: FollowNews[]
+  /** 20260037 has not run: nothing is found in the background; the live check still works. */
+  newsMissing: boolean
   sessions: ReadingSession[]
   /** 20260030 has not run: sessions cannot be logged. */
   sessionsMissing: boolean
@@ -106,6 +110,8 @@ interface LibraryState {
   /** Widens what counts as already seen — never narrows it. */
   markSeen: (id: string, keys: string[]) => void
   unfollow: (id: string) => void
+  /** Marks announcements as looked at, so the bell lets go of them. */
+  readNews: (ids: string[]) => void
 
   /** A bookmark on a book (a favourite), a quote, or a page of its file. */
   isBookmarked: (target: BookmarkTarget) => boolean
@@ -122,7 +128,7 @@ function failed(what: string, reload: () => Promise<void>) {
 }
 
 export const useLibraryStore = create<LibraryState>()((set, get) => ({
-  books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, goals: [], goalsMissing: false, reviews: [], reviewsMissing: false, extrasMissing: false, loading: true, missing: false,
+  books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], news: [], newsMissing: false, followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, goals: [], goalsMissing: false, reviews: [], reviewsMissing: false, extrasMissing: false, loading: true, missing: false,
 
   async loadFromDB() {
     const data = await loadLibrary()
@@ -141,6 +147,10 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     if (follows === 'missing') set({ followsMissing: true })
     else if (follows) set({ follows, followsMissing: false })
 
+    const news = await loadNews()
+    if (news === 'missing') set({ newsMissing: true })
+    else if (news) set({ news, newsMissing: false })
+
     const sessions = await loadSessions()
     if (sessions === 'missing') set({ sessionsMissing: true })
     else if (sessions) set({ sessions, sessionsMissing: false })
@@ -158,7 +168,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     else if (reviews) set({ reviews, reviewsMissing: false })
   },
 
-  clearAll() { set({ books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, goals: [], goalsMissing: false, reviews: [], reviewsMissing: false, extrasMissing: false, loading: true, missing: false }) },
+  clearAll() { set({ books: [], lists: [], links: [], quotes: [], notes: [], bookmarks: [], follows: [], news: [], newsMissing: false, followsMissing: false, sessions: [], sessionsMissing: false, plans: [], plansMissing: false, goals: [], goalsMissing: false, reviews: [], reviewsMissing: false, extrasMissing: false, loading: true, missing: false }) },
 
   addSession(input) {
     const s: ReadingSession = { ...input, id: crypto.randomUUID(), createdAt: nowISO() }
@@ -270,14 +280,25 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     // A set that only grows: "seen" is never un-said, and the cap keeps a
     // prolific author's row from growing without end (oldest dropped first).
     const next: Follow = { ...before, seenKeys: [...new Set([...before.seenKeys, ...keys])].slice(-400) }
-    set(s => ({ follows: s.follows.map(x => (x.id === id ? next : x)) }))
+    // What is now seen is no longer news: the announcements go with it, here and on the server.
+    const gone = get().news.filter(n => n.followId === id && keys.includes(n.workKey)).map(n => n.workKey)
+    set(s => ({ follows: s.follows.map(x => (x.id === id ? next : x)), news: s.news.filter(n => !(n.followId === id && keys.includes(n.workKey))) }))
     void saveFollow(next).catch(failed('save that', get().loadFromDB))
+    if (gone.length) void removeNews(id, gone).catch(failed('clear that', get().loadFromDB))
+  },
+
+  readNews(ids) {
+    const at = nowISO()
+    const mine = get().news.filter(n => ids.includes(n.id) && !n.readAt).map(n => n.id)
+    if (!mine.length) return
+    set(s => ({ news: s.news.map(n => (mine.includes(n.id) ? { ...n, readAt: at } : n)) }))
+    void markNewsRead(mine, at).catch(failed('save that', get().loadFromDB))
   },
 
   unfollow(id) {
     const f = get().follows.find(x => x.id === id)
     if (!f) return
-    set(s => ({ follows: s.follows.filter(x => x.id !== id) }))
+    set(s => ({ follows: s.follows.filter(x => x.id !== id), news: s.news.filter(n => n.followId !== id) }))
     pushUndo(`Unfollow ${f.name}`, () => suppressUndo(() => { set(s => ({ follows: [...s.follows, f] })); void saveFollow(f).catch(failed('follow that again', get().loadFromDB)) }))
     void removeFollow(id).catch(failed('unfollow', get().loadFromDB))
   },

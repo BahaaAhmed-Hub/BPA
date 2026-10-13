@@ -8,7 +8,8 @@ import { inputStyle } from './fieldStyle'
 import { newReleases, releasesOf, seriesQuery, snapshotKeys, workKey } from './followCheck'
 import { useLibraryStore } from './libraryStore'
 import { ResultCard } from './ResultCard'
-import type { Follow } from './types'
+import { checkedAgo } from './priceWatch'
+import type { Follow, FollowNews } from './types'
 
 type Check = { s: 'busy' } | { s: 'failed' } | { s: 'ok'; found: BookCandidate[]; at: number }
 /** Asked again after this long, not on every visit: following is a once-a-day
@@ -18,13 +19,21 @@ const FRESH_MS = 30 * 60_000
 const cache = new Map<string, { found: BookCandidate[]; at: number; query: string }>()
 const CONCURRENT = 4
 
+/** A release the scheduled check found, drawn as the same card a live result gets. */
+const fromNews = (n: FollowNews): BookCandidate => ({
+  title: n.title, authors: n.authors, isbn: n.isbn, publishedYear: n.publishedYear, coverUrl: n.coverUrl, source: 'openlibrary', sourceKey: n.workKey,
+})
+
 /**
  * Authors and series you follow, and what is new from each.
  *
- * Nothing runs in the background: the check happens **when this view is open**
- * (an alert while the app is closed needs a scheduled server job, which is a
- * later phase and is not pretended at here). Failure is per follow — one
- * author's lookup failing says so on that card and the others still answer.
+ * Two things look: this view, when it is open, and a scheduled function once a
+ * day while the app is closed (`library-follow-check`), whose findings wait in
+ * `library_follow_news`. They answer the same question with the same rules, so
+ * the card shows the union — what the live check found and what was found
+ * overnight — and the overnight rows alone while the live one is still reading
+ * or has failed. Failure is per follow: one author's lookup failing says so on
+ * that card and the others still answer.
  */
 export function FollowingView({ onOpenBook }: { onOpenBook: (id: string) => void }) {
   const follows = useLibraryStore(s => s.follows)
@@ -34,6 +43,8 @@ export function FollowingView({ onOpenBook }: { onOpenBook: (id: string) => void
   const addFollow = useLibraryStore(s => s.addFollow)
   const markSeen = useLibraryStore(s => s.markSeen)
   const unfollow = useLibraryStore(s => s.unfollow)
+  const news = useLibraryStore(s => s.news)
+  const readNews = useLibraryStore(s => s.readNews)
   const [checks, setChecks] = useState<Record<string, Check>>({})
   const [formOpen, setFormOpen] = useState(false)
   const [name, setName] = useState('')
@@ -67,6 +78,14 @@ export function FollowingView({ onOpenBook }: { onOpenBook: (id: string) => void
     // change on "mark seen" and must not re-ask the catalogue.
   }, [ids])
 
+  // Looking at this page is reading the overnight finds: let the bell go of them once they have had a moment on screen.
+  const unread = news.filter(n => !n.readAt).map(n => n.id).join(',')
+  useEffect(() => {
+    if (!unread) return
+    const t = setTimeout(() => readNews(unread.split(',')), 1500)
+    return () => clearTimeout(t)
+  }, [unread, readNews])
+
   const authors = follows.filter(f => f.kind === 'author' && f.authorKey)
 
   async function followSeries() {
@@ -92,7 +111,7 @@ export function FollowingView({ onOpenBook }: { onOpenBook: (id: string) => void
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 12, maxWidth: 900 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 220, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
-          What’s new from the authors and series you follow, checked when you open this page.
+          What’s new from the authors and series you follow — checked when you open this page, and once a day while the app is closed.
         </div>
         <Button variant="secondary" size="sm" onClick={() => setFormOpen(o => !o)} aria-expanded={formOpen}><Plus size={ICON.sm} /> Follow a series</Button>
       </div>
@@ -126,27 +145,37 @@ export function FollowingView({ onOpenBook }: { onOpenBook: (id: string) => void
         </Card>
       ) : follows.map((f: Follow) => {
         const c = checks[f.id]
-        const fresh = c?.s === 'ok' ? newReleases(f, c.found, books) : []
+        const live = c?.s === 'ok' ? newReleases(f, c.found, books) : []
+        // The overnight finds that the live check has not (yet) said: still new, not seen, not on the shelf.
+        const liveKeys = new Set(live.map(workKey))
+        const overnight = newReleases(f, news.filter(n => n.followId === f.id).map(fromNews), books).filter(b => !liveKeys.has(workKey(b)))
+        const fresh = [...live, ...overnight]
+        const settled = c?.s === 'ok' || c?.s === 'failed'
         return (
           <Card key={f.id} style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               {f.kind === 'author' ? <UserRound size={ICON.md} color="var(--sb-ink-3)" aria-hidden /> : <BookMarked size={ICON.md} color="var(--sb-ink-3)" aria-hidden />}
               <div style={{ fontWeight: 600, color: 'var(--sb-ink-1)' }}>{f.name}</div>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{f.kind === 'author' ? 'Author' : 'Series'}</span>
-              {c?.s === 'ok' && fresh.length > 0 && (
+              {fresh.length > 0 && (
                 <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent-tint)', color: 'var(--sb-accent-deep)' }}>
                   {fresh.length} new
                 </span>
               )}
               <span style={{ flex: 1 }} />
               {fresh.length > 0 && (
-                <Button size="sm" variant="secondary" onClick={() => c?.s === 'ok' && markSeen(f.id, c.found.map(workKey))}>Mark all seen</Button>
+                <Button size="sm" variant="secondary" onClick={() => markSeen(f.id, [...(c?.s === 'ok' ? c.found.map(workKey) : []), ...fresh.map(workKey)])}>Mark all seen</Button>
               )}
               <Button size="sm" variant="ghost" iconOnly title={`Unfollow ${f.name}`} aria-label={`Unfollow ${f.name}`} onClick={() => unfollow(f.id)}><Trash2 size={ICON.sm} /></Button>
             </div>
-            {(!c || c.s === 'busy') && <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Checking…</div>}
+            {(!c || c.s === 'busy') && fresh.length === 0 && <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Checking…</div>}
             {c?.s === 'failed' && <div role="alert" style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)' }}>Could not check {f.name} just now — Open Library did not answer.</div>}
             {c?.s === 'ok' && fresh.length === 0 && <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Nothing new since you followed.</div>}
+            {settled && f.lastCheckedAt && (
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: f.lastCheckOk === false ? 'var(--sb-accent-deep)' : 'var(--sb-ink-4)' }}>
+                {f.lastCheckOk === false ? `The overnight check could not reach Open Library (${checkedAgo(f.lastCheckedAt)}).` : `Also checked overnight, ${checkedAgo(f.lastCheckedAt)}.`}
+              </div>
+            )}
             {fresh.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
                 {fresh.map((b, i) => (

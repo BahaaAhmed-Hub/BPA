@@ -4524,3 +4524,42 @@ for this item at the Books store only, price/shop/verdict/link, target edit and 
 reload, stop with back-out, Bought it), a removed item only after Shopping is read, and
 the unmigrated project. The fake's PATCH had to apply to the matched row — treated as an
 upsert it created a store with no `categories` and crashed `enrichedItems`.
+
+## Library 7e — new releases, found while the app is closed
+`20260037_library_releases.sql` (`library_follow_news`, `library_follows.last_checked_at/last_check_ok`),
+`20260038_library_releases_schedule.sql`, `supabase/functions/library-follow-check/`,
+`_shared/releases.ts` + `_shared/releaseRun.ts`. A follow (3d) was only ever checked while the
+Following view was open; a function now asks the same question daily and records what it finds.
+- **News is a record of announcements, never the baseline.** `seen_keys` on the follow is still the
+  only thing that decides what is new and "Mark all seen" still just widens it. A news row goes when its
+  work is marked seen (client deletes it at once, the server sweeps stale ones each run), reaches the
+  shelf, or the follow goes (cascade). *Read* (the bell lets go) is not *seen* (it stops being new): a
+  find you have glanced at stays on the card until you say so.
+- **The rules exist twice and are run against each other.** Deno cannot import the bundle, so
+  `releases.ts` restates `followCheck.ts` + `bookLookup.ts`; `library-releases-agree.mjs` drives the
+  app through its real fetch path and the server module over 32 seen × shelf combinations, with a control
+  that the fixtures give different answers. It found a real fault in both: a work listed twice, the first
+  listing owned, was announced from the second — **a work is owned if either listing is on the shelf.**
+- **The pass is pure with its I/O handed in** (`runChecks`), so the test runs the real code with stand-ins
+  that fail on demand: a catalogue failure costs that follow only and is stamped failed (never "nothing
+  new"); a user without the Library, or whose shelf cannot be read, is skipped and their catalogue is not
+  asked (announcing books they own is worse than a late alert); **a follow with no baseline is never
+  announced from** (it would be the whole catalogue); one shelf read per user; a pause between asks, not
+  before the first; never-checked first so a pass that runs out of time continues where it stopped; a
+  per-follow cap, a follow cap and a time budget, with the rest *deferred*, not lost.
+- **Two ways in, nothing else** (`mail-smart-run`'s arrangement): `x-cron-secret` = `CRON_SECRET`, or a
+  signed-in user, who is limited to their own follows. `--no-verify-jwt` in `deploy-functions.yml` because
+  the caller is pg_cron. The schedule migration reuses the two Vault entries 20260016 already needs
+  (`project_functions_url`, `cron_secret`) and is a no-op without pg_cron/pg_net/Vault: the Following view
+  still checks when opened.
+- **The card shows the union**: what the live check found, plus the overnight finds it has not said (so
+  the finds appear at once, and while the live check is reading or has failed), each work once. It says
+  when the overnight check last looked and whether it could reach Open Library. The columns
+  `last_check_*` are the server's; the client never writes them.
+- **The bell has an eighth kind, `release`** ("New book from someone you follow"): unread, not seen, not
+  on the shelf, only while the Library is on; clicking opens the Library; the matrix switch silences it;
+  with 20260037 unrun it says so (`dormantKinds`). Opening the Following view marks the finds read after a
+  moment.
+`scripts/library-releases-run.mjs` (plain node, 17), `library-releases-agree.mjs` (7),
+`library-news.mjs` (22). Not done: the function has not been deployed and nothing has run it against the
+real Open Library from this machine.

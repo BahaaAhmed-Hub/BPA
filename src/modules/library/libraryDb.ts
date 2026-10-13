@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
 import type {
   Book, BookFormat, BookSource, BookStatus, Bookmark, BookmarkKind, LibList, ListBook, ListKind,
-  Follow, FollowKind, Note, PlanPer, QuoteReview, ReadingGoal, GoalKind, ReadingPlan, ReadingSession, SessionKind, NoteScope, Quote, QuoteKind,
+  Follow, FollowKind, FollowNews, Note, PlanPer, QuoteReview, ReadingGoal, GoalKind, ReadingPlan, ReadingSession, SessionKind, NoteScope, Quote, QuoteKind,
 } from './types'
 
 interface BookRow {
@@ -231,9 +231,10 @@ export async function loadLibraryExtras(): Promise<LibraryExtras | null | 'missi
   }
 }
 
-interface FollowRow { id: string; user_id: string; kind: string; name: string; query: string; author_key: string | null; seen_keys: string[] | null; created_at: string }
+interface FollowRow { id: string; user_id: string; kind: string; name: string; query: string; author_key: string | null; seen_keys: string[] | null; created_at: string; last_checked_at?: string | null; last_check_ok?: boolean | null }
 const toFollow = (r: FollowRow): Follow => ({
   id: r.id, kind: r.kind as FollowKind, name: r.name, query: r.query, authorKey: opt(r.author_key), seenKeys: r.seen_keys ?? [], createdAt: r.created_at,
+  lastCheckedAt: opt(r.last_checked_at), lastCheckOk: opt(r.last_check_ok),
 })
 const fromFollow = (f: Follow, userId: string) => ({
   id: f.id, user_id: userId, kind: f.kind, name: f.name, query: f.query, author_key: f.authorKey ?? null, seen_keys: f.seenKeys, created_at: f.createdAt,
@@ -249,6 +250,29 @@ export async function loadFollows(): Promise<Follow[] | null | 'missing'> {
 export async function saveFollow(f: Follow): Promise<void> {
   markLocalWrite('library')
   const { error } = await supabase.from('library_follows').upsert(fromFollow(f, await uid()), { onConflict: 'id' })
+  fail(error)
+}
+interface NewsRow { id: string; follow_id: string; work_key: string; title: string; authors: string[] | null; isbn: string | null; published_year: number | null; cover_url: string | null; found_at: string; read_at: string | null }
+const toNews = (r: NewsRow): FollowNews => ({
+  id: r.id, followId: r.follow_id, workKey: r.work_key, title: r.title, authors: r.authors ?? [], isbn: opt(r.isbn),
+  publishedYear: opt(r.published_year), coverUrl: opt(r.cover_url), foundAt: r.found_at, readAt: opt(r.read_at),
+})
+/** Read on its own like the other optional tables: without 20260037 the shelf and the live check are untouched. */
+export async function loadNews(): Promise<FollowNews[] | null | 'missing'> {
+  const r = await supabase.from('library_follow_news').select('*').order('found_at', { ascending: false }).limit(500)
+  if (r.error) return r.error.code === '42P01' || r.error.code === 'PGRST205' ? 'missing' : null
+  return (r.data as NewsRow[]).map(toNews)
+}
+export async function markNewsRead(ids: string[], at: string): Promise<void> {
+  if (!ids.length) return
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_follow_news').update({ read_at: at }).in('id', ids)
+  fail(error)
+}
+export async function removeNews(followId: string, workKeys: string[]): Promise<void> {
+  if (!workKeys.length) return
+  markLocalWrite('library')
+  const { error } = await supabase.from('library_follow_news').delete().eq('follow_id', followId).in('work_key', workKeys)
   fail(error)
 }
 export async function removeFollow(id: string): Promise<void> {

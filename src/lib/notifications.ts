@@ -15,9 +15,11 @@ import { loadWaiting, mailEverRead } from '@/lib/mailWaiting'
 import { pendingDrafts } from '@/lib/mailBriefs'
 import { lastRankChange } from '@/lib/rankWatch'
 import { useBehavioralStore } from '@/store/behavioralStore'
+import { useLibraryStore } from '@/modules/library/libraryStore'
+import { libraryIsOff } from '@/modules/library/libraryPrefs'
 import { RANK_META } from '@/lib/behavioralEngine'
 
-export type NotifKind = 'decision' | 'needsyou' | 'draft' | 'conflict' | 'habit' | 'review' | 'rank'
+export type NotifKind = 'decision' | 'needsyou' | 'draft' | 'conflict' | 'habit' | 'review' | 'rank' | 'release'
 export type NotifChannel = 'push' | 'mail' | 'digest'
 
 export interface NotifSetting {
@@ -52,6 +54,7 @@ export const DEFAULT_NOTIF_EVENTS: NotifSetting[] = [
   { id: 'conflict', label: 'Calendar conflict',              sub: 'Two events land on the same hour',            push: true,  mail: true,  digest: false },
   { id: 'habit',    label: 'Habit not logged',               sub: 'Nothing against it by the afternoon',         push: true,  mail: false, digest: false },
   { id: 'review',   label: 'Weekly review is due',           sub: 'Sunday evening, once',                        push: false, mail: true,  digest: true  },
+  { id: 'release',  label: 'New book from someone you follow', sub: 'Authors and series in your Library',          push: true,  mail: false, digest: true  },
   { id: 'rank',     label: 'Rank changed',                   sub: 'Behavioral OS moved you up or down',          push: true,  mail: false, digest: true  },
 ]
 
@@ -66,7 +69,7 @@ export const NOTIF_EVENT = 'professor:notificationsChanged'
  *  rank are not in localStorage by themselves. A kind whose source has not run
  *  yet says what it is waiting on (`dormantKinds`) rather than staying quietly
  *  empty. */
-export const DERIVABLE: NotifKind[] = ['decision', 'needsyou', 'draft', 'conflict', 'habit', 'review', 'rank']
+export const DERIVABLE: NotifKind[] = ['decision', 'needsyou', 'draft', 'conflict', 'habit', 'review', 'rank', 'release']
 
 export function loadNotifSettings(defaults: NotifSetting[] = DEFAULT_NOTIF_EVENTS): NotifSetting[] {
   try {
@@ -302,6 +305,26 @@ export function collect(settings: NotifSetting[], now = new Date()): Notificatio
     }
   }
 
+  // A book from an author or series you follow, found while the app was closed. Only the unread ones, only while
+  // the Library is on, and not for a book that has since reached the shelf or been marked seen.
+  if (on('release') && !libraryIsOff()) {
+    const { news, follows, books } = useLibraryStore.getState()
+    for (const n of news) {
+      if (n.readAt) continue
+      const f = follows.find(x => x.id === n.followId)
+      if (!f || f.seenKeys.includes(n.workKey)) continue
+      const key = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+      if (books.some(b => (n.isbn && b.isbn === n.isbn) || key(b.title) === key(n.title))) continue
+      out.push({
+        id: `release:${n.id}`, kind: 'release',
+        title: n.title,
+        detail: `${n.authors[0] ? `${n.authors[0]} · ` : ''}New from ${f.name}${n.publishedYear ? ` · ${n.publishedYear}` : ''}`,
+        at: n.foundAt,
+        go: { module: 'library' },
+      })
+    }
+  }
+
   const seen = loadSeen()
   return out
     .filter(n => !seen[n.id])
@@ -321,6 +344,10 @@ export function dormantKinds(settings: NotifSetting[]): { setting: NotifSetting;
     if (!s.push) continue
     if ((s.id === 'needsyou' || s.id === 'draft') && !read)
       out.push({ setting: s, why: 'once the mail has been read here' })
+    if (s.id === 'release' && libraryIsOff())
+      out.push({ setting: s, why: 'needs the Library switched on' })
+    else if (s.id === 'release' && useLibraryStore.getState().newsMissing)
+      out.push({ setting: s, why: 'needs the database update 20260037_library_releases.sql' })
     if (s.id === 'rank' && !useBehavioralStore.getState().enabled)
       out.push({ setting: s, why: 'needs Behavioral OS switched on' })
   }

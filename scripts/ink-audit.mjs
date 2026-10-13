@@ -291,8 +291,12 @@ const LIBRARY = {
     { id: 'b1', user_id: SU, kind: 'quote', book_id: '00000000-0000-4000-8000-000000000000', quote_id: 'q1', page: null, line: null, label: null, created_at: '2026-09-02T00:00:00Z' },
   ],
   library_follows: [
-    { id: 'f1', user_id: SU, kind: 'author', name: 'Cal Newport', query: 'author_key:OL123A', author_key: 'OL123A', seen_keys: ['/works/OL1W'], created_at: '2026-09-01T00:00:00Z' },
-    { id: 'f2', user_id: SU, kind: 'series', name: 'The Expanse', query: 'title:"The Expanse"', author_key: null, seen_keys: ['/works/OL1W', '/works/OL2W'], created_at: '2026-09-02T00:00:00Z' },
+    { id: 'f1', user_id: SU, kind: 'author', name: 'Cal Newport', query: 'author_key:OL123A', author_key: 'OL123A', seen_keys: ['/works/OL1W'], created_at: '2026-09-01T00:00:00Z', last_checked_at: '2026-10-12T05:40:00Z', last_check_ok: true },
+    { id: 'f2', user_id: SU, kind: 'series', name: 'The Expanse', query: 'title:"The Expanse"', author_key: null, seen_keys: ['/works/OL1W', '/works/OL2W'], created_at: '2026-09-02T00:00:00Z', last_checked_at: '2026-10-12T05:40:00Z', last_check_ok: false },
+  ],
+  // What the daily check found overnight: drawn on the Following cards beside the live results.
+  library_follow_news: [
+    { id: 'n1', user_id: SU, follow_id: 'f1', work_key: '/works/OL9W', title: 'Slow Productivity', authors: ['Cal Newport'], isbn: null, published_year: 2024, cover_url: null, found_at: '2026-10-12T05:41:00Z', read_at: null },
   ],
   // Sessions on the first book (3 pages long in the fixture's PDF, 300 in the row), so the
   // progress bar, the totals and the recent list are on screen when the panel is.

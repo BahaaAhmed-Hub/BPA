@@ -77,6 +77,23 @@ export interface Follow {
   /** Works that existed when you followed (or last said "seen"). */
   seenKeys: string[]
   createdAt: string
+  /** When the scheduled check last asked about this, and whether it could read the catalogue (20260037; server-owned). */
+  lastCheckedAt?: string
+  lastCheckOk?: boolean
+}
+
+/** A release the scheduled check found while the app was closed (20260037). A record of an announcement, never the baseline. */
+export interface FollowNews {
+  id: string
+  followId: string
+  workKey: string
+  title: string
+  authors: string[]
+  isbn?: string
+  publishedYear?: number
+  coverUrl?: string
+  foundAt: string
+  readAt?: string
 }
 
 // ─── Phase 4a: reading and listening sessions ───────────────────────────────

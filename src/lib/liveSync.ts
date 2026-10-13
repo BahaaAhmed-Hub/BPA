@@ -44,6 +44,7 @@ const DOMAIN_OF_TABLE: Record<string, LiveDomain> = {
   library_notes:            'library',
   library_bookmarks:        'library',
   library_follows:          'library',
+  library_follow_news:      'library',
   library_sessions:         'library',
   library_plans:            'library',
   library_goals:            'library',
