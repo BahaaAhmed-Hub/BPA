@@ -217,8 +217,19 @@ export function misplacedAnthropicKey(c: AIConfig): string {
   return stray.startsWith('sk-ant-') ? stray : ''
 }
 
+/** An API key never contains whitespace, and a paste very often carries some —
+ *  a trailing newline from a terminal, a space from a chat. It saved fine and
+ *  then went out as an invalid header, so the key "saved" and was "rejected". */
+export const cleanKey = (k: string | undefined): string => (k ?? '').replace(/\s+/g, '')
+
+/** What was actually presented, without printing it: first 11, last 4, length. */
+export function maskKey(k: string): string {
+  return k.length > 18 ? `${k.slice(0, 11)}…${k.slice(-4)} (${k.length} characters)` : `${k ? '…' : 'empty'} (${k.length} characters)`
+}
+
 export function loadAIConfig(): AIConfig {
-  return { ...AI_CONFIG_DEFAULTS, ...ls<Partial<AIConfig>>('professor-ai-config', {}) }
+  const c = { ...AI_CONFIG_DEFAULTS, ...ls<Partial<AIConfig>>('professor-ai-config', {}) }
+  return { ...c, anthropicKey: cleanKey(c.anthropicKey), groqKey: cleanKey(c.groqKey) }
 }
 let aiPushTimer: ReturnType<typeof setTimeout> | null = null
 function saveAIConfig(c: AIConfig) {
@@ -2382,7 +2393,17 @@ function ProfessorSection() {
       <FieldRow label={keyLabel} sub={keyHint}>
         <div style={{ display: 'flex', gap: 6, width: '100%' }}>
           <input type={showKey ? 'text' : 'password'} value={activeKey}
-            onChange={e => setAI(ai.provider === 'groq' ? { groqKey: e.target.value } : { anthropicKey: e.target.value })}
+            // **Not a login.** A password-typed box is offered to the browser's
+            // password manager, which autofills the key it remembered on page
+            // load — firing this handler with the OLD key, saving it, and
+            // pushing it over the new one ("Saved" appearing on a refresh with
+            // nothing pasted). Autofill is not focused; typing and pasting are.
+            autoComplete="new-password" name="api-key-not-a-login" spellCheck={false}
+            data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"
+            onChange={e => {
+              if (document.activeElement !== e.target) return
+              setAI(ai.provider === 'groq' ? { groqKey: cleanKey(e.target.value) } : { anthropicKey: cleanKey(e.target.value) })
+            }}
             placeholder={ai.provider === 'groq' ? 'gsk_...' : 'sk-ant-...'}
             style={{ ...inputStyle, flex: 1, fontFamily: 'monospace', fontSize: 'var(--sb-t-meta)' }} />
           <button onClick={() => setShowKey(v => !v)} style={{ background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 8px', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', flexShrink: 0 }}>

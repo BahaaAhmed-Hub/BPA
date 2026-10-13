@@ -9,7 +9,7 @@ import {
   readAttachment, kindOf, toAnthropicContent, toGroqContent, unsupported, tooLarge, prettySize,
   type Attachment,
 } from '@/lib/chatAttachments'
-import { loadAIConfig, type AIConfig } from '@/modules/settings/Settings'
+import { loadAIConfig, maskKey, type AIConfig } from '@/modules/settings/Settings'
 import { loadAccounts } from '@/lib/multiAccount'
 import { useBehavioralStore } from '@/store/behavioralStore'
 import { ICON } from '@/lib/type'
@@ -467,8 +467,9 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     } catch (err) {
       const msg     = err instanceof Error ? err.message : String(err)
       const is401   = msg.includes('401') || msg.includes('authentication') || msg.includes('invalid_api_key')
+      const sent = cfg.provider === 'groq' ? cfg.groqKey : cfg.anthropicKey
       const friendly = is401
-        ? `Invalid ${cfg.provider === 'groq' ? 'Groq' : 'Anthropic'} API key. Check Settings → Professor AI.`
+        ? `${cfg.provider === 'groq' ? 'Groq' : 'Anthropic'} refused the key that was sent: ${maskKey(sent)}. Check Settings → AI. It said: ${msg.slice(0, 200)}`
         : `Error: ${msg}`
       setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'error', content: friendly }])
     } finally {

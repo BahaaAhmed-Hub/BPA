@@ -44,7 +44,7 @@ function getAIConfig() {
     const s = raw ? JSON.parse(raw) as Partial<{provider:string;anthropicKey:string;groqKey:string;groqModel:string}> : {}
     return {
       provider:     s.provider ?? 'anthropic',
-      anthropicKey: s.anthropicKey ?? (import.meta.env.VITE_ANTHROPIC_API_KEY as string) ?? '',
+      anthropicKey: (s.anthropicKey ?? '').replace(/\s+/g, '') || ((import.meta.env.VITE_ANTHROPIC_API_KEY as string) ?? ''),
       groqKey:      s.groqKey ?? '',
       groqModel:    s.groqModel ?? 'llama-3.3-70b-versatile',
     }
