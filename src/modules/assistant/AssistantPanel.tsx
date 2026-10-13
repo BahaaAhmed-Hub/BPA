@@ -79,6 +79,7 @@ How to format answers (they are drawn as Markdown in a narrow side panel):
 - Tasks, emails and options are "-" bullets, one line each: **bold title** then a short qualifier. Group with a single "###" label at most once per section.
 - Never use "---" separators or "#"/"##" headings. Never put a table inside a bullet. Bold only labels and key figures.
 - Money: show the currency and keep thousands separators. Use a table to compare more than two figures.
+- Habits: where list_habits gives a "picture", put ![name](picture) before the habit's name (in a table, in its first cell) instead of the emoji, copying the value exactly.
 - Show an image only when a tool gave you its URL, as ![what it is](url). Never invent a URL. If a diagram would genuinely help, describe the structure in a short indented list instead.
 - If a list is long, show the top items and say how many more there are.`
 
