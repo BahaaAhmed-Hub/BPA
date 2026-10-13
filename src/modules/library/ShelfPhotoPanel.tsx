@@ -183,7 +183,7 @@ export function ShelfPhotoPanel({ file, narrow, onClose, onAdded }: { file: File
         <>
           <Card style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {preview && <img src={preview} alt="The photographed shelf" style={{ width: '100%', maxHeight: 170, objectFit: 'contain', borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-field)' }} />}
-            <div aria-live="polite" style={{ fontSize: 'var(--sb-t-body-s)', color: note ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)', minHeight: 58 }}>
+            <div aria-live="polite" style={{ fontSize: 'var(--sb-t-body-s)', color: note ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)', minHeight: phase === 'ready' ? 58 : 20 }}>
               {phase === 'preparing' && 'Preparing the photo…'}
               {phase === 'reading' && (progress[1] > 1 ? `Reading the shelf — part ${Math.min(progress[0] + 1, progress[1])} of ${progress[1]}…` : 'Reading the shelf…')}
               {phase === 'ready' && note}

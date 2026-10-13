@@ -49,8 +49,8 @@ export function SidePanel({ label, eyebrow, narrow, onClose, actions, footer, ch
       {children}
       {footer ? (
         <div style={{
-          position: 'sticky', bottom: 0, marginTop: 'auto', display: 'flex', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end', gap: 8, whiteSpace: 'nowrap',
-          padding: '12px var(--ai-fab-clear) 14px 14px', margin: '0 -14px', background: 'var(--sb-page)', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
+          position: 'sticky', bottom: 0, marginTop: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 8, whiteSpace: 'nowrap', boxSizing: 'border-box',
+          padding: '12px var(--ai-fab-clear) 14px 14px', margin: '0 -14px', minWidth: 0, background: 'var(--sb-page)', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
         }}>{footer}</div>
       ) : <div style={{ height: 56, flexShrink: 0 }} />}
     </aside>

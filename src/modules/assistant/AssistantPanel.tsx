@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import Anthropic from '@anthropic-ai/sdk'
 import { Mic, X, Send, Loader2, ChevronDown, Check, CircleAlert, Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
@@ -463,6 +463,16 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
     if (open) setTimeout(() => inputRef.current?.focus(), 200)
   }, [open])
 
+  // The box is as tall as its text, up to 120px — measured whenever the text changes and not only when a key is
+  // pressed. It was an `onInput` handler, so clearing the box after Send (a state change, not an input event)
+  // left a three-line height standing under an empty box.
+  useLayoutEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  }, [input, open])
+
   const accounts     = loadAccounts()
   const primaryEmail = user?.email ?? ''
   const ctx: ToolContext = { tasks, addTask, updateTask, deleteTask, accounts, primaryEmail, habits }
@@ -923,6 +933,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
                   animation: listening ? 'pulse 1.2s ease-in-out infinite' : undefined,
                 }}><Mic size={ICON.md} /></button>
             )}
+            {/* Never disabled: you can write the next message while an answer is on its way (Enter waits — `sendMessage` refuses while thinking). Disabling it also dropped focus, so every answer ended with a click back into the box. */}
             <textarea
               ref={inputRef}
               value={input}
@@ -934,18 +945,13 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
                 const files = [...e.clipboardData.files]
                 if (files.length) { e.preventDefault(); void addFiles(files) }
               }}
-              placeholder={dropping ? 'Drop it here' : 'Ask, or drop a file in…'}
-              disabled={thinking}
+              placeholder={dropping ? 'Drop it here' : thinking ? 'Answering — you can write the next one…' : 'Ask, or drop a file in…'}
               rows={1}
               style={{
-                flex: 1, background: 'none', border: 'none', outline: 'none', resize: 'none',
-                color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', lineHeight: 1.5,
-                maxHeight: 120, overflowY: 'auto', fontFamily: 'inherit',
-              }}
-              onInput={e => {
-                const el = e.currentTarget
-                el.style.height = 'auto'
-                el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+                flex: 1, minWidth: 0, boxSizing: 'border-box', background: 'none', border: 'none', outline: 'none', resize: 'none',
+                // One line is exactly as tall as the 32px send button beside it, so the icons, the text and the button share a centre.
+                padding: '4px 0', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', lineHeight: '24px',
+                maxHeight: 120, overflowY: 'auto', fontFamily: 'inherit', textAlign: 'left',
               }}
             />
             <button
