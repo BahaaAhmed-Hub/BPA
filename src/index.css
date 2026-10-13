@@ -131,6 +131,9 @@
      over a dark page, which veiled the app instead of dimming it. */
   --sb-overlay: #FFFFFF;
   --sb-scrim: rgba(25,23,18,.45);
+  /* How far in from the viewport's right edge the assistant's floating button reaches
+     (24px margin + 72px button + a gap). A footer that sits in that corner pads by this. */
+  --ai-fab-clear: 104px;
 
   /* ── Shape ───────────────────────────────────────────────────────────────
      A concept is a shape as much as a palette. These are Sunlit Bento's, and
@@ -1100,4 +1103,39 @@ img { max-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sb-out-of-focus { transition: none; }
+}
+
+/* ─── The assistant's button — a person, not a tile ───────────────────────────
+   No fill, no border: the cut-out portrait is the control, so it needs a shadow
+   that follows its outline (`filter`), not a box-shadow around a rectangle.
+   Lift is gated on `hover: hover` like the Library's spines — a finger has no
+   hover, and a tap would leave it stuck halfway up. */
+.ai-fab {
+  position: fixed; padding: 0; border: none; background: transparent; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(0 6px 8px color-mix(in srgb, var(--sb-ink-1) 22%, transparent));
+  transition: transform .2s cubic-bezier(.2,.8,.2,1), filter .2s ease;
+}
+@media (hover: hover) {
+  .ai-fab:hover { transform: translateY(-4px) scale(1.05); filter: drop-shadow(0 12px 14px color-mix(in srgb, var(--sb-ink-1) 26%, transparent)); }
+}
+.ai-fab:active { transform: scale(.94); }
+.ai-fab:focus-visible { outline: 2px solid var(--sb-ink-1); outline-offset: 4px; border-radius: 50%; }
+
+/* The window the assistant lives in: a floating card above the button, not a
+   column down the side. Hidden is faded and dropped, never unmounted — the
+   thread, the draft and an answer still arriving all carry on. */
+.ai-window {
+  transform-origin: 100% 100%;
+  transition: opacity .18s ease, transform .22s cubic-bezier(.2,.8,.2,1), visibility 0s linear 0s;
+}
+.ai-window[data-shown="false"] {
+  opacity: 0; transform: translateY(14px) scale(.97); visibility: hidden; pointer-events: none;
+  transition: opacity .16s ease, transform .2s ease, visibility 0s linear .2s;
+}
+.ai-resize-grip { opacity: 0; transition: opacity .15s ease; }
+.ai-resize:hover .ai-resize-grip, .ai-resize:focus-visible .ai-resize-grip, .ai-resize[data-dragging="true"] .ai-resize-grip { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .ai-fab, .ai-window, .ai-window[data-shown="false"], .ai-resize-grip { transition: none; }
+  .ai-fab:hover { transform: none; }
 }

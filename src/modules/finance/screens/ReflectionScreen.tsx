@@ -1676,7 +1676,7 @@ export function ReflectionScreen(_props?: any) {
             {/* One more of the same thing, already knowing where it goes.
                 The assistant's floating button is fixed to the viewport and
                 lands on this corner, so the row keeps it clear. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingRight: 56 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingRight: 'var(--ai-fab-clear)' }}>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                 {addTarget
                   ? `New entries land in ${addTarget.name}${drill.month === null ? '' : `, ${MONTHS_SHORT[drill.month]}`}`

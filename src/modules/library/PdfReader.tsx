@@ -232,7 +232,7 @@ export default function PdfReader({ book, onClose }: { book: Book; onClose: () =
           )}
         </div>
         {/* Appears with a selection; keeps the corner clear for the assistant button. */}
-        <Button variant="accent" disabled={!sel} onClick={saveQuote} onMouseDown={e => e.preventDefault()} style={{ marginRight: 48 }}>
+        <Button variant="accent" disabled={!sel} onClick={saveQuote} onMouseDown={e => e.preventDefault()} style={{ marginRight: 'calc(var(--ai-fab-clear) - 56px)' }}>
           <Quote size={ICON.md} /> Save as quote
         </Button>
       </div>

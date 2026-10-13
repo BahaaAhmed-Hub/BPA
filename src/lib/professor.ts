@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { ASSISTANT_CLAUDE_MODEL } from './modelInfo'
 import type { DbUser, DbCompany, DbTask, DbCalendarEvent, DbWeeklyReview } from '@/types/database'
 import type { AIConfig } from '@/modules/settings/Settings'
 
@@ -40,7 +41,7 @@ export function anthropic(): Anthropic {
   return new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
 }
 
-const MODEL = 'claude-sonnet-4-6'
+const MODEL = ASSISTANT_CLAUDE_MODEL
 const MAX_TOKENS = 4000
 
 // ─── AI config helpers ────────────────────────────────────────────────────────
