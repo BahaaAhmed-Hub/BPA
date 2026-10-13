@@ -13,13 +13,18 @@
  *
  *    node scripts/memory-is-all-there.mjs [<git-ref>]
  *
- *  The ref defaults to the commit before the split. Pass another to check
- *  against a different point in history.
+ *  The ref defaults to **the commit before the split**, by sha rather than by
+ *  tag: a tag would be tidier to read and this session's git proxy refuses to
+ *  push one, so from a fresh clone the tag would not exist and the check would
+ *  fail for a reason that has nothing to do with the memory. A sha on `main`
+ *  is there for everybody.
  */
 import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 
-const REF = process.argv[2] || process.env.MEMORY_REF || 'SPLIT_BASE'
+/** The last commit whose CLAUDE.md held all 132 sections. */
+const SPLIT_BASE = 'f2c2ef6'
+const REF = process.argv[2] || process.env.MEMORY_REF || SPLIT_BASE
 let old
 try {
   old = execFileSync('git', ['show', `${REF}:CLAUDE.md`], { encoding: 'utf8', maxBuffer: 1 << 26 })
