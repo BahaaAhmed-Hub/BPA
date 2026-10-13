@@ -700,6 +700,16 @@ and the app should wear its own badge.
   did through an `onScroll` prop on its own JSX — so `data-at-end` is now
   right for both rails rather than for whichever one remembered to wire it.
 
+### The mark sits above the rail (third move, and the one that stuck)
+Top-right, then the first item of the content column — and that second place
+floated 11px off the cards and over neither the rail nor anything else. It is
+**52px, centred over the rail's pill, in the window's top-left corner**: a
+64px row (`MARK_ROW` in `App.tsx`) above `TopNav`, which is also `YouCluster`'s
+height, so the mark and search/bell/avatar share one centre line (32px).
+`scripts/mark-and-the-stats.mjs mark` measures it: 0px off the pill's centre,
+52 inside a 62px pill, not in `[data-you]`, centre line 32 = 32. Control —
+the mark put back in the row at 76px — fails 4 of 7 (101px off the rail).
+
 ### The mark owns the top-left corner, not the top-right
 It was the last item in `YouCluster` at 51px. It is the **first** item now, at
 **76px** — 1.5x again, sized to the empty space it sits in rather than to the
