@@ -47,11 +47,13 @@ export function newReleases<B extends { id: string; title: string; authors: stri
   f: Pick<Follow, 'seenKeys'>, found: BookCandidate[], books: B[],
 ): BookCandidate[] {
   const seen = new Set(f.seenKeys)
+  // A work the catalogue lists twice is owned if either listing is on the shelf.
+  const owned = new Set(found.filter(c => shelfMatch(books, c)).map(workKey))
   const out: BookCandidate[] = []
   const have = new Set<string>()
   for (const c of found) {
     const k = workKey(c)
-    if (seen.has(k) || have.has(k) || shelfMatch(books, c)) continue
+    if (seen.has(k) || have.has(k) || owned.has(k)) continue
     have.add(k); out.push(c)
   }
   return out
