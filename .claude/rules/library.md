@@ -978,3 +978,11 @@ Following view was open; a function now asks the same question daily and records
 `library-news.mjs` (22). Not done: the function has not been deployed and nothing has run it against the
 real Open Library from this machine.
 
+
+## HEIC on the shelf scan
+`heic.ts` — `readableImage(file)` converts HEIC/HEIF to JPEG (`heic2any`, imported
+lazily) before the tiles are cut and the preview drawn. Detected by **extension as
+well as MIME type**: Chrome/Firefox hand a picked `.heic` an empty `type`, so a
+MIME-only test called it "not an image". Used by the shelf scan, the ISBN barcode
+photo and the quote photo. Not yet measured
+in a browser against a real HEIC — only `npm run build`.

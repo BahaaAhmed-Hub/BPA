@@ -10,6 +10,7 @@ import { newCategoryNames, resolveCategory } from './shelfCategories'
 import { useLibraryStore } from './libraryStore'
 import { readShelf, ShelfError, type Spine } from './readShelf'
 import { cutTiles, type Tile } from './shelfTiles'
+import { isHeic, readableImage } from './heic'
 import type { BookStatus } from './types'
 
 interface Row extends Spine { key: string; include: boolean; /** The name to file under; '' is none. */ filed: string }
@@ -77,12 +78,15 @@ export function ShelfPhotoDialog({ file, onClose, onAdded }: { file: File; onClo
 
   useEffect(() => {
     let live = true
-    const url = URL.createObjectURL(file)
-    setPreview(url)
+    let url = ''
     void (async () => {
-      if (!file.type.startsWith('image/')) { setFatal(`${file.name || 'That file'} is not an image.`); setPhase('ready'); return }
+      if (!file.type.startsWith('image/') && !isHeic(file)) { setFatal(`${file.name || 'That file'} is not an image.`); setPhase('ready'); return }
       try {
-        const t = await cutTiles(file)
+        const img = await readableImage(file)
+        if (!live) return
+        url = URL.createObjectURL(img)
+        setPreview(url)
+        const t = await cutTiles(img)
         if (!live) return
         setTiles(t)
         await read(t)
@@ -92,7 +96,7 @@ export function ShelfPhotoDialog({ file, onClose, onAdded }: { file: File; onClo
     })()
     // `run` is a request counter, not a DOM node: bumping it on the way out stops an in-flight read writing into a closed dialog.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    return () => { live = false; run.current++; URL.revokeObjectURL(url) }
+    return () => { live = false; run.current++; if (url) URL.revokeObjectURL(url) }
   }, [file, read])
 
   useEffect(() => {

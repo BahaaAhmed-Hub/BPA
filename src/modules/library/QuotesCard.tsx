@@ -136,7 +136,7 @@ export function QuotesCard({ bookId, disabled }: { bookId: string; disabled?: bo
           {/* No `capture`: that would force the camera and take away the photo
               library, which is where a screenshot of an e-book page lives. On
               iOS the plain image picker offers both. */}
-          <input ref={picker} type="file" accept="image/*" hidden aria-label="Choose a photo of a page"
+          <input ref={picker} type="file" accept="image/*,.heic,.heif" hidden aria-label="Choose a photo of a page"
             onChange={e => { const f = e.target.files?.[0]; if (f) setPhoto(f); e.target.value = '' }} />
           <Button variant="ghost" size="sm" onClick={() => picker.current?.click()} style={{ alignSelf: 'flex-start' }}>
             <Camera size={ICON.sm} /> Quote from a photo
