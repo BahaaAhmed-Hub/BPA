@@ -28,6 +28,14 @@ A rule file is dropped by `/compact` and reloaded on demand; anything that
 must survive compaction belongs **here**, which is why the three cross-cutting
 sections below are in this file and not in an area's.
 
+**`.claude/rules/` is tracked on purpose** — `.gitignore` carries `.claude/*`
+with `!.claude/rules/`. Ignored, as it was for one commit, 123 of these
+sections existed on one machine only: `main` held this root file and nothing
+else, and a cloud session clones the remote rather than a working copy.
+`node scripts/memory-is-all-there.mjs` is the check, and it has to be run
+**against a fresh clone** to mean anything — against the working copy it
+passed, because the files were sitting on disk.
+
 ## How a change is proven here
 Every claim in those files was measured, and the method is the point:
 - **Measure, never read.** A DOM assertion passes with the rule missing from
