@@ -4126,7 +4126,7 @@ and the same figure on a book panel cannot disagree.
 - A session's book opens on the shelf; a deleted book's session says so rather than
   vanishing from the list. `sessionsMissing` names `20260030` instead of drawing an
   empty week that would read as "you read nothing".
-`scripts/library-tracker.mjs` — 27 assertions: the pure maths (week edges, year
+`scripts/library-tracker.mjs` — 24 assertions: the pure maths (week edges, year
 edge, clock changes, every streak case, inclusive period totals, buckets) and the
 view (streak tile, filters, 12 columns, opening a book, the missing migration).
 The ink audit has the Tracker.
@@ -4169,7 +4169,7 @@ list of single-book plans, not a second kind of object.
   migration and the rest of the module is unaffected.
 - **Not built here, on purpose:** putting plan time on the calendar is 4d, and
   yearly goals are 4e.
-`scripts/library-plans.mjs` — 53 assertions: the pure maths (pace edge cases,
+`scripts/library-plans.mjs` — 45 assertions: the pure maths (pace edge cases,
 every state, the minutes periods, other books' sessions, the suggested date, the
 sentences) and the UI against a fake that enforces the CHECKs and the unique —
 make, edit date/minutes/per, zero minutes, clearing, undo, the Tracker list,
