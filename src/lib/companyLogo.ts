@@ -12,6 +12,21 @@
 //   and most company marks sit behind a sign-in anyway. A data URL is in the
 //   `companies` row, so it travels to every device the way the colour does and
 //   is there with no network at all.
+// - **The stored square is what the circle shows, edge to edge.** A logo
+//   drawn `contain` with a margin, inside a circular clip, reads as a *square
+//   floating in a circle* — which is exactly what a navy app mark and a white
+//   wordmark looked like in the rail. A mark has one of two kinds of ground
+//   and they want opposite things, so `logoFromFile` asks which:
+//     · **transparent** (a PNG cut out) — the company's own tint is its
+//       ground, so it is drawn contained with a margin and the tint fills the
+//       rest of the circle.
+//     · **opaque** (its own background baked in) — that background *is* the
+//       mark's ground, so the canvas is filled with it first and the mark
+//       drawn over it. A square logo comes out unchanged; a wide one gets its
+//       own colour either side rather than white bars or a crop, so nothing
+//       is ever cut off and the circle is full.
+//   Either way the stored 128px square is already *made to be a circle*, so
+//   `CompanyMark` draws it edge to edge with no padding and no second rule.
 // - **What is stored is pixels, never markup.** An SVG is rasterised like
 //   everything else, so nothing the app draws from this field can ever be
 //   markup — the one shape in, the one shape out. (An `<img>` is already a
@@ -80,20 +95,25 @@ export async function logoFromFile(file: File): Promise<string> {
     throw new Error(`${file.name || 'That file'} is not an image`)
   }
   const bitmap = await decode(file)
-  // `contain`, centred, on a transparent ground: a wordmark is wider than it
-  // is tall and cropping it to a square would cut the name in half.
-  const scale = Math.min(LOGO_PX / bitmap.width, LOGO_PX / bitmap.height)
+  const ground = groundOf(bitmap)
+
+  // With no ground of its own the mark is drawn a little smaller, so it has
+  // air inside the circle rather than touching its edge. With one, it is
+  // drawn at full size: the ground is extended to the corners instead, which
+  // is what makes the circle full without cropping anything.
+  const box = ground ? LOGO_PX : Math.round(LOGO_PX * 0.84)
+  const scale = Math.min(box / bitmap.width, box / bitmap.height)
   const w = Math.max(1, Math.round(bitmap.width * scale))
   const h = Math.max(1, Math.round(bitmap.height * scale))
 
-  const png = draw(bitmap, w, h, 'image/png')
+  const png = draw(bitmap, w, h, ground, 'image/png')
   if (png && logoBytes(png) <= LOGO_MAX_BYTES) return png
 
   // Lossless was over the cap, which means a photographic mark. WebP keeps
   // the alpha, and 0.85 rather than 0.9 because the measurement through this
   // picker — not the standalone encode — put pure noise at 41KB against a
   // 48KB cap, and 15% of headroom is not headroom.
-  const webp = draw(bitmap, w, h, 'image/webp', 0.85)
+  const webp = draw(bitmap, w, h, ground, 'image/webp', 0.85)
   if (webp && logoBytes(webp) <= LOGO_MAX_BYTES) return webp
 
   // The one way to arrive here: a browser with no WebP *encoder*, where
@@ -102,13 +122,72 @@ export async function logoFromFile(file: File): Promise<string> {
   throw new Error(`That image is ${kb(logoBytes(webp || png || ''))} and this browser cannot shrink it further — try a flatter logo, or save it smaller first`)
 }
 
+/**
+ *  The colour this image sits on, or `null` where it has none.
+ *
+ *  Read from the **edge**, not from one corner: a mark on a white card with a
+ *  coloured bar down one side would answer differently at each corner, and
+ *  guessing wrong fills a circle with a colour the logo does not use.
+ *
+ *  Twelve points round the border, and the answer is the one **nine of them
+ *  agree on** rather than all twelve. Unanimity was the first rule and it is
+ *  too strict for real logos: a mark that touches an edge — or merely reaches
+ *  the middle of one, which plenty of wide marks do — puts its own colour
+ *  under a sample point and the whole image is then read as having no ground,
+ *  which puts the square back inside the circle. A photograph still answers
+ *  `null`, because its border does not have nine points within a hair of each
+ *  other; so does any cut-out, since **one** transparent sample is enough to
+ *  say the image has no ground of its own.
+ */
+function groundOf(bitmap: ImageBitmap | HTMLImageElement): string | null {
+  const w = bitmap.width, h = bitmap.height
+  if (!w || !h) return null
+  const c = document.createElement('canvas')
+  c.width = w; c.height = h
+  const ctx = c.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return null
+  ctx.drawImage(bitmap, 0, 0)
+
+  const x1 = 0, x2 = Math.floor(w / 2), x3 = w - 1
+  const y1 = 0, y2 = Math.floor(h / 2), y3 = h - 1
+  const points: [number, number][] = [
+    [x1, y1], [x2, y1], [x3, y1],   // top
+    [x1, y2],           [x3, y2],   // sides
+    [x1, y3], [x2, y3], [x3, y3],   // bottom
+    // One ring in, so a 1px border or a JPEG's ringing does not decide it.
+    [1, 1], [x3 - 1, 1], [1, y3 - 1], [x3 - 1, y3 - 1],
+  ]
+  const seen: number[][] = []
+  for (const [x, y] of points) {
+    let px: Uint8ClampedArray
+    try { px = ctx.getImageData(Math.max(0, x), Math.max(0, y), 1, 1).data }
+    catch { return null }          // a tainted canvas cannot be read
+    if (px[3] < 250) return null   // any transparency at the edge: a cut-out
+    seen.push([px[0], px[1], px[2]])
+  }
+  // 6 of 255 per channel: a JPEG of a flat background wobbles by a couple.
+  const alike = (a: number[], b: number[]) =>
+    Math.abs(a[0] - b[0]) <= 6 && Math.abs(a[1] - b[1]) <= 6 && Math.abs(a[2] - b[2]) <= 6
+  let best: number[] | null = null
+  let bestCount = 0
+  for (const s of seen) {
+    const n = seen.filter(o => alike(s, o)).length
+    if (n > bestCount) { bestCount = n; best = s }
+  }
+  if (!best || bestCount < 9) return null
+  return `rgb(${best[0]}, ${best[1]}, ${best[2]})`
+}
+
 /** The canvas is square, so every logo comes back the same shape and a column
- *  of them lines up whatever each file's proportions were. */
-function draw(bitmap: ImageBitmap | HTMLImageElement, w: number, h: number, type: string, quality?: number): string | null {
+ *  of them lines up whatever each file's proportions were — and `ground`, when
+ *  the image has one, is painted across the whole of it first, so the corners
+ *  the circle needs are the mark's own colour rather than a hole. */
+function draw(bitmap: ImageBitmap | HTMLImageElement, w: number, h: number, ground: string | null, type: string, quality?: number): string | null {
   const canvas = document.createElement('canvas')
   canvas.width = LOGO_PX; canvas.height = LOGO_PX
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
+  if (ground) { ctx.fillStyle = ground; ctx.fillRect(0, 0, LOGO_PX, LOGO_PX) }
   ctx.drawImage(bitmap, (LOGO_PX - w) / 2, (LOGO_PX - h) / 2, w, h)
   try { return canvas.toDataURL(type, quality) } catch { return null }
 }

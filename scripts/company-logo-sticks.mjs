@@ -127,6 +127,14 @@ async function pngFile(kind) {
       g.fillStyle = '#C62828'; g.fillRect(0, 0, w, h)
       g.fillStyle = '#FFFFFF'; g.font = `bold ${Math.round(h * 0.5)}px sans-serif`
       g.fillText('T', w * 0.4, h * 0.7)
+      // A marker at each far end. "Nothing was cropped" is a claim about the
+      // mark's own extremes, and it has to be asserted on something that is
+      // *there* — counting empty space only worked while a contained image
+      // left transparent bars, which an image with its own ground no longer
+      // does.
+      g.fillStyle = '#00E5FF'
+      g.fillRect(0, h * 0.4, Math.max(2, w * 0.03), h * 0.2)
+      g.fillRect(w - Math.max(2, w * 0.03), h * 0.4, Math.max(2, w * 0.03), h * 0.2)
     }
     const blob = await new Promise(res => c.toBlob(res, 'image/png'))
     const buf = new Uint8Array(await blob.arrayBuffer())
@@ -185,25 +193,30 @@ if (MODE === 'shrinks') {
   }), logo)
   ok('a 900x300 wordmark is stored at 128 square', px[0] === 128 && px[1] === 128, JSON.stringify(px))
   ok('and under the cap', logo.length <= 48_000, `${Math.round(logo.length / 1024)}KB`)
-  // Contained, not cropped: the middle band carries the mark and the top does
-  // not, which is only true if the 3:1 image was fitted rather than filled.
-  const bands = await p.evaluate(src => new Promise(res => {
+  // **Nothing cropped, and the corners are the mark's own ground.** A logo
+  // with a background of its own has that background extended to the corners
+  // rather than left transparent, so the circle it is drawn in is full — the
+  // thing the rail got wrong. Both ends of the mark have to survive that.
+  const fit = await p.evaluate(src => new Promise(res => {
     const i = new Image()
     i.onload = () => {
       const c = document.createElement('canvas'); c.width = 128; c.height = 128
-      const g = c.getContext('2d'); g.drawImage(i, 0, 0)
-      const opaque = y => {
-        let n = 0
-        const d = g.getImageData(0, y, 128, 1).data
-        for (let x = 0; x < 128; x++) if (d[x * 4 + 3] > 10) n++
-        return n
+      const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(i, 0, 0)
+      const row = g.getImageData(0, 64, 128, 1).data
+      const cyan = []
+      for (let x = 0; x < 128; x++) {
+        if (row[x * 4] < 120 && row[x * 4 + 1] > 170 && row[x * 4 + 2] > 200) cyan.push(x)
       }
-      res({ top: opaque(4), middle: opaque(64) })
+      const corner = Array.from(g.getImageData(1, 1, 1, 1).data)
+      res({ first: cyan[0] ?? -1, last: cyan[cyan.length - 1] ?? -1, corner })
     }
     i.src = src
   }), logo)
-  ok('the mark is contained, not cropped to a square',
-     bands.middle > 100 && bands.top === 0, JSON.stringify(bands))
+  ok('both ends of the mark survive — nothing was cropped',
+     fit.first >= 0 && fit.last >= 0 && fit.first < 10 && fit.last > 118, JSON.stringify(fit))
+  ok('and the corners carry its own ground, so a circle is full',
+     fit.corner[3] > 250 && Math.abs(fit.corner[0] - 198) < 16 && fit.corner[1] < 70,
+     JSON.stringify(fit.corner))
   await b.close(); process.exit(code)
 }
 

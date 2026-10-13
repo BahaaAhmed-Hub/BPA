@@ -563,11 +563,43 @@ and had to undo.
   the bytes is the entropy, not the quantiser.
 - **`CompanyMark` is one drawing, used by the rail's tile and by the picker**,
   so what you set in Settings is the thing you press in the rail. The disc
-  carries the colour and the mark carries the letters (the measured pairing —
-  the other way round made two of three discs identically near-black), and a
-  logo sits on that same tint, `object-fit: contain` with an inset so a
-  transparent PNG reads against the company's own colour and a wordmark is not
-  cropped to a square.
+  carries the colour and the mark carries the letters — the measured pairing;
+  the other way round made two of three discs identically near-black.
+- **The stored square is what the circle shows, edge to edge**, and getting
+  that wrong is what a screenshot of the rail reported: a navy app mark drawn
+  as a *square floating in a circle*, and a white wordmark as a little card.
+  `contain` plus a 10% pad inside a circular clip is the one arrangement that
+  cannot look right, because a mark's own ground stops at its own edges and
+  the tint shows round the corners. A mark has one of two kinds of ground and
+  they want opposite things, so `logoFromFile` asks which — at upload, so
+  `CompanyMark` draws every logo the same way and there is no second rule:
+  - **transparent** (a cut-out PNG) — the company's tint *is* its ground, so
+    it is drawn at 84% and the tint fills the rest of the circle.
+  - **opaque** (its background baked in) — that background is the ground, so
+    the canvas is filled with it first and the mark drawn over at full size.
+    A square logo comes out unchanged; a wide one gets its own colour either
+    side rather than white bars or a crop. **Nothing is ever cropped** — the
+    alternative, `cover`, would cut the ends off exactly the wordmarks that
+    need them.
+- **`groundOf` takes the colour nine of twelve border points agree on**, not
+  all twelve. Unanimity was the first rule and it is too strict for a real
+  logo: a mark that merely reaches the middle of an edge — which plenty of
+  wide marks do — puts its own colour under a sample point, the image reads as
+  having no ground, and the square is back inside the circle. Found by a
+  fixture that did exactly that. One **transparent** sample still answers
+  `null` outright, because that is a cut-out by definition, and a photograph
+  answers `null` because its border has no nine points within a hair of each
+  other.
+`scripts/company-logo-fills-the-circle.mjs [opaque|wide|cutout|control]` — 34
+assertions, and the measurement is the point: the tile is **screenshotted, the
+PNG decoded back inside the page**, and the colour read on a ring just inside
+the circle's rim. No DOM assertion can answer this — `objectFit` and `padding`
+are the thing under test and the question is what the pixels come to. The two
+grounds are the control pair: a mark with its own background fills the rim
+(`[16,24,92]` all the way round), a cut-out must not and the tint reaches it
+instead (`[216,230,253]`). And the shipped arrangement, restored on the very
+same element — one property pair — puts the tint back at the rim under the
+navy mark, which is the reported screenshot, measured.
 - **`logo_url` is `COMPANY_OPTIONAL`** (`20260025`), so a project that has not
   run the migration keeps the logo in the browser and still writes every other
   column — and `mergeCompanies` refuses to let the server's blank beat it.
@@ -592,9 +624,11 @@ Two faults were in the way, both bigger than the feature:
 `scripts/company-logo-sticks.mjs [set|shrinks|remove|no-column|dense]` — 56
 assertions over the real picker with a real PNG made in the page: the logo
 reaches the store, the row and the rail **with no reload**; a 900×300 wordmark
-is stored 128 square, under the cap, and *contained* (the middle band carries
-the mark, the top band is empty — only true if it was fitted rather than
-filled); Remove clears the column rather than leaving the old one; a dense
+is stored 128 square and under the cap with **both its ends intact** — a
+marker at each far edge of the source, which is the only way to assert
+"nothing was cropped" about an image whose own ground now reaches the corners
+(counting empty space only worked while a contained image left transparent
+bars); Remove clears the column rather than leaving the old one; a dense
 image falls through to WebP with nothing asked of anybody; and on a project
 without the column the write is refused once, the row still lands with its
 name, colour, calendar and people, and the browser keeps both the logo and the

@@ -13,9 +13,11 @@
 //   `inkOnKeeping` fell back to `--sb-ink-1` and two of three discs came out
 //   identically near-black — the one thing a company tile must never do. And a
 //   white disc is a 5% wash in Glass, where `--sb-card` is translucent.
-// - **A logo sits on that same tint**, `object-fit: contain` with a little
-//   inset, so a transparent PNG reads against the company's own colour and a
-//   wordmark is not cropped to a square.
+// - **A logo fills the circle, edge to edge.** `logoFromFile` has already made
+//   the stored square *into* a circle's worth of pixels — a transparent mark
+//   drawn smaller so the tint shows round it, an opaque one extended to its
+//   own corners — so there is nothing left to decide here. Padding it again
+//   was what made a navy app mark read as a square floating in a circle.
 
 import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { useInkOnKeeping } from '@/lib/ink'
@@ -58,10 +60,10 @@ export function CompanyMark({ co, size }: { co: MarkCompany; size: number }) {
           src={co.logoUrl}
           alt=""
           style={{
-            width: '100%', height: '100%', objectFit: 'contain',
-            // A mark drawn edge to edge in a circle loses its own corners to
-            // the clip; the inset is what keeps a square logo square.
-            padding: Math.max(2, Math.round(size * 0.1)), boxSizing: 'border-box',
+            // `cover`, not `contain`: the stored image is always square, so
+            // the two agree — and `cover` is the one that cannot leave a gap
+            // if that ever stops being true.
+            width: '100%', height: '100%', objectFit: 'cover', display: 'block',
           }} />
       ) : initialsOf(co.name)}
     </span>
