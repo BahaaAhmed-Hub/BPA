@@ -4171,3 +4171,61 @@ values restored on the very same element: radius `0px`, ground `#FCFAF4`, no
 shadow, a bottom rule, and the bar spanning 90→1500 — the full width of
 `<main>`, which is the screenshot. The labels changed ground, so the ink audit
 re-ran: **0 failing pairs over 22 screens in all four themes.**
+
+## One shape for every module's menu — the flying bar
+`LOZENGE` (exported from `SideRail.tsx`) is now the shape of **five** bars, not
+one. A module's own menu is the same kind of object as the main menu, and
+every one of them was drawn differently: a full-bleed band with a rule, a bare
+row with no shape at all, or a title floating loose above the content.
+
+| Module | What it was | `data-` hook |
+|---|---|---|
+| **Calendar** | title + controls, a bare row at `padding: 0 4px` | `data-cal-header` |
+| **Today** | a full-bleed `--sb-header` band with a bottom rule — the finance slab's twin | `data-today-bar` |
+| **Tasks** | Filters / Board-Matrix-List / Plan my day / New task, no shape at all | `data-tasks-bar` |
+| **Habits** | title + the day's share on the left, Segmented + New habit on the right | `data-habits-bar` |
+| **Finance** | the tab bar (done first; this is the rule it set) | `data-finance-tabs` |
+
+**Deliberately not given one**, and the reason is the same each time — a
+lozenge round a single control is a box round a pill, which reads as two
+nested rounded things rather than one object:
+- **Mail's `Mail / Smart` switcher** is one `Segmented` alone on its row. Its
+  real toolbar below it is already one `Card` and keeps its own documented
+  shape.
+- **Dashboard** has no control row: the survey found no element near the top
+  of its column carrying two or more buttons.
+- **Settings** has its own rail and a page header that spans above it, which
+  is a different arrangement rather than a menu bar.
+
+### The calendar's stats line is gone, and the lens sentence is not
+`32 events · 2 clashes · next in 1h` was a row of numbers nobody acts on — the
+grid underneath draws every one of those events and a clash is already drawn
+on the two cards it sits between. `clashCount` and `nextInMin` were read by
+that line and nothing else, so both memos went with it (`noUnusedLocals` would
+have insisted anyway).
+- **What was kept is the half that is not a statistic.** The same `<span>`
+  carried the company lens's own count, which `the lens matched almost nothing`
+  above records as *the fix* — a company whose events cannot be resolved is
+  otherwise indistinguishable from a company with nothing on this week, and
+  that ambiguity is how the lens was reported broken. It now draws **only while
+  a lens is on** and says only what the lens matched.
+
+`scripts/flying-bars-match-the-rail.mjs [bars|stats|control]` — 25 assertions
+over the five bars, each measured **against the rail's own lozenge in the same
+page**: radius, ground, shadow, a border that is the same all the way round
+rather than a rule underneath, and a real inset off both edges of `<main>`. A
+hard-coded `999` passes a one-sided assertion and drifts the day `SideRail`
+changes. Control, the old values restored on each very same element: **18 of
+25 fail**. The ink audit re-ran at **0 failing pairs over 22 screens in all
+four themes** — four of these bars changed the ground their text sits on, and
+in Glass `--sb-header` is a 3.5% wash against `--sb-overlay`'s opaque `#1C1B26`.
+
+**The `stats` mode passed vacuously on its first run and said so.** `go(mod)`
+wrote `activeModule` into localStorage *before the first navigation*, while the
+page was still `about:blank` — which has no origin, so the write threw into its
+own try/catch and the app came up on the default module. `[data-cal-header]`
+was therefore absent, `innerText` was `''`, and "no event count" / "no clash
+count" / "no next in" all passed against an empty string. The positive
+assertions beside them — the date range is still there, the controls are still
+there — are the only reason it showed, and the suite now asserts the element
+exists **before** testing what it does not contain.

@@ -70,6 +70,7 @@ import {
   loadApplied, saveApplied, type AppliedBlocksMap, type SourceEvent,
 } from '@/lib/blockingRules'
 import IdealWeekModal from './IdealWeekModal'
+import { LOZENGE } from '../../components/SideRail'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const HOUR_PX  = 64     // pixels per hour (Calendar 1.6: 64px/hr)
@@ -2470,32 +2471,6 @@ export function CalendarIntelligence() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [railDateStr, displayedEvents, allCalendars, eventStatuses])
 
-  const clashCount = useMemo(() => {
-    const ms = (v?: string) => (v ? new Date(v).getTime() : 0)
-    const timed = railEvents
-      .filter(r => r.event.start?.dateTime && r.event.end?.dateTime)
-      .sort((a, b) => ms(a.event.start.dateTime) - ms(b.event.start.dateTime))
-    let n = 0
-    for (let i = 0; i < timed.length; i++) {
-      for (let j = i + 1; j < timed.length; j++) {
-        if (ms(timed[j].event.start.dateTime) < ms(timed[i].event.end.dateTime)) { n++; break }
-      }
-    }
-    return n
-  }, [railEvents])
-
-  /** Minutes until the next event that has not started, or null when the rest
-   *  of the day is empty — a "next in" that has nothing to point at is worse
-   *  than saying nothing. */
-  const nextInMin = useMemo(() => {
-    const now = Date.now()
-    const ups = railEvents
-      .map(r => (r.event.start?.dateTime ? new Date(r.event.start.dateTime).getTime() : 0))
-      .filter(t => t > now)
-      .sort((a, b) => a - b)
-    return ups.length ? Math.max(1, Math.round((ups[0] - now) / 60000)) : null
-  }, [railEvents])
-
   // ── Where the grid opens ────────────────────────────────────────────────────
   //
   // It used to open at 07:00 always, which quietly hid anything earlier: a task
@@ -2641,7 +2616,16 @@ export function CalendarIntelligence() {
           on the right. The route's name was an overline above it, which named
           the page you had just navigated to and were already looking at. */}
       <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '0 4px' }}>
+        {/* **The header is a lozenge, like the rail and the finance tabs.**
+            It was a bare row on the page with 4px of padding, so the title and
+            every control floated loose against the grid below them. One
+            object, with the shape `SideRail` exports, and the title sits in it
+            rather than above it. */}
+        <div data-cal-header style={{
+          ...LOZENGE,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 14, flexWrap: 'wrap', padding: '12px 18px',
+        }}>
           {/* Which stretch of time you are looking at */}
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span className="cal-display" style={{
@@ -2652,35 +2636,30 @@ export function CalendarIntelligence() {
                 : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
                 : fmtDayRange(weekDays)}
             </span>
-            {/* One live sentence, not a row of labels. Anything it cannot
-                honestly say, it leaves out rather than printing a zero. */}
-            <span style={{ fontSize: 14, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
-              {(() => {
-                const scope = calView === 'month' ? monthCells : weekDays
-                const keys = new Set(scope.map(localDateStr))
-                const inScope = displayedEvents.filter(e => keys.has((e.start?.dateTime ?? e.start?.date ?? '').slice(0, 10)))
-                const bits = [`${inScope.length} event${inScope.length === 1 ? '' : 's'}`]
-                // **What the lens actually matched.** Without this, a company
-                // whose events this app cannot recognise looks identical to a
-                // company with nothing on this week: every card goes quiet and
-                // the screen says the same thing either way. A count tells the
-                // two apart, and it is the only honest way to report a filter.
-                if (lensName) {
+            {/* **The counts are gone; the lens sentence is not.** "32 events ·
+                2 clashes · next in 1h" is a row of numbers nobody acts on — the
+                grid underneath draws every one of those events, and a clash is
+                already drawn on the two cards it is between. What is left is
+                the one thing no other pixel on this screen can say: *why* has
+                three-quarters of the week gone quiet. A company whose events
+                this app cannot resolve is otherwise indistinguishable from a
+                company with nothing on this week, which is how that was
+                reported once already. So it draws only while a lens is on, and
+                it is about the lens rather than about the week. */}
+            {lensName && (
+              <span style={{ fontSize: 14, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
+                {(() => {
+                  const scope = calView === 'month' ? monthCells : weekDays
+                  const keys = new Set(scope.map(localDateStr))
+                  const inScope = displayedEvents.filter(e => keys.has((e.start?.dateTime ?? e.start?.date ?? '').slice(0, 10)))
                   const mine = inScope.filter(e =>
                     companyOfCalendar((e as GCalEventExt).calendarId) === lensCompany).length
-                  bits.push(mine > 0
-                    ? `${mine} ${lensName}`
-                    : `none here is ${lensName}'s`)
-                }
-                if (clashCount > 0) bits.push(`${clashCount} clash${clashCount === 1 ? '' : 'es'}`)
-                if (nextInMin !== null) {
-                  bits.push(nextInMin < 60
-                    ? `next in ${nextInMin} min`
-                    : `next in ${Math.round(nextInMin / 60)}h`)
-                }
-                return bits.join(' · ')
-              })()}
-            </span>
+                  return mine > 0
+                    ? `${mine} of ${inScope.length} here ${mine === 1 ? 'is' : 'are'} ${lensName}'s`
+                    : `none here is ${lensName}'s`
+                })()}
+              </span>
+            )}
           </div>
 
           {/* ── Control cluster ────────────────────────────────────────────────

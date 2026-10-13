@@ -41,6 +41,7 @@ import type { Task } from '@/types'
 import type { DbUser, DbCompany } from '@/types/database'
 import { ICON, STROKE } from '@/lib/type'
 import { dayTotals, spanTotals } from '@/lib/habitProgress'
+import { LOZENGE } from '../../components/SideRail'
 
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 
@@ -2069,9 +2070,14 @@ export function TodayPage() {
       )}
 
       {/* ── Brief bar ─────────────────────────────────────────────────────── */}
-      <div style={{
+      {/* **A lozenge, not a strip.** This was the finance tab bar's twin: a
+          full-bleed `--sb-header` band with square corners and a rule under
+          it, running edge to edge across the page. Same shape, same token,
+          same `LOZENGE` as the rail. */}
+      <div data-today-bar style={{
+        ...LOZENGE,
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-        padding: '14px 26px', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-header)',
+        padding: '11px 18px', margin: '2px 18px 12px',
       }}>
         <span style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: INK, flexShrink: 0 }}>Morning Brief</span>
         <span style={{ fontSize: 'var(--sb-t-body-s)', color: MUTED, flexShrink: 0 }}>{dateLine}</span>

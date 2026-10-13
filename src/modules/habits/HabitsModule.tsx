@@ -11,6 +11,7 @@ import {
 import { ICON } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { dayProgress, dayTotals, spanTotals } from '@/lib/habitProgress'
+import { LOZENGE } from '../../components/SideRail'
 
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -1065,7 +1066,13 @@ export function HabitsModule() {
     <div style={{ padding: '22px 26px 60px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {/* ─── Page header ───────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20 }}>
+      {/* The same shape the calendar header takes: a title and what it is
+          worth on the left, the controls on the right, in one floating object
+          rather than loose on the page. */}
+      <div data-habits-bar style={{
+        ...LOZENGE,
+        display: 'flex', alignItems: 'center', gap: 20, padding: '12px 18px',
+      }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)' }}>HABITS TRACKER</span>
           {/* The headline is the share of the day, not the count of habits
