@@ -14,7 +14,7 @@ import {
   ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed, Check,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { pushSharedPrefs, type PushResult } from '@/lib/prefSync'
+import { pushSharedPrefs, lastPushError, type PushResult } from '@/lib/prefSync'
 import { notify } from '@/lib/undo'
 import { paidAtSupported } from '../finance/unpaid'
 import { todayISO } from '../finance/dates'
@@ -2399,7 +2399,7 @@ function ProfessorSection() {
           {keySync === 'held'    && 'Saving…'}
           {keySync === 'saved'   && 'Saved — on this browser and on your account'}
           {keySync === 'nothing' && 'Already saved'}
-          {keySync === 'failed'  && 'Saved here, but it could not reach your account — it will not follow you to another device or the bots yet'}
+          {keySync === 'failed'  && `Saved here, but it could not reach your account${lastPushError ? ` (${lastPushError})` : ''} — it will not follow you to another device or the bots yet`}
         </p>
       )}
 

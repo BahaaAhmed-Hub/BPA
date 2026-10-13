@@ -54,13 +54,16 @@ const supabase = {
       eq: () => ({ maybeSingle: async () => ({ data: { schedule_rules: { shared_prefs: { ...bag } } } }) }),
     }),
     update: patch => ({
-      eq: () => new Promise(res => {
-        pending.push(() => {
-          bag = { ...(patch.schedule_rules.shared_prefs ?? {}) }
-          landed.push(bag[KEY])
-          res({ error: null })
+      eq: () => {
+        const p = new Promise(res => {
+          pending.push(() => {
+            bag = { ...(patch.schedule_rules.shared_prefs ?? {}) }
+            landed.push(bag[KEY])
+            res({ error: null })
+          })
         })
-      }),
+        return Object.assign(p, { select: () => p.then(r => ({ ...r, data: [{ id: 'u1' }] })) })
+      },
     }),
   }),
   auth: { getSession: async () => ({ data: { session: { user: { id: 'u1' } } } }) },
