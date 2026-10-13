@@ -5,6 +5,7 @@
 // the review says how many such books it left out rather than quietly losing them.
 import { daysBetween, streaks } from './trackerStats'
 import { todayISO } from './readingStats'
+import { fmtMoney, spendInYear, type Spend } from './spendStats'
 import type { Book, ListBook, LibList, Quote, ReadingSession } from './types'
 
 export interface Ratings {
@@ -40,6 +41,8 @@ export interface YearReview {
   topAuthor: { name: string; count: number } | null
   quotes: number
   categories: { name: string; count: number }[]
+  /** What books bought this year cost, per currency (7d). By the day bought, not the day finished. */
+  spent: Spend[]
   /** Finished books that have no finish date at all, so belong to no year. */
   undated: number
 }
@@ -110,6 +113,7 @@ export function yearReview(
     // quote saved at 00:30 on 1 January in Cairo would be counted in the year before.
     quotes: quotes.filter(q => new Date(q.createdAt).getFullYear() === year).length,
     categories: [...cats].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)).slice(0, 5),
+    spent: spendInYear(books, year),
     undated: books.filter(b => b.status === 'finished' && !b.finishedOn).length,
   }
 }
@@ -119,9 +123,15 @@ export const MONTH = ['January', 'February', 'March', 'April', 'May', 'June', 'J
 const hours = (m: number) => (m >= 60 ? `${Math.round(m / 6) / 10} h` : `${m} min`)
 
 /** The review as plain Markdown, to paste into a note or a message. Only what is true is said: no zero lines. */
+const spentLine = (r: YearReview) => `Spent on books: ${r.spent.map(x => `**${fmtMoney(x.amount, x.currency)}**`).join(' · ')}`
+
 export function yearMarkdown(r: YearReview): string {
   const out: string[] = [`# ${r.year} in books`, '']
-  if (!r.count) { out.push(`No books finished in ${r.year} yet.`); return out.join('\n') }
+  if (!r.count) {
+    out.push(`No books finished in ${r.year} yet.`)
+    if (r.spent.length) out.push('', spentLine(r))
+    return out.join('\n')
+  }
   out.push(`- **${r.count}** book${r.count === 1 ? '' : 's'} finished${r.pagesKnown ? `, about **${r.pages.toLocaleString('en-US')}** pages${r.pagesKnown < r.count ? ` (${r.pagesKnown} with a page count)` : ''}` : ''}`)
   if (r.readMinutes) out.push(`- **${hours(r.readMinutes)}** reading${r.listenMinutes ? ` and **${hours(r.listenMinutes)}** listening` : ''}, over **${r.daysRead}** day${r.daysRead === 1 ? '' : 's'}`)
   else if (r.listenMinutes) out.push(`- **${hours(r.listenMinutes)}** listening, over **${r.daysRead}** day${r.daysRead === 1 ? '' : 's'}`)
@@ -131,6 +141,7 @@ export function yearMarkdown(r: YearReview): string {
   if (r.longest && r.shortest && r.longest.id !== r.shortest.id) out.push(`- Longest: *${r.longest.title}* (${r.longest.pages} pages) · shortest: *${r.shortest.title}* (${r.shortest.pages})`)
   if (r.fastest && r.slowest && r.fastest.book.id !== r.slowest.book.id) out.push(`- Fastest: *${r.fastest.book.title}* (${r.fastest.days} day${r.fastest.days === 1 ? '' : 's'}) · slowest: *${r.slowest.book.title}* (${r.slowest.days})`)
   if (r.topAuthor) out.push(`- Most read: **${r.topAuthor.name}** (${r.topAuthor.count} books)`)
+  if (r.spent.length) out.push(`- ${spentLine(r)}`)
   if (r.quotes) out.push(`- **${r.quotes}** quote${r.quotes === 1 ? '' : 's'} saved`)
   if (r.top.length) { out.push('', '## Five stars', ...r.top.map(b => `- ${b.title}${b.authors[0] ? ` — ${b.authors[0]}` : ''}`)) }
   out.push('', '## Finished', ...r.finished.map(b => `- ${b.finishedOn}  ${b.title}${b.authors[0] ? ` — ${b.authors[0]}` : ''}${b.rating ? `  ${'★'.repeat(b.rating)}` : ''}`))

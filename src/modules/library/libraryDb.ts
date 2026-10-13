@@ -21,6 +21,8 @@ interface BookRow {
   added_at: string; updated_at: string
   /** 20260028 — absent from a project that has not run it. */
   to_buy?: boolean | null
+  /** 20260035 */
+  paid_amount?: number | string | null; paid_currency?: string | null; bought_on?: string | null; bought_at?: string | null
 }
 interface ListRow {
   id: string; user_id: string; name: string; kind: string; description: string | null
@@ -38,6 +40,7 @@ const toBook = (r: BookRow): Book => ({
   coverUrl: opt(r.cover_url), source: r.source as BookSource, sourceKey: opt(r.source_key),
   status: r.status as BookStatus, format: r.format as BookFormat, rating: r.rating,
   review: opt(r.review), spineColor: opt(r.spine_color), filePath: opt(r.file_path), toBuy: opt(r.to_buy),
+  paidAmount: r.paid_amount == null ? undefined : Number(r.paid_amount), paidCurrency: opt(r.paid_currency), boughtOn: opt(r.bought_on), boughtAt: opt(r.bought_at),
   shelfOrder: r.shelf_order, startedOn: opt(r.started_on), finishedOn: opt(r.finished_on),
   addedAt: r.added_at, updatedAt: r.updated_at,
 })
@@ -45,6 +48,8 @@ const toBook = (r: BookRow): Book => ({
 // `?? null` on every optional: `undefined` is dropped on the way to JSON, so an
 // upsert would never *clear* a field the person emptied — the same hole
 // `parent_id` once had in Finance.
+/** Set once a row has come back carrying the 20260035 columns: only then can a cleared price be written as null. */
+let spendColumns = false
 const fromBook = (b: Book, userId: string) => ({
   id: b.id, user_id: userId, title: b.title, subtitle: b.subtitle ?? null, authors: b.authors,
   isbn: b.isbn ?? null, publisher: b.publisher ?? null, published_year: b.publishedYear ?? null,
@@ -57,6 +62,9 @@ const fromBook = (b: Book, userId: string) => ({
   // Sent only once it has a value, so a project without 20260028 keeps saving
   // every other change to a book — the same shape as a quote's `explanation`.
   ...(b.toBuy !== undefined ? { to_buy: b.toBuy } : {}),
+  // Same rule for the price: sent once it holds something or the project is known to have the columns.
+  ...(b.paidAmount !== undefined || b.paidCurrency || b.boughtOn || b.boughtAt || spendColumns
+    ? { paid_amount: b.paidAmount ?? null, paid_currency: b.paidCurrency ?? null, bought_on: b.boughtOn ?? null, bought_at: b.boughtAt ?? null } : {}),
 })
 
 const toList = (r: ListRow): LibList => ({
@@ -92,6 +100,7 @@ export async function loadLibrary(): Promise<LibraryData | null | 'missing'> {
       return r.error.code === '42P01' || r.error.code === 'PGRST205' ? 'missing' : null
     }
   }
+  if ((b.data as BookRow[]).some(x => 'paid_amount' in x)) spendColumns = true
   return {
     books: (b.data as BookRow[]).map(toBook),
     lists: (l.data as ListRow[]).map(toList),

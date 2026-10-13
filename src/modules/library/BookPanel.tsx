@@ -8,6 +8,7 @@ import { AreaField, DateField, Eyebrow, NumField, Row, Stars, TextField } from '
 import { applyCandidate } from './applyCandidate'
 import { BookFileCard } from './BookFileCard'
 import { BookLinksCard } from './BookLinksCard'
+import { PurchaseCard } from './PurchaseCard'
 import { ReadingLogCard } from './ReadingLogCard'
 import { PlanCard } from './PlanCard'
 import { BookNotesCard } from './Notes'
@@ -166,6 +167,8 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
       </Card>
 
       <BookLinksCard book={book} />
+
+      <PurchaseCard book={book} />
 
       <BookFileCard book={book} onOpen={onOpenReader} />
 

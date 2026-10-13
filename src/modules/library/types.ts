@@ -31,6 +31,11 @@ export interface Book {
   filePath?: string
   /** 3b: on the buy-later list. Absent until the migration (20260028) has run. */
   toBuy?: boolean
+  /** 7d: what it cost, in which currency, when and where. Absent until the migration (20260035) has run. */
+  paidAmount?: number
+  paidCurrency?: string
+  boughtOn?: string
+  boughtAt?: string
   shelfOrder: number
   startedOn?: string
   finishedOn?: string

@@ -4447,3 +4447,34 @@ it reads the books, sessions, quotes and lists already loaded, so it cannot disa
 `scripts/library-year.mjs` — 40+ assertions; the first fixture run "failed" because the test's
 own `book()` ignored `status`, a reading book counted as finished-undated. Fixtures are code.
 The two year steppers (Goals, Year in review) share aria-labels: tests use `.first()`/`.last()`.
+
+## Library 7d (part 1) — what a book cost
+`20260035_library_spend.sql`, `spendStats.ts` (pure), `PurchaseCard.tsx` (a **What it
+cost** card under *Get it*), and a **Spent on books** line in the Year in review. Part 2
+of 7d — a wishlist price watch on the Shopping one — is separate and not built.
+- **Four facts on the book, not a ledger entry**: `paid_amount`, `paid_currency`,
+  `bought_on`, `bought_at`. The Library works without Finance (and its lock), and a price
+  is a note about the book. Nothing here touches Finance's accounts or budgets.
+- **Never converted.** Totals are **per currency** (`spendInYear`): 40 USD and 900 EGP are
+  two figures, because the only rate that would join them is a guess about a day nobody
+  recorded. Sums are in whole cents, so 0.10 + 0.20 is 0.30.
+- **A year is the day it was bought**, not the day it was finished. A price with no
+  currency or no date is in no total, and the screen says how many (`unplaced`) rather
+  than counting it somewhere.
+- **Pre-answered.** The first price typed brings today's date and the currency of the
+  book you last priced — both on screen and editable — so the work is correcting.
+- **A mistyped price is refused, never reinterpreted.** `parseMoney`: a separator
+  followed by 1–2 digits is a decimal point, by exactly 3 a thousands mark (`1,299`,
+  `1.299,50`, `1,299.50`); `12.5.5` and `12,3456` are `null`. The CHECKs in the table
+  (`>= 0`, currency `^[A-Z]{3}$`) say the same thing to a client that skipped the form.
+  The currency list is `Intl.supportedValuesOf('currency')`, not a typed few.
+- **Optional columns, again.** `fromBook` sends the four once they hold something or once
+  a row has come back carrying them (`spendColumns`), so a *cleared* price really clears
+  (`null`) and a project without 20260035 keeps saving everything else — only the price
+  is refused, and the notice names the column.
+- **"Bought it"** appears only on a book that is both on the buy list and priced, and
+  takes it off the list; nothing does that on its own.
+`scripts/library-spend.mjs` — 29 assertions: the parser as a table, exact sums, year
+edges, the left-out count, the Markdown, every write body (a clear is `null`), the CHECK
+refusals, a reload, and the unmigrated project still saving a rating. The ink audit's
+first book carries a price.

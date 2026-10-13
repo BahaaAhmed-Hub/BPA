@@ -6,6 +6,7 @@ import { notify } from '@/lib/undo'
 import { Eyebrow } from './fields'
 import { useLibraryStore } from './libraryStore'
 import { fmtMinutes, todayISO } from './readingStats'
+import { fmtMoney, unplaced } from './spendStats'
 import { MONTH, ratingsOf, yearMarkdown, yearReview, type YearReview } from './yearStats'
 import type { Book } from './types'
 
@@ -47,6 +48,7 @@ export function YearReviewCard({ onOpenBook }: { onOpenBook: (id: string) => voi
   const lists = useLibraryStore(s => s.lists)
   const today = todayISO()
   const [year, setYear] = useState(Number(today.slice(0, 4)))
+  const lost = useMemo(() => unplaced(books), [books])
   const r: YearReview = useMemo(() => yearReview(year, books, sessions, quotes, links, lists, today), [year, books, sessions, quotes, links, lists, today])
   const all = useMemo(() => ratingsOf(books.filter(b => b.status === 'finished')), [books])
   const maxMonth = Math.max(1, ...r.months)
@@ -64,7 +66,7 @@ export function YearReviewCard({ onOpenBook }: { onOpenBook: (id: string) => voi
     <Card style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{ flex: 1 }}><Eyebrow>Year in review</Eyebrow></div>
-        {r.count > 0 && <Button size="sm" variant="ghost" onClick={() => void copy()} title="Copy this as Markdown" style={{ marginTop: -8 }}><Copy size={ICON.sm} /> Copy summary</Button>}
+        {(r.count > 0 || r.spent.length > 0) && <Button size="sm" variant="ghost" onClick={() => void copy()} title="Copy this as Markdown" style={{ marginTop: -8 }}><Copy size={ICON.sm} /> Copy summary</Button>}
         <button type="button" onClick={() => setYear(y => y - 1)} aria-label="Previous year" style={yearBtn}><ChevronLeft size={ICON.sm} /></button>
         <span aria-live="polite" style={{ minWidth: 44, textAlign: 'center', fontWeight: 600, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', marginTop: -8 }}>{year}</span>
         <button type="button" onClick={() => setYear(y => y + 1)} aria-label="Next year" style={yearBtn}><ChevronRight size={ICON.sm} /></button>
@@ -73,6 +75,7 @@ export function YearReviewCard({ onOpenBook }: { onOpenBook: (id: string) => voi
       {r.count === 0 ? (
         <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
           No books finished in {year} yet. A book counts toward the year it has a finish date in — mark one finished, or set the date on its page.
+          {r.spent.length > 0 && <div style={{ marginTop: 6, color: 'var(--sb-ink-2)' }}>Spent on books: {r.spent.map(x => fmtMoney(x.amount, x.currency)).join(' · ')}</div>}
         </div>
       ) : (
         <>
@@ -124,11 +127,13 @@ export function YearReviewCard({ onOpenBook }: { onOpenBook: (id: string) => voi
             )}
             {r.topAuthor && <Row label="Most read">{r.topAuthor.name} — {r.topAuthor.count} books</Row>}
             {r.categories.length > 0 && <Row label="By category">{r.categories.map(c => `${c.name} ${c.count}`).join(' · ')}</Row>}
+            {r.spent.length > 0 && <Row label="Spent on books">{r.spent.map(x => `${fmtMoney(x.amount, x.currency)} (${x.books})`).join(' · ')}</Row>}
             {r.quotes > 0 && <Row label="Quotes saved">{r.quotes}</Row>}
           </div>
         </>
       )}
 
+      {lost > 0 && <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{lost} priced book{lost === 1 ? ' has' : 's have'} no currency or purchase date, so {lost === 1 ? 'is' : 'are'} in no total.</div>}
       {r.undated > 0 && (
         <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
           {r.undated} finished book{r.undated === 1 ? ' has' : 's have'} no finish date, so {r.undated === 1 ? 'it is' : 'they are'} in no year. Set the date on the book&rsquo;s page to count {r.undated === 1 ? 'it' : 'them'}.
