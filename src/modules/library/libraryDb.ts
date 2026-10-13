@@ -23,6 +23,8 @@ interface BookRow {
   to_buy?: boolean | null
   /** 20260035 */
   paid_amount?: number | string | null; paid_currency?: string | null; bought_on?: string | null; bought_at?: string | null
+  /** 20260036 */
+  watch_item_id?: string | null
 }
 interface ListRow {
   id: string; user_id: string; name: string; kind: string; description: string | null
@@ -40,7 +42,7 @@ const toBook = (r: BookRow): Book => ({
   coverUrl: opt(r.cover_url), source: r.source as BookSource, sourceKey: opt(r.source_key),
   status: r.status as BookStatus, format: r.format as BookFormat, rating: r.rating,
   review: opt(r.review), spineColor: opt(r.spine_color), filePath: opt(r.file_path), toBuy: opt(r.to_buy),
-  paidAmount: r.paid_amount == null ? undefined : Number(r.paid_amount), paidCurrency: opt(r.paid_currency), boughtOn: opt(r.bought_on), boughtAt: opt(r.bought_at),
+  paidAmount: r.paid_amount == null ? undefined : Number(r.paid_amount), paidCurrency: opt(r.paid_currency), boughtOn: opt(r.bought_on), boughtAt: opt(r.bought_at), watchItemId: opt(r.watch_item_id),
   shelfOrder: r.shelf_order, startedOn: opt(r.started_on), finishedOn: opt(r.finished_on),
   addedAt: r.added_at, updatedAt: r.updated_at,
 })
@@ -50,6 +52,7 @@ const toBook = (r: BookRow): Book => ({
 // `parent_id` once had in Finance.
 /** Set once a row has come back carrying the 20260035 columns: only then can a cleared price be written as null. */
 let spendColumns = false
+let watchColumn = false
 const fromBook = (b: Book, userId: string) => ({
   id: b.id, user_id: userId, title: b.title, subtitle: b.subtitle ?? null, authors: b.authors,
   isbn: b.isbn ?? null, publisher: b.publisher ?? null, published_year: b.publishedYear ?? null,
@@ -65,6 +68,7 @@ const fromBook = (b: Book, userId: string) => ({
   // Same rule for the price: sent once it holds something or the project is known to have the columns.
   ...(b.paidAmount !== undefined || b.paidCurrency || b.boughtOn || b.boughtAt || spendColumns
     ? { paid_amount: b.paidAmount ?? null, paid_currency: b.paidCurrency ?? null, bought_on: b.boughtOn ?? null, bought_at: b.boughtAt ?? null } : {}),
+  ...(b.watchItemId || watchColumn ? { watch_item_id: b.watchItemId ?? null } : {}),
 })
 
 const toList = (r: ListRow): LibList => ({
@@ -101,6 +105,7 @@ export async function loadLibrary(): Promise<LibraryData | null | 'missing'> {
     }
   }
   if ((b.data as BookRow[]).some(x => 'paid_amount' in x)) spendColumns = true
+  if ((b.data as BookRow[]).some(x => 'watch_item_id' in x)) watchColumn = true
   return {
     books: (b.data as BookRow[]).map(toBook),
     lists: (l.data as ListRow[]).map(toList),
@@ -347,6 +352,17 @@ export async function removeGoal(id: string): Promise<void> {
 /** Does this project have the 20260032 columns? Asked once: a block written to a project without them
  *  would create the calendar event and then fail to remember it, leaving an event nothing can find. */
 let blockProbe: Promise<boolean> | null = null
+let watchProbe: Promise<boolean> | undefined
+/** Asked before a watch is started: creating the Shopping item and then failing to remember it on the book is the worst order to fail in. */
+export function watchSupported(): Promise<boolean> {
+  watchProbe ??= Promise.resolve(supabase.from('library_books').select('watch_item_id').limit(1)).then(r => {
+    // Answers "may I start a watch" and nothing more: whether to *send* the column is decided by a row that carried it
+    // (or by a pointer that holds something), so merely opening a card never changes what every save writes.
+    if (r.error) watchProbe = undefined
+    return !r.error
+  }, () => { watchProbe = undefined; return false })
+  return watchProbe
+}
 export function blocksSupported(): Promise<boolean> {
   blockProbe ??= Promise.resolve(supabase.from('library_plans').select('block_event_id').limit(1)).then(r => {
     if (!r.error) blockColumns = true

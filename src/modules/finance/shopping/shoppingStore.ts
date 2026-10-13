@@ -119,6 +119,8 @@ interface ShoppingState {
 
   // Price watching
   priceWatchLoading: boolean
+  /** True once a load has finished — before that, an empty list means "not read yet", not "nothing there". */
+  loaded: boolean
   refreshPrices:     (itemIds?: string[]) => Promise<void>
   addSnapshots:      (snaps: PriceSnapshot[]) => void
 
@@ -142,6 +144,7 @@ export const useShoppingStore = create<ShoppingState>((set, get) => ({
   loading:   false,
   settings:  loadSettings(),
   priceWatchLoading: false,
+  loaded: false,
 
   enrichedItems: () => {
     const { items, snapshots, stores } = get()
@@ -167,6 +170,7 @@ export const useShoppingStore = create<ShoppingState>((set, get) => ({
       stores:    stores ?? [],
       snapshots: snaps,
       loading:   false,
+      loaded:    items !== null || get().loaded,
     })
   },
 

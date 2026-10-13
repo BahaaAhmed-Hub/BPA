@@ -4478,3 +4478,49 @@ of 7d — a wishlist price watch on the Shopping one — is separate and not bui
 edges, the left-out count, the Markdown, every write body (a clear is `null`), the CHECK
 refusals, a reload, and the unmigrated project still saving a rating. The ink audit's
 first book carries a price.
+
+## Library 7d (part 2) — watching a book's price
+`20260036_library_watch.sql` (`library_books.watch_item_id`), `priceWatch.ts`,
+`WatchCard.tsx` (**Watch the price**, under *What it cost*, on any book not yet finished).
+**The watch is Shopping's.** A watched book is one ordinary Shopping item in the category
+`Books`, and the existing `shopping-price-watch` does the checking; the Library holds only
+the pointer. Nothing was added to the edge function.
+- **It exists only where Shopping can be read.** Shopping is a tab of Finance, so the card
+  says "Finance is not on your plan" (and reads nothing — measured: zero `shopping_*`
+  requests) or "behind the Finance lock", exactly as the assistant's tools refuse a locked
+  ledger. The lock is the lock.
+- **The pointer is written only after the item exists, and the card asks first whether it
+  may be** (`watchSupported()`, a `select watch_item_id limit 1`): creating a Shopping item
+  and then failing to remember it on the book is the worst order to fail in, and an orphan
+  Shopping item keeps being scraped. Without 20260036 the card names the file and adds
+  nothing. The probe answers "may I start" and nothing else — it must **not** make every save
+  send the column (it did, and 6 older suites' fake projects, which accept any select,
+  started refusing every write); that is decided by a row that carried the key.
+- **"Gone" is not claimed before Shopping has been read.** The Shopping store only loaded
+  when its own screen mounted, so an empty list meant "not read yet". `loaded` is true
+  once a load returned items (a failed read does not count), the card loads it itself, and
+  until then says "Reading your shopping list…". A pointer whose item is missing *after*
+  that is said plainly, with **Forget it**; nothing then checks the price.
+- **No store, no price — said before and after.** `storesToCheck` for a `Books` item with no
+  store choice; with none, the card warns at start and while watching. The check is that
+  one answer, not a second copy.
+- **The price is a first match, not a fact.** The shops are searched by title and first
+  author and the page is the first result, which can be another edition. The card says so,
+  links the shop's own page, and shows the shop and how long ago (`checkedAgo`).
+  The verdict against the target is to the cent (`verdict`).
+- **The target is the Shopping item's** (`target_price_max`), edited on the card with the
+  same parser as a price (`parseMoney`); a bad value saves nothing and says so.
+- **Switching the watch on is Shopping's global setting**, so it is a button the person
+  presses, not something starting a watch does silently. Check now is disabled until then.
+- **Ending it is explicit and removes the Shopping item** (two-step: *Stop watching* →
+  *Yes, stop and remove it from Shopping*), and **Bought it** on a priced book on the buy
+  list ends the watch too. **Deleting the book does not touch the Shopping item** — a
+  cross-module delete with no confirmation is the wrong default; it stays under "Books" in
+  Shopping for the person to remove there.
+`scripts/library-watch.mjs` — 37 assertions: the verdict/name/time maths, Finance off
+(zero Shopping reads), no bookshop, the whole path against a fake with the shopping
+tables and a faked price function (item made, pointer written after, the function asked
+for this item at the Books store only, price/shop/verdict/link, target edit and clear, a
+reload, stop with back-out, Bought it), a removed item only after Shopping is read, and
+the unmigrated project. The fake's PATCH had to apply to the matched row — treated as an
+upsert it created a store with no `categories` and crashed `enrichedItems`.

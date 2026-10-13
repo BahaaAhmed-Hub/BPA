@@ -36,6 +36,8 @@ export interface Book {
   paidCurrency?: string
   boughtOn?: string
   boughtAt?: string
+  /** 7d-2: the Shopping item that watches this book's price. Absent until the migration (20260036) has run. */
+  watchItemId?: string
   shelfOrder: number
   startedOn?: string
   finishedOn?: string

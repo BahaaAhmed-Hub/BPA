@@ -91,7 +91,7 @@ const pick = async title => { await p.getByRole('button', { name: new RegExp(tit
 const panel = () => p.getByRole('complementary')
 await pick('Deep Work')
 const card = () => panel().locator('div', { has: p.getByText('What it cost', { exact: true }) }).last()
-const amount = () => panel().getByLabel('Price paid'), curr = () => panel().getByLabel('Currency')
+const amount = () => panel().getByLabel('Price paid'), curr = () => panel().getByLabel('Currency', { exact: true })
 ok('the card is in the panel, empty for a book never priced', await amount().inputValue() === '' && await curr().inputValue() === '')
 const last = () => writes[writes.length - 1]
 writes = []

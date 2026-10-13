@@ -5,6 +5,7 @@ import { Eyebrow, Field, DateField, Row, TextField } from './fields'
 import { inputStyle } from './fieldStyle'
 import { useLibraryStore } from './libraryStore'
 import { todayISO } from './readingStats'
+import { stopWatch } from './priceWatch'
 import { fmtMoney, parseCurrency, parseMoney } from './spendStats'
 import type { Book } from './types'
 
@@ -71,7 +72,7 @@ export function PurchaseCard({ book }: { book: Book }) {
         <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{fmtMoney(book.paidAmount, book.paidCurrency)}</div>
       )}
       {book.toBuy && book.paidAmount !== undefined && (
-        <Button size="sm" variant="secondary" style={{ alignSelf: 'flex-start' }} onClick={() => update(book.id, { toBuy: false })}>
+        <Button size="sm" variant="secondary" style={{ alignSelf: 'flex-start' }} onClick={() => { if (book.watchItemId) stopWatch(book); update(book.id, { toBuy: false }) }}>
           Bought it — take it off the buy list
         </Button>
       )}
