@@ -1426,14 +1426,15 @@ function App() {
         open={assistantOpen}
         minimised={assistantAside}
         onMinimise={() => setAssistantAside(true)}
-        onRestore={() => setAssistantAside(false)}
         onClose={() => { setAssistantOpen(false); setAssistantAside(false) }} />
       {/* While it is put aside the button is back in its "open me" state, so
           either the tab or the button brings it back. */}
       <AssistantToggle
         open={assistantOpen && !assistantAside}
         onClick={() => {
-          if (assistantOpen && !assistantAside) { setAssistantOpen(false); return }
+          // Collapse, never close: closing forgets the conversation, and the person
+          // pressing the button again is asking for it back, not for a new one.
+          if (assistantOpen && !assistantAside) { setAssistantAside(true); return }
           setAssistantOpen(true)
           setAssistantAside(false)
         }} />

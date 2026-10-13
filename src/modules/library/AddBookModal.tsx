@@ -134,7 +134,7 @@ export function AddBookModal({ onClose, onAdded, defaultListIds = [], initialIsb
 
         {/* Sticky, with the right corner left clear: the assistant's floating
             button is fixed to the viewport and sat on top of the primary action. */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, padding: '12px 56px 16px 22px', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, padding: '12px var(--ai-fab-clear) 16px 22px', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
           {!d.title.trim() && <span style={{ ...CAPS, color: 'var(--sb-ink-4)', marginRight: 'auto' }}>A title is all it needs</span>}
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button variant="accent" disabled={!d.title.trim()} onClick={add}>Add to library</Button>
