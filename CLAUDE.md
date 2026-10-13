@@ -3825,8 +3825,35 @@ what the row offers:
   thing every time they arrive, so `KIND_NEED[kind]` writes the sentence and the
   tokens are not spent — in the browser and in the nightly edge function alike.
 - The rules exist twice (Deno cannot import the app's bundle).
-  `scripts/mail-rules-agree.mjs` runs 17 fixtures through both and fails on any
-  disagreement, kept/discarded included. `20260017_mail_smart_kinds.sql` adds
+  `scripts/mail-rules-agree.mjs` runs 23 fixtures through both and fails on any
+  disagreement, kept/discarded included.
+- **And they drifted, exactly where the suite exists to catch it.** A commit
+  that stopped digests leaking into *action* changed `mailKinds.ts` and added
+  a mirror to the server's `looksCampaign` — but the two were never the same
+  shape. The browser asks in two steps: a **newsletter** goes, and a
+  **notification** goes only where `canNeedAction(kind)` is false. The server
+  asked one: a regex over the sender's **local part** — `team@`, `support@`,
+  `info@` among them — which decided *kept at all*, on its own. So a support
+  ticket you were in the middle of, and a `team@` message that addressed you
+  by name, were `action` in the app at 9am and **discarded** by the nightly
+  pass at 3am. One thread, two answers, and nothing on screen to say which had
+  run; the only reason it was ever found is that the suite compares `kept`.
+  A local part says a message is **bulk** and nothing more — whether bulk is a
+  campaign or a receipt is `classifyMail`'s question, and it has to be asked
+  before anything is thrown away.
+  So `supabase/functions/_shared/mailClasses.ts` is the classifier's twin and
+  `keepThread` is now the browser's own two sentences; `looksCampaign` is
+  `classifyMail(…) === 'newsletter'` and its two regexes are gone, so there is
+  one answer rather than two. The new rule is broader where it should be (an
+  ESP domain, a `mail.` subdomain, an unsubscribe line in the body) and
+  narrower where it must be. The **account-is-work** half stays with the
+  browser — `index.ts` asks it separately — which is also the generous side: a
+  row stored and then filtered on display is recoverable, a row never stored
+  is not.
+  Measured as a **diff of the whole fixture table before and after**, not just
+  of the two rows: the nightly column moves on **exactly two** of 23 and
+  nothing else moves at all — which is what stops "keep everything" passing,
+  since six fixtures are still discarded on both sides. `20260017_mail_smart_kinds.sql` adds
   `kind`, `muted`, `archived_at`, `acknowledged_at` and widens the section check.
 
 ## Mail — the week's mail, sorted by what it wants

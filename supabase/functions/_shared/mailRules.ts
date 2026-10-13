@@ -19,6 +19,7 @@
 /** The two clocks the rules use. Here rather than in the function, because a
  *  rule and the number it compares against are one thing. */
 import { kindOf, canNeedAction, KIND_NEED, type MailKind } from './mailKinds.ts'
+import { classifyMail, type MailClass } from './mailClasses.ts'
 // Re-exported so the function imports the rules from one place.
 export { canNeedAction, KIND_NEED }
 export type { MailKind }
@@ -63,33 +64,41 @@ export const FREE_MAIL = new Set([
   'yandex.com','zoho.com',
 ])
 
-/** FROM display names like "Flipboard 10 For Today" or "Morning Brew" — a
- *  service digest, not a person writing to you. Checked before the body so a
- *  truncated snippet cannot hide it. */
-const NEWSLETTER_FROM_NAME =
-  /\b(digest|newsletter|weekly|daily|roundup|edition|briefing|summary|stories|highlights|curated|updates?|for today|this week|for you|morning|evening|news|trending|top \d+|alert|recap)\b/i
-
-/** A bulk-sender local part — the address itself says "I am a list". */
-const BULK_SENDERS =
-  /^(no[-_.]?reply|donotreply|newsletter|news|mailer|mail|marketing|promo|promotions|offers|deals|campaign|updates?|update|notification|notifications|info|hello|hi|team|support|community|digest|alerts?|store|shop|club|members?|stories|edition|picks|roundup|briefing|highlights?|editorial|curator?|weekly|daily|trending|featured|selected|curated|topstories|top|share)[+@._-]/i
-
 /** A campaign: something sent to a list, whatever its subject line says. It is
  *  discarded outright — there is no version of a marketing send that the smart
- *  view has an answer for. */
+ *  view has an answer for.
+ *
+ *  **It used to be a regex of its own, and that is what drifted.** The test
+ *  was a sender's local part (`team@`, `support@`, `info@`…) plus the list
+ *  headers, and it answered *kept or not* on its own. But a local part says
+ *  only that a message is **bulk**; whether bulk is a newsletter or a
+ *  transactional notice is `classifyMail`'s question, and the browser has
+ *  always asked it that way. So this is now the one classifier's answer —
+ *  broader where it should be (an ESP domain, a `mail.` subdomain, an
+ *  unsubscribe line in the body) and narrower where it must be (a receipt or a
+ *  ticket from `support@` is a notification, not a campaign). */
 export function looksCampaign(m: NeutralMessage): boolean {
-  const hs = m.headers
-  const has = (n: string) => !!headerOf(hs, n)
-  if (has('List-Unsubscribe') || has('List-Id') || has('List-Post')) return true
-  if (/bulk|list|junk/i.test(headerOf(hs, 'Precedence'))) return true
-  if (has('X-Campaign-Id') || has('X-Mailer-Campaign') || has('X-Feedback-Id')) return true
-  if (has('Auto-Submitted') && !/^no$/i.test(headerOf(hs, 'Auto-Submitted'))) return true
-  // A FROM display name like "Flipboard 10 For Today" or "Morning Brew" is a
-  // service digest, not a person writing.
-  if (NEWSLETTER_FROM_NAME.test(m.fromName)) return true
-  // The local part of the address announces it is a list.
-  const local = m.from.toLowerCase().split('@')[0] ?? ''
-  if (BULK_SENDERS.test(local + '@')) return true
-  return false
+  return classOf(m, '') === 'newsletter'
+}
+
+/** One call, shaped for a `NeutralMessage`. `mailbox` only separates
+ *  needs-you / copied / other, all of which are decided *below* the bulk
+ *  branch — so the two classes this file reads are the same with or without
+ *  it, and `looksCampaign` can pass none. */
+function classOf(m: NeutralMessage, mailbox: string): MailClass {
+  return classifyMail({
+    headers: m.headers,
+    fromEmail: m.from,
+    fromName: m.fromName,
+    to: m.to.join(', '),
+    cc: m.cc.join(', '),
+    subject: m.subject,
+    // The snippet, not the whole body: the marketing test reads it for an
+    // unsubscribe line, and that lives in the part already handed over.
+    body: m.snippet,
+    mailbox,
+    isInvitation: /text\/calendar/i.test(headerOf(m.headers, 'Content-Type')),
+  })
 }
 
 /** Machine-sent rather than written by a person. Not the same question as
@@ -110,14 +119,29 @@ export function looksAutomated(m: NeutralMessage): boolean {
   return false
 }
 
-/** The one filter, stated once. A campaign goes; other automated mail goes only
- *  nothing else does — `kindOf` tells an announcement from a conversation from
- *  the shape of the thread, so a second rule here guessing from the sender's
- *  address was two rules answering one question. This is the same sentence
- *  `isBusinessThread` makes in the browser, and `scripts/mail-rules-agree.mjs`
- *  fails if the two stop agreeing. */
-export function keepThread(m: NeutralMessage, _kind: MailKind): boolean {
-  return !looksCampaign(m)
+/** The one filter, stated once — and it is now **the same two sentences** the
+ *  browser's `isBusinessThread` makes, rather than a second rule guessing from
+ *  the sender's address:
+ *
+ *  - a **newsletter** goes, whatever its subject line says;
+ *  - a **notification** goes only where the thread's kind leaves the row
+ *    nothing to offer — a build failure nobody is waiting on goes, an
+ *    invitation, a sign-in alert, a cancellation and a ticket you are in the
+ *    middle of all stay.
+ *
+ *  `scripts/mail-rules-agree.mjs` fails if the two stop agreeing, and it is
+ *  what caught the previous answer: a support thread and a `team@` message
+ *  that named you were kept by the app and discarded here.
+ *
+ *  The account-is-work half of the browser's rule stays with the browser:
+ *  `index.ts` asks it separately (`accountIsBusiness || f.internal`), which is
+ *  also the generous side — a row stored and then filtered on display is a
+ *  recoverable mistake, a row never stored is not. */
+export function keepThread(m: NeutralMessage, kind: MailKind, mailbox = ''): boolean {
+  const cls = classOf(m, mailbox)
+  if (cls === 'newsletter') return false
+  if (cls === 'notification' && !canNeedAction(kind)) return false
+  return true
 }
 
 export interface Facts {

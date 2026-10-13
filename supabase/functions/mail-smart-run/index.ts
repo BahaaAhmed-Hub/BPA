@@ -212,10 +212,12 @@ async function runForUser(admin: any, userId: string, now: number): Promise<{ re
 
       const newestMsg = msgs.filter(m => !me.has(m.from.toLowerCase())).pop() ?? msgs[msgs.length - 1]
       const accountIsBusiness = business.includes(box)
-      // A campaign goes; other automated mail stays where the row can answer
-      // it — an invitation, a sign-in alert, a status notice, a meeting called
-      // off. `f.kind` is the same reading the browser makes.
-      if (!keepThread(newestMsg, f.kind)) continue
+      // A newsletter goes; other automated mail stays where the row can
+      // answer it — an invitation, a sign-in alert, a status notice, a meeting
+      // called off, a ticket you are in the middle of. `f.kind` is the same
+      // reading the browser makes, and `box` lets the classifier answer about
+      // the mailbox it actually arrived in.
+      if (!keepThread(newestMsg, f.kind, box)) continue
       if (!accountIsBusiness && !f.internal) continue
 
       out.push({
