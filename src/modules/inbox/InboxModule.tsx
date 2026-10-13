@@ -17,6 +17,7 @@ import { classifyMail, unsubscribeLink, CLASSES, CLASS_INFO, countByClass, type 
 import { listUnreadThreadIds, getThread, modifyThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, markAsUnread, archiveMessage, unarchiveMessage, trashMessage, untrashMessage, listLabels, batchModify, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder, type GmailHeader, type GmailLabel } from '@/lib/gmail'
 import { cachedDraft, forgetBrief } from '@/lib/mailBriefs'
 import { forgetWaiting } from '@/lib/mailWaiting'
+import { useRailOverflow } from '@/lib/railOverflow'
 import { mailAccounts, loadMailView, saveMailView, accountsFor, accountLabel, type MailView } from './mailAccounts'
 import { SmartView } from './SmartView'
 import { runSmartPass, type PassResult, type SmartThread } from '@/lib/mailSmartSync'
@@ -517,30 +518,10 @@ export function InboxModule() {
   }, [filteredEmails, sortKey, sortAsc, companyByMail])
 
 
-  // ── Does the filter rail have more to the right? ──────────────────────────
-  //  The fade at its edge is the only thing that says so — the scrollbar is
-  //  hidden, being 15px of furniture under a 27px row that appears and
-  //  disappears as counts change. But a fade that is always there is just a
-  //  dimmed last pill, so it is drawn only while there is something behind it,
-  //  and only until you have scrolled to it.
-  const railRef = useRef<HTMLDivElement | null>(null)
-  const measureRail = useCallback(() => {
-    const el = railRef.current
-    if (!el) return
-    const more = el.scrollWidth > el.clientWidth + 2
-    el.toggleAttribute('data-overflow', more)
-    el.toggleAttribute('data-at-end', el.scrollLeft + el.clientWidth >= el.scrollWidth - 2)
-  }, [])
-  useEffect(() => {
-    const el = railRef.current
-    if (!el) return
-    measureRail()
-    // The counts change as mail arrives and the column changes width when the
-    // reader opens, so one measurement at mount is the wrong number by lunch.
-    const ro = new ResizeObserver(measureRail)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [measureRail, mailClass, classCounts, visibleEmails.length])
+  // The fade at the rail's right edge, measured — `lib/railOverflow.ts`. It
+  // used to be twenty lines here, which is why the smart view's identical rail
+  // never had one.
+  const railRef = useRailOverflow(`${mailClass}|${visibleEmails.length}`)
 
   /** The messages a bulk action would act on: what the chosen tab holds. */
   const inClass = useMemo(
@@ -1708,7 +1689,7 @@ export function InboxModule() {
               sits at the right of the filters, where a list's controls belong
               together rather than stacked. */}
           <div className="mail-controls">
-          <div className="mail-filter-rail" ref={railRef} onScroll={measureRail}
+          <div className="mail-filter-rail" ref={railRef}
             style={{ flex: 1, minWidth: 0 }}>
             <Pill on={mailClass === null} onClick={() => setMailClass(null)}
               title="Everything in this folder">

@@ -4274,6 +4274,39 @@ and the app should wear its own badge.
 - The **Last 30 days** bar was a `--sb-field` box at `--sb-r-nav` — a *card*
   shape for a menu — and is now the rail's `LOZENGE` like the other five.
   `data-mail-bar`.
+- **And the four views are in it.** They were a rail of their own underneath,
+  while the bar carried a LAST 30 DAYS eyebrow and a sentence about the pass —
+  so the row that decides what you are looking at sat *below* a row that
+  decides nothing, and the bar itself was mostly empty. The views are the
+  control the screen is steered with, so they get the bar. What the pass is
+  doing is said in the one place that is about the pass: the spinner on **Check
+  now**.
+  The statement that went with them said how many people are waiting on you,
+  which is true and is the one thing the counts in the rail do not say. It is
+  gone rather than moved — there is no room for both, and a view you have to
+  scroll past to find is worse than a fact you have to open a view to read.
+  `flexWrap` goes with it: the rail scrolls sideways inside `flex: 1` +
+  **`minWidth: 0`**, which is what stops a flex item refusing to shrink below
+  its own content, so the bar is one line at every width.
+- **The fade at the rail's edge is one measurement, in `lib/railOverflow.ts`.**
+  It lived in `InboxModule` — twenty lines of `ResizeObserver` and
+  `data-overflow`/`data-at-end` — so the smart view's *identical* rail, with
+  the same stylesheet rules behind it, had no fade at all. Now that it is in
+  the bar beside two buttons it is a box that can genuinely run out of room.
+  The hook also listens for `scroll` on the element, which the original only
+  did through an `onScroll` prop on its own JSX — so `data-at-end` is now
+  right for both rails rather than for whichever one remembered to wire it.
+
+### The mark owns the top-left corner, not the top-right
+It was the last item in `YouCluster` at 51px. It is the **first** item now, at
+**76px** — 1.5x again, sized to the empty space it sits in rather than to the
+34px controls, which is the whole reason it moved: the top-left of the content
+column is the one spot nothing else claims, and the corner a badge has always
+been in. `marginRight: auto` pushes the three controls back to their own end,
+which is the same thing a spacer element says with one property instead of a
+node. The row grew **60 → 84**, because an object taller than its row hangs out
+of both ends of it, and the two paddings are now equal (18) so the mark's left
+edge sits as far off its end as the account menu does off the other.
 
 ### Habits said the day twice, a line apart
 The header read `HABITS TRACKER · 33% of today done · 3 of 9 finished · 1d
@@ -4302,12 +4335,19 @@ uses so the two are one object at two sizes.
   information in it.
 
 `scripts/mark-and-the-stats.mjs [mark|mail|habits|control]` — the mark is
-measured as **two** claims, since a size assertion alone passes with the mark
-hanging out of the row: 51 = 1.5 × 34, every item in the row sharing a centre
-line to **0.0px**, the mark inside the row's own bounds, nothing drawn to its
-right, and its right edge on the row's 18px padding. **Control: the row put
-back to 48px on that very element** — the mark then runs −1 → 50 against a row
-of 0 → 48, and only that assertion fails. Mail asserts the switch's absence
+measured as **four** claims, since a size assertion alone passes with the mark
+hanging out of the row or sitting at the wrong end of it: 76 within half a
+pixel of 1.5 × 51, every item in the row sharing a centre line to **0.0px**,
+the mark inside the row's own bounds (4 → 80 in 0 → 84), nothing drawn to its
+**left**, its left edge on the row's 18px padding, and 1,316px of row still to
+its right — or "moved left" would be satisfied by a row with everything piled
+on one side. **Control: the old arrangement restored on those very elements**
+— 51px, `order: 9`, the auto margin dropped, the row back to 60 — and it fails
+6 of 11, with 12 elements then drawn to the mark's left. Mail asserts the pills
+are **inside `[data-mail-bar]`** and that there is exactly **one** filter rail
+on the page, before asserting that "Last 30 days" is nowhere on it, because an
+absence is also true of a blank page; and that the bar is still 46px, which is
+one line of 27px pills rather than two. Mail asserts the switch's absence
 **and** that the Smart view is what draws, because an absence is also true of a
 blank page. Habits reads the two rects' own y order (card 82, bar 179) rather
 than source order. `flying-bars-match-the-rail.mjs` covers six bars now.

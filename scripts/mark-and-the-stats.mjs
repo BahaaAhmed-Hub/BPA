@@ -6,14 +6,16 @@
  *
  * Three separate claims, each measured where it is made:
  *
- * - **mark** — the mark is 1.5x the controls beside it and *aligned*, which is
- *   two measurements rather than one: every item's vertical centre is the same
- *   line, and its right edge is the row's own padding edge with nothing to the
- *   right of it. A size assertion alone would pass with the mark hanging out
- *   of the row.
- * - **mail** — no Mail/Smart switch anywhere, and the Smart view is what draws
- *   (the absence alone is also true of a blank page, so the presence is
- *   asserted beside it).
+ * - **mark** — it is 76px (1.5x the 51 it was), it owns the **top-left**
+ *   corner with nothing drawn to its left, and it is *aligned*: every item in
+ *   the row shares one centre line and the mark sits inside the row's own
+ *   bounds. A size assertion alone passes with the mark hanging out of the row
+ *   or sitting at the wrong end of it, which is why each of those is its own
+ *   claim.
+ * - **mail** — no Mail/Smart switch, and the four views are now **inside the
+ *   bar** with the LAST 30 DAYS statement gone. The absence is also true of a
+ *   blank page, so the pills' presence *in that element* is asserted beside
+ *   it, along with the bar still being one line.
  * - **habits** — the stats card is *above* the controls, and the duplicate
  *   sentence that used to sit over it is gone. Measured as the rects' own y
  *   order, not as source order.
@@ -74,9 +76,19 @@ async function go(mod) {
 if (MODE === 'mark' || MODE === 'control') {
   await go('morning')
   if (MODE === 'control') {
-    // The row as it was: 48px tall, which a 51px mark cannot sit inside.
+    // The arrangement as it was, restored on the very same elements: 51px, at
+    // the *end* of a 60px row. One property each — size, order, the auto
+    // margin that pushes the controls away, and the row's height.
     await p.evaluate(() => {
-      const row = document.querySelector('[data-you]'); if (row) row.style.height = '48px'
+      const row  = document.querySelector('[data-you]')
+      const mark = document.querySelector('[data-be-mark]')
+      if (!row || !mark) return
+      row.style.height = '60px'
+      mark.style.order = '9'
+      mark.style.marginRight = '0'
+      mark.style.marginLeft = '4px'
+      const art = mark.firstElementChild
+      if (art) { art.style.width = '51px'; art.style.height = '51px' }
     })
     await p.waitForTimeout(200)
   }
@@ -97,11 +109,15 @@ if (MODE === 'mark' || MODE === 'control') {
       markMid: +(mr.top + mr.height / 2).toFixed(1),
       rowTop: Math.round(rr.top), rowBottom: Math.round(rr.bottom), rowH: Math.round(rr.height),
       markTop: Math.round(mr.top), markBottom: Math.round(mr.bottom),
+      leftGap: Math.round(mr.left - rr.left),
       rightGap: Math.round(rr.right - mr.right),
       items,
-      // Is anything drawn to the right of it?
-      rightOf: [...document.querySelectorAll('[data-you] *')]
-        .filter(el => el.getBoundingClientRect().left >= mr.right + 1).length,
+      // Is anything drawn to the left of it? (It owns the corner, so: none.)
+      leftOf: [...document.querySelectorAll('[data-you] *')]
+        .filter(el => {
+          const r = el.getBoundingClientRect()
+          return r.width > 0 && r.right <= mr.left - 1
+        }).length,
     }
   })
   if (!m) { ok('the mark is on screen', false); }
@@ -109,9 +125,11 @@ if (MODE === 'mark' || MODE === 'control') {
     console.log('   ' + JSON.stringify(m))
     const ctrl = m.items[0]
     ok('the mark is drawn', m.markW > 0, `${m.markW}x${m.markH}`)
-    ok('the controls beside it are 34px', ctrl?.h === 34, `${ctrl?.h}`)
-    ok('and the mark is 1.5x of them', m.markW === Math.round(ctrl.h * 1.5), `${m.markW} vs ${ctrl.h} x 1.5`)
+    ok('it is 76px', m.markW === 76, `${m.markW}`)
+    // 1.5 x 51 is 76.5; 76 is the whole pixel under it.
+    ok('which is 1.5x the 51 it was', Math.abs(m.markW - 51 * 1.5) <= 0.5, `${m.markW} vs 76.5`)
     ok('it is square', m.markW === m.markH)
+    ok('the controls beside it are still 34px', ctrl?.h === 34, `${ctrl?.h}`)
 
     // Vertical: one centre line through every item in the row.
     const offs = m.items.map(i => Math.abs(i.mid - m.markMid))
@@ -120,28 +138,66 @@ if (MODE === 'mark' || MODE === 'control') {
     ok('and it sits inside the row, not through it',
       m.markTop >= m.rowTop && m.markBottom <= m.rowBottom,
       `mark ${m.markTop}–${m.markBottom} in row ${m.rowTop}–${m.rowBottom}`)
+    ok('the row grew to hold it', m.rowH === 84, `${m.rowH}px`)
 
-    // Horizontal: it owns the corner.
-    ok('nothing is drawn to the right of it', m.rightOf === 0, `${m.rightOf} elements`)
-    ok('it sits on the row’s own right padding', m.rightGap === 18, `${m.rightGap}px`)
+    // Horizontal: it owns the **left** corner now.
+    ok('nothing is drawn to the left of it', m.leftOf === 0, `${m.leftOf} elements`)
+    ok('it sits on the row’s own left padding', m.leftGap === 18, `${m.leftGap}px`)
+    // …and the controls still own the other end, or "moved left" would be
+    // satisfied by a row with everything piled on one side.
+    ok('and the controls still reach the right edge', m.rightGap > 300,
+      `${m.rightGap}px of row to its right`)
   }
 }
 
 /* ── mail ──────────────────────────────────────────────────────────────────── */
 if (MODE === 'mail') {
   await go('inbox')
-  const txt = await p.evaluate(() => document.body.innerText.replace(/\s+/g, ' '))
   const seg = await p.evaluate(() =>
     [...document.querySelectorAll('[role="radiogroup"], .sb-segmented')]
       .map(e => e.innerText.replace(/\s+/g, ' ').trim()))
   console.log('   segmented controls on the page:', JSON.stringify(seg))
   ok('no Mail / Smart switch anywhere', !seg.some(t => /^Mail Smart$|^Smart Mail$/.test(t)))
-  // The absence is also true of a blank page, so assert the view is there.
-  ok('the Smart view is what draws', /Last 30 days/i.test(txt), txt.slice(0, 60))
-  ok('and its bar carries its own controls', /Check now/.test(txt) && /Re-read all/.test(txt))
-  ok('mail-mode is no longer read or written',
-    !(await p.evaluate(() => localStorage.getItem('mail-mode'))) ||
-    !(await p.evaluate(() => document.body.innerHTML.includes('mail-mode'))))
+
+  const bar = await p.evaluate(() => {
+    const el = document.querySelector('[data-mail-bar]')
+    if (!el) return null
+    const r = el.getBoundingClientRect()
+    const rails = [...document.querySelectorAll('.mail-filter-rail')]
+    return {
+      text: el.innerText.replace(/\s+/g, ' ').trim(),
+      h: Math.round(r.height),
+      pageText: document.body.innerText.replace(/\s+/g, ' '),
+      rails: rails.length,
+      railsInBar: rails.filter(x => el.contains(x)).length,
+      // Does the rail actually have its own box to scroll in?
+      railFlexes: rails.filter(x => el.contains(x))
+        .map(x => Math.round(x.getBoundingClientRect().width)),
+    }
+  })
+  if (!bar) { ok('the mail bar is on screen', false) }
+  else {
+    console.log('   ' + JSON.stringify({ ...bar, pageText: bar.pageText.slice(0, 50) }))
+    // The positive claim first: an absence is also true of a blank page.
+    ok('the bar is on screen', bar.h > 0, `${bar.h}px tall`)
+    ok('the four views are inside it',
+      ['Requires your action', 'Worth knowing', 'On your radar', 'Internal FYI']
+        .every(t => bar.text.includes(t)), bar.text.slice(0, 90))
+    ok('and All with them', /\bAll\b/.test(bar.text))
+    ok('there is exactly one filter rail, and it is in the bar',
+      bar.rails === 1 && bar.railsInBar === 1, `${bar.rails} rails, ${bar.railsInBar} in the bar`)
+    ok('it has a box of its own to scroll in', (bar.railFlexes[0] ?? 0) > 200,
+      `${bar.railFlexes[0]}px`)
+    // Now the absence.
+    ok('the LAST 30 DAYS statement is gone from the bar', !/30 days/i.test(bar.text), bar.text.slice(0, 60))
+    ok('and from the page', !/Last 30 days/i.test(bar.pageText))
+    ok('nor does it still say who is waiting',
+      !/waiting on you/i.test(bar.text) && !/Not read yet/i.test(bar.text))
+    ok('the bar still carries its own two controls',
+      /Check now/.test(bar.text) && /Re-read all/.test(bar.text))
+    // One line: pills are 27px, so a wrapped bar is over 60.
+    ok('and it is one line', bar.h <= 52, `${bar.h}px`)
+  }
 }
 
 /* ── habits ────────────────────────────────────────────────────────────────── */

@@ -574,14 +574,34 @@ function YouCluster() {
 
   return (
     <div data-you style={{
-      // **60px, not 48.** The mark is 1.5x the 34px controls beside it — 51px —
-      // and a 51px object in a 48px row overflows it by a pixel and a half at
-      // each end. The row is the thing that gives way: `alignItems: center`
-      // then centres every item on one line, the mark included, which is what
-      // "aligned vertically" has to mean when the items are different heights.
-      flexShrink: 0, height: 60, paddingRight: 18, paddingLeft: 12,
+      // **84px, for the mark.** It is 76px, and a 76px object in a 60px row
+      // overflows it by 8px at each end. The row is the thing that gives way:
+      // `alignItems: center` then centres every item on one line, the mark and
+      // the 34px controls alike, which is what "aligned vertically" has to mean
+      // when the items are different heights. The two paddings are equal, so
+      // the mark's left edge sits the same distance off its end of the row as
+      // the account menu does off the other.
+      flexShrink: 0, height: 84, paddingRight: 18, paddingLeft: 18,
       display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
     }}>
+      {/* ─── The mark, and the top-left corner it owns ──────────────────────
+          It was on the sign-in screen and nowhere else, so the app itself wore
+          no badge. It is the **first** item in the row now — the top-left
+          corner of the content column, which is the one spot nothing else
+          claims and where a badge has always gone. `marginRight: auto` pushes
+          the three controls back to their own end rather than a spacer
+          element: the same thing said with one property instead of a node.
+          76px is 1.5x the 51 it was — sized to the empty space it sits in
+          rather than to the 34px controls — and the row grew 60 → 84 to hold
+          it, because an object taller than its row hangs out of both ends of
+          it. `amber` is the colourway the sign-in screen already uses, so the
+          two are one object at two sizes rather than two marks. It is
+          decoration beside controls that do things, so no `title`: a screen
+          reader announcing "Be" before the search button adds a stop and no
+          information. */}
+      <div data-be-mark aria-hidden style={{ flexShrink: 0, display: 'flex', alignItems: 'center', marginRight: 'auto' }}>
+        <BeLogo variant="amber" size={76} />
+      </div>
       {/* Search sits with them rather than in the rail: it is a thing you
           reach for, not a place you go. It keeps ⌘K and loses its box —
           beside two round controls a worded field is a third kind of
@@ -676,18 +696,6 @@ function YouCluster() {
         )}
       </div>
 
-      {/* ─── The mark ─────────────────────────────────────────────────────────
-          It was on the sign-in screen and nowhere else, so the app itself wore
-          no badge. Here it is the last item in the row, which puts it in the
-          top-right corner of the content column — the one spot nothing else
-          claims. `amber` is the colourway the sign-in screen already uses, so
-          the two are the same object at two sizes rather than two marks.
-          It is decoration beside controls that do things, so no `title`: a
-          screen reader announcing "Be" between the bell and your account menu
-          adds a stop and no information. */}
-      <div data-be-mark aria-hidden style={{ flexShrink: 0, display: 'flex', alignItems: 'center', marginLeft: 4 }}>
-        <BeLogo variant="amber" size={51} />
-      </div>
     </div>
   )
 }
