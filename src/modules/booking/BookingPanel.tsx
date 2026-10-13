@@ -281,7 +281,7 @@ function PlanCard({ plan, handle, calendars, onSave, onDelete }: {
 
 // ─── The panel ───────────────────────────────────────────────────────────────
 
-export function BookingPanel({ userId, userName, calendars, windows, openHours, onOpenHours, onPickWindow, onClose }: {
+export function BookingPanel({ userId, userName, calendars, windows, openHours, onOpenHours, onPickWindow, onDeleteWindow, onClose }: {
   userId: string
   userName?: string
   calendars: ComposerCalendar[]
@@ -295,8 +295,15 @@ export function BookingPanel({ userId, userName, calendars, windows, openHours, 
   /** Take the week to the day a window falls on, so the list and the grid
    *  are one thing rather than two views that have to be reconciled. */
   onPickWindow: (date: string) => void
+  /** Take a window away. The calendar owns the list, so the write and the
+   *  state both live there. */
+  onDeleteWindow: (id: string) => void | Promise<void>
   onClose: () => void
 }) {
+  // Closing hours is cheap to redo and expensive to do by accident: a repeating
+  // window is every week at once. One press arms it, a second confirms, and
+  // moving on disarms it.
+  const [confirming, setConfirming] = useState<string | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
   const [prof, setProf] = useState<BookingProfileRow | null>(null)
   const [plans, setPlans] = useState<PlanRow[] | null>(null)
@@ -464,11 +471,12 @@ export function BookingPanel({ userId, userName, calendars, windows, openHours, 
                   const day = new Date(`${w.on_date}T12:00:00`)
                   const weekday = day.toLocaleDateString(undefined, { weekday: 'short' })
                   return (
-                    <button key={w.id} onClick={() => onPickWindow(next ?? w.on_date)}
+                    <div key={w.id} style={{ display: 'flex', alignItems: 'stretch', gap: 4 }}>
+                    <button onClick={() => onPickWindow(next ?? w.on_date)}
                       title={next ? `Next on ${next} — show me that week` : 'This one has no date still to come'}
                       aria-label={`Open hours ${hhmmOf(w.start_min)} to ${hhmmOf(w.end_min)}, ${repeats ? `every ${weekday}` : w.on_date}${next ? `, next on ${next}` : ', none still to come'}`}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                        display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0,
                         background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
                         borderLeft: 'var(--sb-border-emphasis) solid var(--sb-positive)',
                         borderRadius: 'var(--sb-r-nav)', padding: '6px 9px', cursor: 'pointer',
@@ -483,6 +491,33 @@ export function BookingPanel({ userId, userName, calendars, windows, openHours, 
                       </span>
                       {repeats && <Repeat size={ICON.sm} strokeWidth={STROKE.active} style={{ color: 'var(--sb-positive-deep)', flexShrink: 0 }} />}
                     </button>
+                    {confirming === w.id ? (
+                      <button autoFocus
+                        onClick={() => { setConfirming(null); void onDeleteWindow(w.id) }}
+                        onBlur={() => setConfirming(null)}
+                        aria-label={`Confirm: close open hours ${hhmmOf(w.start_min)} to ${hhmmOf(w.end_min)}${repeats ? ' every week' : ''}`}
+                        style={{
+                          flexShrink: 0, padding: '0 10px', cursor: 'pointer', fontFamily: 'inherit',
+                          fontSize: 'var(--sb-t-meta)', fontWeight: 600, whiteSpace: 'nowrap',
+                          background: 'var(--sb-negative-tint)', color: 'var(--sb-negative-deep)',
+                          border: 'var(--sb-border-width) solid var(--sb-negative)', borderRadius: 'var(--sb-r-nav)',
+                        }}>
+                        {repeats ? 'Close every week?' : 'Close?'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setConfirming(w.id)}
+                        title="Close these hours"
+                        aria-label={`Close open hours ${hhmmOf(w.start_min)} to ${hhmmOf(w.end_min)}, ${repeats ? `every ${weekday}` : w.on_date}`}
+                        style={{
+                          flexShrink: 0, width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', background: 'var(--sb-field)', color: 'var(--sb-ink-3)',
+                          border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+                        }}>
+                        <Trash2 size={ICON.sm} strokeWidth={STROKE.active} />
+                      </button>
+                    )}
+                    </div>
                   )
                 })}
             </div>

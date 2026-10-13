@@ -3346,28 +3346,43 @@ export function CalendarIntelligence() {
                           }) : undefined}
                           title={marking
                             ? `Open ${hhmmOf(w.start_min)} – ${hhmmOf(w.end_min)}${repeats ? ', every week' : ''} — click to change`
-                            : `Open for booking ${hhmmOf(w.start_min)} – ${hhmmOf(w.end_min)}${repeats ? ', every week' : ''}`}
+                            : `Open to book — people can book a call or meeting here, ${hhmmOf(w.start_min)} – ${hhmmOf(w.end_min)}${repeats ? ', every week' : ''}`}
                           aria-label={`Open hours ${hhmmOf(w.start_min)} to ${hhmmOf(w.end_min)} on ${ds}`}
                           style={{
                             position: 'absolute', top, left: 0, right: 0, height: h, zIndex: 0,
                             background: 'var(--sb-positive-tint)',
-                            border: `var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 45%, transparent)`,
+                            // **Dashed: space on offer, not a thing scheduled.** An
+                            // event is a solid card; an open hour is a gap somebody
+                            // can still take, and the border says so before a word is read.
+                            border: `var(--sb-border-width) dashed color-mix(in srgb, var(--sb-positive) 55%, transparent)`,
                             borderLeft: `var(--sb-border-emphasis) solid var(--sb-positive)`,
                             borderRadius: 'var(--sb-r-card)',
                             cursor: marking ? 'pointer' : 'default',
                             pointerEvents: marking ? 'auto' : 'none',
                             textAlign: 'left', padding: '3px 7px', boxSizing: 'border-box',
                             fontFamily: 'inherit', overflow: 'hidden',
+                            // A button centres its content; a tall box wants it at the top.
+                            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start',
                           }}>
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
                             fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-positive-deep)',
                             fontVariantNumeric: 'tabular-nums',
                           }}>
+                            <CalendarPlus size={10} strokeWidth={STROKE.active} aria-hidden />
                             {hhmmOf(w.start_min)}–{hhmmOf(w.end_min)}
                             {repeats && <Repeat size={9} strokeWidth={STROKE.active} />}
-                            {h >= 40 && <span style={{ fontWeight: 600, letterSpacing: '.06em' }}>OPEN</span>}
                           </span>
+                          {h >= 40 && (
+                            <span style={{ display: 'block', marginTop: 1, fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '.04em', color: 'var(--sb-positive-deep)' }}>
+                              Open to book
+                            </span>
+                          )}
+                          {h >= 64 && (
+                            <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 500, color: 'var(--sb-positive-deep)' }}>
+                              Calls &amp; meetings
+                            </span>
+                          )}
                         </button>
                       )
                     })}
@@ -3683,6 +3698,7 @@ export function CalendarIntelligence() {
           openHours={openHours}
           onOpenHours={on => { setOpenHours(on); if (!on) setEditWin(null) }}
           onPickWindow={date => { setAnchorDate(new Date(`${date}T12:00:00`)); setOpenHours(true) }}
+          onDeleteWindow={dropWindow}
           onClose={() => setShowBooking(false)} />
       )}
 
