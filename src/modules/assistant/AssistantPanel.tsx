@@ -9,6 +9,7 @@ import {
   readAttachment, kindOf, toAnthropicContent, toGroqContent, unsupported, tooLarge, prettySize,
   type Attachment,
 } from '@/lib/chatAttachments'
+import { Markdown } from './Markdown'
 import { loadAIConfig, maskKey, type AIConfig } from '@/modules/settings/Settings'
 import { loadAccounts } from '@/lib/multiAccount'
 import { useBehavioralStore } from '@/store/behavioralStore'
@@ -66,6 +67,21 @@ function providerLabel(cfg: AIConfig): string {
 
 // ─── System prompt ────────────────────────────────────────────────────────────
 
+/** How to write for THIS panel: ~390px wide, Markdown drawn properly (tables
+ *  scroll sideways inside their own box, lists get bullets). Said once and
+ *  shared by both tones, because the model otherwise picks its own style —
+ *  which is how a day came back as ten stacked headers and a rule between
+ *  every one. Telegram has its own prompt and its own, narrower dialect. */
+const FORMAT_RULES = `
+How to format answers (they are drawn as Markdown in a narrow side panel):
+- Lead with the answer in one short line, then the detail. No greeting paragraph, no closing summary that repeats the list.
+- A schedule or any list of 3+ items with 2+ attributes is a table: at most 4 short columns (for a day: Time | Event | Where, times as 09:30–12:00). Fewer than 3 items is a sentence or bullets, not a table.
+- Tasks, emails and options are "-" bullets, one line each: **bold title** then a short qualifier. Group with a single "###" label at most once per section.
+- Never use "---" separators or "#"/"##" headings. Never put a table inside a bullet. Bold only labels and key figures.
+- Money: show the currency and keep thousands separators. Use a table to compare more than two figures.
+- Show an image only when a tool gave you its URL, as ![what it is](url). Never invent a URL. If a diagram would genuinely help, describe the structure in a short indented list instead.
+- If a list is long, show the top items and say how many more there are.`
+
 function buildSystemPrompt(userName: string, today: string, samuraiMode = false): string {
   if (samuraiMode) {
     return `You are operating in Samurai Mode as a calm tactical advisor to ${userName}.
@@ -92,7 +108,9 @@ You have tools to:
 - Read and write the finance ledger: balances, spending, budgets, goals, and entries
 - Read images, PDFs and text files the user attaches to a message
 
-Use tools immediately when action is required. Summarize results with minimal words. Ask one focused question when clarification is needed.`
+Use tools immediately when action is required. Summarize results with minimal words. Ask one focused question when clarification is needed.
+${FORMAT_RULES}
+In this mode use no emoji at all.`
   }
 
   return `You are Professor AI — ${userName}'s personal executive assistant with live access to their Gmail, task board, Google Calendar, and Google Drive.
@@ -127,9 +145,11 @@ On money:
 
 Guidelines:
 - Be concise and action-oriented. When asked to do something, use the right tool immediately — don't explain how.
-- After using a tool, summarize findings clearly. Format lists with line breaks.
+- After using a tool, summarize findings clearly.
 - If you need clarification before acting, ask one focused question.
-- Refer to the user by first name only. Keep tone warm but professional.`
+- Refer to the user by first name only. Keep tone warm but professional.
+${FORMAT_RULES}
+- One emoji per section label at most, and only where it helps scanning (📅 schedule, ✅ tasks, ✉️ mail); none inside table cells except a status mark.`
 }
 
 // ─── Message bubble ───────────────────────────────────────────────────────────
@@ -179,7 +199,9 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
         </div>
       )}
       <div style={{
-        maxWidth: '80%', padding: '9px 12px',
+        // The assistant's bubble carries tables, so it takes the width; yours
+        // is a sentence and stays a sentence.
+        maxWidth: isUser ? '80%' : '92%', minWidth: 0, padding: '9px 12px',
         // Three corners on the card radius and one tucked in at the tail, so
         // the bubble points at whoever said it — and both move with the theme.
         borderRadius: isUser
@@ -189,7 +211,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
         border: isUser ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
         fontSize: 'var(--sb-t-body)', lineHeight: 1.6,
         color: isUser ? 'var(--sb-accent-ink)' : 'var(--sb-ink-1)',
-        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+        ...(isUser ? { whiteSpace: 'pre-wrap' as const, wordBreak: 'break-word' as const } : {}),
       }}>
         {/* What went with the message. Without this the thread shows a question
             about a document nobody can see was ever handed over. */}
@@ -208,7 +230,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
             ))}
           </span>
         ) : null}
-        {msg.content}
+        {isUser ? msg.content : <Markdown text={msg.content} />}
       </div>
     </div>
   )
