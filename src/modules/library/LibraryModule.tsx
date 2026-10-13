@@ -8,6 +8,7 @@ import { BookFlight } from './BookFlight'
 import { BookPanel } from './BookPanel'
 import { CoverGrid } from './CoverGrid'
 import { DiscoverView } from './DiscoverView'
+import { EmptyShelf } from './EmptyShelf'
 import { ListsView } from './ListsView'
 import { QuoteBoard } from './QuoteBoard'
 import { Shelf } from './Shelf'
@@ -190,13 +191,7 @@ export function LibraryModule() {
               ) : view === 'lists' ? (
                 <ListsView onOpen={id => { setListId(id); setStatus('all'); setQ(''); setView('shelf') }} />
               ) : books.length === 0 ? (
-                <Card style={{ padding: '28px 26px', maxWidth: 520, margin: '20px 0' }}>
-                  <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 6 }}>Your shelf is empty</div>
-                  <p style={{ margin: '0 0 16px', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
-                    Type a title and its cover and details are found for you. You can shelve it under a category or a list as you add it.
-                  </p>
-                  <Button variant="accent" onClick={() => setAdding(true)}><Plus size={ICON.md} /> Add your first book</Button>
-                </Card>
+                <EmptyShelf onAdd={() => setAdding(true)} />
               ) : visible.length === 0 ? (
                 <p style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>
                   {filtered ? 'No book matches that.' : 'Nothing here.'}{' '}
