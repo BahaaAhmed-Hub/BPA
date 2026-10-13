@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Anthropic from '@anthropic-ai/sdk'
-import { Brain, X, Send, Loader2, ChevronDown, ChevronRight, ChevronLeft, Wrench, Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
+import { Brain, X, Send, Loader2, ChevronDown, ChevronRight, ChevronLeft, Check, CircleAlert, Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHabitsStore } from '@/store/habitsStore'
@@ -45,6 +45,29 @@ interface DisplayMessage {
   content: string
   /** What was sent alongside the words, so the thread shows it too. */
   files?: { name: string; kind: Attachment['kind'] }[]
+  /** Tool chips only: which tool, and whether it is still going. The chip used
+   *  to be a sentence with a wrench that spun for ever — it was never told the
+   *  tool had come back, so it went on looking busy under a finished answer. */
+  tool?: string
+  state?: 'running' | 'done' | 'failed'
+}
+
+/** `list_habits` → "Reading habits…" while it runs, "Read habits" once it has.
+ *  A raw tool name on screen is a log line; this is what it was doing. */
+function toolLabel(name: string): { running: string; done: string } {
+  const m = /^(list|get|search|find|read|check|show)_(.+)$/.exec(name)
+  const w = /^(create|add|new|send|reply|log|set|update|complete|delete|remove|archive|mark|move)_(.+)$/.exec(name)
+  const noun = (m?.[2] ?? w?.[2] ?? name).replace(/_/g, ' ')
+  if (w) {
+    const [run, done] = ({
+      create: ['Creating', 'Created'], add: ['Adding', 'Added'], new: ['Creating', 'Created'],
+      send: ['Sending', 'Sent'], reply: ['Replying to', 'Replied to'],
+      delete: ['Removing', 'Removed'], remove: ['Removing', 'Removed'],
+      archive: ['Archiving', 'Archived'],
+    } as Record<string, [string, string]>)[w[1]] ?? ['Updating', 'Updated']
+    return { running: `${run} ${noun}…`, done: `${done} ${noun}` }
+  }
+  return { running: `Reading ${noun}…`, done: `Read ${noun}` }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -157,16 +180,30 @@ ${FORMAT_RULES}
 
 function MessageBubble({ msg }: { msg: DisplayMessage }) {
   if (msg.role === 'tool') {
+    const state = msg.state ?? 'done'
+    const label = msg.tool ? toolLabel(msg.tool) : { running: msg.content, done: msg.content }
+    const failed = state === 'failed'
+    const colour = failed ? 'var(--sb-negative-deep, var(--sb-negative))' : 'var(--sb-info)'
     return (
       <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          padding: '3px 10px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-meta)',
-          background: 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)',
-          color: 'var(--sb-info)',
+        <span className={state === 'running' ? 'ai-chip ai-chip-running' : 'ai-chip'} data-state={state} style={{
+          position: 'relative', overflow: 'hidden',
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          padding: '4px 11px 4px 9px', borderRadius: 'var(--sb-r-pill)', fontSize: 'var(--sb-t-meta)',
+          background: `color-mix(in srgb, ${failed ? 'var(--sb-negative)' : 'var(--sb-info)'} ${state === 'running' ? 10 : 6}%, transparent)`,
+          border: `var(--sb-border-width) solid color-mix(in srgb, ${failed ? 'var(--sb-negative)' : 'var(--sb-info)'} ${state === 'running' ? 24 : 14}%, transparent)`,
+          color: colour, opacity: state === 'running' ? 1 : 0.8,
+          transition: 'opacity .25s ease, background .25s ease, border-color .25s ease',
         }}>
-          <Wrench size={ICON.sm} style={{ animation: 'spin 1s linear infinite' }} />
-          {msg.content}
+          {state === 'running' && (
+            <svg className="ai-ring" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity=".2" strokeWidth="3" />
+              <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          )}
+          {state === 'done'   && <Check size={13} strokeWidth={2.5} aria-hidden />}
+          {failed             && <CircleAlert size={13} strokeWidth={2.25} aria-hidden />}
+          <span role="status" aria-live="polite">{state === 'running' ? label.running : failed ? `${label.running.replace('…', '')} failed` : label.done}</span>
         </span>
       </div>
     )
@@ -249,7 +286,7 @@ function ThinkingDot() {
       </div>
       <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip) var(--sb-r-card) var(--sb-r-card) var(--sb-r-card)' }}>
         {[0, 1, 2].map(i => (
-          <div key={i} style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)', animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          <div key={i} style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)', animation: `aiWave 1.3s ease-in-out ${i * 0.16}s infinite` }} />
         ))}
       </div>
     </div>
@@ -328,6 +365,11 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
   const primaryEmail = user?.email ?? ''
   const ctx: ToolContext = { tasks, addTask, updateTask, deleteTask, accounts, primaryEmail, habits }
 
+  /** A chip is told when its tool comes back. */
+  function settleChip(id: string, state: 'done' | 'failed') {
+    setDisplayMessages(prev => prev.map(m => (m.id === id ? { ...m, state } : m)))
+  }
+
   // ── Anthropic agentic loop (streaming) ─────────────────────────────────────
 
   async function runAnthropic(trimmed: string, cfg: AIConfig, system: string, history: Anthropic.MessageParam[], atts: Attachment[] = []) {
@@ -373,12 +415,15 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
       const toolResults: Anthropic.ToolResultBlockParam[] = []
       for (const block of response.content) {
         if (block.type !== 'tool_use') continue
-        setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'tool', content: `Checking ${block.name.replace(/_/g, ' ')}…` }])
+        const chip = `tool-${block.id}`
+        setDisplayMessages(prev => [...prev, { id: chip, role: 'tool', content: block.name, tool: block.name, state: 'running' }])
         try {
           const result = await executeTool(block.name, block.input as Record<string, unknown>, ctx)
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) })
+          settleChip(chip, 'done')
         } catch (err) {
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${err instanceof Error ? err.message : String(err)}`, is_error: true })
+          settleChip(chip, 'failed')
         }
       }
       msgs = [...msgs, { role: 'user', content: toolResults }]
@@ -424,12 +469,15 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
       for (const call of msg.tool_calls) {
         const toolName  = call.function.name
         const toolInput = JSON.parse(call.function.arguments) as Record<string, unknown>
-        setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'tool', content: `Checking ${toolName.replace(/_/g, ' ')}…` }])
+        const chip = `tool-${call.id}`
+        setDisplayMessages(prev => [...prev, { id: chip, role: 'tool', content: toolName, tool: toolName, state: 'running' }])
         try {
           const result = await executeTool(toolName, toolInput, ctx)
           toolResults.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) })
+          settleChip(chip, 'done')
         } catch (err) {
           toolResults.push({ role: 'tool', tool_call_id: call.id, content: `Error: ${err instanceof Error ? err.message : String(err)}` })
+          settleChip(chip, 'failed')
         }
       }
       msgs = [...msgs, ...toolResults]
@@ -497,6 +545,11 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
       setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'error', content: friendly }])
     } finally {
       setThinking(false)
+      // Whatever ended the turn — an answer, an error, a refused key — nothing
+      // may be left spinning under it.
+      setDisplayMessages(prev => prev.some(m => m.state === 'running')
+        ? prev.map(m => (m.state === 'running' ? { ...m, state: 'failed' as const } : m))
+        : prev)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anthropicMsgs, groqMsgs, thinking, user, tasks, attachments])
@@ -754,6 +807,18 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
         @keyframes pulse { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
         @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes aiChipSweep { from { transform: translateX(-100%) } to { transform: translateX(100%) } }
+        @keyframes aiWave { 0%,60%,100% { transform: translateY(0) scale(.8); opacity: .45 } 30% { transform: translateY(-4px) scale(1); opacity: 1 } }
+        .ai-ring { flex-shrink: 0; animation: spin .8s linear infinite }
+        .ai-chip-running::after {
+          content: ''; position: absolute; inset: 0; pointer-events: none;
+          background: linear-gradient(100deg, transparent 20%, color-mix(in srgb, var(--sb-info) 18%, transparent) 50%, transparent 80%);
+          animation: aiChipSweep 1.6s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ai-ring { animation-duration: 2.4s }
+          .ai-chip-running::after { animation: none }
+        }
       `}</style>
     </>
   )
