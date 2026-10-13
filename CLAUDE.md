@@ -1951,6 +1951,13 @@ back.
 over the real module with the server's completion order controlled, each batch
 landing backwards. Control, on the shipped code: the browser holds 93
 characters and **the server holds `"s"`**.
+- **A second defence made that control a control of nothing.** The read-back
+  loop added later heals a mis-ordered write on its own, so stripping only the
+  serialisation stopped reproducing the stump: the control asserted the bug
+  appears, the bug did not appear, and the suite reported a failure about code
+  that was fine. A control has to remove **every** defence against the fault it
+  demonstrates, or it measures whichever one somebody left in — so it now
+  strips the retry too, and the server holds `"s"` again.
 
 ## Bots — a 401 is not an empty wallet, and the message has to name the key
 "My API ran out of credit, I paid again, and Telegram still gives me 401."
