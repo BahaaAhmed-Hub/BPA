@@ -165,5 +165,11 @@ export interface ReadingPlan {
   minutes?: number
   /** … each day or each week. */
   per: PlanPer
+  /** The block this plan has put on the calendar (4d): the time of day …  */
+  blockAt?: string
+  /** … the Google event that is it … */
+  blockEventId?: string
+  /** … and what it was built from, to tell when the plan has moved on. */
+  blockSig?: string
   createdAt: string
 }

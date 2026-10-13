@@ -27,6 +27,9 @@ async function open() {
     const t = u.pathname.split('/').pop()
     if (!(t in T)) return json(r, [])
     if (t === 'library_plans' && missing) return json(r, { code: 'PGRST205', message: 'no table' }, 404)
+    // This project has not run 20260032: asking for a block column is the 400 PostgREST sends, which is how
+    // the card learns not to send them (library-plan-blocks.mjs is the suite for a project that has).
+    if (t === 'library_plans' && (u.searchParams.get('select') ?? '').includes('block_')) return json(r, { code: '42703', message: 'column does not exist' }, 400)
     if (m === 'GET') return json(r, T[t])
     if (m === 'POST') {
       const rows = [].concat(JSON.parse(q.postData() || '[]'))
@@ -39,7 +42,12 @@ async function open() {
       for (const row of rows) { const i = T[t].findIndex(x => x.id === row.id); if (i >= 0) T[t][i] = { ...T[t][i], ...row }; else T[t].push(row) }
       return json(r, [], 201)
     }
-    if (m === 'DELETE') { const id = u.searchParams.get('id')?.replace(/^eq\./, ''); if (id) T[t] = T[t].filter(x => x.id !== id); return json(r, []) }
+    if (m === 'DELETE') {
+      const id = u.searchParams.get('id')?.replace(/^eq\./, ''); if (id) T[t] = T[t].filter(x => x.id !== id)
+      // on delete cascade, as the real tables do
+      if (t === 'library_books' && id) { T.library_plans = T.library_plans.filter(x => x.book_id !== id); T.library_sessions = T.library_sessions.filter(x => x.book_id !== id) }
+      return json(r, [])
+    }
     return json(r, [])
   })
   await ctx.route('https://covers.openlibrary.org/**', r => r.fulfill({ status: 404, body: '' }))
@@ -176,7 +184,9 @@ ok('one plan per book: setting again replaces, never duplicates', await p.evalua
 }, B1) === 1 && refused.length === 0)
 await wait(800)
 
-// deleting the book takes its plan, and undo gives it back
+// deleting the book takes its plan, and undo gives it back (let the upserts above land first: a write
+// still in flight when the book goes would, on the real table, be refused by the foreign key)
+await wait(2000)
 await p.getByRole('button', { name: /Deep Work by|Deep Work/ }).first().click().catch(() => {})
 const n0 = await p.evaluate(async () => (await import('/BPA/src/modules/library/libraryStore.ts')).useLibraryStore.getState().plans.length)
 await p.evaluate(async id => (await import('/BPA/src/modules/library/libraryStore.ts')).useLibraryStore.getState().deleteBook(id), B1)

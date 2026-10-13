@@ -297,9 +297,10 @@ const LIBRARY = {
     { id: 's2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', kind: 'listen', on_date: '2026-10-11', minutes: 25, pages: null, to_page: null, created_at: '2026-10-11T08:00:00Z' },
   ],
   // Plans: one live (a state in the accent-deep ink) and one past its date (the negative ink), so
-  // both state colours are measured on the panel and in the Tracker's list.
+  // both state colours are measured on the panel and in the Tracker's list. The first also carries a (stale)
+  // calendar block, so the 4d line and its Update button are on screen.
   library_plans: [
-    { id: 'pl1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', finish_by: '2026-10-20', minutes: 30, per: 'day', created_at: '2026-10-09T00:00:00Z' },
+    { id: 'pl1', user_id: SU, book_id: '00000000-0000-4000-8000-000000000000', finish_by: '2026-10-20', minutes: 30, per: 'day', created_at: '2026-10-09T00:00:00Z', block_at: '20:00', block_event_id: 'ev-fixture', block_sig: 'stale' },
     { id: 'pl2', user_id: SU, book_id: '00000000-0000-4000-8000-000000000001', finish_by: '2026-10-01', minutes: null, per: 'day', created_at: '2026-09-20T00:00:00Z' },
   ],
   library_list_books: [0, 1, 2].map(i => ({ list_id: 'l2', book_id: `00000000-0000-4000-8000-00000000000${i}`, user_id: SU, sort_order: 0, added_at: '2026-09-01T00:00:00Z' })),

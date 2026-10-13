@@ -4175,3 +4175,62 @@ sentences) and the UI against a fake that enforces the CHECKs and the unique —
 make, edit date/minutes/per, zero minutes, clearing, undo, the Tracker list,
 trash, replace-not-duplicate, book delete + undo, and the missing migration.
 The ink audit carries a live and a past-its-date plan.
+
+## Library 4d — a plan's time, on the calendar
+`20260032_library_plan_blocks.sql` (`block_at`, `block_event_id`, `block_sig` on
+`library_plans`), `planBlock.ts` (pure), and a **Time of day / Block this time**
+row on the Plan card, shown once the plan has minutes. A plan puts **one repeating
+event on the primary calendar** — nothing else, and only the primary: a company
+calendar or a connected account is a different token and a different question.
+- **One recurring event, not a hundred.** `FREQ=DAILY;COUNT=n` for a day plan,
+  `FREQ=WEEKLY` for a week plan: one id to remember and one thing to remove. It is
+  **COUNT, never UNTIL** — UNTIL on a timed event must be a UTC date-time, which
+  turns "the finish day" into a timezone question COUNT does not have. No finish
+  date is four weeks, never a series with no end; capped at 366 daily / 52 weekly.
+- **The first block is never in the past.** A time still ahead today starts today,
+  one that has passed starts tomorrow. A finish date already gone is refused
+  ("move it, then block the time") rather than writing a series that ended.
+- **The plan remembers the handle and the recipe, nothing else.** `block_event_id`
+  is the *only* way to that event — lose it and the event is an orphan nothing in
+  the app can find, the `gcalEventId` lesson again — and `block_sig` (time ·
+  minutes · per · finish date · title) is what it was built from. **Stale is a
+  comparison of strings, not a fetch**: edit the minutes, the date or the picker
+  and the card says the block no longer matches and offers **Update the block**.
+  The edit itself writes nothing to Google; a calendar write per keystroke is what
+  the 700ms hold exists to prevent.
+- **Nothing is remembered unless Google took it.** A refused POST (403) stores
+  no id and the card says why; no Google sign-in says so instead of "failed".
+- **Update on an event deleted in Google makes a fresh one** (the PATCH answers
+  404/410) rather than failing on an id that no longer exists. **Taking off an
+  event that is already gone is success.** A delete Google *refuses* keeps the id
+  and says the block is still on the calendar.
+- **Removing the plan takes its block off first**, and if Google refuses, the plan
+  stays: a plan removed while its event survives leaves an event nobody can find.
+  The cleared-block write is skipped on that path — `setPlanBlock` then
+  `deletePlan` fire an upsert and a delete without awaiting either, and the upsert
+  can land second and **bring the row back**. (Found by the test: the plan was
+  still there after a successful delete.)
+- **Block fields are not undoable.** The event lives in Google. `setPlanBlock`
+  pushes no undo entry; undoing a date change restores the date and keeps whatever
+  block the plan has *now*; undoing a removal restores a plan with **no** block,
+  since the event it pointed at was taken off. Otherwise ⌘Z would orphan an event
+  or point a plan at one that is gone.
+- **Block columns follow the optional-column rule.** `fromPlan` sends them once
+  they hold something or once the project is known to have them (`blockColumns`,
+  learned from a row that carried the key), so a *cleared* block really clears
+  (`null`) and an unmigrated project is never sent a column it lacks. The card
+  asks once (`blocksSupported()` — `select block_event_id limit 1`) before offering
+  the button, because creating the event and then failing to remember it is the
+  worst order to fail in; without 20260032 it names the migration and nothing
+  reaches Google. The plan itself keeps saving.
+- **The caption says what is true now:** before blocking, it says what *will* be made ("One
+  repeating 30 min block every day until Fri 23 Oct, on your main calendar");
+  after, what *was*.
+`scripts/library-plan-blocks.mjs` — 40 assertions with `www.googleapis.com`
+intercepted, so the *requests* are asserted: the pure builder with the clock fixed
+(today/tomorrow, COUNT daily/weekly/open-ended/capped, refusals, length, signature,
+time validation) and the card (one POST to `primary`, the recurrence, what is
+stored, stale on edit, PATCH not a second POST, the deleted-in-Google fallback,
+refused delete keeps the id, already-gone is success, refused POST stores nothing,
+removing a plan with a block, both undo rules, no minutes → no controls, and the
+missing migration). The ink audit's first plan carries a stale block.

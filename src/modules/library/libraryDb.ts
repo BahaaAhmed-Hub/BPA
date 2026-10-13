@@ -270,20 +270,38 @@ export async function removeSession(id: string): Promise<void> {
   fail(error)
 }
 
-interface PlanRow { id: string; user_id: string; book_id: string; finish_by: string | null; minutes: number | null; per: string; created_at: string }
+interface PlanRow { id: string; user_id: string; book_id: string; finish_by: string | null; minutes: number | null; per: string; created_at: string; block_at?: string | null; block_event_id?: string | null; block_sig?: string | null }
+/** Set once a row has come back carrying the 20260032 columns: only then can a cleared block be written as null. */
+let blockColumns = false
 const toPlan = (r: PlanRow): ReadingPlan => ({
   id: r.id, bookId: r.book_id, finishBy: opt(r.finish_by), minutes: opt(r.minutes), per: r.per as PlanPer, createdAt: r.created_at,
+  blockAt: opt(r.block_at), blockEventId: opt(r.block_event_id), blockSig: opt(r.block_sig),
 })
 // `?? null`: undefined is dropped on the way to JSON, so a cleared date would never be cleared.
+// The block columns follow the optional-column rule: sent once there is something in them, or once
+// the project is known to have them (so a cleared block really clears) — never to one that lacks them.
 const fromPlan = (p: ReadingPlan, userId: string) => ({
   id: p.id, user_id: userId, book_id: p.bookId, finish_by: p.finishBy ?? null, minutes: p.minutes ?? null, per: p.per, created_at: p.createdAt,
+  ...(p.blockEventId || blockColumns ? { block_at: p.blockAt ?? null, block_event_id: p.blockEventId ?? null, block_sig: p.blockSig ?? null } : {}),
 })
 
 /** Read on its own like sessions: without 20260031 the shelf is untouched. */
 export async function loadPlans(): Promise<ReadingPlan[] | null | 'missing'> {
   const r = await supabase.from('library_plans').select('*')
   if (r.error) return r.error.code === '42P01' || r.error.code === 'PGRST205' ? 'missing' : null
-  return (r.data as PlanRow[]).map(toPlan)
+  const rows = r.data as PlanRow[]
+  if (rows.some(x => 'block_event_id' in x)) blockColumns = true
+  return rows.map(toPlan)
+}
+/** Does this project have the 20260032 columns? Asked once: a block written to a project without them
+ *  would create the calendar event and then fail to remember it, leaving an event nothing can find. */
+let blockProbe: Promise<boolean> | null = null
+export function blocksSupported(): Promise<boolean> {
+  blockProbe ??= Promise.resolve(supabase.from('library_plans').select('block_event_id').limit(1)).then(r => {
+    if (!r.error) blockColumns = true
+    return !r.error
+  }, () => false)
+  return blockProbe
 }
 export async function savePlan(p: ReadingPlan): Promise<void> {
   markLocalWrite('library')

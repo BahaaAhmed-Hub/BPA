@@ -78,6 +78,8 @@ interface LibraryState {
 
   /** One plan per book: setting one on a book that has it replaces it. */
   setPlan: (bookId: string, patch: Partial<Pick<ReadingPlan, 'finishBy' | 'minutes' | 'per'>>) => void
+  /** Records (or forgets) the calendar block a plan made. Not undoable: the event lives in Google, and a restored row pointing at one that was removed — or missing one that exists — would orphan it. */
+  setPlanBlock: (bookId: string, block: Pick<ReadingPlan, 'blockAt' | 'blockEventId' | 'blockSig'>) => void
   deletePlan: (bookId: string) => void
 
   addFollow: (f: Omit<Follow, 'id' | 'createdAt'>) => Follow
@@ -148,17 +150,33 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     if (next.finishBy === undefined && next.minutes === undefined) { get().deletePlan(bookId); return }
     set(st => ({ plans: old ? st.plans.map(p => (p.bookId === bookId ? next : p)) : [...st.plans, next] }))
     pushUndo(old ? 'Change plan' : 'Make a plan', () => suppressUndo(() => {
-      if (old) { set(st => ({ plans: st.plans.map(p => (p.bookId === bookId ? old : p)) })); void savePlan(old).catch(failed('restore that', get().loadFromDB)) }
+      if (old) {
+        // Put back what was said, not the block as it stood: that belongs to the calendar as it is now.
+        const cur = get().plans.find(p => p.bookId === bookId)
+        const back: ReadingPlan = { ...old, blockAt: cur?.blockAt, blockEventId: cur?.blockEventId, blockSig: cur?.blockSig }
+        set(st => ({ plans: st.plans.map(p => (p.bookId === bookId ? back : p)) })); void savePlan(back).catch(failed('restore that', get().loadFromDB))
+      }
       else get().deletePlan(bookId)
     }))
     void savePlan(next).catch(failed('save the plan', get().loadFromDB))
+  },
+
+  setPlanBlock(bookId, block) {
+    const old = get().plans.find(p => p.bookId === bookId)
+    if (!old) return
+    const next: ReadingPlan = { ...old, ...block }
+    set(st => ({ plans: st.plans.map(p => (p.bookId === bookId ? next : p)) }))
+    void savePlan(next).catch(failed('remember the calendar block', get().loadFromDB))
   },
 
   deletePlan(bookId) {
     const old = get().plans.find(p => p.bookId === bookId)
     if (!old) return
     set(st => ({ plans: st.plans.filter(p => p.bookId !== bookId) }))
-    pushUndo('Remove plan', () => suppressUndo(() => { set(st => ({ plans: [...st.plans, old] })); void savePlan(old).catch(failed('restore that', get().loadFromDB)) }))
+    // What comes back has no block: the card takes the event off the calendar before it removes the plan,
+    // so a row restored with the old id would point at an event that no longer exists.
+    const back: ReadingPlan = { ...old, blockAt: undefined, blockEventId: undefined, blockSig: undefined }
+    pushUndo('Remove plan', () => suppressUndo(() => { set(st => ({ plans: [...st.plans, back] })); void savePlan(back).catch(failed('restore that', get().loadFromDB)) }))
     void removePlan(old.id).catch(failed('remove the plan', get().loadFromDB))
   },
 
