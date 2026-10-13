@@ -197,36 +197,73 @@ export async function pushSharedPrefs(): Promise<PushResult> {
  *  cannot support. */
 export type PushResult = 'saved' | 'nothing' | 'failed'
 
+/** Why the last push failed, in the server's or the platform's own words — the
+ *  screen shows it, because "could not reach your account" names no cause. */
+export let lastPushError = ''
+
+/** **A write is not saved until it is read back.** `update … eq('id')` against
+ *  a row that is not there succeeds, changes nothing and returns no error, so
+ *  the screen said "Saved" about a key that went nowhere. And every other
+ *  writer of `schedule_rules` (profile, notification prefs, connected accounts)
+ *  reads the object, edits a field and writes the *whole* object back — one
+ *  landing between this push's read and its write erases the key, after which
+ *  `seen` claimed it synced and nothing ever sent it again. So: write, read it
+ *  back, and try again if it is not there. */
 async function sendSharedPrefs(): Promise<PushResult> {
-  const id = await userId()
-  if (!id) return 'failed'
+  lastPushError = ''
+  const { data: sess } = await supabase.auth.getSession()
+  const user = sess.session?.user
+  if (!user) { lastPushError = 'You are signed out.'; return 'failed' }
+  const id = user.id
 
-  const seen = loadSeen()
-  const mine: Record<string, string> = {}
-  for (const key of SHARED_KEYS) {
-    const v = localStorage.getItem(key)
-    if (v == null) continue
-    // Unchanged since the last sync means this device has nothing to say about
-    // it — not that its copy is the right one.
-    if (seen[key] === v) continue
-    mine[key] = v
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: existing, error: readErr } = await supabase
+      .from('users').select('schedule_rules').eq('id', id).maybeSingle()
+    if (readErr) { lastPushError = readErr.message; console.warn('shared prefs read failed:', readErr.message); return 'failed' }
+
+    const rules = (existing?.schedule_rules as Record<string, unknown>) ?? {}
+    const bag   = (rules[FIELD] as Record<string, string> | undefined) ?? {}
+
+    const seen = loadSeen()
+    const mine: Record<string, string> = {}
+    for (const key of SHARED_KEYS) {
+      const v = localStorage.getItem(key)
+      if (v == null) continue
+      // Unchanged since the last sync means this device has nothing to say
+      // about it — not that its copy is the right one. The exception is a key
+      // the server no longer has at all: nobody holds a newer value of
+      // something that was erased, so sending ours cannot overwrite anyone.
+      if (seen[key] === v && bag[key] !== undefined) continue
+      mine[key] = v
+    }
+    if (Object.keys(mine).length === 0) return 'nothing'
+
+    const next = { ...rules, [FIELD]: { ...bag, ...mine } }
+    const { data: touched, error } = await supabase.from('users')
+      .update({ schedule_rules: next }).eq('id', id).select('id')
+    if (error) { lastPushError = error.message; console.warn('shared prefs did not save:', error.message); return 'failed' }
+
+    if (!touched || touched.length === 0) {
+      // No row to update. Make it, as saveProfileToDB does.
+      const { error: upErr } = await supabase.from('users')
+        .upsert({ id, email: user.email ?? '', schedule_rules: next }, { onConflict: 'id' })
+      if (upErr) { lastPushError = upErr.message; console.warn('shared prefs did not save:', upErr.message); return 'failed' }
+    }
+
+    // Read it back: is what we meant to say actually there?
+    const { data: after } = await supabase
+      .from('users').select('schedule_rules').eq('id', id).maybeSingle()
+    const got = ((after?.schedule_rules as Record<string, unknown> | undefined)?.[FIELD] ?? {}) as Record<string, string>
+    if (Object.keys(mine).every(k => got[k] === mine[k])) {
+      // Only a write that landed may be remembered as synced, or a refused
+      // push is never retried and the change is lost on this device for good.
+      saveSeen({ ...loadSeen(), ...mine })
+      return 'saved'
+    }
+    // Something else wrote the row over ours — go round again with a fresh read.
   }
-  if (Object.keys(mine).length === 0) return 'nothing'
-
-  const { data: existing } = await supabase
-    .from('users').select('schedule_rules').eq('id', id).maybeSingle()
-
-  const rules = (existing?.schedule_rules as Record<string, unknown>) ?? {}
-  const bag   = (rules[FIELD] as Record<string, string> | undefined) ?? {}
-
-  const { error } = await supabase.from('users')
-    .update({ schedule_rules: { ...rules, [FIELD]: { ...bag, ...mine } } })
-    .eq('id', id)
-  // Only a write that landed may be remembered as synced, or a refused push
-  // is never retried and the change is lost on this device for good.
-  if (error) { console.warn('shared prefs did not save:', error.message); return 'failed' }
-  saveSeen({ ...seen, ...mine })
-  return 'saved'
+  lastPushError = 'Another save kept overwriting it; will retry.'
+  return 'failed'
 }
 
 /** Fill in whatever this device has never had. Returns the keys it restored,
