@@ -4,6 +4,8 @@
 // shelf reader and a broken <img> in the preview. Convert to JPEG up front; the
 // converter (~1 MB) is imported only when a HEIC actually turns up.
 
+import { openBitmap } from './shelfTiles'
+
 /** Extension first, because the MIME type is exactly what a desktop browser leaves blank. */
 export function isHeic(file: Blob & { name?: string }): boolean {
   return /^image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name ?? '')
@@ -25,7 +27,11 @@ async function sniffHeic(file: Blob): Promise<boolean> {
   return text.startsWith('ftyp') && /^ftyp(heic|heix|hevc|hevx|heim|heis|mif1|msf1)/.test(text)
 }
 
-/** A file any canvas can draw: HEIC converted, everything else returned as it came. */
+/** A file any canvas can draw: HEIC converted unless this browser already draws it
+ *  (Safari does), everything else returned as it came. */
 export async function readableImage(file: File): Promise<File> {
-  return isHeic(file) || await sniffHeic(file) ? heicToJpeg(file) : file
+  if (!(isHeic(file) || await sniffHeic(file))) return file
+  const native = await openBitmap(file)
+  if (native) { native.close(); return file }
+  return heicToJpeg(file)
 }

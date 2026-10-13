@@ -45,8 +45,25 @@ export function planTiles(w: number, h: number): Rect[] {
 export interface Tile { data: string; mediaType: string; label: string }
 
 /** Draws each planned rectangle to JPEG, scaled down only if it is over the model's edge. */
+/** Safari rejects the options bag (and some builds the Blob) outright, so a failure
+ *  there is not "this file is bad": try the plain call, then an <img>, which is
+ *  what every browser has always been able to decode (and orients by EXIF itself). */
+export async function openBitmap(file: Blob): Promise<ImageBitmap | null> {
+  const viaOptions = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => null)
+  if (viaOptions) return viaOptions
+  const plain = await createImageBitmap(file).catch(() => null)
+  if (plain) return plain
+  const url = URL.createObjectURL(file)
+  try {
+    const img = new Image()
+    img.src = url
+    await img.decode()
+    return await createImageBitmap(img).catch(() => null)
+  } catch { return null } finally { URL.revokeObjectURL(url) }
+}
+
 export async function cutTiles(file: File): Promise<Tile[]> {
-  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => null)
+  const bmp = await openBitmap(file)
   if (!bmp) throw new Error('That photo could not be opened.')
   try {
     const rects = planTiles(bmp.width, bmp.height)
