@@ -73,14 +73,14 @@ ok('an empty shelf says so', await p.getByText('Your shelf is empty').count() > 
 
 // ── Add by searching ────────────────────────────────────────────────────────
 await p.getByRole('button', { name: /Add book/ }).first().click()
-await p.getByRole('dialog').getByLabel('Search for a book').fill('atomic habits')
+await p.getByRole("complementary", { name: "Add a book" }).getByLabel('Search for a book').fill('atomic habits')
 await p.waitForTimeout(1500)
-const hit = p.getByRole('dialog').getByRole('button', { name: /Atomic Habits/ }).first()
+const hit = p.getByRole("complementary", { name: "Add a book" }).getByRole('button', { name: /Atomic Habits/ }).first()
 ok('searching finds the book', await hit.count() > 0)
 await hit.click()
-const titleVal = await p.getByRole('dialog').locator('input').nth(1).inputValue()
+const titleVal = await p.getByRole("complementary", { name: "Add a book" }).locator('input').nth(1).inputValue()
 ok('picking a result fills the form', titleVal === 'Atomic Habits', JSON.stringify(titleVal))
-ok('both sources merged into one candidate', await p.getByRole('dialog').getByRole('button', { name: /Atomic Habits/ }).count() === 1)
+ok('both sources merged into one candidate', await p.getByRole("complementary", { name: "Add a book" }).getByRole('button', { name: /Atomic Habits/ }).count() === 1)
 await p.getByRole('button', { name: 'Add to library' }).click(); await p.waitForTimeout(800)
 ok('it is on the shelf', await p.getByRole('button', { name: /Atomic Habits by James Clear/ }).count() === 1)
 ok('it reached the server, as one row', tables.library_books.length === 1 && tables.library_books[0].title === 'Atomic Habits')
@@ -111,7 +111,7 @@ ok('coming off finished clears the date', tables.library_books[0].finished_on ==
 // ── Lists: create, shelve, filter ───────────────────────────────────────────
 await p.getByRole('tab', { name: 'Lists' }).click(); await p.waitForTimeout(300)
 await p.getByRole('button', { name: /New list/ }).click()
-await p.getByRole('dialog').getByRole('textbox').first().fill('Summer reading')
+await p.getByRole('complementary', { name: 'New list' }).getByRole('textbox').first().fill('Summer reading')
 await p.getByRole('button', { name: 'Create' }).click(); await p.waitForTimeout(700)
 ok('a list is created and shows its count', await p.getByText('Summer reading').count() > 0 && await p.getByText('0 books').count() > 0)
 ok('the list reached the server', tables.library_lists.some(l => l.name === 'Summer reading' && l.kind === 'list'))

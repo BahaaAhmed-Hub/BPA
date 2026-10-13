@@ -51,7 +51,8 @@ await ctx.route('https://api.anthropic.com/**', async r => {
   return reply(typeof out === 'string' ? out : JSON.stringify(out))
 })
 // Looking up covers is on by default: answer it with nothing found (library-shelf-enrich.mjs is the suite for that).
-await ctx.route('https://openlibrary.org/**', r => json(r, { docs: [] }, 200, cors))
+let olDocs = []
+await ctx.route('https://openlibrary.org/**', r => json(r, { docs: olDocs }, 200, cors))
 await ctx.route('https://www.googleapis.com/books/**', r => json(r, { items: [] }, 200, cors))
 await ctx.route('https://covers.openlibrary.org/**', r => r.fulfill({ status: 404, body: '' }))
 await ctx.addInitScript(s => { try {
@@ -78,7 +79,7 @@ const u = await p.evaluate(async () => {
     for (const r of rs) { for (let x = r.x; x < r.x + r.w; x += 25) xs.add(Math.floor(x / 25)); for (let y = r.y; y < r.y + r.h; y += 25) ys.add(Math.floor(y / 25)) }
     return inb && xs.size >= Math.floor(w / 25) && ys.size >= Math.floor(h / 25)
   }
-  const small = t.planTiles(800, 600), wide = t.planTiles(3600, 900), tall = t.planTiles(3000, 4500), huge = t.planTiles(5000, 5000), edge = t.planTiles(1500, 1500), over = t.planTiles(1501, 100)
+  const small = t.planTiles(800, 600), wide = t.planTiles(3600, 900), tall = t.planTiles(3000, 4500), huge = t.planTiles(5000, 5000), edge = t.planTiles(1000, 1000), over = t.planTiles(1001, 100)
   const overlap = rs => rs.slice(0, -1).every((r, i) => r.x + r.w > rs[i + 1].x)
   return {
     small, wideN: wide.length, wideCover: covers(3600, 900, wide), wideOverlap: overlap(wide),
@@ -93,13 +94,13 @@ const u = await p.evaluate(async () => {
     cat: await (async () => { const c = await import('/BPA/src/modules/library/shelfCategories.ts'); return { hit: c.resolveCategory('history', ['History', 'Science']), punct: c.resolveCategory('self  help', ['Self-Help']), fresh: c.resolveCategory('  Biography ', ['History']), none: [c.resolveCategory('', ['A']), c.resolveCategory(undefined, ['A']), c.resolveCategory('!!!', ['A'])], names: c.newCategoryNames(['Biography', 'biography!', 'history', '', 'Economics'], ['History']) } })(),
     catParse: s.parseSpines(JSON.stringify({ books: [{ title: 'A', category: '  Self   Help ' }, { title: 'B', category: 'x'.repeat(100) }, { title: 'C', category: 5 }, { title: 'D', category: '   ' }] })).books.map(b => b.category ?? null),
     catMerge: s.mergeSpines([[{ title: 'Dune', sureness: 'low', category: 'Fiction' }], [{ title: 'Dune', sureness: 'high' }], [{ title: 'Emma', sureness: 'high' }], [{ title: 'Emma', sureness: 'medium', category: 'Classics' }]]).map(b => b.category ?? null),
-    capped: s.mergeSpines([Array.from({ length: 120 }, (_, i) => ({ title: 'Book ' + i, sureness: 'high' }))]).length,
+    capped: s.mergeSpines([Array.from({ length: 200 }, (_, i) => ({ title: 'Book ' + i, sureness: 'high' }))]).length,
   }
 })
 ok('a photo that fits is one piece, whole', u.small.length === 1 && u.small[0].x === 0 && u.small[0].w === 800 && u.small[0].h === 600)
-ok('a wide shelf is cut into columns that overlap, stay inside the photo and cover all of it', u.wideN === 3 && u.wideCover && u.wideOverlap, `${u.wideN} ${u.wideCover} ${u.wideOverlap}`)
-ok('no piece is bigger than the model\'s sweet spot plus overlap', u.sizes.every(([w]) => w <= 1500 * 1.3), JSON.stringify(u.sizes))
-ok('tall and huge photos are capped at six pieces and still cover everything', u.tallN <= 6 && u.tallCover && u.hugeN <= 6 && u.hugeCover, `${u.tallN} ${u.hugeN}`)
+ok('a wide shelf is cut into columns that overlap, stay inside the photo and cover all of it', u.wideN === 4 && u.wideCover && u.wideOverlap, `${u.wideN} ${u.wideCover} ${u.wideOverlap}`)
+ok('no piece is bigger than the model\'s sweet spot plus overlap', u.sizes.every(([w]) => w <= 1000 * 1.4), JSON.stringify(u.sizes))
+ok('tall and huge photos are capped at twelve pieces and still cover everything', u.tallN <= 12 && u.tallCover && u.hugeN <= 12 && u.hugeCover, `${u.tallN} ${u.hugeN}`)
 ok('exactly the edge is one piece; one pixel over is two', u.edge === 1 && u.over === 2)
 ok('an empty or nonsense size is no pieces, not a crash', u.zero.join() === '0,0,0')
 ok('parsing survives fences, counts what could not be read', u.fenced.books.length === 1 && u.fenced.books[0].author === 'B' && u.fenced.unreadable === 3)
@@ -107,7 +108,7 @@ ok('no JSON is no books, never an exception', u.prose.books.length === 0 && u.pr
 ok('junk rows are dropped; spacing tidied; unknown sureness is "low"; long titles capped; a negative count is 0', u.messy.books.length === 3 && u.messy.books[0].title === 'Spaced Out' && u.messy.books[0].sureness === 'low' && !('author' in u.messy.books[0]) && u.messy.books[1].title.length === 200 && u.messy.books[2].sureness === 'medium' && u.messy.unreadable === 0, JSON.stringify(u.messy))
 ok('the same spine read twice is one row: the surer reading wins, an author seen once is kept, punctuation and case ignored', u.merged.length === 2 && u.merged[0].sureness === 'high' && u.merged[0].author === 'James Clear' && u.merged[1].author === 'F. Herbert' && u.merged[1].sureness === 'high', JSON.stringify(u.merged))
 ok('a title that is only punctuation is not a book', !u.merged.some(m => m.title === '!!!'))
-ok('a shelf is capped at 80 rows', u.capped === 80)
+ok('a shelf is capped at 150 rows', u.capped === 150)
 ok('a category guess lands on the one you have, in your spelling — any case or punctuation', u.cat.hit?.name === 'History' && u.cat.hit.existing && u.cat.punct?.name === 'Self-Help' && u.cat.punct.existing)
 ok('a new one is new, tidied; nothing, whitespace and punctuation-only are no category', u.cat.fresh?.name === 'Biography' && !u.cat.fresh.existing && u.cat.none.every(x => x === null))
 ok('new names are listed once each, never one you already have', u.cat.names.join() === 'Biography,Economics', u.cat.names.join())
@@ -117,7 +118,7 @@ ok('merging keeps a category the surer reading lacks, and the surer one\'s when 
 // ── the dialog ──────────────────────────────────────────────────────────────
 const png = (w, h, color = '#8a6f4d') => p.evaluate(async ({ w, h, color }) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = color; g.fillRect(0, 0, w, h); return c.toDataURL('image/png').split(',')[1] }, { w, h, color }).then(s => Buffer.from(s, 'base64'))
 const file = (buffer, name = 'shelf.png', mimeType = 'image/png') => ({ name, mimeType, buffer })
-const dlg = () => p.getByRole('dialog', { name: 'Books from a shelf photo' })
+const dlg = () => p.getByRole('complementary', { name: 'Books from a shelf photo' })
 const choose = async f => { await p.getByLabel('Choose a photo of a shelf').setInputFiles(f); await wait(2500) }
 const close = async () => { if (await dlg().count()) { await p.keyboard.press('Escape'); await wait(300) } }
 const reset = h => { aiCalls = []; aiHandler = h; bookPosts = []; bookDeletes = []; listPosts = []; linkPosts = []; listDeletes = [] }
@@ -182,17 +183,17 @@ await p.keyboard.press('Control+z'); await wait(1500)
 const byTile = n => ({ books: [{ title: 'Overlap Book', sureness: n === 0 ? 'low' : 'high' }, { title: `Only in ${n}`, sureness: 'high' }], unreadable: 1 })
 reset(byTile)
 await choose(file(await png(3600, 900)))
-ok('a wide photo is read in three pieces, one call each', aiCalls.length === 3, String(aiCalls.length))
-ok('each piece is a JPEG no larger than the model\'s edge and names its part', aiCalls.every((c, i) => c.messages[0].content[0].source.media_type === 'image/jpeg' && new RegExp(`part ${i + 1} of 3`).test(c.messages[0].content[1].text)))
-ok('the spine seen in the overlap is one row, plus one per piece (4)', await dlg().getByRole('listitem').count() === 4)
-ok('unreadable spines are summed over the pieces', /3 spines could not be read/.test(await dlg().innerText()))
+ok('a wide photo is read in four pieces, one call each', aiCalls.length === 4, String(aiCalls.length))
+ok('each piece is a JPEG no larger than the model\'s edge and names its part', aiCalls.every((c, i) => c.messages[0].content[0].source.media_type === 'image/jpeg' && new RegExp(`part ${i + 1} of 4`).test(c.messages[0].content[1].text)))
+ok('the spine seen in the overlap is one row, plus one per piece (5)', await dlg().getByRole('listitem').count() === 5)
+ok('unreadable spines are summed over the pieces', /4 spines could not be read/.test(await dlg().innerText()))
 await dlg().getByRole('button', { name: /Read again/ }).click(); await wait(2500)
-ok('Read again asks for the whole photo again', aiCalls.length === 6)
+ok('Read again asks for the whole photo again', aiCalls.length === 8)
 await close()
 
 reset(n => (n === 1 ? { status: 400 } : byTile(n)))
 await choose(file(await png(3600, 900)))
-ok('one piece failing costs its piece: the others are listed and the screen says so', await dlg().getByRole('listitem').count() === 3 && /1 of 3 parts of the photo could not be read/.test(await dlg().innerText()), (await dlg().innerText()).slice(-300))
+ok('one piece failing costs its piece: the others are listed and the screen says so', await dlg().getByRole('listitem').count() === 4 && /1 of 4 parts of the photo could not be read/.test(await dlg().innerText()), (await dlg().innerText()).slice(-300))
 await close()
 
 // ── failures ────────────────────────────────────────────────────────────────
@@ -233,6 +234,20 @@ ok('Cancel adds nothing', await dlg().count() === 0 && bookPosts.length === 0)
 await choose(file(await png(800, 600)))
 await p.keyboard.press('Escape'); await wait(300)
 ok('and so does Escape', await dlg().count() === 0 && bookPosts.length === 0)
+
+// ── the online lookup happens in the panel, and every field it fills can be changed ─────────
+olDocs = [{ key: '/works/OL1W', title: 'Atomic Habits', author_name: ['James Clear'], first_publish_year: 2018, isbn: ['9780735211292'], cover_i: 7, number_of_pages_median: 320 }]
+await ctx.route('https://covers.openlibrary.org/**', r => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="30"><rect width="20" height="30" fill="#c33"/></svg>' }))
+reset(() => ({ books: [{ title: 'atomic habits', author: null, sureness: 'high' }, { title: 'Zzzz Unknown Thing', author: null, sureness: 'high' }], unreadable: 0 }))
+await choose(file(await png(800, 600)))
+await wait(1500)
+ok('a matched book is filled in the panel: proper title, author and year, before anything is saved', await dlg().getByLabel('Title 1').inputValue() === 'Atomic Habits' && await dlg().getByLabel('Author 1').inputValue() === 'James Clear' && await dlg().getByLabel('Published 1').inputValue() === '2018' && bookPosts.length === 0)
+ok('its cover is drawn from the catalogue', await dlg().locator('img[src*="covers.openlibrary.org"]').count() === 1)
+ok('a book the catalogues do not know is left as read and says so', await dlg().getByLabel('Title 2').inputValue() === 'Zzzz Unknown Thing' && /No match online/.test(await dlg().innerText()))
+await dlg().getByLabel('Published 1').fill('1999'); await dlg().getByLabel('Author 1').fill('J. Clear'); await wait(200)
+await dlg().getByRole('button', { name: /^Add \d books?$/ }).click(); await wait(1800)
+const lk = (bookPosts[0] ?? []).find(r => r.title === 'Atomic Habits')
+ok('what is saved is what the panel shows: the edited year and author, the cover, the ISBN and page count from the match', lk?.published_year === 1999 && lk?.authors?.[0] === 'J. Clear' && /covers\.openlibrary\.org/.test(lk?.cover_url ?? '') && lk?.isbn === '9780735211292' && lk?.pages === 320, JSON.stringify(lk))
 
 console.log(fails ? `\n${fails} failing` : '\nall good')
 await b.close()

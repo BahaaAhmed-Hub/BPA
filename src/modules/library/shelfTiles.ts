@@ -11,11 +11,11 @@
 export interface Rect { x: number; y: number; w: number; h: number }
 
 /** The most pieces one photo is cut into: each is a model call. */
-export const MAX_TILES = 6
+export const MAX_TILES = 12
 /** Aim for pieces no bigger than this on their long edge, so they need no downscale. */
-export const TILE_EDGE = 1500
+export const TILE_EDGE = 1000
 /** How far each piece reaches into its neighbour, as a share of a step. */
-export const OVERLAP = 0.12
+export const OVERLAP = 0.18
 /** The model's own ceiling on an edge; a piece larger than this is scaled to it. */
 export const SEND_EDGE = 1568
 

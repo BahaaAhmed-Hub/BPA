@@ -33,19 +33,19 @@ export interface ShelfRead {
   error?: string
 }
 
-export const MAX_BOOKS = 80
+export const MAX_BOOKS = 150
 const MAX_TITLE = 200
 
 const systemFor = (categories: string[]) => `You read book spines in a photograph of a shelf.
 
-List every book whose TITLE you can actually read on its spine or cover. Reply with ONLY a JSON object:
+List EVERY book whose TITLE you can read on its spine or cover — go along the shelf spine by spine and do not stop early: a shelf often holds thirty books or more, and a short list is a wrong answer. Include small, angled, sideways and partly covered spines too, marked by sureness rather than left out. Reply with ONLY a JSON object:
 {"books": [{"title": string, "author": string | null, "sureness": "high" | "medium" | "low", "category": string | null}], "unreadable": number}
 
 Rules:
 - Copy the title as printed, in its own language. Do not translate, correct, complete or guess from a fragment. If you can only read part of a title, do not list it — count it in "unreadable".
 - "author" only if it is printed on that spine. Never fill it from what you know of the book.
-- "sureness": "high" = every word clear; "medium" = clear but small, angled or partly covered; "low" = you are not certain of a word.
-- "unreadable" is the number of spines you can see but cannot read.
+- "sureness": "high" = every word clear; "medium" = clear but small, angled or partly covered; "low" = you can read most of the title but are not certain of a word. A title read in full that you are unsure of is "low", not "unreadable".
+- "unreadable" is the number of spines you can see but truly cannot read any title from.
 - Do not list the same book twice. Ignore ornaments, bookends, boxes, magazines without a clear title, and anything that is not a book.
 - If the photo shows no books, return {"books": [], "unreadable": 0}.
 - "category": what kind of book it is, judged from the title and author alone — never from the spine's colour or design. ${categories.length
@@ -99,7 +99,7 @@ export const ShelfError = AiFailure
 async function readTile(tile: Tile, categories: string[]): Promise<{ books: Spine[]; unreadable: number }> {
   const msg = await anthropic().messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 3000,
+    max_tokens: 6000,
     system: systemFor(categories),
     messages: [{
       role: 'user',

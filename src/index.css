@@ -993,10 +993,55 @@ img { max-width: 100%; }
   opacity: .22; transform: none; box-shadow: none; pointer-events: none;
   outline: 1.5px dashed var(--sb-border); outline-offset: -1.5px;
 }
+/* The bookcase. Wood is a material, not a theme colour, so one walnut is mixed
+   into `--sb-overlay` (opaque in every theme) — it warms Sunlit, greens a little
+   in Evergreen and goes dark in Glass, and always reads as the same furniture.
+   Nothing here carries text: the empty-state card sits on its own ground. */
+.lib-case {
+  --lib-wood:    color-mix(in srgb, #9A7248 86%, var(--sb-overlay));
+  --lib-wood-lt: color-mix(in srgb, #C79F6B 80%, var(--sb-overlay));
+  --lib-wood-dk: color-mix(in srgb, #5E4326 88%, var(--sb-overlay));
+  --lib-back:    color-mix(in srgb, #9A7248 24%, var(--sb-overlay));
+  position: relative; margin: 12px 0 28px; box-sizing: border-box;
+  border: solid var(--lib-wood); border-width: 18px 16px 0;
+  border-radius: 8px 8px 0 0; background: var(--lib-back);
+  box-shadow: inset 0 0 0 1px var(--lib-wood-dk), 0 18px 24px -18px rgba(48,40,20,.55);
+}
+.lib-case::before { /* the top rail's lit edge */
+  content: ''; position: absolute; left: -16px; right: -16px; top: -18px; height: 4px;
+  border-radius: 8px 8px 0 0; background: var(--lib-wood-lt); opacity: .7; pointer-events: none;
+}
+.lib-case::after { /* the plinth */
+  content: ''; position: absolute; left: -22px; right: -22px; bottom: -14px; height: 14px;
+  border-radius: 0 0 6px 6px; background: linear-gradient(to bottom, var(--lib-wood), var(--lib-wood-dk));
+  box-shadow: 0 8px 12px -6px rgba(48,40,20,.5);
+}
+.lib-bay { position: relative; padding-top: 14px; }
+/* Depth: the back panel is darker where the board above shades it. */
+.lib-bay::before {
+  content: ''; position: absolute; inset: 0 0 12px; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0,0,0,.14), rgba(0,0,0,0) 34px);
+}
+.lib-bay > div:first-child { position: relative; }
 .lib-board {
-  height: 12px; margin-top: -1px; border-radius: 0 0 var(--sb-r-chip) var(--sb-r-chip);
-  background: linear-gradient(to bottom, var(--sb-border), var(--sb-field));
-  box-shadow: 0 6px 10px -8px rgba(48,40,20,.45);
+  position: relative; height: 14px; margin: 0 -16px;
+  background: linear-gradient(to bottom, var(--lib-wood-lt) 0, var(--lib-wood) 30%, var(--lib-wood-dk) 100%);
+  box-shadow: 0 5px 8px -5px rgba(48,40,20,.5);
+}
+.lib-plaque {
+  margin: 14px 20px 12px; padding: 24px 26px; max-width: 480px; box-sizing: border-box;
+  background: var(--sb-overlay); border: var(--sb-border-width, 1px) solid var(--sb-border);
+  border-radius: var(--sb-r-card, 14px); box-shadow: var(--sb-shadow-control);
+}
+.lib-bookend {
+  flex: 0 0 auto; width: 16px; height: 96px; margin-bottom: 0; border-radius: 3px 3px 0 0;
+  background: linear-gradient(to right, var(--lib-wood-dk), var(--lib-wood));
+  box-shadow: 0 -1px 0 var(--lib-wood-lt) inset;
+}
+.lib-bookend[data-right] { background: linear-gradient(to left, var(--lib-wood-dk), var(--lib-wood)); }
+.lib-ghost {
+  flex: 0 0 auto; border-radius: 3px 3px 2px 2px; box-sizing: border-box;
+  border: 1.5px dashed color-mix(in srgb, var(--lib-wood-dk) 55%, transparent); opacity: .55;
 }
 .lib-cover {
   position: relative; display: flex; flex-direction: column; padding: 0; border: none; background: none;
