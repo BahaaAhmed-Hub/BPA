@@ -16,6 +16,9 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { pushSharedPrefs } from '@/lib/prefSync'
+import { useHeldText } from '@/lib/useHeldText'
+import { cleanName, loadPersona, NAME_MAX, savePersona, usePersona } from '@/lib/assistantPersona'
+import { AssistantAvatar } from '@/modules/assistant/AssistantAvatar'
 import { notify } from '@/lib/undo'
 import { paidAtSupported } from '../finance/unpaid'
 import { todayISO } from '../finance/dates'
@@ -116,7 +119,7 @@ const SECTION_META: SectionMeta[] = [
   { id: 'profile',       title: 'Profile',              icon: User,        description: 'Name, timezone, work week & framework' },
   { id: 'billing',       title: 'Billing',              icon: CreditCard,  description: 'Plan, payment method and invoices' },
   { id: 'accounts',      title: 'Accounts & companies', icon: Building2,   description: 'Connected Google accounts, and the companies that use them' },
-  { id: 'professor',     title: 'AI',                   icon: Brain,       description: 'Model, autonomy and what the assistant may write for you' },
+  { id: 'professor',     title: 'AI',                   icon: AssistantNavIcon, description: 'Its name, model, autonomy and what the assistant may write for you' },
   { id: 'schedule',      title: 'Schedule rules',       icon: Clock,       description: 'Focus hours, buffers, meeting protections' },
   { id: 'blocking',      title: 'Integrations',         icon: Link,        description: 'Notion, Asana, Trello, Apple Notes and calendar sync' },
   { id: 'tasks',         title: 'Tasks',                icon: CheckSquare, description: 'Board statuses and task types' },
@@ -297,6 +300,11 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       }} />
     </button>
   )
+}
+
+/** The assistant's face where a lucide icon is expected (the rail and the card header). */
+function AssistantNavIcon({ size = 15 }: { size?: number; strokeWidth?: number; color?: string; style?: React.CSSProperties }) {
+  return <span style={{ display: 'inline-flex', flexShrink: 0 }}><AssistantAvatar size={size + 5} radius="50%" ring={false} /></span>
 }
 
 function FieldRow({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
@@ -2164,6 +2172,29 @@ export const GROQ_MODELS = [
   { value: 'mixtral-8x7b-32768',       label: 'Mixtral 8x7B'                  },
 ]
 
+/** What the person calls the assistant. Saved as they type (held briefly), and shared with every device and bot. */
+function AssistantNameRow() {
+  const persona = usePersona()
+  const { text, onChange, onBlur } = useHeldText(persona.name, v => savePersona({ ...loadPersona(), name: v }))
+  const bad = text.trim() !== '' && cleanName(text) === ''
+  return (
+    <FieldRow label="Its name" sub="Type it or say it to get its attention">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <AssistantAvatar size={44} radius="50%" name={persona.name} />
+          <input value={text} maxLength={NAME_MAX} aria-label="Your assistant’s name" placeholder="Give it a name"
+            onChange={e => onChange(e.target.value)} onBlur={onBlur}
+            onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+            style={{ ...inputStyle, width: 190 }} />
+        </div>
+        <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: bad ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)', lineHeight: 1.4 }}>
+          {bad ? 'A name can use letters, numbers, spaces, hyphens and apostrophes.' : 'Shown on the assistant, and used by the Telegram bot and Siri too.'}
+        </p>
+      </div>
+    </FieldRow>
+  )
+}
+
 function ProfessorSection() {
   const [ai, setAIRaw] = useState<AIConfig>(loadAIConfig)
   const [showKey, setShowKey] = useState(false)
@@ -2185,6 +2216,9 @@ function ProfessorSection() {
 
   return (
     <div>
+      {/* ── Name ── */}
+      <AssistantNameRow />
+
       {/* ── Model ── */}
       <FieldRow label="Model" sub="Handles the brief, drafts and matrix suggestions">
         <Segmented
