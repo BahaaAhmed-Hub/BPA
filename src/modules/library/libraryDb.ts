@@ -395,6 +395,10 @@ export function watchSupported(): Promise<boolean> {
   }, () => { watchProbe = undefined; return false })
   return watchProbe
 }
+/** True once a row has come back carrying the 20260041 columns — i.e. the project has them. The shelf measures
+ *  only then: a write the server would refuse is noise on every book, and an empty answer to a probe cannot tell
+ *  "migrated, nothing there" from "not migrated". */
+export const dimsKnown = (): boolean => dimsColumns
 export function blocksSupported(): Promise<boolean> {
   blockProbe ??= Promise.resolve(supabase.from('library_plans').select('block_event_id').limit(1)).then(r => {
     if (!r.error) blockColumns = true

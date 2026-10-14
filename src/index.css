@@ -975,24 +975,120 @@ img { max-width: 100%; }
    otherwise leave the first book touched stuck halfway out. Every movement is
    a transform, so `prefers-reduced-motion` can still it with one rule. */
 .lib-spine {
-  position: relative; flex: 0 0 auto; display: flex; align-items: stretch; justify-content: center;
-  padding: 0; border: none; border-radius: 3px 3px 2px 2px; cursor: pointer;
-  font-family: inherit; text-align: center;
-  box-shadow: inset -3px 0 0 rgba(0,0,0,.12), inset 2px 0 0 rgba(255,255,255,.18), 0 1px 2px rgba(48,40,20,.28);
-  transform-origin: 50% 100%;
-  transition: transform .22s cubic-bezier(.2,.8,.2,1), opacity .18s ease, box-shadow .22s ease;
+  position: relative; flex: 0 0 auto; display: block; padding: 0; border: none; background: none; cursor: pointer;
+  font-family: inherit; text-align: center; color: var(--ink);
   -webkit-tap-highlight-color: transparent;
 }
+/* The hit area is this button and never moves: only the .lib-book inside it turns and lifts, so a book
+   that rises out from under the pointer cannot flicker between hovered and not. */
+.lib-row { perspective: 1200px; perspective-origin: 50% 35%; }
+.lib-book {
+  position: absolute; inset: 0; display: block; transform-style: preserve-3d;
+  transform: translateZ(calc(var(--d) * -0.5)) rotateY(0deg);
+  transition: transform .5s cubic-bezier(.2,.8,.2,1);
+  /* No filter / opacity-group here: either flattens the 3D box and the cover would never appear. */
+}
+.lib-spine::before { /* the shadow on the board and the wall: a real element, so the box itself stays 3D */
+  content: ''; position: absolute; inset: 3px -2px -1px 3px; border-radius: 3px; background: rgba(40,28,10,.34);
+  filter: blur(3px); transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .4s ease;
+}
+.lib-book, .lib-face { pointer-events: none; }   /* the button's own box is the target; a pulled-out cover must not shield the books beside it */
+.lib-face { position: absolute; display: block; backface-visibility: hidden; overflow: hidden; }
+.lib-face-spine {
+  inset: 0; transform: translateZ(calc(var(--d) * 0.5)); border-radius: 3px 3px 1px 1px; background:
+    /* a rounded back: dark at the hinges, a soft highlight just off the middle */
+    linear-gradient(90deg, rgba(0,0,0,.30) 0, rgba(0,0,0,0) 15%, rgba(255,255,255,.17) 34%, rgba(255,255,255,0) 58%, rgba(0,0,0,.26) 100%),
+    /* cloth / paper grain */
+    repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, rgba(0,0,0,.03) 1px 3px),
+    var(--sp);
+}
+/* The front cover: the right-hand face, seen once the book turns. */
+.lib-face-cover {
+  top: 0; height: 100%; width: var(--d); left: calc((var(--w) - var(--d)) / 2);
+  transform: rotateY(90deg) translateZ(calc(var(--w) * 0.5)); background: var(--sp);
+  box-shadow: inset 5px 0 7px -3px rgba(0,0,0,.45);
+}
+.lib-face-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lib-cover-title {
+  position: absolute; inset: 0; padding: 12% 10%; display: flex; align-items: flex-start; font-weight: 650; font-size: 16px; letter-spacing: -.01em;
+  line-height: 1.2; overflow-wrap: anywhere; color: var(--ink);
+}
+/* The page block: the left-hand face, cream paper. */
+.lib-face-pages {
+  top: 0; height: 100%; width: var(--d); left: calc((var(--w) - var(--d)) / 2);
+  transform: rotateY(-90deg) translateZ(calc(var(--w) * 0.5));
+  background: repeating-linear-gradient(90deg, #f1e9d2 0 1px, #e3d8ba 1px 2px);
+}
+.lib-cap { position: absolute; left: 0; right: 0; height: 5px; background: linear-gradient(rgba(0,0,0,.28), rgba(0,0,0,.08)); }
+.lib-cap[data-end="head"] { top: 0; border-radius: 3px 3px 0 0; }
+.lib-cap[data-end="tail"] { bottom: 0; background: linear-gradient(rgba(0,0,0,.08), rgba(0,0,0,.32)); }
+.lib-spine-text {
+  position: absolute; left: 0; right: 0; top: 30px; bottom: 28px; margin: auto; max-width: 100%;
+  display: flex; align-items: center; gap: 6px; justify-content: center;
+  writing-mode: vertical-rl; transform: rotate(180deg); overflow: hidden; white-space: nowrap;
+  font-family: var(--sb-font-num); letter-spacing: .01em;
+}
+.lib-spine-title { min-height: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 650; font-size: 12.5px; }
+.lib-spine-author { flex: 0 1 38%; min-height: 0; overflow: hidden; text-overflow: ellipsis; font-size: 10px; opacity: .85; font-weight: 500; letter-spacing: .04em; }
+.lib-mark {
+  position: absolute; left: 50%; bottom: 9px; width: 15px; height: 15px; margin-left: -7.5px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 8.5px; font-weight: 700; line-height: 1;
+  border: 1px solid color-mix(in srgb, var(--ink) 55%, transparent); color: var(--ink); opacity: .8;
+}
+.lib-ribbon { /* a bookmark ribbon hanging from the head: you are in the middle of this one */
+  position: absolute; top: 4px; left: 50%; width: 5px; height: 14px; margin-left: -2.5px; background: var(--sb-accent);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%); box-shadow: 0 0 0 .5px rgba(0,0,0,.25);
+}
+.lib-seal { /* a foil seal: finished */
+  position: absolute; top: 9px; left: 50%; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3b0, #d9a520 62%, #a47410); box-shadow: 0 0 0 .5px rgba(0,0,0,.35);
+}
+/* Dress: how this spine is finished. */
+.lib-spine[data-look="bands"] .lib-face-spine::before,
+.lib-spine[data-look="bands"] .lib-face-spine::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 2px; background: color-mix(in srgb, var(--ink) 70%, var(--sp));
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--ink) 55%, var(--sp));
+}
+.lib-spine[data-look="bands"] .lib-face-spine::before { top: 22px; }
+.lib-spine[data-look="bands"] .lib-face-spine::after { bottom: 24px; }
+.lib-spine[data-look="stripe"] .lib-face-spine::before,
+.lib-spine[data-look="stripe"] .lib-face-spine::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 16%; background: color-mix(in srgb, var(--ink) 88%, var(--sp));
+}
+.lib-spine[data-look="stripe"] .lib-face-spine::before { top: 5px; }
+.lib-spine[data-look="stripe"] .lib-face-spine::after { bottom: 5px; }
+.lib-spine[data-look="stripe"] .lib-spine-text, .lib-spine[data-look="stripe"] .lib-mark { z-index: 1; }
+.lib-spine-text[data-label] { /* a paper label stuck on the cloth */
+  background: #f4efe0; color: #26231a; border-radius: 2px; width: calc(100% - 8px); margin-inline: 4px; padding: 4px 0; box-sizing: border-box;
+}
+/* A book at the end of a loose row leans on the bookend. */
+.lib-spine[data-lean]::before { display: none; }
+.lib-spine[data-lean] .lib-book { transform-origin: 100% 100%; transform: translateZ(calc(var(--d) * -0.5)) rotate(8deg); }
 @media (hover: hover) {
-  .lib-spine:hover { transform: translateY(-10px) rotate(-1.2deg); box-shadow: inset -3px 0 0 rgba(0,0,0,.12), inset 2px 0 0 rgba(255,255,255,.18), var(--sb-shadow-hover); }
+  .lib-spine:hover { z-index: 3; }
+  .lib-spine:hover .lib-book { transform: translateY(-16px) translateZ(calc(var(--d) * -0.5 + 26px)) rotateY(-32deg); }
+  .lib-spine:hover::before { transform: translate(18px, -4px) scaleX(1.5); opacity: .8; }
 }
-.lib-spine:focus-visible { outline: 2px solid var(--sb-ink-1); outline-offset: 2px; transform: translateY(-10px); }
-.lib-spine:active { transform: translateY(-4px) scale(.985); }
+.lib-spine:focus-visible { outline: 2px solid var(--sb-ink-1); outline-offset: 3px; z-index: 3; }
+.lib-spine:focus-visible .lib-book { transform: translateY(-12px) translateZ(calc(var(--d) * -0.5 + 18px)) rotateY(-24deg); }
+.lib-spine:active .lib-book { transform: translateY(-6px) translateZ(calc(var(--d) * -0.5 + 10px)) rotateY(-30deg) scale(.985); transition-duration: .12s; }
 /* The slot a picked book left. */
-.lib-spine[data-picked] {
-  opacity: .22; transform: none; box-shadow: none; pointer-events: none;
-  outline: 1.5px dashed var(--sb-border); outline-offset: -1.5px;
+.lib-spine[data-picked] { pointer-events: none; }
+.lib-spine[data-picked] .lib-book, .lib-spine[data-picked]::before { opacity: 0; }
+.lib-spine[data-picked]::after { content: ''; position: absolute; inset: 0; opacity: .5; border-radius: 3px; outline: 1.5px dashed var(--sb-border); outline-offset: -1.5px; }
+/* Books settle onto the shelf when it first appears, a few ms apart. */
+@keyframes lib-settle {
+  from { opacity: 0; transform: translateY(-34px) translateZ(calc(var(--d) * -0.5)) rotateZ(var(--tilt)) rotateY(-20deg); }
+  to   { opacity: 1; transform: translateZ(calc(var(--d) * -0.5)) rotateY(0deg); }
 }
+.lib-stage[data-entering] .lib-book { animation: lib-settle .8s cubic-bezier(.2,.9,.3,1.15) backwards; animation-delay: calc(var(--i) * 26ms); }
+/* Light on the case follows the pointer. */
+.lib-stage { position: relative; --gx: -400px; --gy: -400px; }
+.lib-glow {
+  position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity .35s ease; mix-blend-mode: soft-light;
+  background: radial-gradient(280px circle at var(--gx) var(--gy), rgba(255,240,205,.55), rgba(255,240,205,0) 70%);
+}
+@media (hover: hover) { .lib-stage:hover .lib-glow { opacity: 1; } }
 /* The bookcase. Wood is a material, not a theme colour, so one walnut is mixed
    into `--sb-overlay` (opaque in every theme) — it warms Sunlit, greens a little
    in Evergreen and goes dark in Glass, and always reads as the same furniture.
@@ -1053,8 +1149,11 @@ img { max-width: 100%; }
 .lib-cover:focus-visible { outline: 2px solid var(--sb-ink-1); outline-offset: 3px; border-radius: var(--sb-r-chip); }
 .lib-cover[data-picked] { opacity: .3; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
-  .lib-spine, .lib-cover { transition: none; }
-  .lib-spine:hover, .lib-spine:focus-visible, .lib-spine:active, .lib-cover:hover { transform: none; }
+  .lib-book, .lib-cover { transition: none; }
+  .lib-stage[data-entering] .lib-book { animation: none; }
+  .lib-spine:hover .lib-book, .lib-spine:focus-visible .lib-book, .lib-spine:active .lib-book { transform: translateZ(calc(var(--d) * -0.5)); }
+  .lib-glow { display: none; }
+  .lib-cover:hover { transform: none; }
 }
 
 /* ─── Library — the reader's text layer ───────────────────────────────────────
