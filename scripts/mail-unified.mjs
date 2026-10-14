@@ -25,6 +25,8 @@ const thread = (id, subject) => ({ id, messages: [{ id: id + 'm', threadId: id, 
   payload: { mimeType: 'text/plain', headers: [{ name: 'From', value: `Sender ${id} <${id}@example.com>` }, { name: 'To', value: ME }, { name: 'Subject', value: subject }, { name: 'Message-ID', value: `<${id}@x>` }],
     body: { data: b64('Please can you answer this today.') } } }] })
 const unread = [['tA', 'Answer A please'], ['tB', 'Handled B'], ['tC', 'Archived C'], ['tD', 'Heads up D'], ['tE', 'Fresh E not yet analysed']]
+const ICS = ['BEGIN:VCALENDAR', 'METHOD:REQUEST', 'BEGIN:VEVENT', 'UID:inv-1@x', 'SUMMARY:Planning sync', 'DTSTART:20991001T090000Z', 'DTEND:20991001T100000Z', 'ORGANIZER:mailto:boss@x.com', `ATTENDEE:mailto:${ME}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n')
+const inviteThread = () => { const t = thread('tI', 'Invitation: Planning sync'); t.messages[0].payload = { ...t.messages[0].payload, mimeType: 'multipart/alternative', body: {}, parts: [{ mimeType: 'text/plain', body: { data: b64('You are invited') } }, { mimeType: 'text/calendar; method=REQUEST', body: { data: b64(ICS) } }] }; return t }
 let gmailFail = false, calFail = false
 const gmailCalls = [], calCalls = [], storePatches = []
 
@@ -52,6 +54,7 @@ await ctx.route('**://gmail.googleapis.com/**', async r => { const q = r.request
     return gmailFail ? j(r, { error: { message: 'Gmail refused' } }, 403) : j(r, {})
   }
   const m = u.pathname.match(/\/threads\/([^/]+)$/)
+  if (m && m[1] === 'tI') return j(r, inviteThread())
   if (m) { const hit = unread.find(x => x[0] === m[1]); return hit ? j(r, thread(hit[0], hit[1])) : j(r, { error: { message: 'no' } }, 404) }
   if (u.pathname.endsWith('/threads')) return j(r, { threads: unread.map(x => ({ id: x[0] })) })
   if (u.pathname.endsWith('/labels')) return j(r, { labels: [] })
@@ -122,6 +125,32 @@ ok('…then marks the thread handled for every screen', storePatches.some(x => x
 ok('…and marks it read in Gmail', gmailCalls.some(c => /\/threads\/tD\/modify$/.test(c.path) && c.body.removeLabelIds?.includes('UNREAD')))
 n = await needs()
 ok('an answered invitation is no longer "worth knowing" to the assistant either', !JSON.stringify(n.attention.map(x => x.thread_id)).includes('tD'), JSON.stringify(n.attention.map(x => x.thread_id)))
+
+
+// ── Today's chips follow the Mail page; the assistant can answer an invitation, for real ──
+const ask = await p.evaluate(async () => { const m = await import('/BPA/src/lib/mailNeeds.ts'); const f = m.askFor
+  return { analysedNoAction: f('fyi', false, 'reply'), attn: f('attention', false, 'decide'), actionRead: f('action', false, 'read'), actionDecide: f('action', false, 'decide'), actionNoBrief: f('action', false, undefined),
+    notAnalysed: [f(undefined, false, 'decide'), f(undefined, false, undefined)], invited: [f('action', true, 'read'), f(undefined, true, undefined)] } })
+ok('a thread Mail files outside "action" is "to read" whatever the model said', ask.analysedNoAction === 'read' && ask.attn === 'read')
+ok('a thread Mail calls an action is never "to read": "to answer", or the model\'s sharper word', ask.actionRead === 'reply' && ask.actionDecide === 'decide' && ask.actionNoBrief === 'reply')
+ok('one Mail has not read keeps the model\'s word; an invitation is "to book"', ask.notAnalysed.join() === 'decide,read' && ask.invited.join() === 'schedule,schedule')
+
+const tool = (name, input) => p.evaluate(async ([name, input, email]) => { const t = await import('/BPA/src/lib/assistantTools.ts')
+  try { return await t.executeTool(name, input, { primaryEmail: email, accounts: [], tasks: [], habits: [], addTask() {}, updateTask() {}, deleteTask() {} }) } catch (e) { return { threw: String(e.message ?? e) } } }, [name, input, ME])
+storePatches.length = 0; calCalls.length = 0
+let rv = await tool('rsvp_invitation', { thread_id: 'tI', answer: 'tentative' })
+const rc = calCalls.at(-1)
+ok('the assistant answers an invitation with the real calendar PATCH, organiser told', JSON.stringify(rv).includes('tentative') && rc?.body.attendees?.find(a => a.self)?.responseStatus === 'tentative' && /sendUpdates=all/.test(rc?.url ?? ''), JSON.stringify(rv))
+await p.waitForTimeout(800)
+ok('…and the thread is marked handled, as on the other screens', storePatches.some(x => x.tid === 'tI' && x.body.handled_at))
+calFail = true; calCalls.length = 0; storePatches.length = 0
+rv = await tool('rsvp_invitation', { thread_id: 'tI', answer: 'accepted' }); await p.waitForTimeout(500)
+ok('a refusal from Google is returned in words and nothing is marked', JSON.stringify(rv).includes('Calendar refused') && storePatches.length === 0, JSON.stringify(rv))
+calFail = false; calCalls.length = 0
+rv = await tool('rsvp_invitation', { thread_id: 'tA', answer: 'accepted' })
+ok('a thread with no invitation is refused, and the calendar is not touched', /no calendar invitation/i.test(JSON.stringify(rv)) && calCalls.length === 0, JSON.stringify(rv))
+rv = await tool('rsvp_invitation', { thread_id: 'tI', answer: 'maybe' })
+ok('an answer that is not one of the three is refused', /accepted, tentative or declined/.test(JSON.stringify(rv)) && calCalls.length === 0, JSON.stringify(rv))
 
 // ── the Mail page agrees ────────────────────────────────────────────────────
 const p2 = await ctx.newPage(); await go('inbox')

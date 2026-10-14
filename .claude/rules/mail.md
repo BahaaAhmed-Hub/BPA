@@ -652,8 +652,17 @@ a newsletter and a line in a list at once. The smart view's stored analysis is t
   comes back with "Not archived — why". `answerInvitation` = the real PATCH of your attendee status on
   the event (`sendUpdates=all`, the organiser is told), then marks the thread handled and read. Nothing
   is marked unless Gmail / Calendar said yes, so no screen shows a state the mail does not have.
-- Not done on purpose: the assistant has no RSVP tool; Today's own bulk rules and `mailClasses.ts` are
-  still in the tree (cleanup is its own change); the Today card still lists only unread mail.
+- **Follow-up, done:** Today's third copy of the bulk rules (`BULK_SENDERS`, `ESP_DOMAINS`,
+  `BULK_SUBDOMAIN`, `looksLikeBulk`) is deleted — its fallback for a not-yet-analysed thread is
+  `mailClasses.looksLikeBulk`, the smart view's own classifier. **The chip on a Today row follows the
+  Mail page** (`askFor` in `mailNeeds.ts`): the model's reply/schedule/decide says *what kind* of ask it
+  is, never *whether* it is one — Mail files it outside action → "to read"; Mail calls it an action →
+  never "to read". The assistant has `rsvp_invitation` (the same `answerInvitation`; the tool says to
+  call it only once the user has chosen the answer, since it tells the organiser).
+- Still not done: the flat list's dead branch in `InboxModule` (`mode` is `'smart' as const`, so its
+  folders/six-class tabs are unreachable — ~1000 lines whose removal is its own change, and
+  `mailClasses.ts` itself must stay: the smart pass and its server twin classify with it); the Today
+  card still lists only unread mail.
 `scripts/mail-unified.mjs` (22) — Gmail and Calendar faked and able to refuse; every claim read off
 the request that went out. Control on the old code: Today still lists the handled and archived
 threads and the assistant has no `mail_needs`.
