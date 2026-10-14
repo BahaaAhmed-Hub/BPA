@@ -5,6 +5,8 @@ import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHabitsStore } from '@/store/habitsStore'
 import { ASSISTANT_TOOLS, executeTool, type ToolContext } from '@/lib/assistantTools'
+import { Button } from '@/components/ui'
+import { approvalFor, DECLINED, type Approval } from '@/lib/assistantPolicy'
 import {
   readAttachment, kindOf, toAnthropicContent, toGroqContent, unsupported, tooLarge, prettySize,
   type Attachment,
@@ -105,6 +107,14 @@ How to format answers (they are drawn as Markdown in a narrow side panel):
 - Show an image only when a tool gave you its URL, as ![what it is](url). Never invent a URL. If a diagram would genuinely help, describe the structure in a short indented list instead.
 - If a list is long, show the top items and say how many more there are.`
 
+const APP_RULES = `
+About the app and what you may do:
+- You work for the person signed in, on their own data only — their mail, calendar, tasks, habits, finances, shopping and books. You cannot see or change anyone else's, and you never say or pretend that you can.
+- For any question about the app itself ("how do I…", "where is…", "can it…", "what does … do") call app_guide first and answer from it. If it does not cover the question, say you are not sure; never invent a feature, a button or a screen.
+- You can act in every module, not only read: use the tool for the job rather than telling the user to do it themselves. If the right tool does not exist yet, say so plainly and say where in the app they can do it.
+- Anything other people will see (sending mail, replying, answering an invitation), anything that cannot be undone (deleting), and anything that changes money shows the user an approval card with the exact details before it runs. Call the tool directly when they have asked for it — the app asks them; do not also ask in chat. If they decline, it was not done: say so, and do not retry or work around it.
+- Never reveal or ask for passwords, API keys or tokens. Settings that hold credentials are not yours to read or change.`
+
 function buildSystemPrompt(userName: string, today: string, samuraiMode = false, assistantName = ''): string {
   const called = assistantName ? ` The user calls you ${assistantName}; answer to that name and, if asked who you are, say it.` : ''
   if (samuraiMode) {
@@ -125,16 +135,19 @@ Tone translations:
 - Instead of "Here are your emails" → "Incoming communications, reviewed."
 
 You have tools to:
-- List, search, reply to, send, and archive emails
-- Get calendar events for any date range
-- List, create, and complete tasks
+- List, search, reply to, send, and archive emails, and answer invitations
+- Read, create, edit and delete calendar events
+- List, create, edit, complete and delete tasks
+- List, create, edit and log habits
+- Read and manage the user's Library: books, shelves, lists, quotes and reading progress
+- Read and write the finance ledger and the shopping lists
 - Search Google Drive files
-- Read and write the finance ledger: balances, spending, budgets, goals, and entries
+- Explain how the app works (app_guide)
 - Read images, PDFs and text files the user attaches to a message
 
 Use tools immediately when action is required. Summarize results with minimal words. Ask one focused question when clarification is needed.
 ${FORMAT_RULES}
-In this mode use no emoji at all.${called}`
+In this mode use no emoji at all.${APP_RULES}${called}`
   }
 
   return `You are ${assistantName || 'Professor AI'} — ${userName}'s personal executive assistant with live access to their Gmail, task board, Google Calendar, and Google Drive.
@@ -142,11 +155,14 @@ In this mode use no emoji at all.${called}`
 Today's date: ${today}
 
 You have tools to:
-- List, search, reply to, send, and archive emails
-- Get calendar events for any date range
-- List, create, and complete tasks
+- List, search, reply to, send, and archive emails, and answer invitations
+- Read, create, edit and delete calendar events
+- List, create, edit, complete and delete tasks
+- List, create, edit and log habits
+- Read and manage the user's Library: books, shelves, lists, quotes and reading progress
+- Read and write the finance ledger and the shopping lists
 - Search Google Drive files
-- Read and write the finance ledger
+- Explain how the app works (app_guide)
 
 Files: the user can attach images, PDFs and text files to a message. Read what
 they attach and answer from it — an invoice, a statement, a screenshot of a bill
@@ -173,7 +189,8 @@ Guidelines:
 - If you need clarification before acting, ask one focused question.
 - Refer to the user by first name only. Keep tone warm but professional.
 ${FORMAT_RULES}
-- One emoji per section label at most, and only where it helps scanning (📅 schedule, ✅ tasks, ✉️ mail); none inside table cells except a status mark.${called}`
+- One emoji per section label at most, and only where it helps scanning (📅 schedule, ✅ tasks, ✉️ mail); none inside table cells except a status mark.
+${APP_RULES}${called}`
 }
 
 // ─── Message bubble ───────────────────────────────────────────────────────────
@@ -432,7 +449,8 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
   const [attachments,   setAttachments]    = useState<Attachment[]>([])
   const [attachError,   setAttachError]    = useState<string | null>(null)
   const [dropping,      setDropping]       = useState(false)
-  const [composing,     setComposing]      = useState(false)
+  /** An action the assistant wants to take that needs the person's OK. It waits here, and runs only on a click. */
+  const [approval, setApproval] = useState<(Approval & { resolve: (ok: boolean) => void }) | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const lastProviderRef = useRef<string>('')
 
@@ -483,6 +501,18 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
     setDisplayMessages(prev => prev.map(m => (m.id === id ? { ...m, state } : m)))
   }
 
+  /** Every tool call goes through here. A call that is outward, destructive or about money shows what it will do
+   *  and waits for the person; only a click runs it, and a refusal is handed back to the model as a refusal. */
+  async function runTool(name: string, input: Record<string, unknown>): Promise<unknown> {
+    const need = approvalFor(name, input)
+    if (need) {
+      const ok = await new Promise<boolean>(resolve => setApproval({ ...need, resolve }))
+      setApproval(null)
+      if (!ok) return DECLINED
+    }
+    return executeTool(name, input, ctx)
+  }
+
   // ── Anthropic agentic loop (streaming) ─────────────────────────────────────
 
   async function runAnthropic(trimmed: string, cfg: AIConfig, system: string, history: Anthropic.MessageParam[], atts: Attachment[] = []) {
@@ -531,7 +561,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
         const chip = `tool-${block.id}`
         setDisplayMessages(prev => [...prev, { id: chip, role: 'tool', content: block.name, tool: block.name, state: 'running' }])
         try {
-          const result = await executeTool(block.name, block.input as Record<string, unknown>, ctx)
+          const result = await runTool(block.name, block.input as Record<string, unknown>)
           toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) })
           settleChip(chip, 'done')
         } catch (err) {
@@ -585,7 +615,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
         const chip = `tool-${call.id}`
         setDisplayMessages(prev => [...prev, { id: chip, role: 'tool', content: toolName, tool: toolName, state: 'running' }])
         try {
-          const result = await executeTool(toolName, toolInput, ctx)
+          const result = await runTool(toolName, toolInput)
           toolResults.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) })
           settleChip(chip, 'done')
         } catch (err) {
@@ -735,6 +765,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
   }
 
   function clearConversation() {
+    approval?.resolve(false)
     setAttachments([])
     setAttachError(null)
     setDisplayMessages([])
@@ -857,6 +888,29 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
           onDrop={e => { e.preventDefault(); setDropping(false); void addFiles([...e.dataTransfer.files]) }}
           style={{ padding: '8px 12px 10px', borderTop: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0 }}>
 
+          {approval && (
+            <div role="group" aria-label="Approval needed" data-approval={approval.kind} style={{
+              marginBottom: 8, padding: '10px 12px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)',
+              border: 'var(--sb-border-width) solid var(--sb-border)', display: 'flex', flexDirection: 'column', gap: 8,
+            }}>
+              <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{approval.title}</div>
+              {approval.lines.length > 0 && (
+                <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2px 10px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', maxHeight: 120, overflowY: 'auto' }}>
+                  {approval.lines.map(l => (
+                    <div key={l.label} style={{ display: 'contents' }}>
+                      <dt style={{ color: 'var(--sb-ink-3)', textTransform: 'capitalize' }}>{l.label}</dt>
+                      <dd style={{ margin: 0, overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>{l.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <Button size="sm" variant="secondary" onClick={() => approval.resolve(false)}>Not now</Button>
+                <Button size="sm" variant="accent" onClick={() => approval.resolve(true)}>Approve</Button>
+              </div>
+            </div>
+          )}
+
           {/* What is going with the message, and the way to take one back out. */}
           {attachments.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
@@ -948,7 +1002,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
               }}
               placeholder={dropping ? 'Drop it here' : thinking ? 'Answering — you can write the next one…' : 'Ask, or drop a file in…'}
               rows={1}
-              onFocus={() => setComposing(true)} onBlur={() => setComposing(false)}
+              title="Enter to send · Shift+Enter for a new line · paste or drop a file in"
               style={{
                 flex: 1, minWidth: 0, boxSizing: 'border-box', background: 'none', border: 'none', outline: 'none', resize: 'none',
                 // One line is exactly as tall as the 28px send button beside it, so the icons, the text and the button share a centre.
@@ -972,12 +1026,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
               }
             </button>
           </div>
-          {/* The shortcuts are said while you are writing, and not as a permanent second line under a box that is meant to be slim. */}
-          {(composing || input.trim() !== '') && (
-            <p style={{ margin: '4px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', textAlign: 'center' }}>
-              Enter to send · Shift+Enter for a new line · paste or drop a file in
-            </p>
-          )}
+          {/* No line of shortcuts under the box: it came and went with focus, and a layout that changes when you press a button moves that button out from under the pointer before the click lands (the Approve button, the paperclip, the mic all lost clicks to it). The shortcuts are the box's tooltip. */}
         </div>
       </div>
 

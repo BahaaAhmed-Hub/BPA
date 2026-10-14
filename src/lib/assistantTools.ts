@@ -4,12 +4,15 @@ import { archiveMessage, extractBody, getThread, type GmailMessage } from './gma
 import { archiveThread, answerInvitation } from './mailActions'
 import { readInvite } from './invitations'
 import { readNeeds } from './mailNeeds'
+import { APP_GUIDE, findGuide } from './appGuide'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { type ConnectedAccount } from './multiAccount'
 import { getGoogleToken } from './tokenManager'
 import { refreshPrimaryToken } from './googleCalendar'
-import { loadLogs, commitHabitLogs } from '@/store/habitsStore'
+import { loadLogs, commitHabitLogs, getHabitColors, useHabitsStore, type Habit } from '@/store/habitsStore'
 import { FINANCE_TOOLS, FINANCE_TOOL_NAMES, executeFinanceTool } from './financeTools'
+import { LIBRARY_TOOLS, LIBRARY_TOOL_NAMES, executeLibraryTool } from './libraryTools'
+import { SETTINGS_TOOLS, SETTINGS_TOOL_NAMES, executeSettingsTool } from './settingsTools'
 
 // ─── Context provided by the React component ─────────────────────────────────
 
@@ -152,6 +155,13 @@ async function fetchEmailSummaries(token: string, query: string, max = 8) {
 const ACCT = { account_email: { type: 'string', description: 'Connected account email (omit for primary)' } }
 
 export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
+  // ── The app itself ─────────────────────────────────────────────────────────
+  {
+    name: 'app_guide',
+    description: 'How the app works: what each module is, where things are, and what the user can do there. Call it for ANY question about the app itself ("how do I…", "where is…", "what does … do", "can I…"). With no topic it lists the topics; with a topic (overview, today, calendar, mail, tasks, habits, finance, shopping, library, assistant, settings, search) it returns that guide. Answer from what it says. If it does not cover something, say you are not sure — never invent a feature or a screen.',
+    input_schema: { type: 'object' as const, properties: { topic: { type: 'string', description: 'A topic id such as "library" or "mail" (optional)' } }, required: [] },
+  },
+
   // ── Accounts ────────────────────────────────────────────────────────────────
   {
     name: 'list_connected_accounts',
@@ -278,6 +288,25 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: 'update_calendar_event',
+    description: 'Change or move a calendar event: its title, start/end time, description or location. Get the event_id from list_calendar_events. Giving only a new start keeps the event\'s length. If the event has other guests, changing it tells them: the tool then refuses until you call it again with confirm_notify_guests: true, which makes the app ask the user to approve first.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        event_id:       { type: 'string', description: 'Google Calendar event ID' },
+        title:          { type: 'string' },
+        start_datetime: { type: 'string', description: 'ISO 8601 e.g. 2025-05-10T14:00:00' },
+        end_datetime:   { type: 'string', description: 'ISO 8601 (optional; the length is kept if omitted)' },
+        description:    { type: 'string' },
+        location:       { type: 'string' },
+        timezone:       { type: 'string', description: 'IANA timezone (optional; the event\'s own is kept)' },
+        confirm_notify_guests: { type: 'boolean', description: 'Only after the tool said the event has guests' },
+        ...ACCT,
+      },
+      required: ['event_id'],
+    },
+  },
+  {
     name: 'delete_calendar_event',
     description: 'Delete (cancel) a calendar event by its ID.',
     input_schema: {
@@ -356,6 +385,37 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
   {
+    name: 'create_habit',
+    description: 'Create a new habit. A yes/no habit is "boolean"; a counted one is "quantity" with a goal and a unit (8 glasses).',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        name: { type: 'string' }, emoji: { type: 'string', description: 'One emoji (optional)' },
+        frequency: { type: 'string', enum: ['daily', 'weekdays', 'weekly'], description: 'Default daily' },
+        type: { type: 'string', enum: ['boolean', 'quantity'], description: 'Default boolean' },
+        goal: { type: 'number', description: 'Target per day, for a quantity habit' }, unit: { type: 'string', description: 'e.g. glasses, minutes' },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'update_habit',
+    description: 'Change a habit — rename it, change its emoji, frequency, goal or unit, or pause it (active: false) or bring it back (active: true). Name the habit by its name.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        habit: { type: 'string', description: 'The habit\'s name (or part of it)' }, name: { type: 'string' }, emoji: { type: 'string' },
+        frequency: { type: 'string', enum: ['daily', 'weekdays', 'weekly'] }, goal: { type: 'number' }, unit: { type: 'string' }, active: { type: 'boolean' },
+      },
+      required: ['habit'],
+    },
+  },
+  {
+    name: 'delete_habit',
+    description: 'Delete a habit and its history for good. The app asks the user to approve first. Prefer update_habit with active: false to pause one.',
+    input_schema: { type: 'object' as const, properties: { habit: { type: 'string' } }, required: ['habit'] },
+  },
+  {
     name: 'log_habit_completion',
     description: 'Mark a habit as completed for a given date.',
     input_schema: {
@@ -395,9 +455,24 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
   // financeTools.ts, because money has its own rules — the lock, the currency
   // conversion, what counts as paid — and none of them belong in here.
   ...FINANCE_TOOLS,
+  ...LIBRARY_TOOLS,
+  ...SETTINGS_TOOLS,
 ]
 
 // ─── Tool executor ────────────────────────────────────────────────────────────
+
+/** A habit by what the person calls it. Ambiguous or unknown is refused with what matched, never guessed. */
+function habitNamed(name: string): Habit {
+  const q = name.trim().toLowerCase()
+  if (!q) throw new Error('Which habit? Give its name.')
+  const all = useHabitsStore.getState().habits
+  const exact = all.filter(h => h.name.trim().toLowerCase() === q)
+  if (exact.length === 1) return exact[0]
+  const hits = exact.length ? exact : all.filter(h => h.name.toLowerCase().includes(q))
+  if (hits.length === 1) return hits[0]
+  if (!hits.length) throw new Error(`No habit matches "${name}". They are: ${all.map(h => h.name).join(', ') || 'none yet'}.`)
+  throw new Error(`"${name}" matches ${hits.length} habits: ${hits.slice(0, 6).map(h => `“${h.name}”`).join(', ')}. Say which one.`)
+}
 
 export async function executeTool(
   name: string,
@@ -409,8 +484,20 @@ export async function executeTool(
   // Money answers for itself: the finance lock, the base currency and the
   // ledger's own arithmetic are all in there.
   if (FINANCE_TOOL_NAMES.has(name)) return executeFinanceTool(name, input)
+  if (LIBRARY_TOOL_NAMES.has(name)) return executeLibraryTool(name, input)
+  if (SETTINGS_TOOL_NAMES.has(name)) return executeSettingsTool(name, input)
 
   switch (name) {
+
+    // ── The app itself ───────────────────────────────────────────────────────
+
+    case 'app_guide': {
+      const asked = typeof input.topic === 'string' ? input.topic : ''
+      if (!asked.trim()) return { topics: Object.entries(APP_GUIDE).map(([id, e]) => ({ id, title: e.title, where: e.where })) }
+      const hit = findGuide(asked)
+      if (!hit) return { found: false, note: `No guide for "${asked}". Topics: ${Object.keys(APP_GUIDE).join(', ')}. If the question is not covered, say you are not sure rather than guessing.` }
+      return { id: hit.id, ...hit.entry }
+    }
 
     // ── Accounts ─────────────────────────────────────────────────────────────
 
@@ -602,6 +689,40 @@ export async function executeTool(
       return { success: true, event_id: event.id, link: event.htmlLink, message: `Event "${input.title as string}" created` }
     }
 
+    case 'update_calendar_event': {
+      const token = await tokenForEmail(acctEmail, ctx)
+      const id = encodeURIComponent(input.event_id as string)
+      const cur = await calGet<{ summary?: string; attendees?: { email: string; self?: boolean; organizer?: boolean }[]; start?: { dateTime?: string; date?: string; timeZone?: string }; end?: { dateTime?: string; date?: string; timeZone?: string } }>(token, `/calendars/primary/events/${id}`)
+      const guests = (cur.attendees ?? []).filter(a => !a.self && !a.organizer)
+      // Changing an event with guests tells them. That is somebody else's calendar and inbox, so it needs
+      // the person's approval (the panel asks when `confirm_notify_guests` is set) — never a quiet side effect.
+      if (guests.length && input.confirm_notify_guests !== true) {
+        return { needs_confirmation: true, message: `“${cur.summary ?? 'This event'}” has ${guests.length} other guest${guests.length === 1 ? '' : 's'}, and changing it tells them. If the user wants that, call update_calendar_event again with the same changes and confirm_notify_guests: true — the app will ask them to approve.` }
+      }
+      const patch: Record<string, unknown> = {}
+      if (typeof input.title === 'string' && input.title.trim()) patch.summary = input.title.trim()
+      if (typeof input.description === 'string') patch.description = input.description
+      if (typeof input.location === 'string') patch.location = input.location
+      const tz = (input.timezone as string | undefined) ?? cur.start?.timeZone ?? 'UTC'
+      if (typeof input.start_datetime === 'string') {
+        const startMs = new Date(input.start_datetime).getTime()
+        if (!Number.isFinite(startMs)) throw new Error('start_datetime is not a date and time.')
+        const oldS = cur.start?.dateTime ? new Date(cur.start.dateTime).getTime() : NaN
+        const oldE = cur.end?.dateTime ? new Date(cur.end.dateTime).getTime() : NaN
+        const endIso = typeof input.end_datetime === 'string' ? input.end_datetime
+          : Number.isFinite(oldS) && Number.isFinite(oldE) ? new Date(startMs + (oldE - oldS)).toISOString() : null
+        if (!endIso) throw new Error('Give end_datetime too: this event has no timed length to keep.')
+        if (!(new Date(endIso).getTime() > startMs)) throw new Error('The end must be after the start.')
+        patch.start = { dateTime: input.start_datetime, timeZone: tz }
+        patch.end = { dateTime: endIso, timeZone: tz }
+      } else if (typeof input.end_datetime === 'string') {
+        patch.end = { dateTime: input.end_datetime, timeZone: tz }
+      }
+      if (!Object.keys(patch).length) throw new Error('Nothing to change: give a title, time, description or location.')
+      await calPost(token, `/calendars/primary/events/${id}?sendUpdates=${guests.length ? 'all' : 'none'}`, patch, 'PATCH')
+      return { success: true, message: `Event updated${guests.length ? ` and ${guests.length} guest${guests.length === 1 ? '' : 's'} told` : ''}` }
+    }
+
     case 'delete_calendar_event': {
       const token = await tokenForEmail(acctEmail, ctx)
       const res   = await fetch(
@@ -692,6 +813,41 @@ export async function executeTool(
       }
       const habit = ctx.habits.find(h => h.id === input.habit_id)
       return { success: true, message: `${habit?.emoji ?? '✓'} ${habit?.name ?? 'Habit'} logged for ${date}` }
+    }
+
+    case 'create_habit': {
+      const name = String(input.name ?? '').trim()
+      if (!name) throw new Error('A name is needed.')
+      const st = useHabitsStore.getState()
+      if (st.habits.some(h => h.name.trim().toLowerCase() === name.toLowerCase() && h.isActive)) return { created: false, already_exists: true, message: `You already have a habit called “${name}”.` }
+      const type = input.type === 'quantity' ? 'quantity' : 'boolean'
+      const goal = Number(input.goal)
+      if (type === 'quantity' && !(goal > 0)) throw new Error('A counted habit needs a goal above zero (for example 8) and a unit (glasses).')
+      const frequency = input.frequency === 'weekdays' || input.frequency === 'weekly' ? input.frequency : 'daily'
+      const colors = getHabitColors()
+      const color = colors[st.habits.length % colors.length]
+      const id = st.addHabit({ name, emoji: typeof input.emoji === 'string' && input.emoji.trim() ? input.emoji.trim() : '✅', color, frequency, isActive: true, type, ...(type === 'quantity' ? { goal, unit: typeof input.unit === 'string' ? input.unit.trim() : undefined } : {}) })
+      return { created: true, id, message: `Habit “${name}” created (${frequency}${type === 'quantity' ? `, ${goal} ${String(input.unit ?? '')}`.trimEnd() : ''}).` }
+    }
+
+    case 'update_habit': {
+      const h = habitNamed(String(input.habit ?? ''))
+      const patch: Partial<Habit> = {}
+      if (typeof input.name === 'string' && input.name.trim()) patch.name = input.name.trim()
+      if (typeof input.emoji === 'string' && input.emoji.trim()) patch.emoji = input.emoji.trim()
+      if (input.frequency === 'daily' || input.frequency === 'weekdays' || input.frequency === 'weekly') patch.frequency = input.frequency
+      if (input.goal !== undefined) { const g = Number(input.goal); if (!(g > 0)) throw new Error('goal must be above zero.'); patch.goal = g }
+      if (typeof input.unit === 'string') patch.unit = input.unit.trim() || undefined
+      if (typeof input.active === 'boolean') patch.isActive = input.active
+      if (!Object.keys(patch).length) throw new Error('Nothing to change.')
+      useHabitsStore.getState().updateHabit(h.id, patch)
+      return { updated: true, message: `Habit “${patch.name ?? h.name}” updated.` }
+    }
+
+    case 'delete_habit': {
+      const h = habitNamed(String(input.habit ?? ''))
+      useHabitsStore.getState().deleteHabit(h.id)
+      return { deleted: true, message: `Habit “${h.name}” deleted.` }
     }
 
     // ── Drive ─────────────────────────────────────────────────────────────────
