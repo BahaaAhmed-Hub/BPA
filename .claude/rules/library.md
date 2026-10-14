@@ -1056,3 +1056,13 @@ faked catalogues that lie (inches as cm, wrong edition, impossible thickness, an
 - **Size on the shelf** card in the book panel shows the size and its source, edits write a typed size (refused if it is not a
   believable book), "Measure again online" re-runs the lookup.
 Known failing on main too, unrelated: `library-goals` ("deleting a list takes its challenge"), `library-plans` ("deleting a book takes its plan").
+
+## Library — changing a cover
+`CoverCard.tsx` in the book panel (under the identity card). Three ways, each writes straight through: **Use my own picture**
+(`coverFromFile`: HEIC converted, orientation honoured, scaled to ≤520px on the long edge, JPEG with the quality stepped down
+until the data address is ≤180k characters, stored in the book's own `cover_url` — no bucket, works on every device, and the
+spine colour can be read from it because a data address never taints the canvas; a non-picture is refused and saves nothing),
+**Other covers online** (`coverOptions`: every picture either catalogue has, *not* merged — `lookupBooks` keeps one cover per
+book, which hid the second source; the ISBN's own first), and **Remove cover** (writes `null`). No `capture` on the input.
+`scripts/library-cover-change.mjs` (13): a real PNG built byte by byte, the stored JPEG measured on the page (347×520), the refusal,
+both catalogue pictures offered, only the cover changed, the clear.

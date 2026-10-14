@@ -119,6 +119,19 @@ export async function lookupByIsbn(isbn: string, signal?: AbortSignal): Promise<
   return { candidates: merge(all).slice(0, 1), failed }
 }
 
+/** Every cover either catalogue has for this book — NOT merged, so a book both know offers both pictures (the
+ *  merge keeps one). Which edition a picture is of is the person's call, so nothing here picks. */
+export async function coverOptions(query: string, signal?: AbortSignal): Promise<{ urls: string[]; failed: string[] }> {
+  const q = query.trim()
+  if (q.length < 2) return { urls: [], failed: [] }
+  const [ol, gb] = await Promise.allSettled([openLibrary(q, 10, signal), googleBooks(q, 10, signal)])
+  const failed: string[] = []
+  if (ol.status === 'rejected') failed.push('Open Library')
+  if (gb.status === 'rejected') failed.push('Google Books')
+  const all = [...(ol.status === 'fulfilled' ? ol.value : []), ...(gb.status === 'fulfilled' ? gb.value : [])]
+  return { urls: [...new Set(all.map(c => c.coverUrl).filter((u): u is string => !!u))], failed }
+}
+
 export async function lookupBooks(query: string, signal?: AbortSignal, limit = 8): Promise<LookupResult> {
   const q = query.trim()
   if (q.length < 2) return { candidates: [], failed: [] }
