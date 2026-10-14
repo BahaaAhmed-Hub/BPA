@@ -23,13 +23,15 @@ import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import type { GCalEvent } from '@/lib/googleCalendar'
 import type { EventStatus } from '@/lib/eventMetadata'
 import { loadEventStatuses, toggleEventStatus } from '@/lib/eventStatus'
-import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, archiveMessage, markAsRead, sendMail, escapeHtml } from '@/lib/gmail'
+import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, markAsRead, sendMail, escapeHtml } from '@/lib/gmail'
 import type { GmailHeader, GmailMessage, MailAccount } from '@/lib/gmail'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
+import { archiveThread, answerInvitation } from '@/lib/mailActions'
+import { readNeeds, keyOf as needKey } from '@/lib/mailNeeds'
 import { briefsFor, rememberDraft, forgetBrief, type InboxBrief, type MailAction } from '@/lib/mailBriefs'
 import { rememberWaiting, forgetWaiting } from '@/lib/mailWaiting'
 import {
-  readInvite, respondToInvite, removeFromCalendar, RSVP_LABEL, answerFor, rememberAnswer,
+  readInvite, removeFromCalendar, RSVP_LABEL, answerFor,
   type Invite, type Rsvp,
 } from '@/lib/invitations'
 import { notify } from '@/lib/undo'
@@ -1674,11 +1676,19 @@ export function TodayPage() {
           return []
         }
       }))
+      // What the smart view already decided about these threads. A thread it holds is judged **there** — an
+      // archive, a mute, an RSVP or "done" made on the Mail page leaves this card too, and what it calls an
+      // action is what Mail calls an action. One it has not read yet (new since the last pass) falls back to
+      // this card's own rules below, because showing it is better than hiding it.
+      const needs = await readNeeds(boxes.map(b => b.email))
       const rows: MailRow[] = []
       const bulk: MailRow[] = []
       for (const { th, account } of perBox.flat()) {
         const last = th?.messages?.at(-1)
         if (!th || !last) continue
+        const nk = needKey({ accountEmail: account.email, threadId: th.id })
+        const judged = needs?.byKey.get(nk)
+        if (needs?.stored.has(nk) && (!judged || judged.handled)) continue
         const headers = last.payload?.headers ?? []
         const from = header(headers, 'From')
         const name = from.replace(/<.*>/, '').replace(/"/g, '').trim()
@@ -1690,7 +1700,7 @@ export function TodayPage() {
         const plain = extractBody(last)
         // A campaign addressed to you personally is still a campaign, so bulk
         // mail never counts as needing you.
-        const isBulk = looksLikeBulk(headers, email, plain)
+        const isBulk = judged ? false : looksLikeBulk(headers, email, plain)
         const row: MailRow = {
           id: th.id,
           messageId: last.id,
@@ -1705,7 +1715,7 @@ export function TodayPage() {
           html: extractHtmlBody(last),
           body: plain,
           receivedAt: new Date(Number(last.internalDate ?? Date.now())).toISOString(),
-          needsYou: !isBulk && !!me && to.includes(me),
+          needsYou: judged ? judged.section === 'action' : !isBulk && !!me && to.includes(me),
           newsletter: isBulk,
           account,
           msgs: th.messages ?? [last],
@@ -1834,15 +1844,12 @@ export function TodayPage() {
     if (!invite) return
     setRsvpBusy(p => ({ ...p, [row.id]: answer }))
     setRsvpError(p => { const n = { ...p }; delete n[row.id]; return n })
-    const res = await respondToInvite(invite, row.account, answer)
+    const res = await answerInvitation(invite, row.account, row.id, answer)
     setRsvpBusy(p => { const n = { ...p }; delete n[row.id]; return n })
     if (res.ok) {
       setRsvpDone(p => ({ ...p, [row.id]: answer }))
-      rememberAnswer(invite.uid, answer)
-      // An answered invitation is dealt with. This card reads *unread* mail, so
-      // marking it read is what takes it off the list — and it survives the
-      // refresh, which component state did not.
-      void markAsRead(row.messageId, row.account).catch(() => { /* the answer still stands */ })
+      // Answered, read and marked handled by `answerInvitation`, so it leaves this card, the
+      // Mail page and the assistant's list together — and survives a refresh.
       forgetWaiting(row.id)
       notify(`${RSVP_LABEL[answer]} to ${invite.summary}`)
     } else {
@@ -2009,11 +2016,16 @@ export function TodayPage() {
     setPlanAccepted(true)
   }
 
+  /** Server first, the whole thread, and a refusal puts the row back: a row that left this card and not Gmail is a lie. */
   async function archiveMail(row: MailRow) {
+    const wasNews = newsletters.some(r => r.id === row.id)
     setMail(prev => prev.filter(r => r.id !== row.id))
     setNewsletters(prev => prev.filter(r => r.id !== row.id))
-    forgetWaiting(row.id)
-    try { await archiveMessage(row.messageId, row.account) } catch { /* it stays archived here either way */ }
+    const done = await archiveThread(row.account, row.id)
+    if (done.ok) { forgetWaiting(row.id); return }
+    notify(`Not archived — ${done.why}`)
+    if (wasNews) setNewsletters(prev => prev.some(r => r.id === row.id) ? prev : [...prev, row])
+    else setMail(prev => prev.some(r => r.id === row.id) ? prev : [...prev, row].sort((a, b) => Number(b.needsYou) - Number(a.needsYou) || b.receivedAt.localeCompare(a.receivedAt)))
   }
 
   /** Sweeping the newsletters away really archives them in Gmail — it used to
@@ -2021,7 +2033,12 @@ export function TodayPage() {
   async function archiveNewsletters() {
     const going = newsletters
     setNewsletters([])
-    await Promise.all(going.map(r => archiveMessage(r.messageId, r.account).catch(() => null)))
+    const results = await Promise.all(going.map(async r => ({ r, done: await archiveThread(r.account, r.id) })))
+    const back = results.filter(x => !x.done.ok).map(x => x.r)
+    if (back.length) {
+      notify(`${back.length} of ${going.length} could not be archived and are back on the list`)
+      setNewsletters(prev => [...prev, ...back.filter(r => !prev.some(p => p.id === r.id))])
+    }
   }
 
   function mailToTask(row: MailRow) {

@@ -48,7 +48,10 @@ const small = { ...inputStyle, minHeight: 32, fontSize: 'var(--sb-t-body-s)' } a
  * added until it is ticked and saved. A book already on the shelf is shown as
  * such and cannot be ticked.
  */
-export function ShelfPhotoPanel({ file, narrow, onClose, onAdded }: { file: File; narrow?: boolean; onClose: () => void; onAdded: (ids: string[]) => void }) {
+/** More than this at once is a lot of reading to ask for in one go (each photo is up to a dozen parts, and every part is a model call). */
+export const MAX_PHOTOS = 5
+
+export function ShelfPhotoPanel({ files, narrow, onClose, onAdded }: { files: File[]; narrow?: boolean; onClose: () => void; onAdded: (ids: string[]) => void }) {
   const shelf = useLibraryStore(s => s.books)
   const addBooks = useLibraryStore(s => s.addBooks)
   const lists = useLibraryStore(s => s.lists)
@@ -65,7 +68,8 @@ export function ShelfPhotoPanel({ file, narrow, onClose, onAdded }: { file: File
   const [note, setNote] = useState<string | null>(null)
   const [fatal, setFatal] = useState<string | null>(null)
   const [status, setStatus] = useState<BookStatus>('want')
-  const [preview, setPreview] = useState<string | null>(null)
+  const [previews, setPreviews] = useState<string[]>([])
+  const [skipped, setSkipped] = useState<string[]>([])
   const run = useRef(0)
 
   const patchKey = useCallback((key: string, p: Partial<Row> | ((r: Row) => Partial<Row>)) =>
@@ -128,26 +132,40 @@ export function ShelfPhotoPanel({ file, narrow, onClose, onAdded }: { file: File
 
   useEffect(() => {
     let live = true
-    let url = ''
+    const urls: string[] = []
     void (async () => {
-      if (!file.type.startsWith('image/') && !isHeic(file)) { setFatal(`${file.name || 'That file'} is not an image.`); setPhase('ready'); return }
-      try {
-        const img = await readableImage(file)
-        if (!live) return
-        url = URL.createObjectURL(img)
-        setPreview(url)
-        const t = await cutTiles(img)
-        if (!live) return
-        setTiles(t)
-        await read(t)
-      } catch (e) {
-        if (live) { setFatal(e instanceof Error ? e.message : 'That photo could not be opened.'); setPhase('ready') }
+      // Several photos are one shelf's worth of reading: every photo is cut into parts, all the parts are read
+      // one after another, and one list comes out (`mergeSpines` keys on the title, so a book seen in two photos is one row).
+      // A photo that will not open costs that photo, said by name; only when none opens is it an error.
+      const chosen = files.slice(0, MAX_PHOTOS)
+      const lost: string[] = files.length > MAX_PHOTOS ? [`Only the first ${MAX_PHOTOS} photos are read; ${files.length - MAX_PHOTOS} left out.`] : []
+      const all: Tile[] = []
+      let firstWhy = ''
+      for (const [i, f] of chosen.entries()) {
+        const label = f.name || `Photo ${i + 1}`
+        if (!f.type.startsWith('image/') && !isHeic(f)) { lost.push(`${label} is not an image.`); firstWhy ||= `${label} is not an image.`; continue }
+        try {
+          const img = await readableImage(f)
+          if (!live) return
+          urls.push(URL.createObjectURL(img)); setPreviews([...urls])
+          const t = await cutTiles(img)
+          if (!live) return
+          all.push(...t.map(x => (chosen.length > 1 ? { ...x, label: `photo ${i + 1} of ${chosen.length}, ${x.label}` } : x)))
+        } catch (e) {
+          const why = e instanceof Error ? e.message : 'could not be opened.'
+          lost.push(`${label}: ${why}`); firstWhy ||= why
+        }
       }
+      if (!live) return
+      setSkipped(lost)
+      if (all.length === 0) { setFatal(chosen.length === 1 ? firstWhy || 'That photo could not be opened.' : `None of the ${chosen.length} photos could be opened. ${firstWhy}`); setPhase('ready'); return }
+      setTiles(all)
+      await read(all)
     })()
     // `run` is a request counter, not a DOM node: bumping it on the way out stops an in-flight read writing into a closed panel.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    return () => { live = false; run.current++; if (url) URL.revokeObjectURL(url) }
-  }, [file, read])
+    return () => { live = false; run.current++; urls.forEach(u => URL.revokeObjectURL(u)) }
+  }, [files, read])
 
   // Whether a row is already on the shelf follows the text, so correcting a title can clear (or cause) the flag.
   const dups = useMemo(() => rows.map(r => r.title.trim() ? shelfMatch(shelf, { title: r.title, authors: r.author ? [r.author] : [], source: 'manual' }) : undefined), [rows, shelf])
@@ -182,12 +200,18 @@ export function ShelfPhotoPanel({ file, narrow, onClose, onAdded }: { file: File
       ) : (
         <>
           <Card style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {preview && <img src={preview} alt="The photographed shelf" style={{ width: '100%', maxHeight: 170, objectFit: 'contain', borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-field)' }} />}
+            {previews.length === 1 && <img src={previews[0]} alt="The photographed shelf" style={{ width: '100%', maxHeight: 170, objectFit: 'contain', borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-field)' }} />}
+            {previews.length > 1 && (
+              <div role="group" aria-label={`${previews.length} photographed shelves`} style={{ display: 'flex', gap: 6, overflowX: 'auto' }} className="sb-no-scrollbar">
+                {previews.map((u, i) => <img key={u} src={u} alt={`Shelf photo ${i + 1}`} style={{ height: 84, width: 'auto', maxWidth: 160, objectFit: 'cover', flexShrink: 0, borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-field)' }} />)}
+              </div>
+            )}
             <div aria-live="polite" style={{ fontSize: 'var(--sb-t-body-s)', color: note ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)', minHeight: phase === 'ready' ? 58 : 20 }}>
-              {phase === 'preparing' && 'Preparing the photo…'}
+              {phase === 'preparing' && (files.length > 1 ? 'Preparing the photos…' : 'Preparing the photo…')}
               {phase === 'reading' && (progress[1] > 1 ? `Reading the shelf — part ${Math.min(progress[0] + 1, progress[1])} of ${progress[1]}…` : 'Reading the shelf…')}
               {phase === 'ready' && note}
-              {phase === 'ready' && !note && rows.length > 0 && (looking ? `Finding covers online — ${rows.length - looking} of ${rows.length}…` : 'Covers and details are filled in where a catalogue matched. Fix anything that is wrong, and untick any you do not want.')}
+              {phase === 'ready' && skipped.length > 0 && <div>{skipped.join(' ')}</div>}
+              {phase === 'ready' && !note && skipped.length === 0 && rows.length > 0 && (looking ? `Finding covers online — ${rows.length - looking} of ${rows.length}…` : 'Covers and details are filled in where a catalogue matched. Fix anything that is wrong, and untick any you do not want.')}
             </div>
           </Card>
 

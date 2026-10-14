@@ -52,7 +52,7 @@ export function LibraryModule() {
   const [flight, setFlight] = useState<{ book: Book; from: DOMRect } | null>(null)
   const [adding, setAdding] = useState(false)
   const [editingList, setEditingList] = useState<ListEditing | null>(null)
-  const [shelfPhoto, setShelfPhoto] = useState<File | null>(null)
+  const [shelfPhoto, setShelfPhoto] = useState<File[] | null>(null)
   const shelfInput = useRef<HTMLInputElement>(null)
   const [addIsbn, setAddIsbn] = useState<string | undefined>()
   const [readingId, setReadingId] = useState<string | null>(null)
@@ -140,10 +140,10 @@ export function LibraryModule() {
         <Segmented value={view} onChange={setView} options={[
           { value: 'shelf', label: 'Shelf' }, { value: 'covers', label: 'Covers' }, { value: 'lists', label: 'Lists' }, { value: 'quotes', label: 'Quotes' }, { value: 'discover', label: 'Discover' }, { value: 'tracker', label: 'Tracker' },
         ]} />
-        <Button variant="secondary" disabled={missing} onClick={() => shelfInput.current?.click()} title="Photograph a shelf and add the books on it"><Camera size={ICON.md} /> Scan shelf</Button>
+        <Button variant="secondary" disabled={missing} onClick={() => shelfInput.current?.click()} title="Photograph a shelf — or several — and add the books on them"><Camera size={ICON.md} /> Scan shelf</Button>
         {/* No `capture`: it would force the camera and take away the photo library, where a shelf photo usually is. */}
-        <input ref={shelfInput} type="file" accept="image/*,.heic,.heif" hidden aria-label="Choose a photo of a shelf"
-          onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) { setAdding(false); setEditingList(null); setShelfPhoto(f) } }} />
+        <input ref={shelfInput} type="file" accept="image/*,.heic,.heif" multiple hidden aria-label="Choose a photo of a shelf"
+          onChange={e => { const fs = [...(e.target.files ?? [])]; e.target.value = ''; if (fs.length) { setAdding(false); setEditingList(null); setShelfPhoto(fs) } }} />
         <Button variant="accent" disabled={missing} onClick={() => openAdd()}><Plus size={ICON.md} /> Add book</Button>
       </header>
 
@@ -216,7 +216,7 @@ export function LibraryModule() {
                 onAdded={() => { setAdding(false); setAddIsbn(undefined); setView(view === 'lists' || view === 'quotes' || view === 'discover' || view === 'tracker' ? 'shelf' : view) }} />
             )}
             {shelfPhoto && !adding && !editingList && (
-              <ShelfPhotoPanel file={shelfPhoto} narrow={narrow} onClose={() => setShelfPhoto(null)}
+              <ShelfPhotoPanel files={shelfPhoto} narrow={narrow} onClose={() => setShelfPhoto(null)}
                 onAdded={() => { setShelfPhoto(null); setStatus('all'); setQ(''); setListId(null); setView('shelf') }} />
             )}
             {editingList && !adding && (

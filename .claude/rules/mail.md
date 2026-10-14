@@ -629,3 +629,31 @@ a snapshot, and the row returns to the list with it.
 - **Delete means the Bin**, and says so. `gmail.modify` cannot erase a message —
   that needs full `mail.google.com` — and a swipe should not destroy mail. No
   batch endpoint bins mail, so that one is a call each via `messages/trash`.
+
+## Mail — one answer to "what needs me", and one way to act (Mail page · Today · assistant)
+`lib/mailNeeds.ts` (read) and `lib/mailActions.ts` (act). Three screens had three judgements — the
+Mail page from stored analysis, the Today card from its own sender rules over an unread query, the
+assistant from a raw Gmail search the model had to judge itself — so one thread could be an action,
+a newsletter and a line in a list at once. The smart view's stored analysis is the authority now.
+- **`readNeeds(accounts)`** = the smart view's own `visibleThreads` over `mail_smart_threads`,
+  grouped by `groupOf` (**handled is always FYI**, which SmartView now uses too). `null` means "could
+  not ask", never "nothing". `stored` vs `byKey` separates *a decision you made* (archived, muted,
+  handled — in the store, not visible) from *never analysed* (not in the store).
+- **Today** judges a thread the store holds by the store (`needsYou` = section is action; a handled,
+  archived or muted thread leaves the card) and falls back to its own `looksLikeBulk` rules only for a
+  thread the store has not read yet — showing a new message beats hiding it. The fallback is the thing
+  still to delete (its rules are the third copy); the header's answer/book/decide chips are still the
+  model's `briefInbox`.
+- **The assistant** has `mail_needs` (the same list: action / attention, with what is wanted) and its
+  `list_emails` description says it carries no judgement; `archive_email` takes a `thread_id`.
+- **Acting is server first, whichever screen.** `archiveThread` is a **thread** modify in Gmail (Today
+  and the assistant archived one *message*, which leaves a thread with other INBOX messages in the
+  inbox) and **Today swallowed a refusal** — the row left the card and the mail never left Gmail. It now
+  comes back with "Not archived — why". `answerInvitation` = the real PATCH of your attendee status on
+  the event (`sendUpdates=all`, the organiser is told), then marks the thread handled and read. Nothing
+  is marked unless Gmail / Calendar said yes, so no screen shows a state the mail does not have.
+- Not done on purpose: the assistant has no RSVP tool; Today's own bulk rules and `mailClasses.ts` are
+  still in the tree (cleanup is its own change); the Today card still lists only unread mail.
+`scripts/mail-unified.mjs` (22) — Gmail and Calendar faked and able to refuse; every claim read off
+the request that went out. Control on the old code: Today still lists the handled and archived
+threads and the assistant has no `mail_needs`.
