@@ -1010,3 +1010,10 @@ book comes back when the other closes. Camera/export/reader dialogs stay dialogs
   list comes out — `mergeSpines` keys on the title, so a book in two photos is one row. Parts are labelled
   "photo 2 of 3, part 1 of 4". A file that will not open costs that file, named; none opening is the error;
   more than five says how many were left out. Row cap raised to 300. Asserted in `library-shelf-photo.mjs`.
+- **A panel stops above the assistant's button; its footer is one full-width row.** The first answer to
+  the corner button was `--ai-fab-clear` of right padding in the footer, which on a ~300px panel left ~170px
+  for three buttons — they wrapped into a ragged second row (Read again clipped, Add books stranded under
+  Cancel). `SidePanel` now has `margin-bottom: calc(var(--ai-fab-clear) - 8px)`, the footer is
+  `nowrap` with ordinary padding, and **Read again moved into the status card** (it is about the reading, not
+  the commit). `library-shelf-photo.mjs` measures Cancel and Add on one row (same top and bottom, a gap),
+  all inside the panel, and the panel's bottom at or above the button's top, at three widths.
