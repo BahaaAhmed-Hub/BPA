@@ -1017,3 +1017,21 @@ book comes back when the other closes. Camera/export/reader dialogs stay dialogs
   `nowrap` with ordinary padding, and **Read again moved into the status card** (it is about the reading, not
   the commit). `library-shelf-photo.mjs` measures Cancel and Add on one row (same top and bottom, a gap),
   all inside the panel, and the panel's bottom at or above the button's top, at three widths.
+
+## Library — a book's real size (chunk 1 of the true-scale shelf)
+`bookDimensions.ts` (pure), `findDimensions.ts` (network), `20260041_library_dimensions.sql`
+(`height_mm`, `width_mm`, `thickness_mm`, `dims_source`). The shelf will stand books at the size they
+really have; this is the part that decides what to believe. Not yet drawn — the shelf still uses `spine.ts`.
+- **Every reading is validated alone before it can reinforce another.** Plausible ranges, shape of a book
+  (0.45–1.3), thickness per page (0.025–0.25 mm) when pages are known, and the shape of the **cover
+  picture** (±12%). A reading that fails is dropped with its reason, never averaged in. Two valid sources
+  that disagree on height: one is used (no such book exists in between), at medium confidence.
+- **No unit is refused.** "21 x 14" could be inches or centimetres; guessing is how a 21 mm book is made.
+- **Sources:** Open Library's edition record (ISBN), Google Books (ISBN, or whole-title + author surname),
+  and up to three cover pictures whose proportions must agree (majority decides, an even split is ignored).
+  Google's answer for another ISBN is ignored. A source that is down is named; a 404 is "not listed".
+- **`dims_source`** says `measured` / `cover` / `estimate` / `manual`. An estimate (pages × sheet thickness
+  + binding board, taller when long) is labelled as one; a typed size is never overwritten.
+- Columns follow the optional-column rule (`dimsColumns`): a project without 20260041 keeps saving.
+`scripts/library-dimensions.mjs` (50): parsing, every refusal, the estimate, settling, and the lookup against
+faked catalogues that lie (inches as cm, wrong edition, impossible thickness, another-shaped cover, down).

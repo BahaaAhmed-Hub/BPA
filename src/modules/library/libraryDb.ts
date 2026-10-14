@@ -19,6 +19,8 @@ interface BookRow {
   rating: number; review: string | null; spine_color: string | null; file_path: string | null
   shelf_order: number; started_on: string | null; finished_on: string | null
   added_at: string; updated_at: string
+  /** 20260041 */
+  height_mm?: number | null; width_mm?: number | null; thickness_mm?: number | null; dims_source?: string | null
   /** 20260028 — absent from a project that has not run it. */
   to_buy?: boolean | null
   /** 20260035 */
@@ -43,6 +45,7 @@ const toBook = (r: BookRow): Book => ({
   status: r.status as BookStatus, format: r.format as BookFormat, rating: r.rating,
   review: opt(r.review), spineColor: opt(r.spine_color), filePath: opt(r.file_path), toBuy: opt(r.to_buy),
   paidAmount: r.paid_amount == null ? undefined : Number(r.paid_amount), paidCurrency: opt(r.paid_currency), boughtOn: opt(r.bought_on), boughtAt: opt(r.bought_at), watchItemId: opt(r.watch_item_id),
+  heightMm: opt(r.height_mm), widthMm: opt(r.width_mm), thicknessMm: opt(r.thickness_mm), dimsSource: opt(r.dims_source) as Book['dimsSource'],
   shelfOrder: r.shelf_order, startedOn: opt(r.started_on), finishedOn: opt(r.finished_on),
   addedAt: r.added_at, updatedAt: r.updated_at,
 })
@@ -53,6 +56,8 @@ const toBook = (r: BookRow): Book => ({
 /** Set once a row has come back carrying the 20260035 columns: only then can a cleared price be written as null. */
 let spendColumns = false
 let watchColumn = false
+/** Set once a row has come back carrying the 20260041 columns: only then can a cleared size be written as null. */
+let dimsColumns = false
 const fromBook = (b: Book, userId: string) => ({
   id: b.id, user_id: userId, title: b.title, subtitle: b.subtitle ?? null, authors: b.authors,
   isbn: b.isbn ?? null, publisher: b.publisher ?? null, published_year: b.publishedYear ?? null,
@@ -68,6 +73,8 @@ const fromBook = (b: Book, userId: string) => ({
   // Same rule for the price: sent once it holds something or the project is known to have the columns.
   ...(b.paidAmount !== undefined || b.paidCurrency || b.boughtOn || b.boughtAt || spendColumns
     ? { paid_amount: b.paidAmount ?? null, paid_currency: b.paidCurrency ?? null, bought_on: b.boughtOn ?? null, bought_at: b.boughtAt ?? null } : {}),
+  ...(b.heightMm || b.widthMm || b.thicknessMm || b.dimsSource || dimsColumns
+    ? { height_mm: b.heightMm ?? null, width_mm: b.widthMm ?? null, thickness_mm: b.thicknessMm ?? null, dims_source: b.dimsSource ?? null } : {}),
   ...(b.watchItemId || watchColumn ? { watch_item_id: b.watchItemId ?? null } : {}),
 })
 
@@ -106,6 +113,7 @@ export async function loadLibrary(): Promise<LibraryData | null | 'missing'> {
   }
   if ((b.data as BookRow[]).some(x => 'paid_amount' in x)) spendColumns = true
   if ((b.data as BookRow[]).some(x => 'watch_item_id' in x)) watchColumn = true
+  if ((b.data as BookRow[]).some(x => 'height_mm' in x)) dimsColumns = true
   return {
     books: (b.data as BookRow[]).map(toBook),
     lists: (l.data as ListRow[]).map(toList),
