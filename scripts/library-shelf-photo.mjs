@@ -272,13 +272,17 @@ ok('a matched book is filled in the panel: proper title, author and year, before
 ok('its cover is drawn from the catalogue', await dlg().locator('img[src*="covers.openlibrary.org"]').count() === 1)
 ok('a book the catalogues do not know is left as read and says so', await dlg().getByLabel('Title 2').inputValue() === 'Zzzz Unknown Thing' && /No match online/.test(await dlg().innerText()))
 await dlg().getByLabel('Published 1').fill('1999'); await dlg().getByLabel('Author 1').fill('J. Clear'); await wait(200)
-// ── the footer stays inside the panel at the narrowest width, however crowded ───────────
+// ── the footer is one aligned row, inside the panel, clear of the assistant's button ─────
 for (const w of [900, 1280, 1400]) {
   await p.setViewportSize({ width: w, height: 900 }); await wait(400)
-  const m = await dlg().evaluate(a => { const pr = a.getBoundingClientRect(); return [...a.querySelectorAll('button')].filter(b => /Read again|Cancel|^Add/.test(b.textContent)).map(b => { const r = b.getBoundingClientRect(); return [b.textContent.trim(), r.left >= pr.left - 0.5, r.right <= pr.right + 0.5, r.width > 0] }) })
-  ok(`footer buttons are whole and inside the panel at ${w}px`, m.length === 3 && m.every(x => x[1] && x[2] && x[3]), JSON.stringify(m))
+  const m = await dlg().evaluate(a => { const pr = a.getBoundingClientRect(); const fab = document.querySelector('[data-assistant-fab]')?.getBoundingClientRect()
+    const box = re => { const b = [...a.querySelectorAll('button')].find(x => re.test(x.textContent)); const r = b?.getBoundingClientRect(); return r && { top: r.top, bottom: r.bottom, left: r.left, right: r.right, w: r.width } }
+    return { pr: { bottom: pr.bottom, right: pr.right, left: pr.left }, fabTop: fab?.top ?? null, again: box(/Read again/), cancel: box(/^Cancel$/), add: box(/^Add/) } })
+  const inside = r => r && r.left >= m.pr.left && r.right <= m.pr.right - 8
+  ok(`all three buttons are whole and inside the panel at ${w}px`, inside(m.again) && inside(m.cancel) && inside(m.add), JSON.stringify(m))
+  ok(`Cancel and Add are on ONE row, the same height, with a gap between them at ${w}px`, Math.abs(m.cancel.top - m.add.top) <= 1 && Math.abs(m.cancel.bottom - m.add.bottom) <= 1 && m.add.left - m.cancel.right >= 4 && m.add.left > m.cancel.right, JSON.stringify([m.cancel, m.add]))
+  ok(`the panel ends above the assistant's button, so nothing is under it at ${w}px`, m.fabTop !== null && m.pr.bottom <= m.fabTop, `panel bottom ${m.pr.bottom} · button top ${m.fabTop}`)
 }
-
 await p.setViewportSize({ width: 1280, height: 1400 })
 await dlg().getByRole('button', { name: /^Add \d books?$/ }).click(); await wait(1800)
 const lk = (bookPosts[0] ?? []).find(r => r.title === 'Atomic Habits')

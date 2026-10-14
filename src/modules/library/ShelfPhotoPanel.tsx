@@ -191,7 +191,6 @@ export function ShelfPhotoPanel({ files, narrow, onClose, onAdded }: { files: Fi
   return (
     <SidePanel label="Books from a shelf photo" eyebrow="Scan shelf" narrow={narrow} onClose={onClose}
       footer={<>
-        {tiles && !fatal && <Button variant="ghost" disabled={busy} onClick={() => void read(tiles)} style={{ marginRight: 'auto' }}><RefreshCw size={14} /> Read again</Button>}
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
         <Button variant="accent" disabled={busy || chosen.length === 0} onClick={add}>{chosen.length ? `Add ${chosen.length} book${chosen.length === 1 ? '' : 's'}` : 'Add books'}</Button>
       </>}>
@@ -213,6 +212,11 @@ export function ShelfPhotoPanel({ files, narrow, onClose, onAdded }: { files: Fi
               {phase === 'ready' && skipped.length > 0 && <div>{skipped.join(' ')}</div>}
               {phase === 'ready' && !note && skipped.length === 0 && rows.length > 0 && (looking ? `Finding covers online — ${rows.length - looking} of ${rows.length}…` : 'Covers and details are filled in where a catalogue matched. Fix anything that is wrong, and untick any you do not want.')}
             </div>
+            {tiles && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => void read(tiles)}><RefreshCw size={13} /> Read again</Button>
+              </div>
+            )}
           </Card>
 
           {rows.length > 0 && (
