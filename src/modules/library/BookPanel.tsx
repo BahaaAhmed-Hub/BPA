@@ -9,6 +9,7 @@ import { applyCandidate } from './applyCandidate'
 import { BookFileCard } from './BookFileCard'
 import { BookLinksCard } from './BookLinksCard'
 import { PurchaseCard } from './PurchaseCard'
+import { SizeCard } from './SizeCard'
 import { WatchCard } from './WatchCard'
 import { ReadingLogCard } from './ReadingLogCard'
 import { PlanCard } from './PlanCard'
@@ -168,6 +169,8 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
       </Card>
 
       <BookLinksCard book={book} />
+
+      <SizeCard book={book} />
 
       <PurchaseCard book={book} />
 

@@ -990,8 +990,9 @@ img { max-width: 100%; }
 }
 .lib-spine::before { /* the shadow on the board and the wall: a real element, so the box itself stays 3D */
   content: ''; position: absolute; inset: 3px -2px -1px 3px; border-radius: 3px; background: rgba(40,28,10,.34);
-  filter: blur(3px); transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .4s ease;
+  filter: blur(3px); pointer-events: none; transition: transform .5s cubic-bezier(.2,.8,.2,1), opacity .4s ease;
 }
+.lib-book, .lib-face { pointer-events: none; }   /* the button's own box is the target; a pulled-out cover must not shield the books beside it */
 .lib-book, .lib-face { pointer-events: none; }   /* the button's own box is the target; a pulled-out cover must not shield the books beside it */
 .lib-face { position: absolute; display: block; backface-visibility: hidden; overflow: hidden; }
 .lib-face-spine {
