@@ -33,7 +33,7 @@ export interface ShelfRead {
   error?: string
 }
 
-export const MAX_BOOKS = 150
+export const MAX_BOOKS = 300
 const MAX_TITLE = 200
 
 const systemFor = (categories: string[]) => `You read book spines in a photograph of a shelf.

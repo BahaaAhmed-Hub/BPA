@@ -94,7 +94,7 @@ const u = await p.evaluate(async () => {
     cat: await (async () => { const c = await import('/BPA/src/modules/library/shelfCategories.ts'); return { hit: c.resolveCategory('history', ['History', 'Science']), punct: c.resolveCategory('self  help', ['Self-Help']), fresh: c.resolveCategory('  Biography ', ['History']), none: [c.resolveCategory('', ['A']), c.resolveCategory(undefined, ['A']), c.resolveCategory('!!!', ['A'])], names: c.newCategoryNames(['Biography', 'biography!', 'history', '', 'Economics'], ['History']) } })(),
     catParse: s.parseSpines(JSON.stringify({ books: [{ title: 'A', category: '  Self   Help ' }, { title: 'B', category: 'x'.repeat(100) }, { title: 'C', category: 5 }, { title: 'D', category: '   ' }] })).books.map(b => b.category ?? null),
     catMerge: s.mergeSpines([[{ title: 'Dune', sureness: 'low', category: 'Fiction' }], [{ title: 'Dune', sureness: 'high' }], [{ title: 'Emma', sureness: 'high' }], [{ title: 'Emma', sureness: 'medium', category: 'Classics' }]]).map(b => b.category ?? null),
-    capped: s.mergeSpines([Array.from({ length: 200 }, (_, i) => ({ title: 'Book ' + i, sureness: 'high' }))]).length,
+    capped: s.mergeSpines([Array.from({ length: 400 }, (_, i) => ({ title: 'Book ' + i, sureness: 'high' }))]).length,
   }
 })
 ok('a photo that fits is one piece, whole', u.small.length === 1 && u.small[0].x === 0 && u.small[0].w === 800 && u.small[0].h === 600)
@@ -108,7 +108,7 @@ ok('no JSON is no books, never an exception', u.prose.books.length === 0 && u.pr
 ok('junk rows are dropped; spacing tidied; unknown sureness is "low"; long titles capped; a negative count is 0', u.messy.books.length === 3 && u.messy.books[0].title === 'Spaced Out' && u.messy.books[0].sureness === 'low' && !('author' in u.messy.books[0]) && u.messy.books[1].title.length === 200 && u.messy.books[2].sureness === 'medium' && u.messy.unreadable === 0, JSON.stringify(u.messy))
 ok('the same spine read twice is one row: the surer reading wins, an author seen once is kept, punctuation and case ignored', u.merged.length === 2 && u.merged[0].sureness === 'high' && u.merged[0].author === 'James Clear' && u.merged[1].author === 'F. Herbert' && u.merged[1].sureness === 'high', JSON.stringify(u.merged))
 ok('a title that is only punctuation is not a book', !u.merged.some(m => m.title === '!!!'))
-ok('a shelf is capped at 150 rows', u.capped === 150)
+ok('a shelf is capped at 300 rows', u.capped === 300)
 ok('a category guess lands on the one you have, in your spelling — any case or punctuation', u.cat.hit?.name === 'History' && u.cat.hit.existing && u.cat.punct?.name === 'Self-Help' && u.cat.punct.existing)
 ok('a new one is new, tidied; nothing, whitespace and punctuation-only are no category', u.cat.fresh?.name === 'Biography' && !u.cat.fresh.existing && u.cat.none.every(x => x === null))
 ok('new names are listed once each, never one you already have', u.cat.names.join() === 'Biography,Economics', u.cat.names.join())
@@ -194,6 +194,33 @@ await close()
 reset(n => (n === 1 ? { status: 400 } : byTile(n)))
 await choose(file(await png(3600, 900)))
 ok('one piece failing costs its piece: the others are listed and the screen says so', await dlg().getByRole('listitem').count() === 4 && /1 of 4 parts of the photo could not be read/.test(await dlg().innerText()), (await dlg().innerText()).slice(-300))
+await close()
+
+// ── several photos at once ─────────────────────────────────────────────────────
+const two = async (n = 2, extra = []) => { const fs = []; for (let i = 0; i < n; i++) fs.push(file(await png(800, 600, i % 2 ? '#4d6f8a' : '#8a6f4d'), `shelf${i + 1}.png`)); return [...fs, ...extra] }
+const chooseMany = async fs => { await p.getByLabel('Choose a photo of a shelf').setInputFiles(fs); await wait(3000) }
+ok('the file picker takes several photos', await p.getByLabel('Choose a photo of a shelf').evaluate(el => el.multiple))
+reset(n => ({ books: [{ title: 'Shared Book', sureness: 'high' }, { title: `Only in photo ${n + 1}`, sureness: 'high' }], unreadable: 1 }))
+await chooseMany(await two(2))
+ok('two photos are read as two parts, one call each, each named by its photo', aiCalls.length === 2 && /photo 1 of 2/.test(aiCalls[0].messages[0].content[1].text) && /photo 2 of 2/.test(aiCalls[1].messages[0].content[1].text), aiCalls.map(c => c.messages[0].content[1].text).join(' | '))
+ok('both photos show in the panel', await dlg().locator('img[alt^="Shelf photo"]').count() === 2)
+ok('one list comes out: the book in both photos is one row, plus one per photo (3)', await dlg().getByRole('listitem').count() === 3)
+ok('unreadable spines are summed over both photos', /2 spines could not be read/.test(await dlg().innerText()))
+await close()
+
+reset(n => ({ books: [{ title: `Book ${n}`, sureness: 'high' }], unreadable: 0 }))
+await chooseMany(await two(6))
+ok('more than five photos: the first five are read, and it says what was left out', aiCalls.length === 5 && /Only the first 5 photos are read; 1 left out/.test(await dlg().innerText()), `${aiCalls.length} calls`)
+await close()
+
+reset(n => ({ books: [{ title: `Book ${n}`, sureness: 'high' }], unreadable: 0 }))
+await chooseMany(await two(1, [{ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('not a picture') }]))
+ok('a file that is not an image costs that file: the photo is still read, and the file is named', aiCalls.length === 1 && /notes\.txt is not an image/.test(await dlg().innerText()) && await dlg().getByRole('listitem').count() === 1)
+await close()
+
+reset(() => SHELF)
+await chooseMany([{ name: 'a.txt', mimeType: 'text/plain', buffer: Buffer.from('x') }, { name: 'b.txt', mimeType: 'text/plain', buffer: Buffer.from('y') }])
+ok('when none of them is an image it is an error, and no call is made', aiCalls.length === 0 && /None of the 2 photos could be opened/.test(await dlg().innerText()))
 await close()
 
 // ── failures ────────────────────────────────────────────────────────────────

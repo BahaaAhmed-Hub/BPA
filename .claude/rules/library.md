@@ -1005,3 +1005,8 @@ book comes back when the other closes. Camera/export/reader dialogs stay dialogs
   6000, 150 rows. A title read in full but doubtful is `low`, not `unreadable`.
 - **The bookcase** (`Bookcase.tsx`, `.lib-case`): walnut mixed into `--sb-overlay`, ≥3 bays,
   empty state is `EmptyShelf`; Covers view stands covers face-out on the boards.
+- **Scan shelf takes several photos** (`multiple` on the picker, `files: File[]` on `ShelfPhotoPanel`, at most
+  `MAX_PHOTOS` = 5). Each photo is cut into parts; every part of every photo is read one after another and one
+  list comes out — `mergeSpines` keys on the title, so a book in two photos is one row. Parts are labelled
+  "photo 2 of 3, part 1 of 4". A file that will not open costs that file, named; none opening is the error;
+  more than five says how many were left out. Row cap raised to 300. Asserted in `library-shelf-photo.mjs`.
