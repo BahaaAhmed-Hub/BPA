@@ -23,10 +23,10 @@ export function useCaseWidth() {
 }
 
 /** One shelf: what stands on it, and the board it stands on. */
-export function Bay({ children, minHeight = 190 }: { children?: ReactNode; minHeight?: number }) {
+export function Bay({ children, minHeight = 190, gap = 6 }: { children?: ReactNode; minHeight?: number; gap?: number }) {
   return (
     <div className="lib-bay">
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, padding: '0 20px', minHeight }}>{children}</div>
+      <div className="lib-row" style={{ display: 'flex', alignItems: 'flex-end', gap, padding: '0 20px', minHeight }}>{children}</div>
       <div className="lib-board" />
     </div>
   )

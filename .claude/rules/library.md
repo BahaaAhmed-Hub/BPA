@@ -1017,3 +1017,42 @@ book comes back when the other closes. Camera/export/reader dialogs stay dialogs
   `nowrap` with ordinary padding, and **Read again moved into the status card** (it is about the reading, not
   the commit). `library-shelf-photo.mjs` measures Cancel and Add on one row (same top and bottom, a gap),
   all inside the panel, and the panel's bottom at or above the button's top, at three widths.
+
+## Library — a book's real size (chunk 1 of the true-scale shelf)
+`bookDimensions.ts` (pure), `findDimensions.ts` (network), `20260041_library_dimensions.sql`
+(`height_mm`, `width_mm`, `thickness_mm`, `dims_source`). The shelf will stand books at the size they
+really have; this is the part that decides what to believe. Not yet drawn — the shelf still uses `spine.ts`.
+- **Every reading is validated alone before it can reinforce another.** Plausible ranges, shape of a book
+  (0.45–1.3), thickness per page (0.025–0.25 mm) when pages are known, and the shape of the **cover
+  picture** (±12%). A reading that fails is dropped with its reason, never averaged in. Two valid sources
+  that disagree on height: one is used (no such book exists in between), at medium confidence.
+- **No unit is refused.** "21 x 14" could be inches or centimetres; guessing is how a 21 mm book is made.
+- **Sources:** Open Library's edition record (ISBN), Google Books (ISBN, or whole-title + author surname),
+  and up to three cover pictures whose proportions must agree (majority decides, an even split is ignored).
+  Google's answer for another ISBN is ignored. A source that is down is named; a 404 is "not listed".
+- **`dims_source`** says `measured` / `cover` / `estimate` / `manual`. An estimate (pages × sheet thickness
+  + binding board, taller when long) is labelled as one; a typed size is never overwritten.
+- Columns follow the optional-column rule (`dimsColumns`): a project without 20260041 keeps saving.
+`scripts/library-dimensions.mjs` (50): parsing, every refusal, the estimate, settling, and the lookup against
+faked catalogues that lie (inches as cm, wrong edition, impossible thickness, another-shaped cover, down).
+
+## Library — the true-scale 3D shelf (chunks 2–5)
+`Shelf.tsx`, `spine.ts` (`boxOf`, `PX_PER_MM` = 1.1), `coverTone.ts`, `useMeasureShelf.ts`, `SizeCard.tsx`, `.lib-*` in `index.css`.
+- **A book is a 3D box at its real size**: spine thickness = `thickness_mm`, height = `height_mm`, depth = cover width.
+  Missing size → the page-count estimate (`estimateDims`), never a fixed block. Spine colour comes from the cover
+  (`coverTone`: 16×16 canvas, saturation-weighted; a host without CORS leaves the theme colour — nothing stored).
+  Four finishes by hash (plain, bands, paper label, stripe), cap shading, bookmark ribbon = reading, foil seal =
+  finished, publisher mark. Books touch (1px); a loose row leans its last book on a bookend.
+- **Motion**: settle-in once per appearance (`data-entering`, 2.2s, not on every re-row); hover turns the book −32° to show
+  its cover; the light on the case follows the pointer (`--gx/--gy`). Reduced motion removes all of it.
+- **Three things that cost a debugging round each.** (1) A `filter` on a `preserve-3d` element flattens it: the cover face
+  never appeared until the shadow became its own `::before`. (2) The pulled-out cover and the shadow pseudo-element are part
+  of the button and sat over the neighbours, so `pointer-events: none` on `.lib-book`, `.lib-face` and `::before`: the
+  button's own box is the only target (`library-sessions` caught it). (3) Hover moves `.lib-book`, never the button, so the
+  hit area cannot move out from under the pointer.
+- **Measuring** (`useMeasureShelf`): the visible books without a `dims_source`, two at a time, via `findDimensions`; written
+  with `patchBooks` (no undo). Only once a row has come back carrying the 20260041 columns (`dimsKnown`) — a probe cannot
+  tell "migrated, empty" from "not migrated". Both catalogues unreachable → not marked, retried next session.
+- **Size on the shelf** card in the book panel shows the size and its source, edits write a typed size (refused if it is not a
+  believable book), "Measure again online" re-runs the lookup.
+Known failing on main too, unrelated: `library-goals` ("deleting a list takes its challenge"), `library-plans` ("deleting a book takes its plan").

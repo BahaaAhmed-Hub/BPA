@@ -21,6 +21,11 @@ export interface Book {
   source: BookSource
   sourceKey?: string
   status: BookStatus
+  /** Real size in millimetres, and where it came from (20260041). Absent until looked up. */
+  heightMm?: number
+  widthMm?: number
+  thicknessMm?: number
+  dimsSource?: 'measured' | 'cover' | 'estimate' | 'manual'
   format: BookFormat
   /** 0 is unrated. */
   rating: number
