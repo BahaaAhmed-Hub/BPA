@@ -308,3 +308,40 @@ more than once, and the claim was the bug.
   cannot be recovered — deliberately unpaid and genuinely paid on its due date
   are identical once stamped, and nothing recorded which it was — so those are
   left alone rather than guessed at.
+
+## Bots — Telegram and Siri are the app's assistant too, and they ask first
+`_shared/assistantGate.ts` (the consent policy — **the app's `src/lib/assistantPolicy.ts` is a re-export of it**),
+`_shared/appGuide.ts` (the guide — `src/lib/appGuide.ts` re-exports it), `_shared/botKit.ts` (the gate's plumbing and
+the bots' new tools), `20260040_assistant_pending.sql`. Before this the bots did a reply or a ledger entry the moment
+the model asked, and had no Library, no habit create/edit/delete, no "what needs me" and no app guide.
+- **Every tool call goes through `gateCall` before `dispatchTool`** (both bots, asserted by a test that counts the call
+  sites). An outward / destructive / money act is **parked** in `assistant_pending_actions` and *not run*; the model is
+  told it is waiting and not to claim it is done. `reply_email` joined the outward set — the bots' name for the app's
+  `reply_to_email`; a new name belongs in the one file and is gated in all three assistants.
+- **The question is built from the call's real arguments**, by us, never from the model's description of it: Telegram
+  sends a card with ✅ Approve / Not now (`callback_data` `ap:<uuid>` / `no:<uuid>`, 39 bytes of 64); Siri speaks the
+  title and arguments and "Say yes to do it, or no to cancel", replacing whatever the model said.
+- **Approve runs it once.** `takeAction` is `delete … returning` filtered by id, user, channel, chat (Telegram) and
+  `expires_at > now()` (10 minutes) — a second tap, a retried webhook, another person, another chat or a stale button
+  finds nothing and does nothing. The table has RLS on and **no policy**: only the service role touches it.
+- **Fail closed.** If the act cannot be parked (migration not run, database down) it is *not done* and the model is
+  told NOT DONE. Until `20260040` runs, a bot reply or ledger entry is refused, not allowed.
+- **Siri has no buttons, so a bare yes/no answers the latest open question.** `parseYesNo` accepts only 1–4 words that
+  are a plain yes/no (English and Arabic); "yes, send it to Ahmed instead" is a new request and goes to the agent, the
+  old question just expires. One question open at a time (a new one replaces it; two in one turn → the second is
+  refused, reserved synchronously because tool calls run in parallel). Apostrophes are dropped before matching
+  (`don't` → `dont`) — the first draft turned it into `don t` and could not cancel.
+- **New bot tools** (both bots): `app_guide`, `mail_needs`, `create_habit` / `update_habit` / `delete_habit`, and
+  `library_overview/find_books/add_book/update_book/log_reading/add_quote/delete_book`. All query `user_id = <the
+  resolved user>` with the service role, so scope is enforced in the query, not by RLS. The Library obeys both
+  switches the app does (`has_module` and the person's synced `library-settings`) and **fails off** if it cannot tell.
+  `library_log_reading` keeps the app's rules (new ground only, 1–1440 min, no future day, page within the book,
+  first sitting starts the book, never finishes it); `library_update_book` stamps/clears dates as the app does.
+- **Deliberately not in the bots:** settings tools, cover/online lookup when adding a book (a wrong cover is worse than
+  none — the bot says nothing was fetched), Notes/Planning/Booking, company-hiding in `mail_needs` (a client-side
+  preference). The app's own Library/habit tools are still separate, store-based implementations; only the policy and
+  the guide are single-sourced.
+`scripts/bots-as-assistant.mjs` (140+ assertions): a fake database that can refuse, **the bots' real approval handler and
+real `Deno.serve` block lifted out of the files**. Controls: remove `reply_email` from the gate → 2 fail; drop the
+expiry check → "an expired act cannot be approved" fails; drop the chat check → 2 fail. **Not exercised here: a live
+Telegram button tap, a live Siri Shortcut, or the Anthropic model choosing the tool** — those need the deployed bots.

@@ -243,3 +243,40 @@ so the clip, mic, text and button share a centre. It is **no longer `disabled` w
 answer is arriving** (that also dropped focus after every reply): you can write the next
 message, Enter waits (`sendMessage` refuses while thinking). `assistant-window.mjs` §5;
 control with the old file: 20px / 81px / disabled / focus lost — 4 of 4 fail.
+
+## The assistant works in every module, inside the account's scope, and asks before it matters
+`lib/assistantPolicy.ts` (consent), `appGuide.ts` (knowledge), `libraryTools.ts`, `settingsTools.ts`, and
+more in `assistantTools.ts`. "Scope" is already the signed-in person's own data (their tokens, their rows);
+this is what it may do *with* it, and how it knows the app.
+- **Three kinds of act wait for a click, enforced in code** — `runTool` in `AssistantPanel` calls
+  `approvalFor(name, input)` between the model's request and the tool, shows an **Approval needed** card
+  with the call's real arguments (long ones clipped, `confirm` and blanks dropped), and runs only on
+  *Approve*. **outward** (send, reply, RSVP, changing an event that has guests), **destructive** (any tool
+  named `delete_*` / `remove_*` / `*_delete_*`) and **money** (writes to the ledger). A refusal is handed back
+  as `DECLINED`, which tells the model not to retry or find another way. Never a line in the prompt alone.
+  Everything else — reading, ordinary edits of your own things, archive, logging — is done directly.
+- **A model can say `confirm: true` for itself, so the person's click is what counts**: the card drops that
+  key. `update_calendar_event` on an event with other guests refuses (`needs_confirmation`) until called again
+  with `confirm_notify_guests: true`, and *that* call is outward — it can never tell guests as a side effect.
+- **The hint line under the composer is gone** (it appeared and disappeared with focus). Pressing a button in
+  that area blurred the box, the line unmounted, and the buttons moved before the click landed — the
+  Approve button lost its click to it. The shortcuts are the box's `title`. Same trap as the shelf panel.
+- **`app_guide` is what it answers "how do I…" from**, and the prompt says to call it and not invent.
+  `assistant-knows-the-app.mjs` reads the *source* — the rail in `App.tsx`, the Settings sections, the Library
+  views, the Finance screens — and fails if the guide names something the app does not have or omits one it does.
+- **Library tools use names, not ids** (`library_*`): a book is found by title, an ambiguous or unknown one is
+  refused with what matched, adding looks the book up as strictly as the Add panel (a wrong cover is worse than
+  none), finishing/starting dates itself, progress is `progressOf`/`pagesCovered`, switched off or unmigrated
+  answers in words. **Habits** can now be made, changed, paused and deleted by name.
+- **Settings are a closed list of four** (the assistant's name, reading answers aloud, the Library shown, the
+  quote of the day), changed through the same functions Settings calls. The AI key, tokens, billing, accounts,
+  privacy, automation and the **theme** are not in it: the theme lives in three places the Settings screen keeps
+  in step, and changing one from outside would be put back by the next load. It says where to do it instead.
+- Not covered: Telegram and Siri have their own server-side tools (`supabase/functions`) and are a separate
+  step; there is no tool, and no guide entry, for Notes/Planning (booking is one line under Calendar) yet — the prompt
+  tells the assistant to say it is not sure rather than guess.
+Tests: `assistant-approval` (19), `assistant-library` (23), `assistant-calendar-habits` (19),
+`assistant-knows-the-app` (26); `assistant-window` and `mail-unified` re-run unchanged.
+
+## Telegram and Siri use the same policy
+The consent policy (`approvalFor`, `DECLINED`) now lives in `supabase/functions/_shared/assistantGate.ts` and the guide in `_shared/appGuide.ts`; `src/lib/assistantPolicy.ts` and `src/lib/appGuide.ts` re-export them, so the panel, the Telegram bot and Siri gate the same acts and answer from the same text. How the bots park and approve an act is in `server.md` ("Telegram and Siri are the app's assistant too").
