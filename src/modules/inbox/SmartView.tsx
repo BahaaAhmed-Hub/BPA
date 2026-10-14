@@ -1,3 +1,4 @@
+import { groupOf } from '@/lib/mailNeeds'
 import { useEffect, useMemo, useState } from 'react'
 import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, EyeOff, X as XIcon, HelpCircle, Send, Trash2, LogIn, Undo2 } from 'lucide-react'
 import { Button, Card, Pill } from '@/components/ui'
@@ -197,7 +198,7 @@ export function SmartView({
   // where it can still be found.
   const grouped = useMemo(() => {
     const g: Record<SmartSection, SmartThread[]> = { action: [], attention: [], radar: [], fyi: [] }
-    for (const t of threads) g[t.handled ? 'fyi' : t.section].push(t)
+    for (const t of threads) g[groupOf(t)].push(t)
     return g
   }, [threads])
 
@@ -427,7 +428,7 @@ export function SmartView({
               // A row's shape belongs to the row, not to the view it is being
               // read in: something with nothing to act on is one line whether
               // you are looking at FYI or at everything at once.
-              const where = t.handled ? 'fyi' : t.section
+              const where = groupOf(t)
               return where === 'fyi' ? (
                 /* ── A quiet row is still a row you can pick ────────────────
                    This was one `<button>` and nothing else, so an FYI row had

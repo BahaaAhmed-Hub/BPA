@@ -1,6 +1,9 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import type { Task } from '@/types'
 import { archiveMessage, extractBody, type GmailMessage } from './gmail'
+import { archiveThread } from './mailActions'
+import { readNeeds } from './mailNeeds'
+import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { type ConnectedAccount } from './multiAccount'
 import { getGoogleToken } from './tokenManager'
 import { refreshPrimaryToken } from './googleCalendar'
@@ -158,7 +161,12 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
   // ── Email ────────────────────────────────────────────────────────────────────
   {
     name: 'list_emails',
-    description: 'List recent unread emails (returns snippets). Use get_email to read the full body of a specific thread.',
+    description: 'List recent unread emails (returns snippets, with NO judgement of importance). For "what needs me", "what is important" or "what should I answer", use mail_needs instead — it is the same list the Mail page and Today show. Use get_email to read the full body of a specific thread.',
+    input_schema: { type: 'object' as const, properties: { ...ACCT }, required: [] },
+  },
+  {
+    name: 'mail_needs',
+    description: 'What needs the user, exactly as the Mail page and the Today card judge it: "action" = they owe someone an answer, decision or RSVP; "attention" = worth knowing, nothing to answer. Already excludes mail they archived, muted or marked done anywhere in the app. ALWAYS use this for questions about important, urgent or waiting mail — never decide importance from list_emails snippets yourself, or the answer will disagree with what they see on screen. If it says unavailable, say so and offer list_emails as an unranked look.',
     input_schema: { type: 'object' as const, properties: { ...ACCT }, required: [] },
   },
   {
@@ -211,11 +219,11 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'archive_email',
-    description: 'Archive an email (remove from inbox).',
+    description: 'Archive an email thread (remove it from the Gmail inbox and from the app\'s lists). Pass thread_id, which list_emails, search_emails and mail_needs all return.',
     input_schema: {
       type: 'object' as const,
-      properties: { message_id: { type: 'string' }, ...ACCT },
-      required: ['message_id'],
+      properties: { thread_id: { type: 'string' }, message_id: { type: 'string', description: 'Only if you have no thread_id; archives just that one message.' }, ...ACCT },
+      required: [],
     },
   },
   {
@@ -420,6 +428,25 @@ export async function executeTool(
       return fetchEmailSummaries(token, 'is:unread in:inbox', 8)
     }
 
+    case 'mail_needs': {
+      const boxes = mailAccounts(ctx.primaryEmail)
+      const picked = acctEmail ? boxes.filter(b => b.email === acctEmail) : boxes
+      const needs = await readNeeds(picked.map(b => b.email))
+      if (!needs) {
+        return { available: false, note: 'The app has not analysed the mail yet (open the Mail page once, or sign in again). list_emails gives an unranked look in the meantime.' }
+      }
+      const shape = (t: (typeof needs.all)[number]) => ({
+        thread_id: t.threadId, account_email: t.accountEmail, from: t.fromName || t.fromEmail, subject: t.subject,
+        what_is_wanted: t.need || undefined, kind: t.kind, last_message_days_ago: Math.floor((Date.now() - t.lastAt) / 86_400_000),
+        you_are_holding_someone_up: t.bottleneck || undefined,
+      })
+      return {
+        available: true,
+        action: needs.action.slice(0, 15).map(shape), action_total: needs.action.length,
+        attention: needs.attention.slice(0, 10).map(shape), attention_total: needs.attention.length,
+      }
+    }
+
     case 'get_email': {
       const token = await tokenForEmail(acctEmail, ctx)
       const threadId = input.thread_id as string
@@ -485,6 +512,15 @@ export async function executeTool(
     }
 
     case 'archive_email': {
+      if (input.thread_id) {
+        // The whole thread, in Gmail, and recorded for every screen — or a refusal said in words, never a quiet "done".
+        const account = mailAccounts(ctx.primaryEmail).find(a => a.email === (acctEmail ?? ctx.primaryEmail))
+        if (!account) throw new Error(`Account "${acctEmail}" is not connected.`)
+        const done = await archiveThread(account, input.thread_id as string)
+        if (!done.ok) throw new Error(`Not archived: ${done.why}`)
+        return { success: true, message: 'Thread archived' }
+      }
+      if (!input.message_id) throw new Error('Give a thread_id (or a message_id).')
       if (acctEmail && acctEmail !== ctx.primaryEmail) {
         const token = await tokenForEmail(acctEmail, ctx)
         await gmailPost(token, `/users/me/messages/${input.message_id as string}/modify`, { removeLabelIds: ['INBOX'] })

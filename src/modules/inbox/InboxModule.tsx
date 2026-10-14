@@ -14,6 +14,7 @@ import { notify, pushUndo } from '@/lib/undo'
 import { inkOn } from '@/lib/ink'
 import type { EmailTriage, EmailData } from '@/lib/professor'
 import { classifyMail, unsubscribeLink, CLASSES, CLASS_INFO, countByClass, type MailClass } from '@/lib/mailClasses'
+import { archiveThread, answerInvitation } from '@/lib/mailActions'
 import { listUnreadThreadIds, getThread, modifyThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, markAsUnread, archiveMessage, unarchiveMessage, trashMessage, untrashMessage, listLabels, batchModify, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder, type GmailHeader, type GmailLabel } from '@/lib/gmail'
 import { cachedDraft, forgetBrief } from '@/lib/mailBriefs'
 import { forgetWaiting } from '@/lib/mailWaiting'
@@ -23,7 +24,7 @@ import { SmartView } from './SmartView'
 import { runSmartPass, type PassResult, type SmartThread } from '@/lib/mailSmartSync'
 import { markHandled, markThread } from '@/lib/mailSmartDb'
 import {
-  looksLikeInvitation, readInvite, respondToInvite, rememberAnswer, RSVP_LABEL, type Rsvp,
+  looksLikeInvitation, readInvite, RSVP_LABEL, type Rsvp,
 } from '@/lib/invitations'
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { SwipeRow } from './SwipeRow'
@@ -623,13 +624,10 @@ export function InboxModule() {
   async function archiveReading() {
     if (!reading) return
     const t = smart?.threads.find(x => x.threadId === reading.threadId)
-    try {
-      await modifyThread(reading.threadId, { remove: ['INBOX'] }, reading.account)
-    } catch (e) {
-      notify(e instanceof Error ? e.message : 'It could not be archived'); return
-    }
+    const done = await archiveThread(reading.account, reading.threadId)
+    if (!done.ok) { notify(done.why); return }
     const at = Date.now()
-    if (t) { markSmart([t], { archivedAt: at }); void markThread(t.accountEmail, t.threadId, { archived_at: new Date(at).toISOString() }) }
+    if (t) markSmart([t], { archivedAt: at })
     setReading(null)
     notify('Archived')
   }
@@ -848,10 +846,7 @@ export function InboxModule() {
     for (const t of ts) {
       const account = accounts.find(a => a.email === t.accountEmail)
       if (!account) { back.push(t); continue }
-      try {
-        await modifyThread(t.threadId, { remove: ['INBOX'] }, account)
-        void markThread(t.accountEmail, t.threadId, { archived_at: new Date(at).toISOString() })
-      } catch { back.push(t) }
+      if (!(await archiveThread(account, t.threadId)).ok) back.push(t)
     }
     // **A row that left here and did not leave Gmail is a lie.** The gesture is
     // optimistic because a batch of eight should not freeze the list, but a
@@ -913,11 +908,9 @@ export function InboxModule() {
           : 'No invitation found in this thread')
         return
       }
-      const res = await respondToInvite(read.invite, account, answer)
+      const res = await answerInvitation(read.invite, account, t.threadId, answer)
       if (!res.ok) { notify(res.why ?? 'Google would not take the answer'); return }
-      rememberAnswer(read.invite.uid, answer)
       markSmart([t], { handled: true })
-      void markThread(t.accountEmail, t.threadId, { handled_at: new Date().toISOString() })
       notify(`${RSVP_LABEL[answer]} — ${read.invite.summary}`)
     } catch (e) {
       notify(e instanceof Error ? e.message : 'The invitation could not be answered')

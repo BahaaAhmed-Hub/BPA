@@ -120,7 +120,7 @@ const MAX_PER_PASS = 40
  *  the rows painted before the network and the rows painted after it cannot be
  *  filtered or sorted differently — which would make the list visibly reshuffle
  *  a second after it appeared. */
-function visibleThreads(all: SmartThread[], from: number): SmartThread[] {
+export function visibleThreads(all: SmartThread[], from: number): SmartThread[] {
   return all
     .filter(t => t.lastAt >= from)
     // Ignored means ignored: a new message on a muted thread does not undo the
@@ -147,7 +147,7 @@ function visibleThreads(all: SmartThread[], from: number): SmartThread[] {
       { bottleneck: b.bottleneck, lastAt: b.lastAt } as ThreadFacts))
 }
 
-function rowToThread(r: SmartRow): SmartThread {
+export function rowToThread(r: SmartRow): SmartThread {
   return {
     accountEmail: r.account_email, threadId: r.thread_id, lastMessageId: r.last_message_id,
     subject: r.subject ?? '(no subject)', fromName: r.from_name ?? '', fromEmail: r.from_email ?? '',
