@@ -277,3 +277,6 @@ this is what it may do *with* it, and how it knows the app.
   tells the assistant to say it is not sure rather than guess.
 Tests: `assistant-approval` (19), `assistant-library` (23), `assistant-calendar-habits` (19),
 `assistant-knows-the-app` (26); `assistant-window` and `mail-unified` re-run unchanged.
+
+## Telegram and Siri use the same policy
+The consent policy (`approvalFor`, `DECLINED`) now lives in `supabase/functions/_shared/assistantGate.ts` and the guide in `_shared/appGuide.ts`; `src/lib/assistantPolicy.ts` and `src/lib/appGuide.ts` re-export them, so the panel, the Telegram bot and Siri gate the same acts and answer from the same text. How the bots park and approve an act is in `server.md` ("Telegram and Siri are the app's assistant too").

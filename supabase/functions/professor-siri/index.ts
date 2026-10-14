@@ -19,6 +19,7 @@
 
 import { calledLine, personaName } from '../_shared/persona.ts'
 import { CalendarHub, eventLine } from '../_shared/googleCalendars.ts'
+import { approvalSpoken, gateCall, KIT_RULES, KIT_TOOLS, latestPendingId, parseYesNo, runKitTool, takeAction, type GateCtx, type Parked } from '../_shared/botKit.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const sb = createClient(
@@ -833,7 +834,7 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'archive_email':        return toolArchiveEmail(userId, args)
     case 'mark_email_read':      return toolMarkEmailRead(userId, args)
     case 'reply_email':          return toolReplyEmail(userId, args)
-    default:                     return `Unknown tool: ${name}`
+    default:                     return (await runKitTool(sb, userId, name, args, todayISO())) ?? `Unknown tool: ${name}`
   }
 }
 
@@ -1135,7 +1136,7 @@ async function assistantNameFor(userId: string): Promise<string> {
   } catch { return '' }
 }
 
-async function runAgent(userId: string, userMessage: string): Promise<string> {
+async function runAgent(userId: string, userMessage: string, gate: GateCtx = { userId, channel: 'siri' }, parked: Parked[] = []): Promise<string> {
   const { key: anthropicKey, from: keyFrom } = await anthropicKeyFor(userId)
   const assistantName = await assistantNameFor(userId)
   if (!anthropicKey) return fallbackProcess(userId, userMessage)
@@ -1201,10 +1202,11 @@ IMPORTANT — understand natural speech (Arabic and English):
 
 Calendars: the user has SEVERAL — a personal one and company ones (Teradix, DX). get_calendar_events reads them all at once and names each event's calendar. Pass calendar="<name>" to narrow to one, and when creating an event pass calendar="<name>" if the user says which. Never claim they have only one calendar.
 
-What you CAN do: tasks (list, add, complete, edit), habits (read with get_habits, log with log_habit), log expenses/income, calendar (read, create, edit events), today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read, reply).
+What you CAN do: tasks (list, add, complete, edit), habits (read, log, create, edit, pause, delete), log expenses/income (the user is asked to say yes first), calendar (read, create, edit events), today's overview, shopping lists (view, add items, mark bought), email (list, what needs them, archive, mark read, reply — a reply is only sent after the user says yes), the Library (shelf, add/edit books, log reading, save quotes, remove a book — after a yes), and explain how the app works (app_guide).
 What you CANNOT do: read financial balances or history — say so briefly if asked.
 
-Reply style: short, warm, direct. No markdown. Use plain bullets with •. After a tool result, one short sentence of context if helpful, then the list. For confirmations a single sentence is fine.`
+Reply style: short, warm, direct. No markdown. Use plain bullets with •. After a tool result, one short sentence of context if helpful, then the list. For confirmations a single sentence is fine.
+${KIT_RULES}`
 
   const messages: { role: string; content: unknown }[] = [
     { role: 'user', content: userMessage },
@@ -1226,7 +1228,7 @@ Reply style: short, warm, direct. No markdown. Use plain bullets with •. After
         // not because the ceiling cuts them off.
         max_tokens: 1024,
         system:     systemPrompt,
-        tools:      CLAUDE_TOOLS,
+        tools:      [...CLAUDE_TOOLS, ...KIT_TOOLS],
         messages,
       }),
     })
@@ -1286,7 +1288,7 @@ Reply style: short, warm, direct. No markdown. Use plain bullets with •. After
         toolUses.map(async tu => ({
           type:        'tool_result' as const,
           tool_use_id: tu.id!,
-          content:     await dispatchTool(userId, tu.name!, tu.input ?? {}),
+          content:     (await gateCall(sb, gate, tu.name!, tu.input ?? {}, parked)) ?? await dispatchTool(userId, tu.name!, tu.input ?? {}),
         }))
       )
 
@@ -1351,7 +1353,24 @@ Deno.serve(async (req) => {
     return ok('What would you like me to do? Send your command as a text query parameter or in the request body.')
   }
 
-  // Run the agent and return plain text Siri can speak
-  const response = await runAgent(userId, text)
+  // A plain "yes" / "no" answers the one thing Siri last asked, if it is still open. The act is taken out
+  // of the table as it is read, so a repeated "yes" does it once; anything longer than a bare yes/no is
+  // a new request and goes to the agent instead (and the old question simply expires).
+  const verdict = parseYesNo(text)
+  if (verdict) {
+    const id = await latestPendingId(sb, userId)
+    const row = id ? await takeAction(sb, id, { userId, channel: 'siri' }) : null
+    if (row) {
+      if (verdict === 'no') return ok('Okay, I did not do it.')
+      try { return ok(await dispatchTool(userId, row.tool, row.input)) }
+      catch (e) { console.error('approved act failed:', e); return ok('It failed, so nothing was changed that I can confirm.') }
+    }
+  }
+
+  // Run the agent and return plain text Siri can speak. If it wanted to do something that needs a yes,
+  // the question is spoken from the call's real arguments — not from the model's description of it.
+  const parked: Parked[] = []
+  const response = await runAgent(userId, text, { userId, channel: 'siri' }, parked)
+  if (parked.length > 0 && parked[0].id) return ok(`${approvalSpoken(parked[0].approval)}. Say yes to do it, or no to cancel.`)
   return ok(response)
 })

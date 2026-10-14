@@ -20,6 +20,7 @@
 
 import { calledLine, personaName } from '../_shared/persona.ts'
 import { CalendarHub, eventLine } from '../_shared/googleCalendars.ts'
+import { approvalText, gateCall, KIT_RULES, KIT_TOOLS, runKitTool, takeAction, type GateCtx, type Parked } from '../_shared/botKit.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const sb = createClient(
@@ -1237,7 +1238,7 @@ async function assistantNameFor(userId: string): Promise<string> {
   } catch { return '' }
 }
 
-async function runAgent(userId: string, userMessage: string, history: Turn[] = []): Promise<string> {
+async function runAgent(userId: string, userMessage: string, history: Turn[] = [], gate: GateCtx = { userId, channel: 'telegram' }, parked: Parked[] = []): Promise<string> {
   const { key: anthropicKey, from: keyFrom } = await anthropicKeyFor(userId)
   const assistantName = await assistantNameFor(userId)
   if (!anthropicKey) {
@@ -1301,7 +1302,7 @@ IMPORTANT — understand natural speech (Arabic and English):
 
 Calendars: the user has SEVERAL — a personal one and company ones (Teradix, DX). get_calendar_events reads them all at once and names each event's calendar. Pass calendar="<name>" to narrow to one, and when creating an event pass calendar="<name>" if the user says which. Never claim they have only one calendar.
 
-What you CAN do: tasks (list, add, complete, edit), habits (read with get_habits, log with log_habit), log expenses/income (add_transaction), read transactions (get_transactions), calendar (read, create, edit events), today's overview, shopping lists (view, add items, mark bought), email (list, archive, mark read, reply).
+What you CAN do: tasks (list, add, complete, edit), habits (read, log, create, edit, pause, delete), log expenses/income (add_transaction, asks the user to approve), read transactions (get_transactions), calendar (read, create, edit events), today's overview, shopping lists (view, add items, mark bought), email (list, what needs them, archive, mark read, reply — a reply asks the user to approve first), the Library (shelf, add/edit books, log reading, save quotes, remove a book — removal asks to approve), and explain how the app works (app_guide).
 What you CANNOT do: read account balances, budget envelopes, or goal progress — say so briefly if asked, don't apologise.
 
 LIVE DATA — ALWAYS CALL TOOLS: For any question about current state (habits logged today, tasks open, today's schedule, shopping list contents, finance totals) — you MUST call the relevant tool to get FRESH data from the database. NEVER answer these from conversation history — the data changes every minute. History is ONLY for understanding references like "that habit", "the task I just added", "mark it done" — not for reporting current counts or values.
@@ -1318,7 +1319,8 @@ Reply style: short, warm, direct. No markdown headers.
 - Always present any list of items — tasks, habits, emails, events, shopping items, results — as bullet points (use · or -).
 - Even a single result looks better as a bullet when it has multiple fields (e.g. name + date + status).
 - After using a tool, add one short sentence of context if helpful, then the bullet list.
-- For confirmations ("Added ✓", "Logged ✓") a single line is fine — no bullet needed.`
+- For confirmations ("Added ✓", "Logged ✓") a single line is fine — no bullet needed.
+${KIT_RULES}`
 
   const messages: { role: string; content: unknown }[] = [
     ...history,
@@ -1338,7 +1340,7 @@ Reply style: short, warm, direct. No markdown headers.
         // A day across several calendars is a longer reply than it used to be.
         max_tokens: 2048,
         system:     systemPrompt,
-        tools:      CLAUDE_TOOLS,
+        tools:      [...CLAUDE_TOOLS, ...KIT_TOOLS],
         messages,
       }),
     })
@@ -1398,7 +1400,7 @@ Reply style: short, warm, direct. No markdown headers.
         toolUses.map(async tu => ({
           type:        'tool_result' as const,
           tool_use_id: tu.id!,
-          content:     await dispatchTool(userId, tu.name!, tu.input ?? {}),
+          content:     (await gateCall(sb, gate, tu.name!, tu.input ?? {}, parked)) ?? await dispatchTool(userId, tu.name!, tu.input ?? {}),
         }))
       )
 
@@ -1447,7 +1449,7 @@ async function dispatchTool(userId: string, name: string, args: Record<string, u
     case 'archive_email':       return toolArchiveEmail(userId, args)
     case 'mark_email_read':     return toolMarkEmailRead(userId, args)
     case 'reply_email':         return toolReplyEmail(userId, args)
-    default:                    return `Unknown tool: ${name}`
+    default:                    return (await runKitTool(sb, userId, name, args, todayISO())) ?? `Unknown tool: ${name}`
   }
 }
 
@@ -1512,6 +1514,56 @@ async function handleStart(chatId: number) {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
+// ── Approvals ─────────────────────────────────────────────────────────────────
+//
+// An outward, destructive or money act is parked (see _shared/botKit.ts) and the person is shown what it
+// is with two buttons. The act runs only on a tap on Approve; the row is taken out as it is read, so a
+// second tap, a retried webhook or an old button finds nothing and does nothing.
+
+async function sendApprovalCard(chatId: number, p: Parked) {
+  await tg('sendMessage', {
+    chat_id: chatId,
+    text: approvalText(p.approval).slice(0, 4000),
+    reply_markup: { inline_keyboard: [[
+      { text: '✅ Approve', callback_data: `ap:${p.id}` },
+      { text: 'Not now',    callback_data: `no:${p.id}` },
+    ]] },
+  })
+}
+
+async function handleApproval(cq: { id: string; data?: string; message?: { message_id: number; chat: { id: number } } }) {
+  const answer = (text: string) => tg('answerCallbackQuery', { callback_query_id: cq.id, text })
+  const m = /^(ap|no):([0-9a-f-]{36})$/.exec(cq.data ?? '')
+  const chatId = cq.message?.chat.id
+  if (!m || chatId === undefined) { await answer('That button is not valid any more.'); return }
+
+  const auth = await resolveChat(chatId)
+  if (!auth) { await answer('This chat is not connected.'); return }
+
+  const done = (text: string) => cq.message
+    ? tg('editMessageText', { chat_id: chatId, message_id: cq.message.message_id, text: text.slice(0, 4000), reply_markup: { inline_keyboard: [] } })
+    : Promise.resolve(false)
+
+  const row = await takeAction(sb, m[2], { userId: auth.userId, channel: 'telegram', chatId: String(chatId) })
+  if (!row) {
+    await answer('Already handled, or it expired.')
+    await done('This request has already been handled or has expired. Ask me again if you still want it.')
+    return
+  }
+  if (m[1] === 'no') {
+    await answer('Cancelled')
+    await done(`${row.summary}\n\n✖ Not done.`)
+    await rememberExchange(chatId, auth.userId, `(I declined: ${row.summary.split('\n')[0]})`, 'Okay, I did not do it.')
+    return
+  }
+  await answer('Doing it…')
+  let result: string
+  try { result = await dispatchTool(auth.userId, row.tool, row.input) }
+  catch (e) { console.error('approved act failed:', e); result = 'It failed, so nothing was changed that I can confirm.' }
+  await done(`${row.summary}\n\n✅ ${result}`)
+  await rememberExchange(chatId, auth.userId, `(I approved: ${row.summary.split('\n')[0]})`, result)
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'GET') return new Response('Professor Telegram Bot is running.')
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
@@ -1526,10 +1578,21 @@ Deno.serve(async (req) => {
       // window — the message they answered may be older than a day.
       reply_to_message?: { text?: string; caption?: string }
     }
+    // A tap on an Approve / Not now button under a parked act.
+    callback_query?: {
+      id: string
+      data?: string
+      message?: { message_id: number; chat: { id: number } }
+    }
   }
   try {
     update = await req.json()
   } catch {
+    return new Response('ok')
+  }
+
+  if (update.callback_query) {
+    await handleApproval(update.callback_query)
     return new Response('ok')
   }
 
@@ -1603,9 +1666,14 @@ Deno.serve(async (req) => {
   const asked   = quoted ? `↩ replying to: "${quoted.slice(0, 600)}"\n\n${text}` : text
 
   // Run the agent (or fallback) and reply
-  const response = await runAgent(auth.userId, asked, history)
+  const parked: Parked[] = []
+  const response = await runAgent(auth.userId, asked, history, { userId: auth.userId, channel: 'telegram', chatId: String(chatId) }, parked)
   await reply(chatId, response)
-  await rememberExchange(chatId, auth.userId, asked, response)
+  // What was asked of the person is shown by US from the call's real arguments — never from the model's
+  // description of it — with the buttons that approve it.
+  for (const p of parked) await sendApprovalCard(chatId, p)
+  const asReply = response + parked.map(p => `\n(Waiting for the user's approval: ${p.approval.title})`).join('')
+  await rememberExchange(chatId, auth.userId, asked, asReply)
 
   return new Response('ok')
 })

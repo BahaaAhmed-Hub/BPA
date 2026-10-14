@@ -27,7 +27,7 @@ const srcAlt      = lift(/function alternating\(/, '\n}')
 const srcRecent   = lift(/async function recentTurns\(/, '\n}')
 const srcRemember = lift(/async function rememberExchange\(/, '\n}')
 const srcForget   = lift(/async function forgetChat\(/, '\n}')
-const srcEntry    = lift(/  const history = await recentTurns/, 'await rememberExchange(chatId, auth.userId, asked, response)')
+const srcEntry    = lift(/  const history = await recentTurns/, 'await rememberExchange(chatId, auth.userId, asked, asReply)')
 const HISTORY_TURNS = Number(SRC.match(/const HISTORY_TURNS = (\d+)/)[1])
 const AGE_SRC = SRC.match(/const HISTORY_MAX_AGE_MS = ([^\n]+)/)[1]
 const CHARS = Number(SRC.match(/const HISTORY_MAX_CHARS = (\d+)/)[1])
@@ -169,9 +169,9 @@ async function runEntry(message) {
   const rememberExchange = async (_c, _u, asked, answered) => { seen.stored = [asked, answered] }
   const auth = { userId: 'u-1' }, chatId = 5
   const text = message.text
-  const fn = new Function('message','text','recentTurns','runAgent','reply','rememberExchange','auth','chatId',
+  const fn = new Function('message','text','recentTurns','runAgent','reply','rememberExchange','auth','chatId','sendApprovalCard',
     js(`return (async () => { ${srcEntry} })()`))
-  await fn(message, text, recentTurns, runAgent, reply, rememberExchange, auth, chatId)
+  await fn(message, text, recentTurns, runAgent, reply, rememberExchange, auth, chatId, async () => {})
   return seen
 }
 {
@@ -193,7 +193,7 @@ async function runEntry(message) {
 }
 
 // ── 5. the wiring nothing else can prove ─────────────────────────────────────
-ok('runAgent takes the history', /async function runAgent\(userId: string, userMessage: string, history: Turn\[\] = \[\]\)/.test(SRC))
+ok('runAgent takes the history', /async function runAgent\(userId: string, userMessage: string, history: Turn\[\] = \[\],/.test(SRC))
 ok('and spreads it before this message', /\.\.\.history,\s*\n\s*\{ role: 'user', content: userMessage \},/.test(SRC))
 ok('the system prompt explains what the thread is for', /THE CONVERSATION:/.test(SRC))
 ok('…and names the reply marker it will actually see', SRC.includes('↩ replying to:') || SRC.includes('↩ replying to:'))
