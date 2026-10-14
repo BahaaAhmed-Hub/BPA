@@ -273,7 +273,7 @@ this is what it may do *with* it, and how it knows the app.
   privacy, automation and the **theme** are not in it: the theme lives in three places the Settings screen keeps
   in step, and changing one from outside would be put back by the next load. It says where to do it instead.
 - Not covered: Telegram and Siri have their own server-side tools (`supabase/functions`) and are a separate
-  step; there is no tool for Notes/Planning/Booking yet — `app_guide` says what they are and the assistant
-  says so plainly rather than pretending.
+  step; there is no tool, and no guide entry, for Notes/Planning (booking is one line under Calendar) yet — the prompt
+  tells the assistant to say it is not sure rather than guess.
 Tests: `assistant-approval` (19), `assistant-library` (23), `assistant-calendar-habits` (19),
 `assistant-knows-the-app` (26); `assistant-window` and `mail-unified` re-run unchanged.
