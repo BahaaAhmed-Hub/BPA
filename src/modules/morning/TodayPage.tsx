@@ -24,10 +24,12 @@ import type { GCalEvent } from '@/lib/googleCalendar'
 import type { EventStatus } from '@/lib/eventMetadata'
 import { loadEventStatuses, toggleEventStatus } from '@/lib/eventStatus'
 import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, markAsRead, sendMail, escapeHtml } from '@/lib/gmail'
-import type { GmailHeader, GmailMessage, MailAccount } from '@/lib/gmail'
+import type { GmailMessage, MailAccount } from '@/lib/gmail'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { archiveThread, answerInvitation } from '@/lib/mailActions'
-import { readNeeds, keyOf as needKey } from '@/lib/mailNeeds'
+import { readNeeds, askFor, keyOf as needKey } from '@/lib/mailNeeds'
+import { looksLikeBulk } from '@/lib/mailClasses'
+import type { SmartSection } from '@/lib/mailSmart'
 import { briefsFor, rememberDraft, forgetBrief, type InboxBrief, type MailAction } from '@/lib/mailBriefs'
 import { rememberWaiting, forgetWaiting } from '@/lib/mailWaiting'
 import {
@@ -233,6 +235,8 @@ interface MailRow {
   receivedAt: string
   needsYou: boolean
   newsletter: boolean
+  /** The Mail page's section for this thread, where the smart view has read it. The chip follows it. */
+  section?: SmartSection
   /** Which mailbox it arrived in. A merged list you cannot act on is a list
    *  you do not know where a reply would leave from. */
   account: MailAccount
@@ -652,38 +656,6 @@ const DRAFT_FIELD: React.CSSProperties = {
   color: INK, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', outline: 'none',
 }
 
-/** Marketing and newsletters, recognised the several ways they announce
- *  themselves. A well-behaved sender sets List-Unsubscribe; plenty do not, so
- *  the sending address, the campaign headers the big platforms stamp on, and an
- *  unsubscribe line in the body all count too. */
-const BULK_SENDERS = /^(no[-_.]?reply|donotreply|newsletter|news|mailer|mail|marketing|promo|promotions|offers|deals|campaign|updates|update|notification|notifications|info|hello|hi|team|support|community|digest|alerts?|store|shop|club|members?)[+@._-]/i
-
-const ESP_DOMAINS = /(mailchimp|mcsv|mcdlv|sendgrid|sendinblue|brevo|exponea|klaviyo|hubspot|braze|exacttarget|salesforce|mailgun|sparkpost|iterable|customer\.io|sailthru|campaign-archive|cmail\d|createsend|constantcontact|omnisend|drip|activecampaign|convertkit|substack|beehiiv|mailerlite|amazonses|postmark|mandrill)/i
-
-const BULK_SUBDOMAIN = /^(mail|email|e|em|mailer|mailing|news|newsletter|marketing|campaign|send|sender|smtp|notify|notifications|reply|links?|go|click|track|cta|mktg|crm|info)\./i
-
-function looksLikeBulk(headers: GmailHeader[], email: string, body: string): boolean {
-  const h = (n: string) => header(headers, n)
-
-  // The headers a list or campaign is supposed to carry
-  if (h('List-Unsubscribe') || h('List-Id') || h('List-Post') || h('List-Help')) return true
-  if (/\b(bulk|list|junk|marketing)\b/i.test(h('Precedence'))) return true
-  if (h('Feedback-ID') || h('X-Campaign-Id') || h('X-Campaignid') || h('X-Mailer-Campaign')) return true
-  if (h('X-SES-Outgoing') || h('X-Mailgun-Sid') || h('X-SG-EID') || h('X-Report-Abuse')) return true
-  const auto = h('Auto-Submitted')
-  if (auto && auto.toLowerCase() !== 'no') return true
-  if (/csa_complaint|bulk/i.test(h('X-Complaints-To') + h('X-Mailer'))) return true
-
-  // What the address itself says
-  const [local = '', domain = ''] = email.toLowerCase().split('@')
-  if (BULK_SENDERS.test(`${local}@`)) return true
-  if (ESP_DOMAINS.test(domain)) return true
-  if (BULK_SUBDOMAIN.test(domain)) return true
-
-  // And, failing all that, an unsubscribe line in the message
-  return /unsubscribe|opt[- ]?out|manage (your )?(email )?preferences|view (this|it) in (your )?browser|إلغاء الاشتراك/i.test(body.slice(0, 4000))
-}
-
 /** What each action wants of you, and how it is drawn. */
 const ACTION_META: Record<MailAction, { verb: string; Icon: typeof CornerUpLeft }> = {
   reply:    { verb: 'to answer',  Icon: CornerUpLeft },
@@ -886,7 +858,7 @@ function MailCard({
   // about while the summaries land.
   const counts = useMemo(() => {
     const c: Record<MailAction, number> = { reply: 0, schedule: 0, decide: 0, read: 0 }
-    for (const r of rows) c[invites[r.messageId] ? 'schedule' : briefs[r.id]?.action ?? 'read'] += 1
+    for (const r of rows) c[askFor(r.section, !!invites[r.messageId], briefs[r.id]?.action)] += 1
     return c
   }, [rows, briefs, invites])
   const wants = counts.reply + counts.schedule + counts.decide
@@ -894,7 +866,7 @@ function MailCard({
   // What the card actually lists. A filter that survives its own chip
   // disappearing would leave you looking at nothing and no way back.
   const shown = useMemo(
-    () => filter ? rows.filter(r => (invites[r.messageId] ? 'schedule' : briefs[r.id]?.action) === filter) : rows,
+    () => filter ? rows.filter(r => askFor(r.section, !!invites[r.messageId], briefs[r.id]?.action) === filter) : rows,
     [rows, briefs, filter, invites],
   )
   useEffect(() => { if (filter && counts[filter] === 0) setFilter(null) }, [filter, counts])
@@ -902,7 +874,7 @@ function MailCard({
   /** Who has been waiting longest for an answer, and how long. */
   const oldest = useMemo(() => {
     const waiting = rows
-      .filter(r => invites[r.messageId] || (briefs[r.id]?.action && briefs[r.id]?.action !== 'read'))
+      .filter(r => askFor(r.section, !!invites[r.messageId], briefs[r.id]?.action) !== 'read')
       .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))[0]
       ?? rows.filter(r => r.needsYou).sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))[0]
     if (!waiting) return null
@@ -1700,7 +1672,7 @@ export function TodayPage() {
         const plain = extractBody(last)
         // A campaign addressed to you personally is still a campaign, so bulk
         // mail never counts as needing you.
-        const isBulk = judged ? false : looksLikeBulk(headers, email, plain)
+        const isBulk = judged ? false : looksLikeBulk(headers, email, plain, name)
         const row: MailRow = {
           id: th.id,
           messageId: last.id,
@@ -1716,6 +1688,7 @@ export function TodayPage() {
           body: plain,
           receivedAt: new Date(Number(last.internalDate ?? Date.now())).toISOString(),
           needsYou: judged ? judged.section === 'action' : !isBulk && !!me && to.includes(me),
+          section: judged?.section,
           newsletter: isBulk,
           account,
           msgs: th.messages ?? [last],

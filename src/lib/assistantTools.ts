@@ -1,7 +1,8 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import type { Task } from '@/types'
-import { archiveMessage, extractBody, type GmailMessage } from './gmail'
-import { archiveThread } from './mailActions'
+import { archiveMessage, extractBody, getThread, type GmailMessage } from './gmail'
+import { archiveThread, answerInvitation } from './mailActions'
+import { readInvite } from './invitations'
 import { readNeeds } from './mailNeeds'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { type ConnectedAccount } from './multiAccount'
@@ -224,6 +225,15 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
       type: 'object' as const,
       properties: { thread_id: { type: 'string' }, message_id: { type: 'string', description: 'Only if you have no thread_id; archives just that one message.' }, ...ACCT },
       required: [],
+    },
+  },
+  {
+    name: 'rsvp_invitation',
+    description: 'Answer a calendar invitation that arrived by email — it sets the user\'s real reply on the Google Calendar event and the organiser is told, exactly as the Yes / Maybe / No buttons in Mail and Today do. This tells other people something on the user\'s behalf: call it ONLY after the user has said which answer to give (accepted, tentative or declined) for that invitation. Pass the thread_id from mail_needs, list_emails or search_emails.',
+    input_schema: {
+      type: 'object' as const,
+      properties: { thread_id: { type: 'string' }, answer: { type: 'string', enum: ['accepted', 'tentative', 'declined'] }, ...ACCT },
+      required: ['thread_id', 'answer'],
     },
   },
   {
@@ -528,6 +538,22 @@ export async function executeTool(
         await archiveMessage(input.message_id as string)
       }
       return { success: true, message: 'Email archived' }
+    }
+
+    case 'rsvp_invitation': {
+      const answer = input.answer as string
+      if (answer !== 'accepted' && answer !== 'tentative' && answer !== 'declined') throw new Error('answer must be accepted, tentative or declined')
+      const account = mailAccounts(ctx.primaryEmail).find(a => a.email === (acctEmail ?? ctx.primaryEmail))
+      if (!account) throw new Error(`Account "${acctEmail}" is not connected.`)
+      const thread = await getThread(input.thread_id as string, account)
+      const subject = thread.messages.at(-1)?.payload?.headers?.find(h => h.name.toLowerCase() === 'subject')?.value ?? ''
+      const read = await readInvite(thread.messages, subject, account)
+      if (read.kind === 'not-one') throw new Error('There is no calendar invitation in that thread.')
+      if (read.kind === 'unreadable') throw new Error(`The invitation could not be read: ${read.why}`)
+      if (read.invite.cancelled) throw new Error('That meeting has been cancelled — there is nothing to answer.')
+      const res = await answerInvitation(read.invite, account, input.thread_id as string, answer)
+      if (!res.ok) throw new Error(res.why ?? 'Google would not record the answer')
+      return { success: true, message: `Answered ${answer} to "${read.invite.summary}" on the calendar; the organiser has been told.` }
     }
 
     case 'mark_email_read': {

@@ -19,6 +19,7 @@
 import { loadSmartThreads } from '@/lib/mailSmartDb'
 import { rowToThread, visibleThreads, type SmartThread } from '@/lib/mailSmartSync'
 import { windowStart, type SmartSection } from '@/lib/mailSmart'
+import type { MailAction } from '@/lib/mailBriefs'
 
 export const keyOf = (t: { accountEmail: string; threadId: string }) => `${t.accountEmail}|${t.threadId}`
 
@@ -56,4 +57,22 @@ export async function readNeeds(accountEmails: string[], now = Date.now()): Prom
     byKey: new Map(all.map(t => [keyOf(t), t])),
     stored: new Set(rows.map(r => `${r.account_email}|${r.thread_id}`)),
   }
+}
+
+/**
+ * What a row on Today is asking of you — the word on its chip.
+ *
+ * The model's reading (`briefed`: reply / schedule / decide / read) says *what kind* of ask a message is; it must
+ * not say *whether* it is one, because the Mail page already decided that and the two cannot disagree. So where
+ * the smart view has judged the thread (`section`): anything it files outside **action** is "to read", and
+ * anything it calls an action is never "to read" (it is "to answer" unless the model can be more specific).
+ * A thread it has not read yet (`section` undefined) keeps the model's word, and an invitation is "to book" —
+ * answering it is the whole of what it wants.
+ */
+export function askFor(section: SmartSection | undefined, invited: boolean, briefed: MailAction | undefined): MailAction {
+  if (invited) return 'schedule'
+  const a = briefed ?? 'read'
+  if (section === undefined) return a
+  if (section !== 'action') return 'read'
+  return a === 'read' ? 'reply' : a
 }
