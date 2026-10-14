@@ -432,6 +432,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
   const [attachments,   setAttachments]    = useState<Attachment[]>([])
   const [attachError,   setAttachError]    = useState<string | null>(null)
   const [dropping,      setDropping]       = useState(false)
+  const [composing,     setComposing]      = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const lastProviderRef = useRef<string>('')
 
@@ -854,7 +855,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
           onDragOver={e => { e.preventDefault(); setDropping(true) }}
           onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropping(false) }}
           onDrop={e => { e.preventDefault(); setDropping(false); void addFiles([...e.dataTransfer.files]) }}
-          style={{ padding: '12px 14px 14px', borderTop: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0 }}>
+          style={{ padding: '8px 12px 10px', borderTop: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0 }}>
 
           {/* What is going with the message, and the way to take one back out. */}
           {attachments.length > 0 && (
@@ -896,10 +897,10 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
             </p>
           )}
           <div style={{
-            display: 'flex', alignItems: 'flex-end', gap: 8,
+            display: 'flex', alignItems: 'flex-end', gap: 4,
             background: 'var(--sb-field)',
             border: `var(--sb-border-width) solid ${dropping ? 'var(--sb-info)' : 'var(--sb-border)'}`,
-            borderRadius: 'var(--sb-r-nav)', padding: '10px 12px',
+            borderRadius: 'var(--sb-r-nav)', padding: '4px 4px 4px 6px',
             transition: 'border-color 0.15s',
           }}>
             <input
@@ -914,10 +915,10 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
               disabled={thinking}
               title="Attach an image, a PDF or a text file"
               style={{
-                width: 26, height: 26, padding: 0, borderRadius: 'var(--sb-r-sm)', border: 'none',
+                width: 28, height: 28, padding: 0, borderRadius: 'var(--sb-r-sm)', border: 'none',
                 background: 'none', color: 'var(--sb-ink-3)', cursor: thinking ? 'default' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}><Paperclip size={ICON.md} /></button>
+              }}><Paperclip size={ICON.sm + 2} /></button>
             {speechSupported() && (
               <button
                 type="button"
@@ -927,11 +928,11 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
                 aria-label={listening ? 'Stop listening' : `Talk to ${persona.name || 'your assistant'}`}
                 title={listening ? 'Stop listening' : `Talk to ${persona.name || 'your assistant'}`}
                 style={{
-                  width: 26, height: 26, padding: 0, borderRadius: 'var(--sb-r-pill)', border: 'none', flexShrink: 0,
+                  width: 28, height: 28, padding: 0, borderRadius: 'var(--sb-r-pill)', border: 'none', flexShrink: 0,
                   background: listening ? 'var(--sb-accent)' : 'none', color: listening ? 'var(--sb-accent-ink)' : 'var(--sb-ink-3)',
                   cursor: thinking ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   animation: listening ? 'pulse 1.2s ease-in-out infinite' : undefined,
-                }}><Mic size={ICON.md} /></button>
+                }}><Mic size={ICON.sm + 2} /></button>
             )}
             {/* Never disabled: you can write the next message while an answer is on its way (Enter waits — `sendMessage` refuses while thinking). Disabling it also dropped focus, so every answer ended with a click back into the box. */}
             <textarea
@@ -947,10 +948,11 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
               }}
               placeholder={dropping ? 'Drop it here' : thinking ? 'Answering — you can write the next one…' : 'Ask, or drop a file in…'}
               rows={1}
+              onFocus={() => setComposing(true)} onBlur={() => setComposing(false)}
               style={{
                 flex: 1, minWidth: 0, boxSizing: 'border-box', background: 'none', border: 'none', outline: 'none', resize: 'none',
-                // One line is exactly as tall as the 32px send button beside it, so the icons, the text and the button share a centre.
-                padding: '4px 0', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', lineHeight: '24px',
+                // One line is exactly as tall as the 28px send button beside it, so the icons, the text and the button share a centre.
+                padding: '4px 4px', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', lineHeight: '20px',
                 maxHeight: 120, overflowY: 'auto', fontFamily: 'inherit', textAlign: 'left',
               }}
             />
@@ -958,21 +960,24 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
               onClick={() => void sendMessage(input)}
               disabled={(!input.trim() && attachments.length === 0) || thinking}
               style={{
-                width: 32, height: 32, borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
+                width: 28, height: 28, borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
                 background: (!input.trim() && attachments.length === 0) || thinking ? 'color-mix(in srgb, var(--sb-info) 20.0%, transparent)' : 'linear-gradient(135deg, var(--sb-info) 0%, color-mix(in srgb, var(--sb-info) 58%, var(--sb-ink-on-fill)) 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 transition: 'background 0.15s',
                 boxShadow: (!input.trim() && attachments.length === 0) || thinking ? 'none' : '0 0 10px color-mix(in srgb, var(--sb-info) 40.0%, transparent)',
               }}>
               {thinking
-                ? <Loader2 size={ICON.md} color="var(--sb-info)" style={{ animation: 'spin 1s linear infinite' }} />
+                ? <Loader2 size={ICON.sm + 2} color="var(--sb-info)" style={{ animation: 'spin 1s linear infinite' }} />
                 : <Send size={ICON.sm} color={!input.trim() && attachments.length === 0 ? 'var(--sb-info)' : 'var(--sb-ink-on-fill)'} />
               }
             </button>
           </div>
-          <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', textAlign: 'center' }}>
-            Enter to send · Shift+Enter for a new line · paste or drop a file in
-          </p>
+          {/* The shortcuts are said while you are writing, and not as a permanent second line under a box that is meant to be slim. */}
+          {(composing || input.trim() !== '') && (
+            <p style={{ margin: '4px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', textAlign: 'center' }}>
+              Enter to send · Shift+Enter for a new line · paste or drop a file in
+            </p>
+          )}
         </div>
       </div>
 
