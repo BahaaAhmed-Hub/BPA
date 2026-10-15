@@ -736,6 +736,9 @@ export interface InboxMessage {
   /** Whether it was addressed to the reader rather than copied to them. */
   addressedToMe: boolean
   body: string
+  /** The earlier messages of the thread, oldest first, already trimmed. What was
+   *  said before is what makes a reply fit the conversation. */
+  history?: string
 }
 
 /** As much of a message as is worth sending — the ask is nearly always at the
@@ -780,6 +783,7 @@ the message.`
     m.addressedToMe ? 'Addressed directly to the reader.' : 'The reader is copied, not addressed.',
     '',
     m.body.replace(/\s+\n/g, '\n').trim().slice(0, BODY_CHARS),
+    ...(m.history ? ['', '--- EARLIER IN THIS THREAD (context only; reply to the message above) ---', m.history.slice(0, 2400)] : []),
   ].join('\n')).join('\n\n')
 
   const raw = await call(system, `The reader is ${input.me}.\n\n${userMsg}`)

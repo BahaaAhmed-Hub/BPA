@@ -590,6 +590,47 @@ export async function fetchAttachment(
   } catch { return null }
 }
 
+// ─── Attachments you can open ────────────────────────────────────────────────
+
+export interface FileAttachment {
+  filename: string
+  mimeType: string
+  size: number
+  attachmentId?: string
+  /** Small parts Gmail keeps inline in the message rather than externalising. */
+  data?: string
+}
+
+/** The files a message carries. No network. A signature's logo (an image with a
+ *  Content-ID and no `attachment` disposition) is part of the body, not a file. */
+export function fileAttachments(msg: GmailMessage): FileAttachment[] {
+  const out: FileAttachment[] = []
+  const walk = (parts: GmailPart[] | undefined) => {
+    for (const p of parts ?? []) {
+      const h = (n: string) => p.headers?.find(x => x.name.toLowerCase() === n)?.value ?? ''
+      const inlineLogo = !!h('content-id') && p.mimeType.startsWith('image/') && !/attachment/i.test(h('content-disposition'))
+      if (p.filename && (p.body.attachmentId || p.body.data) && !inlineLogo) {
+        out.push({ filename: p.filename, mimeType: p.mimeType, size: p.body.size, attachmentId: p.body.attachmentId, data: p.body.data })
+      }
+      walk(p.parts)
+    }
+  }
+  walk(msg.payload.parts)
+  return out
+}
+
+/** The file as a Blob, ready to download or open. */
+export async function attachmentBlob(
+  msg: GmailMessage, file: FileAttachment, account?: MailAccount,
+): Promise<Blob> {
+  const b64url = file.data ?? (file.attachmentId ? await fetchAttachment(msg.id, file.attachmentId, account) : null)
+  if (!b64url) throw new Error('Gmail would not give up that file')
+  const bin = atob(b64url.replace(/-/g, '+').replace(/_/g, '/'))
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return new Blob([bytes], { type: file.mimeType || 'application/octet-stream' })
+}
+
 /** Each cid image as a data URI. Skips anything too big to be a signature. */
 export async function loadInlineImages(
   msg: GmailMessage, account?: MailAccount, limit = 8, maxBytes = 2_000_000,

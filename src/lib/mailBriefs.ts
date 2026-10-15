@@ -67,6 +67,7 @@ export interface BriefInput {
   receivedAt: string
   addressedToMe: boolean
   body: string
+  history?: string
 }
 
 export interface BriefResult {
@@ -106,6 +107,7 @@ export async function briefsFor(
     receivedAt: r.receivedAt,
     addressedToMe: r.addressedToMe,
     body: r.body,
+    history: r.history,
   }))
 
   try {
