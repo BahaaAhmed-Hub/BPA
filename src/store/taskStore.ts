@@ -490,13 +490,14 @@ export const useTaskStore = create<TaskState>()(
             }
           }
 
-          // Giving a task a date is deciding when to do it, so it stops being
-          // a brain dump entry and joins Schedule — the quadrant for the
-          // important things that are not urgent yet. Only from the dump: a
-          // task already put in Do stays in Do, and clearing the date does not
-          // send anything back.
-          const scheduled = old.quadrant == null && !!updates.dueDate && !('quadrant' in updates)
-          if (scheduled) desc.push('Moved from Inbox to Schedule')
+          // The first date a task is given is deciding when to do it, so it
+          // joins Schedule (PLAN) — from the brain dump, or from Do, which is
+          // where a task made without a date starts. A task already in another
+          // quadrant stays put, a second date change moves nothing, and
+          // clearing the date does not send anything back.
+          const scheduled = !old.dueDate && !!updates.dueDate && !('quadrant' in updates)
+            && (old.quadrant == null || old.quadrant === 'do')
+          if (scheduled) desc.push(`Moved from ${old.quadrant ? QUADRANT_META[old.quadrant].label : 'Inbox'} to Schedule`)
 
           const patch = scheduled ? { ...updates, quadrant: 'schedule' as const } : updates
           const next = s.tasks.map(t => t.id === id ? { ...t, ...patch } : t)

@@ -332,3 +332,15 @@ something is deciding about it, so it leaves the brain dump. `taskStore.updateTa
 does it (and `addTask`, for one created with a date already on it), so every path
 gets it: the detail panel, the planner, the palette. Only from the dump — a task
 already in Do stays in Do — and clearing the date sends nothing back.
+
+## Tasks — no date is Do, a date is Schedule
+`placementForNew` is now two rules: **no `dueDate` → `do`; a `dueDate` → `schedule`**
+(badged PLAN, and where `useTaskCalendarPush` makes the company's calendar event).
+It used to hand a bare task to Schedule, so every new task carried the PLAN
+badge and looked planned. `updateTask` carries the other half: **the first date
+a task is given** moves it from the brain dump *or from Do* to Schedule — New
+task opens the panel on a task that starts in Do, so without this a date set
+there left it in Do. A task in Delegate/Eliminate stays put; a second date
+change or clearing the date moves nothing. Trade-off: a task deliberately kept
+in Do moves to Schedule if it is first dated afterwards.
+Not browser-measured; build only.
