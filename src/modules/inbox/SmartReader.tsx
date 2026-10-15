@@ -8,8 +8,8 @@ import {
 import { Button } from '@/components/ui'
 import { ICON, STROKE } from '@/lib/type'
 import {
-  getThread, header, extractHtmlBody, extractBody,
-  type MailAccount, type GmailMessage,
+  getThread, header, extractHtmlBody, extractBody, fileAttachments, attachmentBlob,
+  type MailAccount, type GmailMessage, type FileAttachment,
 } from '@/lib/gmail'
 
 // ─── Reading a thread, beside the list ───────────────────────────────────────
@@ -71,7 +71,48 @@ interface Shown {
   date: string
   html: string | null
   text: string
-  attachments: string[]
+  files: FileAttachment[]
+  raw: GmailMessage
+}
+
+const sizeOf = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`
+/** What a browser can show itself; everything else goes to Downloads, where the
+ *  computer opens it with whatever app is the default for that type. */
+const viewable = (t: string) => t === 'application/pdf' || t.startsWith('image/') || t.startsWith('text/plain')
+
+function AttachmentChip({ msg, file, account }: { msg: GmailMessage; file: FileAttachment; account: MailAccount }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const go = async (mode: 'open' | 'save') => {
+    setBusy(true); setErr('')
+    try {
+      const url = URL.createObjectURL(await attachmentBlob(msg, file, account))
+      if (mode === 'open') window.open(url, '_blank', 'noopener')
+      else {
+        const a = document.createElement('a')
+        a.href = url; a.download = file.filename
+        document.body.appendChild(a); a.click(); a.remove()
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not get the file')
+    } finally { setBusy(false) }
+  }
+  const btn = { border: 'none', background: 'none', cursor: 'pointer', padding: '2px 4px', color: 'var(--sb-ink-2)', font: 'inherit', fontWeight: 600 } as const
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4, maxWidth: '100%', padding: '3px 8px',
+      border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
+      background: 'var(--sb-field)', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)',
+    }}>
+      <Paperclip size={11} strokeWidth={STROKE.rest} />
+      <span title={file.filename} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{file.filename}</span>
+      <span>{sizeOf(file.size)}</span>
+      {viewable(file.mimeType) && <button disabled={busy} style={btn} onClick={() => void go('open')}>Open</button>}
+      <button disabled={busy} style={btn} onClick={() => void go('save')}>{busy ? '…' : 'Download'}</button>
+      {err && <span role="alert" style={{ color: 'var(--sb-negative)' }}>{err}</span>}
+    </span>
+  )
 }
 
 function addressOf(v: string): string {
@@ -133,17 +174,6 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-function attachmentsOf(msg: GmailMessage): string[] {
-  const out: string[] = []
-  const walk = (part: { filename?: string; parts?: unknown[] } | undefined) => {
-    if (!part) return
-    if (part.filename) out.push(part.filename)
-    for (const p of (part.parts ?? []) as { filename?: string; parts?: unknown[] }[]) walk(p)
-  }
-  walk(msg.payload as unknown as { filename?: string; parts?: unknown[] })
-  return out.filter(Boolean)
-}
-
 export function SmartReader({
   target, width, className, actions,
 }: {
@@ -183,7 +213,8 @@ export function SmartReader({
           date: header(m.payload?.headers ?? [], 'Date'),
           html: extractHtmlBody(m),
           text: extractBody(m),
-          attachments: attachmentsOf(m),
+          files: fileAttachments(m),
+          raw: m,
         }))
         setMessages(rows)
         // The newest is the one you came to read; the rest quote it.
@@ -398,14 +429,12 @@ export function SmartReader({
                         copy, which is exactly where it is worth seeing. */}
                     <Field label="Bcc" value={m.bcc} />
                   </div>
-                  {m.attachments.length > 0 && (
-                    <p style={{
-                      margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
-                      fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)',
-                    }}>
-                      <Paperclip size={11} strokeWidth={STROKE.rest} />
-                      {m.attachments.join(', ')}
-                    </p>
+                  {m.files.length > 0 && (
+                    <div style={{ margin: '0 0 8px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {m.files.map((f, i) => (
+                        <AttachmentChip key={`${f.attachmentId ?? f.filename}-${i}`} msg={m.raw} file={f} account={target.account} />
+                      ))}
+                    </div>
                   )}
                   <Body html={m.html} text={m.text} />
                 </div>

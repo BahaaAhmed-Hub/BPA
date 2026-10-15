@@ -666,3 +666,18 @@ a newsletter and a line in a list at once. The smart view's stored analysis is t
 `scripts/mail-unified.mjs` (22) — Gmail and Calendar faked and able to refuse; every claim read off
 the request that went out. Control on the old code: Today still lists the handled and archived
 threads and the assistant has no `mail_needs`.
+
+## Mail — attachments you can open, and Today's drafts that know the thread
+- **`fileAttachments(msg)` / `attachmentBlob()`** in `gmail.ts`. The reader listed
+  filenames as plain text — nothing to click. Each is a chip with size, **Open**
+  (PDF, images, text: a blob URL in a new tab) and **Download** (saved to
+  Downloads, which the computer opens with its default app; a browser cannot
+  launch a desktop app itself). A signature logo (Content-ID image, not
+  `attachment`) is body, not a file.
+- **Today stays unread-only; Mail's "Requires your action" also holds opened
+  threads.** That, not different rules, was why the two disagreed. The card now
+  says "N more threads need your action but are already opened — see them in
+  Mail" (`openedWaiting`, from `readNeeds().action` minus the listed rows).
+- **Drafts get the thread.** `historyOf(row)` passes up to 4 earlier messages
+  (500 chars each) as `InboxMessage.history`; the newest message keeps its own
+  1400-char budget. Not yet measured in a browser against a live inbox.

@@ -816,8 +816,21 @@ function MailMeter({ wants, idle }: { wants: number; idle: number }) {
 /** How many of each kind the card shows before it stops. */
 const MAIL_SHOWN = 6
 
+/** The thread before the newest message, oldest first and trimmed, so a drafted
+ *  reply fits the conversation rather than only the last paragraph of it. */
+function historyOf(r: MailRow): string {
+  return r.msgs
+    .filter(m => m.id !== r.messageId)
+    .slice(-4)
+    .map(m => {
+      const h = m.payload?.headers ?? []
+      return `From: ${header(h, 'From')} · ${header(h, 'Date')}\n${extractBody(m).replace(/\s+\n/g, '\n').trim().slice(0, 500)}`
+    })
+    .join('\n\n')
+}
+
 function MailCard({
-  rows, loading, error, boxes, newsletters, briefs, briefing, briefNote,
+  rows, loading, error, boxes, newsletters, briefs, briefing, briefNote, openedWaiting,
   onArchive, onArchiveAll, onOpenInbox, onOpen, onOpenDraft,
   invites, inviteFailed, rsvpBusy, rsvpDone, rsvpError, rsvpRemoved, onRespond, onRemoveFromCalendar,
 }: {
@@ -832,6 +845,8 @@ function MailCard({
   briefing: boolean
   /** Why there are no summaries, when there are none. Said quietly. */
   briefNote: string | null
+  /** Mail's "Requires your action" threads that are already opened, so not listed here. */
+  openedWaiting: number
   onArchive: (row: MailRow) => void
   onArchiveAll: () => void
   onOpenInbox: () => void
@@ -915,6 +930,18 @@ function MailCard({
           padding: '8px 16px', fontSize: 'var(--sb-t-meta)', color: GHOST,
           background: FIELD, borderBottom: `var(--sb-border-width) solid ${HAIR}`,
         }}>{briefNote}</div>
+      )}
+
+      {!loading && !error && openedWaiting > 0 && (
+        <div style={{
+          padding: '8px 16px', fontSize: 'var(--sb-t-meta)', color: MUTED,
+          background: FIELD, borderBottom: `var(--sb-border-width) solid ${HAIR}`,
+        }}>
+          {openedWaiting} more {openedWaiting === 1 ? 'thread needs' : 'threads need'} your action but {openedWaiting === 1 ? 'is' : 'are'} already opened —{' '}
+          <button onClick={onOpenInbox} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', font: 'inherit', fontWeight: 700, color: INK, textDecoration: 'underline' }}>
+            see them in Mail
+          </button>
+        </div>
       )}
 
       {error ? (
@@ -1575,6 +1602,9 @@ export function TodayPage() {
 
   const [mail, setMail] = useState<MailRow[]>([])
   const [newsletters, setNewsletters] = useState<MailRow[]>([])
+  /** Threads Mail files under "Requires your action" that this unread-only card
+   *  does not list — ones already opened. Said, so the two screens never seem to disagree. */
+  const [openedWaiting, setOpenedWaiting] = useState(0)
   const [mailLoading, setMailLoading] = useState(true)
   const [openMail, setOpenMail] = useState<MailRow | null>(null)
   const [mailError, setMailError] = useState<string | null>(null)
@@ -1700,6 +1730,8 @@ export function TodayPage() {
       bulk.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
       setMail(rows.slice(0, MAIL_SHOWN))
       setNewsletters(bulk.slice(0, MAIL_SHOWN))
+      const unreadKeys = new Set(rows.map(r => needKey({ accountEmail: r.account.email, threadId: r.id })))
+      setOpenedWaiting(needs ? needs.action.filter(t => !unreadKeys.has(needKey(t))).length : 0)
       // The bell cannot fetch mail, so what this read found is written down for
       // it. Campaigns are left out: nothing waits on them.
       rememberWaiting(rows.map(r => ({
@@ -1762,6 +1794,7 @@ export function TodayPage() {
       rows.map(r => ({
         id: r.id, messageId: r.messageId, fromName: r.fromName, fromEmail: r.fromEmail,
         subject: r.subject, receivedAt: r.receivedAt, addressedToMe: r.needsYou, body: r.body,
+        history: historyOf(r),
       })),
       briefContext(),
       partial => setBriefs(prev => ({ ...prev, ...partial })),
@@ -1858,6 +1891,7 @@ export function TodayPage() {
       [{
         id: row.id, messageId: row.messageId, fromName: row.fromName, fromEmail: row.fromEmail,
         subject: row.subject, receivedAt: row.receivedAt, addressedToMe: row.needsYou, body: row.body,
+        history: historyOf(row),
       }],
       briefContext(),
     )
@@ -2135,6 +2169,7 @@ export function TodayPage() {
             briefs={briefs}
             briefing={briefing}
             briefNote={briefNote}
+            openedWaiting={openedWaiting}
             onArchive={row => void archiveMail(row)}
             onArchiveAll={() => void archiveNewsletters()}
             onOpenInbox={() => setActiveModule('inbox')}
