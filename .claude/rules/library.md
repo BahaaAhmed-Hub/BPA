@@ -1066,3 +1066,17 @@ spine colour can be read from it because a data address never taints the canvas;
 book, which hid the second source; the ISBN's own first), and **Remove cover** (writes `null`). No `capture` on the input.
 `scripts/library-cover-change.mjs` (13): a real PNG built byte by byte, the stored JPEG measured on the page (347×520), the refusal,
 both catalogue pictures offered, only the cover changed, the clear.
+
+## Library — "Read or borrow" only lists places that have the book
+`readSources.ts` (pure, fetch injected), used by `BookLinksCard`. The card used to link to five search pages whether or not the
+site had the book (Open Library's page for a missing title says "No matching books"). Now each source is **asked** and only those
+that have this book are shown, linking to the book itself:
+- Open Library: `ebook_access` public (Read online) or borrowable (Borrow) — never print-disabled-only or no-ebook; Internet
+  Archive: its lending library or works dated before 1930 (never a community upload of a recent book); Gutenberg via Gutendex;
+  Google Books: a preview it marks PARTIAL or ALL_PAGES. With an ISBN the question is the ISBN, and a preview of another ISBN is refused.
+- Strict match (`isThisBook`): whole title or once a subtitle is set aside, author surname a whole word ("Herbert, Frank" works),
+  <4-character titles exact. Catalogue keys/ids are pattern-checked before they go into a link.
+- **WorldCat is gone**: it has no public check, so it could only be a search page. Checking / nowhere / could-not-ask are three
+  different sentences; a source that is down is named and never counted as "does not have it"; a result with a failed source is
+  not cached. Buy links are unchanged (shop searches). `bookLinks.ts`'s `free` list is now unused by the card (kept, its test pins it).
+`scripts/library-read-sources.mjs` (35) with catalogues that lie; `library-links.mjs` drives the card.

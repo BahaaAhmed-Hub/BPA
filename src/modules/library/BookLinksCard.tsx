@@ -6,8 +6,38 @@ import { Eyebrow } from './fields'
 import { inputStyle } from './fieldStyle'
 import { loadLibrarySettings, saveLibrarySettings } from './libraryPrefs'
 import { useLibraryStore } from './libraryStore'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { findReadable, type ReadResult } from './readSources'
 import type { Book } from './types'
+
+const readCache = new Map<string, ReadResult>()
+
+/** Only the places that were asked and have this book. Checking, nowhere, and could-not-ask are three different sentences. */
+function ReadGroup({ read }: { read: ReadResult | null }) {
+  const note = { fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' } as const
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }} aria-live="polite">
+      <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-2)' }}>Read or borrow, free and legal</div>
+      {read === null && <div style={note}>Checking where you can read it…</div>}
+      {read && read.found.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {read.found.map(l => (
+            <a key={l.id} href={l.href} target="_blank" rel="noopener noreferrer" title={`${l.how} on ${l.label}`}
+              className="sb-btn" data-variant="secondary" data-size="sm" style={{ textDecoration: 'none' }}>
+              {l.label} · {l.how} <ExternalLink size={ICON.sm} aria-hidden />
+            </a>
+          ))}
+        </div>
+      )}
+      {read && read.found.length === 0 && (
+        <div style={note}>{read.failed.length
+          ? `Could not check ${read.failed.join(' and ')}, so nothing is shown yet.`
+          : 'Not available to read or borrow for free on Open Library, the Internet Archive, Project Gutenberg or Google Books.'}</div>
+      )}
+      {read && read.found.length > 0 && read.failed.length > 0 && <div style={note}>Could not check {read.failed.join(' and ')}.</div>}
+    </div>
+  )
+}
 
 function LinkGroup({ title, links }: { title: string; links: BookLink[] }) {
   return (
@@ -36,7 +66,23 @@ function LinkGroup({ title, links }: { title: string; links: BookLink[] }) {
 export function BookLinksCard({ book }: { book: Book }) {
   const update = useLibraryStore(s => s.updateBook)
   const [country, setCountry] = useState(() => loadLibrarySettings().country ?? defaultCountry())
-  const { free, buy } = linksFor(book, country)
+  const { buy } = linksFor(book, country)
+  const [read, setRead] = useState<ReadResult | null>(null)
+  const isbn = book.isbn
+  useEffect(() => {
+    const key = `${book.title}|${book.authors[0] ?? ''}|${isbn ?? ''}`
+    const cached = readCache.get(key)
+    if (cached) { setRead(cached); return }
+    setRead(null)
+    const ac = new AbortController()
+    void findReadable({ title: book.title, authors: book.authors, isbn }, ac.signal).then(r => {
+      if (ac.signal.aborted) return
+      // A result with a source that could not be asked is not remembered: it is asked again next time.
+      if (!r.failed.length) readCache.set(key, r)
+      setRead(r)
+    })
+    return () => ac.abort()
+  }, [book.title, book.authors, isbn])
   const codes = COUNTRY_CODES.includes(country) ? COUNTRY_CODES : [...COUNTRY_CODES, country].sort()
 
   return (
@@ -55,10 +101,10 @@ export function BookLinksCard({ book }: { book: Book }) {
           </select>
         </label>
       </div>
-      <LinkGroup title="Read or borrow, free and legal" links={free} />
+      <ReadGroup read={read} />
       <LinkGroup title={`Buy in ${countryName(country)}`} links={buy} />
       <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
-        Each button opens that shop’s or library’s own search for this book. Prices and stock are not checked here.
+        Reading links are shown only where the book was found, and open the book itself. Buy buttons open each shop’s own search; prices and stock are not checked here.
       </p>
     </Card>
   )
