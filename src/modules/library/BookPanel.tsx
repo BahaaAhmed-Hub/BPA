@@ -10,6 +10,7 @@ import { BookFileCard } from './BookFileCard'
 import { BookLinksCard } from './BookLinksCard'
 import { PurchaseCard } from './PurchaseCard'
 import { SizeCard } from './SizeCard'
+import { CoverCard } from './CoverCard'
 import { WatchCard } from './WatchCard'
 import { ReadingLogCard } from './ReadingLogCard'
 import { PlanCard } from './PlanCard'
@@ -116,6 +117,8 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
             onPick={c => { patch(applyCandidate(book, c)); setFinding(false) }} />
         )}
       </Card>
+
+      <CoverCard book={book} />
 
       <Card style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Eyebrow>Reading</Eyebrow>
