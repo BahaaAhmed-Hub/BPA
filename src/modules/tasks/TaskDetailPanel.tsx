@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  X, Maximize2, ChevronDown, ChevronRight,
+  X, ChevronDown, ChevronRight,
   Plus, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check, User, Paperclip,
   ExternalLink, Ban,
 } from 'lucide-react'
@@ -104,7 +104,6 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   const { updateTask, deleteTask, activities } = useTaskStore()
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [fullLog, setFullLog] = useState(false)
-  const [expanded, setExpanded] = useState(false)
   const [activityOpen, setActivityOpen] = useState(true)
   const [dropping, setDropping] = useState(false)
   const [newStep, setNewStep] = useState('')
@@ -248,7 +247,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
 
   return (
     <aside style={{
-      width: expanded ? 'min(560px, 62vw)' : 'clamp(300px, 32vw, 400px)', flexShrink: 0, alignSelf: 'flex-start',
+      width: 'clamp(300px, 32vw, 400px)', flexShrink: 0, alignSelf: 'flex-start',
       maxHeight: 'calc(100vh - 212px)',
       background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       display: 'flex', flexDirection: 'column', minWidth: 0,
@@ -314,7 +313,6 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           }}>
           <Ban size={ICON.sm} />
         </button>
-        <button title={expanded ? 'Narrow the panel' : 'Widen the panel'} onClick={() => setExpanded(x => !x)} style={ICON_BTN}><Maximize2 size={ICON.sm} /></button>
         <button title="Delete task" onClick={() => { deleteTask(task.id); onClose() }} style={ICON_BTN}>
           <Trash2 size={ICON.md} />
         </button>
