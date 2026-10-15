@@ -153,10 +153,38 @@ Priority: **M** = must for beta, **S** = should, **L** = later.
 
 ### F1 — Compass (M)
 *As a new user, I want the app to understand me, so its advice fits my life.*
-- Conversational interview in short steps; every question skippable.
-- Optional import: paste CV / LinkedIn / "about me" text.
-- Output: a "here's how I see you" summary, shown as editable **beliefs**.
-- **Acceptance:** user can finish in under 10 minutes; every belief shows its source; user can edit or delete any belief; skipping all questions still yields a usable profile.
+
+Eight short screens. **Every screen except the consent screen and the final summary can be skipped.** Screens are mocked in the companion page "Compass and AI Architecture".
+
+| # | Screen | Input style |
+|---|---|---|
+| 0 | Before we start | Plain-language consent: what is read and why; kill switch. Not skippable. |
+| 1 | A little about you | Age-range chips, life-stage chips, and an **optional LinkedIn/CV block** (see below). |
+| 2 | What are you good at? | **Option chips** (8 shown) with **Show more** (10 more), pick up to 5, plus "add your own". |
+| 3 | Where do you struggle? | Same pattern, pick up to 4. |
+| 4 | What matters most? | Same pattern, **pick top 3; tap order is the rank**. |
+| 5 | How do you actually work? | Habit chips with Show more, plus "add your own". |
+| 6 | What limits you? | Grouped chips: hours per week (single), money available (single), fixed commitments (multi, Show more). |
+| 7 | How I see you | Editable belief list with sources; "What I don't know yet" for skipped steps. Not skippable. |
+
+**LinkedIn:** LinkedIn does not let apps read a profile from a link, so the block offers *Add LinkedIn PDF* (Resources → Save to PDF) and *Paste profile text*. Either is optional. A fast-tier model extracts roles, companies and years into a fixed schema; the user confirms the result as beliefs.
+
+**Skipping is data.** Skip asks for an optional reason, and the reason decides the system's behavior:
+- *Ask me later* — asked once more after 7 days; behavior may fill the gap at low confidence, always shown to the user first.
+- *Prefer not to say* — never asked, never inferred; advice avoids the topic and says so.
+- *Doesn't apply* — marked not applicable.
+- *Just skip* — treated as "ask me later", lower priority.
+
+**Design rules**
+- Options are a **static curated list** (no AI call), so the screens cost nothing and are instant. AI is used only to tidy free-text "add your own" answers, to read LinkedIn/CV text, and to write the final summary.
+- **Values are never inferred from behavior.** What people do does not show what they care about; values come only from the user.
+- Habits answered here carry lower confidence than other answers because self-description is optimistic; they are replaced by measured habits (task/habit logs, Apple Health) over time.
+
+**Acceptance**
+- User can finish in under 10 minutes.
+- Every belief shows its source and can be edited or removed.
+- Skipping every optional screen still produces a usable profile, and the summary lists what is unknown and why.
+- A rejected belief is never inferred again.
 
 ### F2 — Goals (M)
 *As a user, I want goals proposed for me and refined by me.*
