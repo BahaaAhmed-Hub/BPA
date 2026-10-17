@@ -55,6 +55,7 @@ import {
 } from './outcome/shared'
 
 import { ExpensesBox } from './outcome/ExpensesBox'
+import { HabitsBox } from './outcome/HabitsBox'
 
 export type { OutcomeEvent }
 
@@ -611,6 +612,9 @@ export function MeetingOutcome({ event, onClose, onFollowUp }: {
           <ExpensesBox
             event={event} co={co}
             open={openBox === 'expenses'} onToggle={() => setOpenBox(openBox === 'expenses' ? null : 'expenses')} />
+          <HabitsBox
+            event={event}
+            open={openBox === 'habits'} onToggle={() => setOpenBox(openBox === 'habits' ? null : 'habits')} />
         </div>
 
         {/* ── Actions ────────────────────────────────────────────────────── */}

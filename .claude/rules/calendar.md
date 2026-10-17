@@ -244,8 +244,8 @@ place, notes, guests), without replies or the Meet link.
 opens **in place** and shows what is already related to the meeting, with the
 tools to tick it, change it or add something new. **No box opens another
 panel** — a panel would take the window and the rest of what was being filed.
-**Tasks** and **Expenses** are built; Habits, Books and Events follow, each on
-the same `OutcomeBox` shell (`outcome/shared.tsx`, one file per kind beside it).
+**Tasks**, **Expenses** and **Habits** are built; Books and Events follow, each
+on the same `OutcomeBox` shell (`outcome/shared.tsx`, one file per kind beside it).
 - **Everything writes as you go, and each row takes itself back.** The old
   type-lines → review → save form held work in a window that vanished when it
   closed. A tick is `toggleComplete`; an edit is `updateTask`; a new task is
@@ -331,6 +331,39 @@ unpaid with the meeting's day and its origin; confirming writes the payment date
 and the envelope goes from 580 left to 60 over, Undo puts it back; an edit
 reaches the ledger; Undo on a made entry issues the DELETE. The lock mode is
 its own control (the `expenses` run, unlocked, shows all of it), as is `fx`.
+
+## Calendar — the Habits box logs against the meeting's own day
+`outcome/HabitsBox.tsx`. A habit counted in the moment is counted; one
+remembered at ten at night is guessed. Everything here is the Habits module's:
+- **`commitHabitLogs` is the only write path**, and the Habits page reads its
+  logs once on mount, so every write here also fires
+  `professor:habitLogsUpdated`. A tick is a date in `professor-habit-logs`; a
+  measured habit writes its quantity and is **ticked when the goal is met** —
+  the same rule as the page's `setQuantity` — and one tap adds `stepFor(habit)`
+  (1,000 for steps), never 1.
+- **A habit has no meeting on it, so none is invented.** Nothing in a habit says
+  it is about meetings, and guessing from a name would be a rule nobody agreed
+  to. Every *active* habit is offered for the meeting's day; the ones **logged
+  from another meeting before** (the ledger, `kind: 'habit'`) lead and say
+  "from meetings". The order depends on that and the habits' own order, never on
+  what was just ticked, so a row stays where it was. The fixture makes Stretching
+  come first naturally and Networking only by the ledger, or the ordering claim
+  would be vacuous.
+- **The share leads, the tally supports** (`dayTotals`): "22% of Sat, 17 Oct",
+  not "0 of 3" — 5,200 of 8,000 steps beside two unticked habits is a fifth of
+  the day. A part-day is never drawn ticked.
+- **A change is remembered as it was.** Undo — or flipping the control back by
+  hand — restores the first state and takes the link the change made, so the
+  meeting never claims a tick that no longer exists. The link is `touched`; only
+  a habit **made here** is `made`, and its Undo deletes the habit *and its days*,
+  as the page's own delete does.
+- **A new habit is a done-or-not or a measured one**, daily/weekdays/weekly, with
+  "count this day as done" for the first kind. Not drawn when the plan has no
+  Habits (`moduleIsOff('habits')`).
+`scripts/meeting-outcome-habits.mjs [habits|off]` — 37 assertions against the
+real `habits` / `habit_logs` shapes: the log, the quantity and the goal tick on
+localStorage; after the 1.5s debounce the server gets `completed: true` and
+`quantity: 8200`; each Undo; a made habit reaching the server and then gone.
 
 ## Booking — letting somebody outside put an hour on the calendar
 Two things, kept apart because they answer different questions. **Meeting
