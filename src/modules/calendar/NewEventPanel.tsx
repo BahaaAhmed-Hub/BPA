@@ -229,6 +229,8 @@ export interface SeededEvent {
   calId?: string
   location?: string
   invitees?: ComposerInvitee[]
+  /** The description, for a copy of an event that had one. */
+  notes?: string
 }
 
 export interface ComposerResult {
@@ -555,7 +557,7 @@ export function NewEventPanel({
   }
 
   const [extrasOpen, setExtrasOpen] = useState(false)
-  const [notes, setNotes] = useState(existing?.notes ?? '')
+  const [notes, setNotes] = useState(existing?.notes ?? sown?.notes ?? '')
   const notesRef = useRef<HTMLTextAreaElement>(null)
   const [visibility, setVisibility] = useState<'default' | 'private' | 'public'>(existing?.visibility ?? 'default')
   const [status, setStatus] = useState<'done' | 'cancelled' | null>(existing?.status ?? null)

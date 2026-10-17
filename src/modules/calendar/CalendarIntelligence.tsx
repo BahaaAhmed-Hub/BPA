@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Check, ExternalLink, AlertCircle, Shield, Copy, Trash2, CheckSquare, Plus,
-  CalendarPlus, Repeat, X,
+  CalendarPlus, Repeat, X, CopyPlus,
 } from 'lucide-react'
 import { formatTime } from '@/modules/tasks/SchedulePopover'
 import {
@@ -1140,6 +1140,7 @@ function EventContextMenu({
   onClose,
   onViewDetails,
   onStatusToggle,
+  onDuplicate,
   onDelete,
 }: {
   event: GCalEventExt
@@ -1148,6 +1149,7 @@ function EventContextMenu({
   onClose: () => void
   onViewDetails: () => void
   onStatusToggle: (s: EventStatus) => void
+  onDuplicate: () => void
   onDelete: () => void
 }) {
   const menuRef = useRef<HTMLDivElement>(null)
@@ -1264,6 +1266,7 @@ function EventContextMenu({
         { disabled: !event.htmlLink })}
       {item('copy-details', <Copy size={ICON.sm} />, 'Copy Details',
         () => navigator.clipboard.writeText(formatCopyDetails()).catch(() => {}))}
+      {item('duplicate',    <CopyPlus size={ICON.sm} />, 'Duplicate Event', onDuplicate)}
 
       <div style={sep} />
 
@@ -1944,6 +1947,39 @@ export function CalendarIntelligence() {
         .map(a => ({ email: a.email, ...(a.optional ? { optional: true } : {}) })),
     })
     setNewEventDraft({ dateStr: localDateStr(when), startMin, endMin: startMin + len, anchorX: 0, anchorY: 0 })
+  }
+
+  /** A copy of an event, handed to the composer rather than written at once:
+   *  a duplicate that lands on top of the original is only useful once you
+   *  have moved it, so it opens with the same title, calendar, place, notes,
+   *  guests and hours and waits for you to pick the day. Replies and the Meet
+   *  link do not travel — nobody has answered a meeting that does not exist,
+   *  and a conference belongs to the event it was minted for. */
+  function openDuplicate(ev: GCalEventExt) {
+    const startIso = ev.start?.dateTime
+    const endIso = ev.end?.dateTime
+    const s0 = startIso ? new Date(startIso) : null
+    const e0 = endIso ? new Date(endIso) : null
+    const nextHour = Math.min(22, new Date().getHours() + 1) * 60
+    const startMin = s0 ? s0.getHours() * 60 + s0.getMinutes() : nextHour
+    const endMin = s0 && e0
+      ? startMin + Math.max(15, Math.round((e0.getTime() - s0.getTime()) / 60000))
+      : startMin + 60
+    setSelectedEvent(null)
+    setCtxMenu(null)
+    setNewEventSeed({
+      title: ev.summary ?? '',
+      calId: ev.calendarId,
+      ...(ev.location ? { location: ev.location } : {}),
+      ...(ev.description ? { notes: ev.description } : {}),
+      invitees: (ev.attendees ?? [])
+        .filter(a => !a.self && a.email)
+        .map(a => ({ email: a.email, ...(a.optional ? { optional: true } : {}) })),
+    })
+    setNewEventDraft({
+      dateStr: localDateStr(s0 ?? (ev.start?.date ? new Date(`${ev.start.date}T12:00:00`) : new Date())),
+      startMin, endMin, anchorX: 0, anchorY: 0, drawn: true,
+    })
   }
 
   const { askAboutOutcome, outcomePrompt } = useMeetingOutcome(openFollowUp)
@@ -3712,6 +3748,7 @@ export function CalendarIntelligence() {
             toggleStatus(ctxMenu.event.id, s)
             setCtxMenu(null)
           }}
+          onDuplicate={() => openDuplicate(ctxMenu.event)}
           onDelete={() => void handleDeleteEvent(ctxMenu.event)}
         />
       )}
