@@ -244,8 +244,8 @@ place, notes, guests), without replies or the Meet link.
 opens **in place** and shows what is already related to the meeting, with the
 tools to tick it, change it or add something new. **No box opens another
 panel** — a panel would take the window and the rest of what was being filed.
-Only **Tasks** is built so far; Expenses, Habits, Books and Events follow, each
-on the same `OutcomeBox` shell.
+**Tasks** and **Expenses** are built; Habits, Books and Events follow, each on
+the same `OutcomeBox` shell (`outcome/shared.tsx`, one file per kind beside it).
 - **Everything writes as you go, and each row takes itself back.** The old
   type-lines → review → save form held work in a window that vanished when it
   closed. A tick is `toggleComplete`; an edit is `updateTask`; a new task is
@@ -290,6 +290,47 @@ date and a note of where it came from and links as `made`, and Undo on it
 deletes the task and the link. Controls: the first run, on the code before the
 `belongsTo` fix, offered nothing; before the single list, focus was `body`
 after a tick.
+
+## Calendar — the Expenses box files drafts, behind the lock
+`outcome/ExpensesBox.tsx`. Money is the one kind with rules of its own, and each
+of them is Finance's, not this window's:
+- **An expense made here is an unpaid entry — a draft.** No `paidAt`, not
+  cleared, so `unpaid.ts` keeps it out of every balance, envelope and report and
+  the feeds draw it dotted. A figure typed into a calendar window is a guess
+  about money; **Confirm** is the ledger's own "paid" gesture (`paidAt` = the
+  entry's day, or today if that day has not come) and Undo on it makes it a
+  draft again. It is written with `upsertTransaction`, which saves and follows
+  the year — never the legacy `addTransaction`, which only touches the store.
+- **The lock stands.** The budget left and the unpaid bills are exactly what the
+  lock exists to hide, and a calendar window would be a way round it. Locked, the
+  box says *Locked*, renders **nothing** of the ledger (measured: no payee, no
+  amount, no account name) and asks for the same password or device check, in
+  place; `useFinanceLock`'s own `unlock` and the `finance:lockChanged` event
+  mean the rest of the app agrees.
+- **A module that is off is not drawn** (`moduleIsOff('finance')`) and was never
+  loaded — the harness asserts the box is absent **and** that no `finance_*`
+  table was read.
+- **No figure is claimed that cannot be checked.** "N left of M" is said only
+  for a plain monthly budget in force that month (`loadRules`, `activeIn`,
+  `monthlyAmount`, not `isDated`), counting **settled** entries by `whenPaid`
+  across the category and its sub-categories, and only when every one converts
+  (`convert` → null for a currency nobody has a rate for). Otherwise nothing: a
+  wrong "left" is worse than none. The draft is not in it, so the line moves
+  when you confirm, not when you add — the form says so.
+- **"Near this day", not "for Teradix".** Entries carry no company, so the
+  unpaid bills offered are those dated within a week of the meeting, said as such.
+  The account and category open on what was last filed for this company
+  (`outcome-expense-memory`, this device only).
+- **`MoneyInput` commits the value its parent holds**, not what was typed — a
+  row passing a fixed `value` wrote the *old* amount on blur. The row keeps its
+  own draft amount. (Found by the harness: `[85]` where `[85, 95]` was meant.)
+`scripts/meeting-outcome-expenses.mjs [expenses|lock|off|fx]` — against the
+real row shapes (`account_id`, `paid_at`, `tx_type`…): the near unpaid bill is
+offered and an old one, a paid one are not; a filed draft reaches the ledger
+unpaid with the meeting's day and its origin; confirming writes the payment date
+and the envelope goes from 580 left to 60 over, Undo puts it back; an edit
+reaches the ledger; Undo on a made entry issues the DELETE. The lock mode is
+its own control (the `expenses` run, unlocked, shows all of it), as is `fx`.
 
 ## Booking — letting somebody outside put an hour on the calendar
 Two things, kept apart because they answer different questions. **Meeting

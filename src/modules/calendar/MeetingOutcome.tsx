@@ -35,7 +35,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Sparkles, Check, ChevronDown, ChevronUp, CalendarPlus, CheckSquare, Link as LinkIcon, Pencil } from 'lucide-react'
+import { X, Sparkles, Check, CalendarPlus, CheckSquare, Link as LinkIcon, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { breakdownMeetingNotes, type ExtractedTask } from '@/lib/professor'
 import { useTaskStore } from '@/store/taskStore'
@@ -49,18 +49,14 @@ import LinkPreviews from '../../components/LinkPreviews'
 import {
   addOutcomeLink, removeOutcomeLink, linksForEvent, linksForRecord, subscribeOutcomeLinks,
 } from '@/lib/meetingOutcomes'
+import {
+  OutcomeBox, EYEBROW, FIELD, chip, ymd, fromYmd, initialsOf,
+  type OutcomeEvent,
+} from './outcome/shared'
 
-/** The meeting this is about. Only what the question needs. */
-export interface OutcomeEvent {
-  id: string
-  title: string
-  /** "Tue 7 Oct · 14:00 – 15:00", for the header. */
-  when?: string
-  calendarId?: string
-  htmlLink?: string
-  /** The event's own description — what "Read my notes" reads first. */
-  notes?: string
-}
+import { ExpensesBox } from './outcome/ExpensesBox'
+
+export type { OutcomeEvent }
 
 type Users = ReturnType<typeof getVisibleUsers>
 
@@ -82,10 +78,6 @@ const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
  *  have. */
 const belongsTo = (t: Task, co: DynamicCompany) => t.companyId === co.id || (!t.companyId && t.company === co.id)
 
-const pad = (n: number) => String(n).padStart(2, '0')
-const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-const fromYmd = (s: string) => new Date(`${s}T12:00:00`)
-
 /** Today, tomorrow and the next Monday — the three days a follow-up is usually
  *  wanted on. Anything else is the date field beside them. */
 function dueChips(): { label: string; value: string }[] {
@@ -106,84 +98,6 @@ function dueLabel(due: string | undefined): string {
   if (due === today) return 'Today'
   if (due === ymd(new Date(Date.now() + 86400000))) return 'Tomorrow'
   return fromYmd(due).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-}
-
-const initialsOf = (name: string) =>
-  name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('') || '?'
-
-const EYEBROW: React.CSSProperties = {
-  margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
-  color: 'var(--sb-ink-3)', textTransform: 'uppercase',
-}
-
-const FIELD: React.CSSProperties = {
-  background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-  borderRadius: 'var(--sb-r-sm)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)',
-  padding: '0 12px', height: 44, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
-}
-
-/** A pill-shaped control. `on` is the chosen one in a row of choices. */
-function chip(on = false, dashed = false): React.CSSProperties {
-  return {
-    height: 36, padding: '0 12px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-    fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
-    background: on ? 'var(--sb-ink-1)' : dashed ? 'transparent' : 'var(--sb-card)',
-    color: on ? 'var(--sb-card)' : 'var(--sb-ink-2)',
-    border: on ? 'none' : `var(--sb-border-width) ${dashed ? 'dashed' : 'solid'} var(--sb-border)`,
-    display: 'inline-flex', alignItems: 'center', gap: 6,
-  }
-}
-
-// ─── A box ───────────────────────────────────────────────────────────────────
-//
-// One shell for every kind, so the five boxes open, close and read the same.
-// Open, it takes the kind's own colour on its border and header; closed, it is
-// a line saying what is in it.
-
-function OutcomeBox({ id, icon, title, summary, open, onToggle, tint, children }: {
-  id: string
-  icon: React.ReactNode
-  title: string
-  summary: string
-  open: boolean
-  onToggle: () => void
-  /** The kind's colour — the border when open, the icon tile always. */
-  tint: string
-  children: React.ReactNode
-}) {
-  return (
-    <section
-      data-outcome-box={id}
-      data-open={open ? '1' : '0'}
-      style={{
-        flexShrink: 0, overflow: 'hidden', background: 'var(--sb-card)',
-        borderRadius: 'var(--sb-r-card)',
-        border: open ? `1.5px solid ${tint}` : 'var(--sb-border-width) solid var(--sb-border)',
-      }}>
-      <button
-        onClick={onToggle}
-        aria-expanded={open}
-        aria-label={`${title}: ${summary}`}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', height: 60,
-          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: 'none',
-          background: open ? `color-mix(in srgb, ${tint} 7%, var(--sb-card))` : 'var(--sb-card)',
-          color: 'var(--sb-ink-1)',
-        }}>
-        <span style={{
-          width: 34, height: 34, borderRadius: 'var(--sb-r-nav)', flexShrink: 0,
-          background: `color-mix(in srgb, ${tint} 14%, var(--sb-card))`, color: tint,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>{icon}</span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 'var(--sb-t-body)', fontWeight: 700 }}>{title}</span>
-          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{summary}</span>
-        </span>
-        {open ? <ChevronUp size={ICON.md} color="var(--sb-ink-3)" /> : <ChevronDown size={ICON.md} color="var(--sb-ink-3)" />}
-      </button>
-      {open && <div style={{ padding: '12px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>{children}</div>}
-    </section>
-  )
 }
 
 // ─── Tasks ───────────────────────────────────────────────────────────────────
@@ -694,6 +608,9 @@ export function MeetingOutcome({ event, onClose, onFollowUp }: {
             onAddSuggestion={addSuggestion}
             pasteOpen={pasteOpen} notes={notes} onNotes={setNotes}
             onRead={() => void readNotes()} busy={busy} error={error} />
+          <ExpensesBox
+            event={event} co={co}
+            open={openBox === 'expenses'} onToggle={() => setOpenBox(openBox === 'expenses' ? null : 'expenses')} />
         </div>
 
         {/* ── Actions ────────────────────────────────────────────────────── */}

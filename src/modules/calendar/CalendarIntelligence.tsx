@@ -1910,6 +1910,7 @@ export function CalendarIntelligence() {
       calendarId: ev.calendarId,
       htmlLink: ev.htmlLink,
       ...(ev.description ? { notes: ev.description } : {}),
+      date: ev.start?.dateTime ? localDateStr(new Date(ev.start.dateTime)) : ev.start?.date,
     }
   }
 
