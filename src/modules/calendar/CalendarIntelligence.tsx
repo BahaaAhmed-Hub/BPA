@@ -1909,6 +1909,7 @@ export function CalendarIntelligence() {
       when: s0 ? fmtPopupDate(s0, e0, !ev.start?.dateTime) : undefined,
       calendarId: ev.calendarId,
       htmlLink: ev.htmlLink,
+      ...(ev.description ? { notes: ev.description } : {}),
     }
   }
 

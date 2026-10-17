@@ -280,7 +280,8 @@ function scheduleDbSync(tasks: Task[], edited: string[] = []) {
 interface TaskState {
   tasks: Task[]
   activities: TaskActivity[]
-  addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void
+  /** Returns the new task's id, for a caller that needs to point at it. */
+  addTask: (task: Omit<Task, 'id' | 'createdAt'>) => string
   addTasksBatch: (tasks: Omit<Task, 'id' | 'createdAt'>[]) => void
   updateTask: (id: string, updates: Partial<Task>) => void
   moveTask: (id: string, quadrant: Quadrant | null) => void
@@ -373,6 +374,7 @@ export const useTaskStore = create<TaskState>()(
 
       addTask: task => {
         get()._remember('Added a task')
+        const id = crypto.randomUUID()
         set(s => {
           const newTask: Task = {
             ...task,
@@ -380,7 +382,7 @@ export const useTaskStore = create<TaskState>()(
             // it belongs on the board, not in the pile of things not yet
             // thought through. See `scheduled` below.
             quadrant: task.quadrant ?? (task.dueDate ? 'schedule' : null),
-            id: crypto.randomUUID(),
+            id,
             createdAt: new Date().toISOString(),
           }
           const next = [...s.tasks, newTask]
@@ -390,6 +392,7 @@ export const useTaskStore = create<TaskState>()(
             activities: [...s.activities, act(newTask.id, 'created', 'Task created')],
           }
         })
+        return id
       },
 
       addTasksBatch: tasks => {

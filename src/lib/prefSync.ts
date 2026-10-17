@@ -29,10 +29,12 @@
 // one store along. A device that has merely *read* a key says nothing about it.
 
 import { supabase } from '@/lib/supabase'
+import { joinOutcomeLinks, type OutcomeLink } from '@/lib/meetingOutcomes'
 
 /** Your work — the same on every device you open. */
 const SHARED_KEYS = [
   'cal-event-statuses',          // which events you marked done or cancelled
+  'cal-outcome-links',           // which meeting each task, expense… came out of
   'cal-intel-hidden',            // calendars you hid
   'cal-intel-hidden-accounts',
   'cal-intel-colors',            // colours you gave them
@@ -125,6 +127,17 @@ const MERGEABLE: Partial<Record<typeof SHARED_KEYS[number], (mine: string, their
       const a = JSON.parse(mine)   as Record<string, string>
       const b = JSON.parse(theirs) as Record<string, string>
       return JSON.stringify({ ...b, ...a })
+    } catch { return mine }
+  },
+
+  // meeting → record links. Joined per entry, the later change winning, so a
+  // link made on one device reaches the other and an undone one stays undone
+  // (it is a tombstone, which a plain `{...b, ...a}` would resurrect).
+  'cal-outcome-links': (mine, theirs) => {
+    try {
+      return JSON.stringify(joinOutcomeLinks(
+        JSON.parse(mine) as Record<string, OutcomeLink>,
+        JSON.parse(theirs) as Record<string, OutcomeLink>))
     } catch { return mine }
   },
 

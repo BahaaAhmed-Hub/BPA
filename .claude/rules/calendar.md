@@ -78,10 +78,6 @@ gone, and with it the last of `--sb-ev-type`.
 - **Ends belongs to Custom.** Choosing a preset after it means the preset, so
   the fields go and what they held goes with them — a stale "after 8 times"
   hanging off a plain Monthly is a rule nobody asked for.
-- **A drawn span keeps its end.** `cal-compose-memory`'s usual length applies
-  only to a draft with no end of its own (`+ New event`, a seed): the grid sets
-  `drawn: true` on the draft, and the panel skips the memory for it. Before, any
-  drag opened as one hour once a duration had been remembered.
 - **A bare click on the grid no longer creates anything.** Drawing a span says
   when it is and how long it runs; a click says neither, and a panel opening
   under every stray click is one you spend the day closing. The two ways in are
@@ -234,6 +230,66 @@ assertions. Control: the tick writes the status and asks nothing.
   is gone, kept by hand are none of its parts: `toggleStatus` was already the
   funnel all three of those call sites went through, which is why asking there
   covers the doors nobody has thought of yet.
+
+## Calendar — a drawn span keeps the end it was drawn to
+`cal-compose-memory`'s usual length applies only to a draft with no end of its
+own (`+ New event`, a seed). The grid sets `drawn: true` on the draft and the
+panel skips the memory for it; before, any drag opened as one hour once a
+duration had been remembered. **Duplicate Event** sets it too — a copy keeps the
+event's own hours — and opens the composer through `seed` (title, calendar,
+place, notes, guests), without replies or the Meet link.
+
+## Calendar — the outcome window is a box per kind, and every record keeps its thread
+`MeetingOutcome.tsx` is one 800px window with a box per kind of output; a box
+opens **in place** and shows what is already related to the meeting, with the
+tools to tick it, change it or add something new. **No box opens another
+panel** — a panel would take the window and the rest of what was being filed.
+Only **Tasks** is built so far; Expenses, Habits, Books and Events follow, each
+on the same `OutcomeBox` shell.
+- **Everything writes as you go, and each row takes itself back.** The old
+  type-lines → review → save form held work in a window that vanished when it
+  closed. A tick is `toggleComplete`; an edit is `updateTask`; a new task is
+  `addTask`; **Undo** on a row reopens a ticked one, or deletes one made here.
+  Closing the window costs nothing, because nothing is waiting in it.
+- **The thread is its own list, not a column on four tables**
+  (`lib/meetingOutcomes.ts`, key `cal-outcome-links`, a prefSync key). Entry:
+  meeting → record, `role: 'made'` (this window created it) or `'touched'` (it
+  existed and was ticked or edited here). Both directions are a lookup —
+  `linksForEvent`, `linksForRecord`. **A removal is a tombstone** (`gone`),
+  because the list is *joined* across devices and a join only adds: an entry
+  absent here would come straight back from the other. The later `at` wins.
+  Undoing a tick removes the link that tick made; undoing one on a task *made
+  here* keeps it, since the task still came from the meeting.
+- **"This company's" is two fields.** A company made since the four legacy tags
+  is `companyId`; Teradix, DX and the others of the four are the `company` tag
+  alone with **no** `companyId` — the server keeps both in `company_tag`. The
+  first cut asked only `companyId` and offered **nothing** for the company most
+  people have. The harness seeded the server's real snake_case rows (`company_tag`,
+  `due_date`) rather than the store's shape, which is what showed it.
+- **A row must not change parent when ticked.** Linked rows were drawn first in
+  their own array, so a tick moved the row between two lists, React remounted
+  it, and focus fell onto `body` — a keyboard user ticked a box and lost their
+  place. One list in date order does not move.
+- **`gcalEventId` is never the meeting's.** A dated task earns a block of its
+  own from App's auto-push and *that* id lands in it; what must not happen is
+  the meeting's id there, which would hand the task the meeting's hour so that
+  ticking one finished the other. The link to the meeting is `links: [htmlLink]`
+  and the ledger.
+- **Read my notes offers, never writes.** It reads the event's own description,
+  or opens a paste box when there is none, and the action items come back as
+  dashed rows inside the Tasks box with **Add** — the extractor failing leaves
+  the box exactly as usable. Pasted links still draw `LinkPreviews` cards.
+The old section above describes the type-lines-then-review form this replaced;
+its script, `meeting-outcome-becomes-tasks.mjs`, is retired.
+`scripts/meeting-outcome-hub.mjs [tasks|dismiss|links|followup|keys]` — against
+a server serving its real row shape: the company's open task is offered and
+**another company's and a finished one are not**; a tick completes it, writes
+the link and moves the count, and Undo reopens it and tombstones the link; an
+edit inside the row reaches the store and links; a new task carries the company,
+date and a note of where it came from and links as `made`, and Undo on it
+deletes the task and the link. Controls: the first run, on the code before the
+`belongsTo` fix, offered nothing; before the single list, focus was `body`
+after a tick.
 
 ## Booking — letting somebody outside put an hour on the calendar
 Two things, kept apart because they answer different questions. **Meeting
