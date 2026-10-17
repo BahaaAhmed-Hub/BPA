@@ -102,7 +102,7 @@ interface EventLayout {
   inset?: number
 }
 interface CreatingEvt  { dateStr: string; originMin: number; currentMin: number }
-interface NewEventDraft { dateStr: string; startMin: number; endMin: number; anchorX: number; anchorY: number }
+interface NewEventDraft { dateStr: string; startMin: number; endMin: number; anchorX: number; anchorY: number; drawn?: boolean }
 interface NewEventData {
   title:        string
   calId:        string
@@ -1480,7 +1480,7 @@ export function CalendarIntelligence() {
         // surprise event or the other way round.
         if (openHoursRef.current) { void openTheseHours(cur.dateStr, startMin, endMin); return }
         setNewEventSeed(null)
-        setNewEventDraft({ dateStr: cur.dateStr, startMin, endMin, anchorX: e.clientX, anchorY: e.clientY })
+        setNewEventDraft({ dateStr: cur.dateStr, startMin, endMin, anchorX: e.clientX, anchorY: e.clientY, drawn: true })
       }
     }
     document.addEventListener('pointermove',   onMove)
@@ -3535,6 +3535,7 @@ export function CalendarIntelligence() {
           visibility: (ev.visibility as ExistingEvent['visibility']) ?? 'default',
           status: eventStatuses[ev.id] ?? null,
           htmlLink: ev.htmlLink,
+          organizer: ev.organizer,
         }
 
         return (

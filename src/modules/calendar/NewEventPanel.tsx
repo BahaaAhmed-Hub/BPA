@@ -301,6 +301,9 @@ export interface ExistingEvent {
   status: 'done' | 'cancelled' | null
   /** Where Google would open it. */
   htmlLink?: string
+  /** Who actually organises it — on an invitation that is somebody else, and
+   *  the account viewing it is only a guest. */
+  organizer?: { email?: string; displayName?: string }
 }
 
 export interface ComposerCalendar {
@@ -389,7 +392,9 @@ export function NewEventPanel({
   clashes, onSave, onCancel, onPush, onDelete, onMoveCalendar, extra, uploadFile,
   alertMinutes, onAlert, onAddMeet, onRemoveMeet, onStatus,
 }: {
-  draft: { dateStr: string; startMin: number; endMin: number }
+  /** `drawn`: the span was dragged out on the grid, so its end is an answer
+   *  the person gave and the remembered duration must not overwrite it. */
+  draft: { dateStr: string; startMin: number; endMin: number; drawn?: boolean }
   /** The event this panel is about, when it already exists. Absent means the
    *  panel is composing a new one — the only difference between the two. */
   existing?: ExistingEvent
@@ -440,7 +445,9 @@ export function NewEventPanel({
   // Everything arrives answered: for a new event the length you usually give
   // this kind of thing, for an existing one what the event actually says.
   const startMin = draft.startMin
-  const endMin = memory.minutes && !editing ? startMin + memory.minutes : draft.endMin
+  // A span drawn on the grid already says how long it runs; the usual length
+  // is only for a start with no end of its own.
+  const endMin = memory.minutes && !editing && !draft.drawn ? startMin + memory.minutes : draft.endMin
 
   // A seed answers only what it has, and only for an event being composed.
   const sown = editing ? undefined : seed
@@ -490,9 +497,15 @@ export function NewEventPanel({
   //  bug. A mailbox is case-insensitive in its domain and, in every practice
   //  that matters here, its local part too, so the comparison is made on the
   //  normalised form and only ever on that.
+  //
+  //  `organiser` is whose calendar this is, which is the event's organiser only
+  //  when you made it. On an invitation you received the organiser is somebody
+  //  else, and labelling you "Organiser" there was simply wrong — so the row is
+  //  drawn from the event's own `organizer`, and you stay in the guest list.
+  const host = existing?.organizer?.email ?? organiser
   const attendeeRows = useMemo(
-    () => people.filter(p => !sameEmail(p.email, organiser)),
-    [people, organiser])
+    () => people.filter(p => !sameEmail(p.email, host)),
+    [people, host])
   // Every avatar in the Attendees card takes its ink from its own swatch. The
   // hook, not the bare function, because both swatches are `var()`s and the
   // answer stops being true the moment the theme moves.
@@ -641,8 +654,10 @@ export function NewEventPanel({
       return
     }
     // You are on the event already, as its organiser.
-    if (sameEmail(email, organiser)) {
-      setInviteeError('You are the organiser — you are already on it')
+    if (sameEmail(email, host)) {
+      setInviteeError(sameEmail(host, organiser)
+        ? 'You are the organiser — you are already on it'
+        : `${email} is the organiser — they are already on it`)
       return
     }
     const next = [...people, { email }]
@@ -1044,11 +1059,11 @@ export function NewEventPanel({
             to store and read as a different person from the same address
             written properly one row below. */}
         <PersonRow
-          initials={initialsOf(organiser ?? 'me')}
+          initials={initialsOf(host ?? 'me')}
           avatarBg={C.ink}
           avatarInk={ink(C.ink)}
-          name={organiser ? nameFromEmail(organiser) : 'You'}
-          sub={organiser ? normaliseEmail(organiser) : 'Organiser'}
+          name={host ? (existing?.organizer?.displayName || nameFromEmail(host)) : 'You'}
+          sub={host ? normaliseEmail(host) : 'Organiser'}
           rsvp={{ label: 'Organiser', bg: C.inset, ink: C.third }}
         />
 
