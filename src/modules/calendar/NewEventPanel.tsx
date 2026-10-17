@@ -389,7 +389,9 @@ export function NewEventPanel({
   clashes, onSave, onCancel, onPush, onDelete, onMoveCalendar, extra, uploadFile,
   alertMinutes, onAlert, onAddMeet, onRemoveMeet, onStatus,
 }: {
-  draft: { dateStr: string; startMin: number; endMin: number }
+  /** `drawn`: the span was dragged out on the grid, so its end is an answer
+   *  the person gave and the remembered duration must not overwrite it. */
+  draft: { dateStr: string; startMin: number; endMin: number; drawn?: boolean }
   /** The event this panel is about, when it already exists. Absent means the
    *  panel is composing a new one — the only difference between the two. */
   existing?: ExistingEvent
@@ -440,7 +442,9 @@ export function NewEventPanel({
   // Everything arrives answered: for a new event the length you usually give
   // this kind of thing, for an existing one what the event actually says.
   const startMin = draft.startMin
-  const endMin = memory.minutes && !editing ? startMin + memory.minutes : draft.endMin
+  // A span drawn on the grid already says how long it runs; the usual length
+  // is only for a start with no end of its own.
+  const endMin = memory.minutes && !editing && !draft.drawn ? startMin + memory.minutes : draft.endMin
 
   // A seed answers only what it has, and only for an event being composed.
   const sown = editing ? undefined : seed

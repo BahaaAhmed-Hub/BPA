@@ -78,6 +78,10 @@ gone, and with it the last of `--sb-ev-type`.
 - **Ends belongs to Custom.** Choosing a preset after it means the preset, so
   the fields go and what they held goes with them — a stale "after 8 times"
   hanging off a plain Monthly is a rule nobody asked for.
+- **A drawn span keeps its end.** `cal-compose-memory`'s usual length applies
+  only to a draft with no end of its own (`+ New event`, a seed): the grid sets
+  `drawn: true` on the draft, and the panel skips the memory for it. Before, any
+  drag opened as one hour once a duration had been remembered.
 - **A bare click on the grid no longer creates anything.** Drawing a span says
   when it is and how long it runs; a click says neither, and a panel opening
   under every stray click is one you spend the day closing. The two ways in are
