@@ -3535,6 +3535,7 @@ export function CalendarIntelligence() {
           visibility: (ev.visibility as ExistingEvent['visibility']) ?? 'default',
           status: eventStatuses[ev.id] ?? null,
           htmlLink: ev.htmlLink,
+          organizer: ev.organizer,
         }
 
         return (
