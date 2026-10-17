@@ -244,8 +244,8 @@ place, notes, guests), without replies or the Meet link.
 opens **in place** and shows what is already related to the meeting, with the
 tools to tick it, change it or add something new. **No box opens another
 panel** — a panel would take the window and the rest of what was being filed.
-**Tasks**, **Expenses**, **Habits** and **Books** are built; Events follows, each
-on the same `OutcomeBox` shell (`outcome/shared.tsx`, one file per kind beside it).
+All five boxes are built — **Tasks**, **Expenses**, **Habits**, **Books** and
+**Events** — each on the same `OutcomeBox` shell (`outcome/shared.tsx`, one file per kind beside it).
 **Any number of boxes can be open at once**, Tasks to begin with: it was an
 accordion at first, which closed the box being worked on to show the next, and
 the design draws two open side by side.
@@ -427,6 +427,55 @@ first honest run found three Glass failures the resting window had hidden:
   steps depend on the earlier ones, so filtering `visit` alone left them clicking in a page
   that had not got where they expected (the first attempt timed out on a Library tab).
 Result: **0 failing pairs in all four themes**, with all four boxes open and acted on.
+
+## Calendar — the Events box writes through a port, and inviting is the one thing that leaves the building
+`outcome/EventsBox.tsx`, and `OutcomeCalendarPort` in `outcome/shared.tsx`. What a
+meeting most often leaves behind is another meeting; this schedules it, moves the
+next in the series, and takes back what it made, without leaving the window.
+- **The window never builds a Google request.** The calendar hands it a port
+  (`buildOutcomePort` in `CalendarIntelligence`: `find`, `later`, `target`,
+  `create`, `patch`, `remove`) and every write goes the way the calendar's own
+  writes go — a connected account through its edge function (its token is never in
+  the browser), the primary account with its own. A rule added to those paths cannot
+  be missed here. It is a **hoisted function**, not a `const`: the hook that takes
+  it is called earlier in the component than the line that would define a const.
+- **Guests begin off, and the form says what scheduling will do.** An event written
+  with attendees is emailed by Google the moment it exists, and an email cannot be
+  taken back. So the "Invite" row is switches that start **off** and reset after
+  every schedule, the caption reads "Google will email 1 person the invitation" or
+  "No one is invited unless you switch them on", and **you are never in the list**
+  (`self` is filtered). The design drew them pre-switched on; an outward action
+  should not be implied by a default.
+- **Undo on an event made here is a real DELETE** — Google has no undelete — and for
+  one with guests it is a cancellation they receive; the button's title says so. A
+  delete Google refuses keeps the row and says it is still on the calendar. **Undo
+  move** is a second PATCH putting the first state back. Closing the window undoes
+  nothing, as everywhere here.
+- **A refusal says why and writes nothing**: no row, no link, no count. The primary
+  helper hands back `403: {"error":{…}}`, which is a response body and not a thing to
+  put on screen, so `readableWhy` reads it ("403 Forbidden"); asserted.
+- **Changing only the start keeps the length.** An event starting at 14:00 and still
+  ending at 11:00 is one Google refuses, and "start it later" means the same length,
+  later.
+- **Read-only calendars are not written to.** The follow-up goes to the meeting's
+  calendar when it can be written to, else to your own main one, and the form names
+  which ("On Teradix Ltd" / "On a@x.com"); with neither, the form is not offered and
+  says why. The first version would have tried the read-only one and been refused.
+- **Only what is on screen is claimed.** The next occurrence of a series is offered
+  when it is already loaded and labelled "in view, same series"; the box does not
+  ask Google for the rest of the series. Rows are one list in date order, so a move
+  does not change a row's parent (focus).
+- **The footer's Next meeting is gone** — the box is the next meeting — and the
+  composer is one press away as **Open the full form**, for what the quick form does
+  not do (a Meet link, a repeat). It stays in the footer only for a window given no
+  calendar port, so the way to a next meeting is never lost.
+`scripts/meeting-outcome-events.mjs [events|fallback|readonly|full]` — 41
+assertions with Google served and able to refuse: the POST read as the calendar sent
+it (calendar, title, day and hours, location, attendees absent), an invite going out
+as exactly the one person, an edit keeping the length, Undo as a DELETE, a move and its
+undo as two PATCHes, a 403 leaving nothing behind, a read-only calendar falling back
+to the main one, and none writable offering no form. The ink audit screen now opens
+and acts on all five boxes, and is 0 failing pairs in all four themes.
 
 ## Booking — letting somebody outside put an hour on the calendar
 Two things, kept apart because they answer different questions. **Meeting

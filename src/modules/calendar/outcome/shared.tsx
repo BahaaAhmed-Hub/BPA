@@ -22,6 +22,56 @@ export interface OutcomeEvent {
 }
 
 
+// ─── What the window may ask of the calendar ────────────────────────────────
+//
+// The window cannot reach the calendar's own state, and should not: how an
+// event is written depends on whose calendar it is (a connected account's token
+// is never in the browser, so it goes through an edge function; the primary
+// account uses its own), and that knowledge lives in `CalendarIntelligence`.
+// So the calendar hands the window a small port, and the Events box asks it —
+// it never builds a Google request itself.
+
+/** One event, in the shape the box needs. Dates are the reader's local day. */
+export interface OutcomeEventRef {
+  id: string
+  title: string
+  calendarId: string
+  /** YYYY-MM-DD, local. */
+  date: string
+  /** HH:MM, local — empty for an all-day event. */
+  startTime: string
+  endTime: string
+  allDay: boolean
+  /** Everyone but you. */
+  guests: { email: string; name?: string }[]
+  location?: string
+  seriesId?: string
+}
+
+export interface NewFollowUp {
+  title: string
+  date: string
+  startTime: string
+  endTime: string
+  invitees: string[]
+  location?: string
+  notes?: string
+}
+
+export type PortResult = { ok: true; event: OutcomeEventRef } | { ok: false; error: string }
+
+export interface OutcomeCalendarPort {
+  /** The event as it stands now, or null when it is not on screen. */
+  find: (id: string) => OutcomeEventRef | null
+  /** Later events of the same series that are already loaded. */
+  later: (id: string) => OutcomeEventRef[]
+  /** The calendar a follow-up would be written to, or why there is none. */
+  target: (calendarId: string) => { id: string; name: string } | null
+  create: (input: NewFollowUp, calendarId: string) => Promise<PortResult>
+  patch: (id: string, p: Partial<Pick<NewFollowUp, 'title' | 'date' | 'startTime' | 'endTime'>>) => Promise<PortResult>
+  remove: (id: string) => Promise<boolean>
+}
+
 export const pad = (n: number) => String(n).padStart(2, '0')
 export const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 export const fromYmd = (s: string) => new Date(`${s}T12:00:00`)

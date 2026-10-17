@@ -51,12 +51,13 @@ import {
 } from '@/lib/meetingOutcomes'
 import {
   OutcomeBox, EYEBROW, FIELD, chip, ymd, fromYmd, initialsOf,
-  type OutcomeEvent,
+  type OutcomeEvent, type OutcomeCalendarPort,
 } from './outcome/shared'
 
 import { ExpensesBox } from './outcome/ExpensesBox'
 import { HabitsBox } from './outcome/HabitsBox'
 import { BooksBox } from './outcome/BooksBox'
+import { EventsBox } from './outcome/EventsBox'
 
 export type { OutcomeEvent }
 
@@ -452,9 +453,11 @@ function TasksBox({ event, co, users, open, onToggle, suggestions, onDismissSugg
 
 // ─── The window ──────────────────────────────────────────────────────────────
 
-export function MeetingOutcome({ event, onClose, onFollowUp }: {
+export function MeetingOutcome({ event, onClose, onFollowUp, calendar }: {
   event: OutcomeEvent
   onClose: () => void
+  /** What the window may ask of the calendar. Absent, the Events box is not drawn. */
+  calendar?: OutcomeCalendarPort
   /** Hand the next meeting to the calendar's own composer. Absent, the action
    *  is not offered rather than drawn and dead. */
   onFollowUp?: (ev: OutcomeEvent) => void
@@ -625,6 +628,10 @@ export function MeetingOutcome({ event, onClose, onFollowUp }: {
           <BooksBox
             event={event}
             open={isOpen('books')} onToggle={() => toggleBox('books')} />
+          <EventsBox
+            event={event} calendar={calendar}
+            open={isOpen('events')} onToggle={() => toggleBox('events')}
+            onFullForm={onFollowUp ? next : undefined} />
         </div>
 
         {/* ── Actions ────────────────────────────────────────────────────── */}
@@ -636,7 +643,10 @@ export function MeetingOutcome({ event, onClose, onFollowUp }: {
             title="Reads this meeting's notes, or the ones you paste, and offers the action items">
             <Sparkles size={ICON.sm} /> {busy ? 'Reading…' : 'Read my notes'}
           </Button>
-          {onFollowUp && (
+          {/* The Events box schedules the next one in place; this stays only for a
+              window that was given no calendar to ask, so the way to a next
+              meeting is never lost. */}
+          {onFollowUp && !calendar && (
             <Button variant="secondary" onClick={next} title="Opens the next meeting with the same people and calendar">
               <CalendarPlus size={ICON.sm} /> Next meeting
             </Button>
@@ -656,13 +666,14 @@ export function MeetingOutcome({ event, onClose, onFollowUp }: {
 /** Wraps marking an event done. Call `askAboutOutcome(ev)` right **after** the
  *  status is written — never instead of it — and render `outcomePrompt` in the
  *  same component. */
-export function useMeetingOutcome(onFollowUp?: (ev: OutcomeEvent) => void) {
+export function useMeetingOutcome(onFollowUp?: (ev: OutcomeEvent) => void, calendar?: OutcomeCalendarPort) {
   const [pending, setPending] = useState<OutcomeEvent | null>(null)
 
   const outcomePrompt = pending ? (
     <MeetingOutcome
       event={pending}
       onClose={() => setPending(null)}
+      calendar={calendar}
       onFollowUp={onFollowUp ? ev => { setPending(null); onFollowUp(ev) } : undefined} />
   ) : null
 

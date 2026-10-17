@@ -246,7 +246,10 @@ if (MODE === 'dismiss') {
 
 // ── MODE === 'followup' ─────────────────────────────────────────────────────
 if (MODE === 'followup') {
-  await dialog.getByRole('button', { name: /Next meeting/i }).click()
+  // The next meeting is scheduled in the Events box now; the composer is its
+  // "full form" escape hatch, for what the quick form does not do.
+  await dialog.locator('[data-outcome-box="events"]').getByRole('button', { name: /^Events:/ }).click()
+  await dialog.getByRole('button', { name: /Open the full form/ }).click()
   await p.waitForTimeout(1200)
   const t = await text()
   const values = await p.locator('input[type="text"], input:not([type])').evaluateAll(els => els.map(e => e.value).filter(Boolean))

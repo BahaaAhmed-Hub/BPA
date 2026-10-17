@@ -55,6 +55,7 @@ import {
   type WindowRow,
 } from '@/lib/booking'
 import type { OutcomeEvent } from './MeetingOutcome'
+import type { OutcomeCalendarPort, OutcomeEventRef, PortResult } from './outcome/shared'
 import { useFocusClass, useCompanyFocus } from '@/lib/companyFocus'
 import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
@@ -1984,7 +1985,7 @@ export function CalendarIntelligence() {
     })
   }
 
-  const { askAboutOutcome, outcomePrompt } = useMeetingOutcome(openFollowUp)
+  const { askAboutOutcome, outcomePrompt } = useMeetingOutcome(openFollowUp, buildOutcomePort())
 
   // ── Calendar visibility ─────────────────────────────────────────────────────
   function toggleCal(id: string) {
@@ -2008,6 +2009,137 @@ export function CalendarIntelligence() {
     e.stopPropagation()
     setSelectedEvent(null)
     setCtxMenu({ event: ev, x: e.clientX, y: e.clientY })
+  }
+
+  /** What the outcome window may ask of the calendar. Every write goes the way
+   *  the calendar's own writes go: a connected account through its edge function
+   *  (its token is never in the browser), the primary account with its own. The
+   *  window never builds a Google request, so a rule here cannot be missed there. */
+  function outcomeRefOf(ev: GCalEventExt): OutcomeEventRef {
+    const p2 = (n: number) => String(n).padStart(2, '0')
+    const s0 = ev.start?.dateTime ? new Date(ev.start.dateTime) : null
+    const e0 = ev.end?.dateTime ? new Date(ev.end.dateTime) : null
+    const hm = (d: Date | null) => d ? `${p2(d.getHours())}:${p2(d.getMinutes())}` : ''
+    return {
+      id: ev.id,
+      title: ev.summary ?? '',
+      calendarId: ev.calendarId ?? '',
+      date: s0 ? localDateStr(s0) : (ev.start?.date ?? ''),
+      startTime: hm(s0), endTime: hm(e0), allDay: !s0,
+      guests: (ev.attendees ?? []).filter(a => !a.self && a.email).map(a => ({ email: a.email, ...(a.displayName ? { name: a.displayName } : {}) })),
+      ...(ev.location ? { location: ev.location } : {}),
+      ...(ev.recurringEventId ? { seriesId: ev.recurringEventId } : {}),
+    }
+  }
+
+  /** The calendar a new event may be written to: the one asked for when it can
+   *  be written to, else your own main one. A read-only calendar is not a place
+   *  to put a follow-up, and saying so beats a refusal from Google. */
+  /** Google's refusal, as a person would say it: the primary account's helper
+   *  hands back `403: {"error":{…"message":"Forbidden"}}`, which is the body of a
+   *  response and not something to put on screen. */
+  function readableWhy(why?: string): string {
+    if (!why) return ''
+    const m = /^(\d{3}):\s*(\{[\s\S]*\})\s*$/.exec(why)
+    if (!m) return why
+    try { const msg = (JSON.parse(m[2]!) as { error?: { message?: string } }).error?.message; return msg ? `${m[1]} ${msg}` : m[1]! } catch { return why }
+  }
+
+  function outcomeTarget(calendarId: string) {
+    const canWrite = (c: CalWithAccount) => c.accessRole === 'owner' || c.accessRole === 'writer'
+    const asked = allCalendars.find(c => c.id === calendarId)
+    const cal = asked && canWrite(asked) ? asked : allCalendars.find(c => c.primary && canWrite(c))
+    return cal ?? null
+  }
+
+  function buildOutcomePort(): OutcomeCalendarPort {
+   return {
+    find: id => {
+      const ev = (events as GCalEventExt[]).find(e => e.id === id)
+      return ev ? outcomeRefOf(ev) : null
+    },
+    later: id => {
+      const all = events as GCalEventExt[]
+      const src = all.find(e => e.id === id)
+      if (!src?.recurringEventId) return []
+      const at = new Date(src.start.dateTime ?? `${src.start.date}T00:00:00`).getTime()
+      return all
+        .filter(e => e.id !== id && e.recurringEventId === src.recurringEventId
+          && new Date(e.start.dateTime ?? `${e.start.date}T00:00:00`).getTime() > at)
+        .sort((a, b) => new Date(a.start.dateTime ?? a.start.date ?? '').getTime() - new Date(b.start.dateTime ?? b.start.date ?? '').getTime())
+        .slice(0, 3).map(outcomeRefOf)
+    },
+    target: calendarId => {
+      const c = outcomeTarget(calendarId)
+      return c ? { id: c.id, name: c.summaryOverride ?? c.summary } : null
+    },
+    create: async (i, calendarId): Promise<PortResult> => {
+      const cal = outcomeTarget(calendarId)
+      if (!cal) return { ok: false, error: 'There is no calendar here that you can write to.' }
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      const body: GCalEventCreate = {
+        summary: i.title,
+        start: { dateTime: `${i.date}T${i.startTime}:00`, timeZone: tz },
+        end:   { dateTime: `${i.date}T${i.endTime}:00`,   timeZone: tz },
+        ...(i.location ? { location: i.location } : {}),
+        ...(i.notes ? { description: i.notes } : {}),
+        ...(i.invitees.length ? { attendees: i.invitees.map(email => ({ email })) } : {}),
+      }
+      let created: GCalEvent | null = null
+      let why: string | undefined
+      if (cal.accountId) {
+        const r = await efCreateEvent(cal.accountId, cal.id, body)
+        created = r.event; why = r.error
+      } else {
+        const token = await refreshPrimaryToken() || cal.accountToken
+        if (!token) return { ok: false, error: 'Google needs reconnecting before this can be written.' }
+        const r = await createCalendarEventWithToken(token, cal.id, body)
+        created = r.event; why = r.error
+      }
+      if (!created) return { ok: false, error: why ? `Google would not create it — ${readableWhy(why)}` : 'Google would not create it.' }
+      const made = { ...created, calendarId: cal.id, calendarColor: calEffectiveColor(cal) } as GCalEventExt
+      setEvents(prev => [...prev, made])
+      return { ok: true, event: outcomeRefOf(made) }
+    },
+    patch: async (id, p): Promise<PortResult> => {
+      const ev = (events as GCalEventExt[]).find(e => e.id === id)
+      if (!ev) return { ok: false, error: 'That event is not on screen any more.' }
+      const cur = outcomeRefOf(ev)
+      const tz = ev.start.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+      const date = p.date ?? cur.date
+      const st = p.startTime ?? cur.startTime
+      // Moving the start moves the end with it: an event that begins at 14:00
+      // and still ends at 11:00 is one Google refuses, and what a person means
+      // by "start it later" is the same length, later.
+      const mins = (t: string) => { const [h, m] = t.split(':').map(Number); return (h ?? 0) * 60 + (m ?? 0) }
+      let en = p.endTime ?? cur.endTime
+      if (p.startTime !== undefined && p.endTime === undefined && cur.startTime && cur.endTime) {
+        const end = mins(st) + (mins(cur.endTime) - mins(cur.startTime))
+        en = `${String(Math.floor(end / 60) % 24).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`
+      }
+      const patch: Partial<GCalEventCreate> = {
+        ...(p.title !== undefined ? { summary: p.title } : {}),
+        ...((p.date !== undefined || p.startTime !== undefined || p.endTime !== undefined) && !cur.allDay
+          ? { start: { dateTime: `${date}T${st}:00`, timeZone: tz }, end: { dateTime: `${date}T${en}:00`, timeZone: tz } } : {}),
+      }
+      const updated = await handleUpdateEvent(ev, patch)
+      if (!updated) return { ok: false, error: 'Google would not save that change.' }
+      return { ok: true, event: outcomeRefOf({ ...ev, ...updated } as GCalEventExt) }
+    },
+    remove: async id => {
+      const ev = (events as GCalEventExt[]).find(e => e.id === id)
+      const cal = ev ? allCalendars.find(c => c.id === ev.calendarId) : null
+      if (!ev || !cal || !ev.calendarId) return false
+      let ok = false
+      if (cal.accountId) ok = await efDeleteEvent(cal.accountId, ev.calendarId, ev.id)
+      else {
+        const token = await refreshPrimaryToken() || cal.accountToken
+        ok = token ? await deleteCalendarEventWithToken(token, ev.calendarId, ev.id) : false
+      }
+      if (ok) setEvents(prev => prev.filter(e => e.id !== id))
+      return ok
+    },
+   }
   }
 
   async function handleDeleteEvent(ev: GCalEventExt) {

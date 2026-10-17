@@ -541,7 +541,7 @@ for (const theme of THEMES) {
     await page.waitForTimeout(900)
     const dlg = page.locator('[role="dialog"][aria-label^="What came out of"]')
     if (await dlg.count() !== 1) throw new Error('the outcome window did not open')
-    for (const id of ['tasks', 'expenses', 'habits', 'books']) {
+    for (const id of ['tasks', 'expenses', 'habits', 'books', 'events']) {
       const box = dlg.locator(`[data-outcome-box="${id}"]`)
       if (await box.count() === 0) throw new Error(`the ${id} box is not drawn`)
       if (await box.getAttribute('data-open') !== '1') await box.locator('button[aria-expanded]').first().click()
@@ -570,7 +570,14 @@ for (const theme of THEMES) {
       await bk.getByLabel(/Save a quote from/).first().fill('A line worth keeping', { timeout: 2000 })
       await bk.getByRole('button', { name: 'Add quote' }).first().click({ timeout: 2000 })
     })
-    if (process.env.INK_DEBUG) for (const id of ['tasks','expenses','habits','books']) console.log(`   [${id}]`, (await dlg.locator(`[data-outcome-box="${id}"]`).innerText()).replace(/\n+/g,' | ').slice(0,260))
+    if (process.env.INK_DEBUG) for (const id of ['tasks','expenses','habits','books','events']) console.log(`   [${id}]`, (await dlg.locator(`[data-outcome-box="${id}"]`).innerText()).replace(/\n+/g,' | ').slice(0,260))
+    // The audit's Google answers a write with an empty body, so this lands on
+    // the refusal — a state worth measuring in its own right (the error line).
+    await tryDo('an event is scheduled (or refused, and said so)', async () => {
+      const ev = dlg.locator('[data-outcome-box="events"]')
+      await ev.getByRole('button', { name: /^Schedule$/ }).click({ timeout: 2000 })
+      await page.waitForTimeout(900)
+    })
     console.log(`   · outcome window acted on: ${acted.join(', ') || 'nothing'}`)
     await page.waitForTimeout(400)
   })
