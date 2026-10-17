@@ -1,3 +1,5 @@
+import { MeetingBacklink } from '@/components/MeetingBacklink'
+import { linksForRecord } from '@/lib/meetingOutcomes'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   X, ChevronDown, Plus, Paperclip, Check, Trash2,
@@ -559,6 +561,15 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   outline: 'none', textAlign: 'left',
                 }} />
           </div>
+
+          {/* Which meeting it was filed from, when one was. Drawn only when there is
+              one — a row with a label and nothing beside it says nothing. */}
+          {transaction && linksForRecord('expense', transaction.id).length > 0 && (
+            <div style={ROW}>
+              <span style={LABEL}>Meeting</span>
+              <MeetingBacklink kind="expense" recordId={transaction.id} verb="Filed from" />
+            </div>
+          )}
 
           {openPanes.tags && (
             <div style={{ ...ROW, alignItems: 'flex-start' }}>

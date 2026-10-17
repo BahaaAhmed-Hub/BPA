@@ -74,6 +74,8 @@ await ctx.route('**://www.googleapis.com/**', r => {
     if (q.method() === 'POST') {
       posts.push({ calId: decodeURIComponent(calId), body })
       if (/refuse/i.test(body.summary ?? '')) return j({ error: { code: 403, message: 'Forbidden' } }, 403)
+      // Answered, but with no event in it: it must not reach the grid.
+      if (/hollow/i.test(body.summary ?? '')) return j({})
       const ev = { ...body, id: `ev-new-${++seq}`, status: 'confirmed', htmlLink: `https://calendar.google.com/event?eid=new${seq}` }
       created.push(ev)
       return j(ev)
@@ -241,6 +243,15 @@ ok('the request was made', posts.length === nPosts + 1)
 ok('and the reason is a sentence, not a response body', !/\{"error"/.test(await box.innerText()), (await box.innerText()).replace(/\n+/g, ' | ').slice(-150))
 ok('but no row appears for it', await box.locator('[data-outcome-event]').filter({ hasText: 'refuse this one' }).count() === 0)
 ok('and nothing is linked', (await live()).length === nLinks)
+
+// ── An answer with no event in it ───────────────────────────────────────────
+const nBefore = (await live()).length
+await box.getByLabel('Title of the next meeting').fill('hollow answer')
+await schedule().click()
+await p.waitForTimeout(800)
+ok('an empty answer is not believed, and says so', /not with an event/.test(await box.innerText()))
+ok('the page is still standing', await dialog.count() === 1 && await box.count() === 1)
+ok('and nothing was linked for it', (await live()).length === nBefore)
 
 // ── The full form is still there ────────────────────────────────────────────
 if (MODE === 'full') {

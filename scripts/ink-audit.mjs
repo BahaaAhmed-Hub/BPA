@@ -475,6 +475,9 @@ for (const theme of THEMES) {
     localStorage.setItem('shopping-layout', 'list')
   }, [session, cals, theme])
 
+  // A crash is the commonest way for a screen to measure nothing, and the
+  // blindness warning says *that* it did, not *why*.
+  page.on('pageerror', e => console.log('   [pageerror]', String(e).slice(0, 220)))
   await page.goto(`http://localhost:${process.argv[2]}/BPA/`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3400)
   // Measured, not assumed: a theme that did not apply is a run about another
@@ -494,9 +497,9 @@ for (const theme of THEMES) {
   // lean page — the stranger's booking page is 32 elements and all of them
   // real — says its own floor rather than being reported as never opened.
   const visit = async (label, go, floor = 40) => {
-    // INK_ONLY=<text> runs only the screens whose name contains it: a screen
+    // INK_ONLY=<text>[|<text>…] runs only the screens whose name contains one of them: a screen
     // being worked on does not need the other forty re-measured each time.
-    if (process.env.INK_ONLY && !label.includes(process.env.INK_ONLY)) return
+    if (process.env.INK_ONLY && !process.env.INK_ONLY.split('|').some(t => label.includes(t))) return
     let opened = true
     try { await go() } catch (e) { opened = false; seen.push({ label, pairs: 0, why: String(e).split('\n')[0].slice(0, 70) }) }
     if (!opened) return
@@ -581,14 +584,32 @@ for (const theme of THEMES) {
     console.log(`   · outcome window acted on: ${acted.join(', ') || 'nothing'}`)
     await page.waitForTimeout(400)
   })
-  // INK_ONLY stops here: everything below depends on the screens before it, so
-  // a filter on `visit` alone would leave later steps clicking in a page that
-  // never got where they expect.
-  if (!process.env.INK_ONLY) {
   // Booking: the owner's panel, and the same week with the open-hours bands on
   // it. The public page is a different document entirely — it renders above
   // the sign-in gate, with no session — so it is audited by its own file
   // rather than from in here.
+  // The two ends of the thread, reached from the window just acted on: the
+  // meeting's own card listing what was filed, and a task saying where it came
+  // from. Each throws if its thing is not there, so a screen that never drew the
+  // element is named blind rather than called clean.
+  await visit('Calendar · outcomes on the meeting', async () => {
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
+    await page.locator('.event-card').first().click()
+    await page.waitForTimeout(1200)
+    if (await page.locator('[data-outcomes-card]').count() !== 1) throw new Error('the event panel has no Outcomes card')
+  })
+  await visit('Tasks · a task made in a meeting', async () => {
+    await page.locator('[data-side-rail] button[aria-label="Tasks"]').click()
+    await page.waitForTimeout(1500)
+    await page.getByText('Send the proposal', { exact: true }).first().click({ timeout: 4000 })
+    await page.waitForTimeout(800)
+    if (await page.locator('[data-meeting-backlink="task"]').count() !== 1) throw new Error('the task shows no meeting chip')
+  })
+  // INK_ONLY stops here: everything below depends on the screens before it, so
+  // a filter on `visit` alone would leave later steps clicking in a page that
+  // never got where they expect.
+  if (!process.env.INK_ONLY) {
   outcomeFixture = false
   await visit('Calendar · booking panel', async () => {
     await page.keyboard.press('Escape')

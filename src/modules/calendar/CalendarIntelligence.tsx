@@ -56,6 +56,7 @@ import {
 } from '@/lib/booking'
 import type { OutcomeEvent } from './MeetingOutcome'
 import type { OutcomeCalendarPort, OutcomeEventRef, PortResult } from './outcome/shared'
+import { OutcomesCard } from './outcome/OutcomesCard'
 import { useFocusClass, useCompanyFocus } from '@/lib/companyFocus'
 import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
@@ -2097,6 +2098,11 @@ export function CalendarIntelligence() {
         created = r.event; why = r.error
       }
       if (!created) return { ok: false, error: why ? `Google would not create it — ${readableWhy(why)}` : 'Google would not create it.' }
+      // An answer is not an event until it says which one and when. A body with
+      // neither put on the grid is drawn by reading `start.dateTime` of nothing
+      // — the whole screen goes with it — and the thread would claim an event
+      // that does not exist.
+      if (!created.id || !created.start) return { ok: false, error: 'Google answered, but not with an event — nothing was created.' }
       const made = { ...created, calendarId: cal.id, calendarColor: calEffectiveColor(cal) } as GCalEventExt
       setEvents(prev => [...prev, made])
       return { ok: true, event: outcomeRefOf(made) }
@@ -3748,6 +3754,11 @@ export function CalendarIntelligence() {
               void handleUpdateEvent(ev, { reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: v }] } })
             }}
             extra={<>
+              {/* What came out of it — first, because for a meeting that is done it is
+                  the thing to find, and the way back into the window. */}
+              <OutcomesCard
+                eventId={ev.id} done={eventStatuses[ev.id] === 'done'}
+                onReopen={() => { const o = outcomeOf(ev.id); if (o) askAboutOutcome(o) }} />
               {/* What the Professor has read about this meeting. */}
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>Prep</span>

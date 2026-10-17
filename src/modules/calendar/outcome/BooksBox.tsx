@@ -90,7 +90,7 @@ function BookRow({ book, event, linkedHere, madeHere, changes, onChanges, onUndo
   const [quotePage, setQuotePage] = useState('')
 
   const link = (kind: 'book' | 'quote', id: string, role: 'made' | 'touched') =>
-    addOutcomeLink({ eventId: event.id, eventTitle: event.title, kind, recordId: id, role })
+    addOutcomeLink({ eventId: event.id, eventTitle: event.title, eventDate: event.date, kind, recordId: id, role })
 
   const touch = () => { if (!linkedHere) link('book', book.id, 'touched') }
 
@@ -387,7 +387,7 @@ function BooksInner({ event, open, onToggle }: { event: OutcomeEvent; open: bool
     setChanges(prev => ({ ...prev, [id]: patch(prev[id] ?? empty()) }))
 
   function added(b: Book) {
-    addOutcomeLink({ eventId: event.id, eventTitle: event.title, kind: 'book', recordId: b.id, role: 'made' })
+    addOutcomeLink({ eventId: event.id, eventTitle: event.title, eventDate: event.date, kind: 'book', recordId: b.id, role: 'made' })
     setMadeHere(prev => new Set(prev).add(b.id))
   }
 
@@ -395,7 +395,7 @@ function BooksInner({ event, open, onToggle }: { event: OutcomeEvent; open: bool
    *  Undo can put it back, and link it. */
   function started(b: Book) {
     setChange(b.id)(c => ({ ...c, before: c.before ?? { status: b.status, startedOn: b.startedOn, finishedOn: b.finishedOn } }))
-    if (!linkedIds.has(b.id)) addOutcomeLink({ eventId: event.id, eventTitle: event.title, kind: 'book', recordId: b.id, role: 'touched' })
+    if (!linkedIds.has(b.id)) addOutcomeLink({ eventId: event.id, eventTitle: event.title, eventDate: event.date, kind: 'book', recordId: b.id, role: 'touched' })
   }
 
   function undoMade(b: Book) {

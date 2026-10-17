@@ -477,6 +477,47 @@ undo as two PATCHes, a 403 leaving nothing behind, a read-only calendar falling 
 to the main one, and none writable offering no form. The ink audit screen now opens
 and acts on all five boxes, and is 0 failing pairs in all four themes.
 
+## Calendar — the thread read from the other end: a chip on each record, a card on the meeting
+`components/MeetingBacklink.tsx` (the chip) and `outcome/OutcomesCard.tsx` (the
+meeting's list). The ledger (`meetingOutcomes.ts`) is written by the boxes and read
+here; nothing about a record's own table changed.
+- **One chip, five places, drawn only when there is something to say.** "From:" on a
+  task (`TaskDetailPanel`), "Filed from:" on an entry (`TransactionModal`, in a row
+  that itself only exists when there is a link — a label with nothing beside it says
+  nothing), "Logged from:" on a habit (its record), "Saved during:" on a quote and
+  "Worked on in:" on a book. It takes only a placement style from its caller, so it
+  never leaves an empty box in a grid. A click is `focusOn` the calendar with the
+  event id and **the day** — the ledger now keeps `eventDate`, so the click lands on
+  the right week; a link made before that was kept still reads and just cannot jump.
+- **The title is the one the meeting had then**, kept in the ledger, so "From: Client
+  lunch" survives the event being renamed or deleted.
+- **The meeting lists what it produced — in counts, never amounts.** The card is in the
+  event panel, which is not behind the finance lock; "1 expense filed" says what happened
+  and the figure stays where something asks who you are. Tasks are listed by title (and
+  struck through when done, each opening the task); habits by name; books and quotes as
+  counts. **Reopen** brings the window back: everything in it is derived from the stores
+  and the ledger, so it shows what was filed — the session-only Undo buttons are not
+  restored, because they are about *this sitting*.
+- **Drawn for a meeting that is done, or has anything filed; absent otherwise.** A card
+  saying "nothing yet" on every event would be noise on the busiest screen. A done
+  meeting always has it, which is how the window is reopened after being closed. It is
+  the **first** of the panel's extras, because the first placement (last) put it under the
+  fold and under the assistant's button; Reopen sits beside the label for the same reason.
+- **A refusal that is not a refusal crashed the grid.** The audit's Google answered a
+  create with an empty body; `createCalendarEventWithToken` treats any ok response as an
+  event, so `{}` went onto the grid and the render read `start.dateTime` of nothing — the
+  whole screen went, and the audit reported it as "only 3 elements". The port now needs an
+  **id and a start** before it believes an answer, and says "Google answered, but not with
+  an event" (asserted: the page stays up, nothing is linked).
+`scripts/meeting-outcome-backlinks.mjs [meeting|tasks|habits|library|finance]` — a linked
+record per module with an unlinked control beside each, and a positive "the panel is open"
+before every "has no chip" (the first finance run clicked the calendar cell's copy of the
+payee, the form never opened, and the control would have passed for nothing). The ink audit
+gained **Calendar · outcomes on the meeting** and **Tasks · a task made in a meeting**, and a
+`pageerror` line, since a crash is the commonest reason a screen measures nothing and the
+blindness warning only says that it did. `INK_ONLY` takes `a|b|c`. 0 failing pairs in all four
+themes over the three outcome screens.
+
 ## Booking — letting somebody outside put an hour on the calendar
 Two things, kept apart because they answer different questions. **Meeting
 plans** (`meeting_plans`) are the predefined calls an outsider picks from —

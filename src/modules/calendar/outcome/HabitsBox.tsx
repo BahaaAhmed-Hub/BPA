@@ -193,7 +193,7 @@ function HabitsInner({ event, open, onToggle }: { event: OutcomeEvent; open: boo
   const visible = showAll ? ordered : ordered.slice(0, 6)
 
   const link = (id: string, role: 'made' | 'touched') =>
-    addOutcomeLink({ eventId: event.id, eventTitle: event.title, kind: 'habit', recordId: id, role })
+    addOutcomeLink({ eventId: event.id, eventTitle: event.title, eventDate: event.date, kind: 'habit', recordId: id, role })
 
   const notifyLogs = () => window.dispatchEvent(new Event(LOGS_UPDATED))
 

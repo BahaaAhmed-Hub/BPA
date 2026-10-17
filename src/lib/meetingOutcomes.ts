@@ -27,6 +27,10 @@ export interface OutcomeLink {
   /** What the meeting was called then — kept so "From: Client lunch" still
    *  reads when the event has since been renamed or deleted. */
   eventTitle: string
+  /** The day it was on (YYYY-MM-DD, local), so a click can land on it. Absent
+   *  on a link made before this was kept: the chip still reads, it just cannot
+   *  jump to the right week. */
+  eventDate?: string
   kind: OutcomeKind
   recordId: string
   role: 'made' | 'touched'
@@ -66,7 +70,7 @@ export function joinOutcomeLinks(a: Record<string, OutcomeLink>, b: Record<strin
 /** Link a record to the meeting. Idempotent; a `made` entry is never downgraded
  *  to `touched` by a later tick, and a link that was undone comes back. */
 export function addOutcomeLink(
-  link: { eventId: string; eventTitle: string; kind: OutcomeKind; recordId: string; role: 'made' | 'touched' },
+  link: { eventId: string; eventTitle: string; eventDate?: string; kind: OutcomeKind; recordId: string; role: 'made' | 'touched' },
 ): void {
   const map = loadOutcomeLinks()
   const k = keyOf(link.eventId, link.kind, link.recordId)

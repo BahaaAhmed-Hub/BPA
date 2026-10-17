@@ -1,3 +1,4 @@
+import { MeetingBacklink } from '@/components/MeetingBacklink'
 import { useEffect, useRef, useState } from 'react'
 import { Bookmark, Camera, Pencil, Trash2 } from 'lucide-react'
 import { Button, Card } from '@/components/ui'
@@ -69,6 +70,7 @@ function QuoteItem({ quote }: { quote: Quote }) {
           : quote.body
             ? <p style={{ margin: 0, fontStyle: 'italic', lineHeight: 1.55, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>“{quote.body}”</p>
             : <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>No text yet — edit this quote to type what the photo says.</p>}
+        <MeetingBacklink kind="quote" recordId={quote.id} verb="Saved during" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginRight: 'auto' }}>{place}</span>
           {/* The colour is a thing you choose while editing, not a permanent row of six dots. */}

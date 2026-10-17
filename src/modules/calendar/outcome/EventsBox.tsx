@@ -175,7 +175,7 @@ export function EventsBox({ event, calendar, open, onToggle, onFullForm }: {
   if (!calendar) return null
 
   const link = (id: string, role: 'made' | 'touched') =>
-    addOutcomeLink({ eventId: event.id, eventTitle: event.title, kind: 'event', recordId: id, role })
+    addOutcomeLink({ eventId: event.id, eventTitle: event.title, eventDate: event.date, kind: 'event', recordId: id, role })
 
   async function schedule() {
     if (!calendar || !src || !title.trim()) return

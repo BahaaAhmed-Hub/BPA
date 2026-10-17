@@ -338,7 +338,7 @@ function ExpensesInner({ event, co, open, onToggle }: {
   const accName = (id: string) => accounts.find(a => a.id === id)?.name ?? ''
   const catName = (id?: string) => categories.find(c => c.id === id)?.name ?? ''
   const link = (id: string, role: 'made' | 'touched') =>
-    addOutcomeLink({ eventId: event.id, eventTitle: event.title, kind: 'expense', recordId: id, role })
+    addOutcomeLink({ eventId: event.id, eventTitle: event.title, eventDate: event.date, kind: 'expense', recordId: id, role })
 
   const env = envelopeFor(categoryId || undefined, date.slice(0, 7), expenseCats, transactions)
 

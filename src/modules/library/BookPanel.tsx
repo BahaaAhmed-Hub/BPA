@@ -1,3 +1,4 @@
+import { MeetingBacklink } from '@/components/MeetingBacklink'
 import { useState } from 'react'
 import { Bookmark, Trash2, X, Search } from 'lucide-react'
 import { Button, Card, Pill, Segmented } from '@/components/ui'
@@ -117,6 +118,8 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
             onPick={c => { patch(applyCandidate(book, c)); setFinding(false) }} />
         )}
       </Card>
+
+      <MeetingBacklink kind="book" recordId={book.id} verb="Worked on in" />
 
       <CoverCard book={book} />
 

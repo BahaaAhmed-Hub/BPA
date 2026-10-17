@@ -320,7 +320,7 @@ function TasksBox({ event, co, users, open, onToggle, suggestions, onDismissSugg
   }, [tasks, linked.map(l => l.recordId).join(',')])
 
   const link = (id: string, role: 'made' | 'touched') =>
-    addOutcomeLink({ eventId: event.id, eventTitle: event.title, kind: 'task', recordId: id, role })
+    addOutcomeLink({ eventId: event.id, eventTitle: event.title, eventDate: event.date, kind: 'task', recordId: id, role })
 
   function tick(t: Task) {
     const wasLinked = linkedIds.has(t.id)
@@ -516,7 +516,7 @@ export function MeetingOutcome({ event, onClose, onFollowUp, calendar }: {
       title: s.title, due: s.dueDate, ownerId: matched?.id,
       box: s.quadrant ?? undefined,
     }))
-    addOutcomeLink({ eventId: event.id, eventTitle: event.title, kind: 'task', recordId: id, role: 'made' })
+    addOutcomeLink({ eventId: event.id, eventTitle: event.title, eventDate: event.date, kind: 'task', recordId: id, role: 'made' })
     setSuggestions(prev => prev.filter((_, j) => j !== i))
   }
 
