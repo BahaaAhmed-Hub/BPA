@@ -20,7 +20,7 @@
 // entry absent on this device would come straight back from the other. So an
 // undone link stays, marked `gone`, and the later of two `at`s wins.
 
-export type OutcomeKind = 'task' | 'expense' | 'habit' | 'book' | 'event'
+export type OutcomeKind = 'task' | 'expense' | 'habit' | 'book' | 'quote' | 'event'
 
 export interface OutcomeLink {
   eventId: string

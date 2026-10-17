@@ -77,7 +77,7 @@ function HabitRow({ habit, day, done, qty, linkedHere, usual, changed, madeHere,
       data-done={done ? '1' : '0'}
       style={{
         borderRadius: 'var(--sb-r-nav)', padding: '0 12px', minHeight: 56, display: 'flex', alignItems: 'center', gap: 10,
-        background: done ? 'color-mix(in srgb, var(--sb-warning) 10%, var(--sb-card))' : 'var(--sb-card)',
+        background: done ? 'color-mix(in srgb, var(--sb-warning) 10%, var(--sb-overlay))' : 'var(--sb-card)',
         border: 'var(--sb-border-width) solid var(--sb-border)',
       }}>
       <button
@@ -87,7 +87,7 @@ function HabitRow({ habit, day, done, qty, linkedHere, usual, changed, madeHere,
         aria-label={`${done ? 'Unmark' : 'Mark done for'} ${habit.name} on ${dayLabel(day)}`}
         style={{
           width: 26, height: 26, borderRadius: '50%', flexShrink: 0, padding: 0, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-card)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-on-dark)',
           background: done ? 'var(--sb-ink-1)' : 'transparent',
           border: done ? 'none' : '2px solid var(--sb-ink-3)',
         }}>
@@ -375,7 +375,7 @@ function HabitsInner({ event, open, onToggle }: { event: OutcomeEvent; open: boo
             <button type="submit" disabled={!name.trim() || (measured && !(Number(goal) > 0))} style={{
               height: 40, padding: '0 18px', borderRadius: 'var(--sb-r-sm)', border: 'none', fontFamily: 'inherit',
               fontSize: 'var(--sb-t-body-s)', fontWeight: 700, cursor: 'pointer',
-              background: 'var(--sb-ink-1)', color: 'var(--sb-card)',
+              background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
               opacity: name.trim() && (!measured || Number(goal) > 0) ? 1 : 0.45,
             }}>Create habit</button>
           </div>

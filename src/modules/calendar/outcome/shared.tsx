@@ -48,7 +48,7 @@ export function chip(on = false, dashed = false): React.CSSProperties {
     height: 36, padding: '0 12px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
     fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
     background: on ? 'var(--sb-ink-1)' : dashed ? 'transparent' : 'var(--sb-card)',
-    color: on ? 'var(--sb-card)' : 'var(--sb-ink-2)',
+    color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-2)',
     border: on ? 'none' : `var(--sb-border-width) ${dashed ? 'dashed' : 'solid'} var(--sb-border)`,
     display: 'inline-flex', alignItems: 'center', gap: 6,
   }
@@ -88,7 +88,7 @@ export function OutcomeBox({ id, icon, title, summary, open, onToggle, tint, chi
         style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', height: 60,
           cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: 'none',
-          background: open ? `color-mix(in srgb, ${tint} 7%, var(--sb-card))` : 'var(--sb-card)',
+          background: open ? `color-mix(in srgb, ${tint} 7%, var(--sb-overlay))` : 'var(--sb-card)',
           color: 'var(--sb-ink-1)',
         }}>
         <span style={{

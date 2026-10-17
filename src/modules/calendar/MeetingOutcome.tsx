@@ -56,6 +56,7 @@ import {
 
 import { ExpensesBox } from './outcome/ExpensesBox'
 import { HabitsBox } from './outcome/HabitsBox'
+import { BooksBox } from './outcome/BooksBox'
 
 export type { OutcomeEvent }
 
@@ -168,7 +169,7 @@ function TaskRow({ task, users, linkedHere, editing, madeHere, onTick, onEdit, o
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: done ? 'var(--sb-positive)' : 'transparent',
             border: done ? 'none' : '2px solid var(--sb-ink-3)',
-            color: 'var(--sb-card)',
+            color: 'var(--sb-ink-on-fill)',
           }}>
           {done && <Check size={14} strokeWidth={3} />}
         </button>
@@ -234,7 +235,7 @@ function TaskRow({ task, users, linkedHere, editing, madeHere, onTick, onEdit, o
                 <span style={{
                   width: 24, height: 24, borderRadius: '50%', fontSize: 11, fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'var(--sb-accent)', color: 'var(--sb-card)',
+                  background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
                 }}>{initialsOf(u.name)}</span>{u.name.split(' ')[0]}
               </button>
             ))}
@@ -249,7 +250,7 @@ function TaskRow({ task, users, linkedHere, editing, madeHere, onTick, onEdit, o
                     height: 34, width: 42, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                     fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                     background: task.priority === p ? 'var(--sb-ink-1)' : 'var(--sb-card)',
-                    color: task.priority === p ? 'var(--sb-card)' : 'var(--sb-ink-2)',
+                    color: task.priority === p ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-2)',
                   }}>{p}</button>
               ))}
             </span>
@@ -410,7 +411,7 @@ function TasksBox({ event, co, users, open, onToggle, suggestions, onDismissSugg
           </span>
           <button onClick={() => onDismissSuggestion(i)} aria-label={`Dismiss: ${s.title}`}
             style={{ ...chip(), width: 36, padding: 0, justifyContent: 'center' }}><X size={ICON.sm} /></button>
-          <button onClick={() => onAddSuggestion(i)} style={{ ...chip(), background: 'var(--sb-accent)', color: 'var(--sb-card)', border: 'none', fontWeight: 700 }}>Add</button>
+          <button onClick={() => onAddSuggestion(i)} style={{ ...chip(), background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', border: 'none', fontWeight: 700 }}>Add</button>
         </div>
       ))}
 
@@ -442,7 +443,7 @@ function TasksBox({ event, co, users, open, onToggle, suggestions, onDismissSugg
         <button type="submit" disabled={!title.trim()} style={{
           height: 48, padding: '0 18px', borderRadius: 'var(--sb-r-nav)', border: 'none', fontFamily: 'inherit',
           fontSize: 'var(--sb-t-body-s)', fontWeight: 700, cursor: title.trim() ? 'pointer' : 'default',
-          background: 'var(--sb-ink-1)', color: 'var(--sb-card)', opacity: title.trim() ? 1 : 0.45,
+          background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', opacity: title.trim() ? 1 : 0.45,
         }}>Add</button>
       </form>
     </OutcomeBox>
@@ -467,7 +468,13 @@ export function MeetingOutcome({ event, onClose, onFollowUp }: {
     return mine.length ? mine : all
   }, [co])
 
-  const [openBox, setOpenBox] = useState<string | null>('tasks')
+  // Any number of boxes open at once, Tasks to begin with: filing a taxi and
+  // ticking a habit are one errand, and an accordion that closed the first to
+  // show the second would put away the thing being worked on.
+  const [openBoxes, setOpenBoxes] = useState<Set<string>>(() => new Set(['tasks']))
+  const isOpen = (id: string) => openBoxes.has(id)
+  const toggleBox = (id: string) => setOpenBoxes(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  const showBox = (id: string) => setOpenBoxes(prev => new Set(prev).add(id))
 
   // Reading notes: what the model finds is offered as dashed rows inside the
   // box it belongs to, never written until you say Add.
@@ -482,8 +489,8 @@ export function MeetingOutcome({ event, onClose, onFollowUp }: {
   const linkedCount = linksForEvent(event.id).length
 
   async function readNotes() {
-    if (!notes.trim()) { setPasteOpen(true); setOpenBox('tasks'); return }
-    setBusy(true); setError(null); setOpenBox('tasks')
+    if (!notes.trim()) { setPasteOpen(true); showBox('tasks'); return }
+    setBusy(true); setError(null); showBox('tasks')
     try {
       const out = await breakdownMeetingNotes(notes, event.title, co ? [co] : loadDynamicCompanies())
       setSuggestions(out)
@@ -603,7 +610,7 @@ export function MeetingOutcome({ event, onClose, onFollowUp }: {
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 26px 6px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <TasksBox
             event={event} co={co} users={users}
-            open={openBox === 'tasks'} onToggle={() => setOpenBox(openBox === 'tasks' ? null : 'tasks')}
+            open={isOpen('tasks')} onToggle={() => toggleBox('tasks')}
             suggestions={suggestions}
             onDismissSuggestion={i => setSuggestions(prev => prev.filter((_, j) => j !== i))}
             onAddSuggestion={addSuggestion}
@@ -611,10 +618,13 @@ export function MeetingOutcome({ event, onClose, onFollowUp }: {
             onRead={() => void readNotes()} busy={busy} error={error} />
           <ExpensesBox
             event={event} co={co}
-            open={openBox === 'expenses'} onToggle={() => setOpenBox(openBox === 'expenses' ? null : 'expenses')} />
+            open={isOpen('expenses')} onToggle={() => toggleBox('expenses')} />
           <HabitsBox
             event={event}
-            open={openBox === 'habits'} onToggle={() => setOpenBox(openBox === 'habits' ? null : 'habits')} />
+            open={isOpen('habits')} onToggle={() => toggleBox('habits')} />
+          <BooksBox
+            event={event}
+            open={isOpen('books')} onToggle={() => toggleBox('books')} />
         </div>
 
         {/* ── Actions ────────────────────────────────────────────────────── */}

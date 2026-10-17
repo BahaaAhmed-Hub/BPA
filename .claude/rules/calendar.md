@@ -244,8 +244,11 @@ place, notes, guests), without replies or the Meet link.
 opens **in place** and shows what is already related to the meeting, with the
 tools to tick it, change it or add something new. **No box opens another
 panel** — a panel would take the window and the rest of what was being filed.
-**Tasks**, **Expenses** and **Habits** are built; Books and Events follow, each
+**Tasks**, **Expenses**, **Habits** and **Books** are built; Events follows, each
 on the same `OutcomeBox` shell (`outcome/shared.tsx`, one file per kind beside it).
+**Any number of boxes can be open at once**, Tasks to begin with: it was an
+accordion at first, which closed the box being worked on to show the next, and
+the design draws two open side by side.
 - **Everything writes as you go, and each row takes itself back.** The old
   type-lines → review → save form held work in a window that vanished when it
   closed. A tick is `toggleComplete`; an edit is `updateTask`; a new task is
@@ -364,6 +367,66 @@ remembered at ten at night is guessed. Everything here is the Habits module's:
 real `habits` / `habit_logs` shapes: the log, the quantity and the goal tick on
 localStorage; after the 1.5s debounce the server gets `completed: true` and
 `quantity: 8200`; each Undo; a made habit reaching the server and then gone.
+
+## Calendar — the Books box logs a sitting, because progress is derived
+`outcome/BooksBox.tsx`. The Library's rules, not this window's:
+- **Two switches, either turns it off** (`libraryIsOff()`: the plan and Settings →
+  Library); an off Library is not drawn and nothing of it is read. While the shelf
+  loads the box says "Fetching your library…", never "no books".
+- **Logging pages is a reading session.** Progress is the furthest page any session
+  reached and is never stored on the book, so **Undo is deleting that session** and
+  nothing else needs putting back. A sitting needs minutes (the table refuses
+  without), so the form carries them, **pre-answered with the length of the last
+  sitting**; the day is the meeting's, capped at today. A page past the end is refused
+  naming the page count and sends nothing. `+10 / +20` move the page from where you are.
+  The first sitting on a want-to-read book starts it (the store does that).
+- **A change is remembered as it was**, per book and per session: finishing keeps
+  `startedOn` and dates `finishedOn`; **Undo finish** restores exactly the status and dates
+  from before. The link is `touched` and goes only when nothing this window did to the book
+  is outstanding — and **only after this window had changed something**. The first version
+  removed it in an effect that also ran on mount, which would have deleted a link made in an
+  earlier sitting.
+- **A quote is its own record** (`OutcomeKind` gained `'quote'`): filed with its page,
+  linked `made`; deleting a book made here takes its quotes' links with it, since the server
+  cascades them.
+- **Found the way the Library finds it** (`lookupBooks`, both catalogues). One down is
+  named; both down says so and offers **Add "…" as typed**, never "not found". A book
+  already on the shelf (`shelfMatch`) says so and offers **Start reading** rather than a
+  second copy — and that path has to hand the book back so it is linked and undoable
+  (the first version started it and linked nothing).
+- **Optional migrations stay optional.** No sessions table: the pages form is replaced by a
+  line naming `20260030`, and the box claims **no page** it cannot read off a log (asserted).
+  No quotes table: the quote form is hidden.
+- **Not built: "mentioned in your notes".** Read my notes extracts tasks; picking book titles
+  out of prose is a second extractor and a guess about what counts as a book.
+`scripts/meeting-outcome-books.mjs [books|missing|off]` — 55 assertions against the real
+`library_*` row shapes with both catalogues faked and switchable.
+
+## Calendar — the outcome window's ink, measured on every box and in the acted-on states
+`scripts/ink-audit.mjs` has a screen for it (**Calendar · what came out of it**), and the
+first honest run found three Glass failures the resting window had hidden:
+- **A fixed text colour on a fill is only right where the card is opaque white.** I had used
+  `--sb-card` as the text on every dark or coloured fill. In Glass the card is a 5% wash, so
+  it read **1.01:1** on the ink fill, and `--sb-info` is a *light* blue there (1.04). The themes
+  already declare the pairs: **`--sb-ink-on-dark` on `--sb-ink-1`**, **`--sb-accent-ink` on
+  `--sb-accent`**, **`--sb-ink-on-fill` on a semantic fill** (positive, info). The primary
+  button's own CSS says so; reaching for the card token was the mistake.
+- **A tint mixed into `--sb-card` is a mid-tone in Glass.** The habit row's caption read 4.19
+  and the box header's 4.48; mixing into **`--sb-overlay`**, the one opaque surface, fixed both
+  (the rule `shell.md` already states, met again).
+- **The first audit measured one box of four, and said 0 failing.** The window was an
+  accordion, so opening Books closed Tasks, Expenses and Habits before the measurement. The
+  screen now opens all four and **acts on each** (adds a task, drafts an expense, ticks a
+  habit, saves a quote) so the states that only exist afterwards — a Draft with Confirm, a
+  ticked row, a done task — are on the page. It prints what it did and what it could not, since
+  a step that silently does nothing is the same trap again: the first run did one of four.
+- **The audit serves no finance or habit data for any other screen**, so a small fixture is
+  switched on inside this one visit only (`outcomeFixture`, then a reload because the stores
+  load at boot). Every other screen is measured exactly as before.
+- **`INK_ONLY=<text>`** runs only the screens whose name contains it and stops there: the later
+  steps depend on the earlier ones, so filtering `visit` alone left them clicking in a page
+  that had not got where they expected (the first attempt timed out on a Library tab).
+Result: **0 failing pairs in all four themes**, with all four boxes open and acted on.
 
 ## Booking — letting somebody outside put an hour on the calendar
 Two things, kept apart because they answer different questions. **Meeting

@@ -129,7 +129,7 @@ function Unlock({ onDone }: { onDone: () => void }) {
           style={{ ...FIELD, flex: '1 1 220px', height: 48, borderRadius: 'var(--sb-r-nav)' }} />
         <button type="submit" disabled={busy || !pw} style={{
           height: 48, padding: '0 18px', borderRadius: 'var(--sb-r-nav)', border: 'none', cursor: pw ? 'pointer' : 'default',
-          background: 'var(--sb-ink-1)', color: 'var(--sb-card)', fontFamily: 'inherit', fontWeight: 700,
+          background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', fontFamily: 'inherit', fontWeight: 700,
           fontSize: 'var(--sb-t-body-s)', opacity: pw ? 1 : 0.45,
         }}>Unlock</button>
         {passkey && (
@@ -209,7 +209,7 @@ function ExpenseRow({ tx, accountName, categoryName, accounts, categories, linke
         ) : null}
         {unpaid && (
           <button onClick={onConfirm} aria-label={`Confirm: ${tx.payee || 'expense'}`}
-            style={{ ...chip(), background: 'var(--sb-positive)', color: 'var(--sb-card)', border: 'none', fontWeight: 700 }}>
+            style={{ ...chip(), background: 'var(--sb-positive)', color: 'var(--sb-ink-on-fill)', border: 'none', fontWeight: 700 }}>
             <Check size={14} strokeWidth={3} />Confirm
           </button>
         )}
@@ -434,7 +434,7 @@ function ExpensesInner({ event, co, open, onToggle }: {
                 {chipCats.map(c => (
                   <button type="button" key={c.id} onClick={() => setCategoryId(categoryId === c.id ? '' : c.id)}
                     aria-pressed={categoryId === c.id}
-                    style={categoryId === c.id ? { ...chip(true), background: 'var(--sb-positive)' } : chip()}>{c.name}</button>
+                    style={categoryId === c.id ? { ...chip(true), background: 'var(--sb-positive)', color: 'var(--sb-ink-on-fill)' } : chip()}>{c.name}</button>
                 ))}
                 <select aria-label="Another category"
                   value={chipCats.some(c => c.id === categoryId) ? '' : categoryId}
@@ -451,7 +451,7 @@ function ExpensesInner({ event, co, open, onToggle }: {
                 <button type="submit" disabled={!(amount > 0)} style={{
                   height: 40, padding: '0 18px', borderRadius: 'var(--sb-r-sm)', border: 'none', fontFamily: 'inherit',
                   fontSize: 'var(--sb-t-body-s)', fontWeight: 700, cursor: amount > 0 ? 'pointer' : 'default',
-                  background: 'var(--sb-ink-1)', color: 'var(--sb-card)', opacity: amount > 0 ? 1 : 0.45,
+                  background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', opacity: amount > 0 ? 1 : 0.45,
                 }}>Add as draft</button>
               </div>
               {env && (

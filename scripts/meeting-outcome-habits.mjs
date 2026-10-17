@@ -137,6 +137,9 @@ ok('the Habits box is a box, closed to begin with', await box.count() === 1 && a
 await box.getByRole('button', { name: /^Habits:/ }).click()
 await p.waitForTimeout(400)
 ok('the box opened', await box.getAttribute('data-open') === '1')
+// An accordion would have closed Tasks to show this one — and the design draws
+// two boxes open side by side. Tasks is open by default, so it is the witness.
+ok('opening a box does not close another', await dialog.locator('[data-outcome-box="tasks"]').getAttribute('data-open') === '1')
 
 // ── What is offered, and in what order ──────────────────────────────────────
 ok('every active habit is offered', await row('h-stretch').count() === 1 && await row('h-net').count() === 1 && await row('h-steps').count() === 1)
