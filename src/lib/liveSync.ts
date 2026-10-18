@@ -20,6 +20,7 @@
 // The poll backs right off once Realtime is confirmed working, so it costs a
 // request every few minutes rather than every few seconds.
 
+import { backoffLeft } from './serverStrain'
 import { supabase } from '@/lib/supabase'
 
 export type LiveDomain = 'habits' | 'tasks' | 'finance' | 'library'
@@ -72,8 +73,18 @@ const QUIET_MS = 3000
 /** A floor on how often a domain reloads, whatever is asking. */
 const MIN_GAP_MS = 4000
 
+/** Coming back to the tab pulls a domain only if it has not been read this
+ *  recently. Each pull is one read per table — 23 in all — and focus fires on
+ *  every alt-tab, so without a floor a person switching windows all day asked the
+ *  server for the whole account each time. A longer absence still pulls at once;
+ *  anything shorter is covered by Realtime or the poll below. */
+const WAKE_MIN_GAP_MS = 60_000
+
 const POLL_WITH_REALTIME_MS = 5 * 60_000
-const POLL_ALONE_MS         = 45_000
+/** With no Realtime this poll is the whole feature, so it is as slow as a second
+ *  device can bear to wait. It was 45s: 23 reads, ~80 times an hour, for every
+ *  open tab, to catch the occasional edit made somewhere else. */
+const POLL_ALONE_MS         = 3 * 60_000
 
 let realtimeReady = false
 
@@ -100,13 +111,21 @@ async function run(domain: LiveDomain): Promise<void> {
   const gap = MIN_GAP_MS - (now - lastRun[domain])
   if (gap > 0) { schedule(domain, gap); return }
 
+  // The server has been failing: leave it alone until its wait runs out, one
+  // domain at a time so the first read back is not 23 at once. Queued, not
+  // dropped — whatever was missed is read once it is answering.
+  const strained = backoffLeft()
+  if (strained > 0) { schedule(domain, strained + 500 * DOMAINS.indexOf(domain)); return }
+
   lastRun[domain] = now
   try { await fn() } catch { /* offline, or signed out mid-flight */ }
 }
 
-/** Reload everything now — the tab just came back, or the network did. */
-export function refreshAllNow(): void {
-  for (const d of DOMAINS) if (refetchers.has(d)) schedule(d, 0)
+/** Reload everything now — the tab just came back, or the network did.
+ *  `minAgeMs` skips a domain read more recently than that. */
+export function refreshAllNow(minAgeMs = 0): void {
+  const now = Date.now()
+  for (const d of DOMAINS) if (refetchers.has(d) && now - lastRun[d] >= minAgeMs) schedule(d, 0)
 }
 
 export interface LiveSyncHandlers {
@@ -152,11 +171,14 @@ export function startLiveSync(userId: string, handlers: LiveSyncHandlers): () =>
   // ── Pull ───────────────────────────────────────────────────────────────────
   const wake = () => {
     if (document.visibilityState !== 'visible') return
-    refreshAllNow()
+    refreshAllNow(WAKE_MIN_GAP_MS)
   }
+  // The network coming back is not a tab switch: whatever was missed while
+  // offline has to be read, however recently the last pull ran.
+  const back = () => { if (document.visibilityState === 'visible') refreshAllNow() }
   document.addEventListener('visibilitychange', wake)
   window.addEventListener('focus', wake)
-  window.addEventListener('online', wake)
+  window.addEventListener('online', back)
 
   // A single slow tick rather than three timers. It is the whole feature when
   // Realtime is off, and a backstop for a dropped socket when it is on.
@@ -173,7 +195,7 @@ export function startLiveSync(userId: string, handlers: LiveSyncHandlers): () =>
     clearInterval(tick)
     document.removeEventListener('visibilitychange', wake)
     window.removeEventListener('focus', wake)
-    window.removeEventListener('online', wake)
+    window.removeEventListener('online', back)
     void supabase.removeChannel(channel)
     for (const t of pending.values()) clearTimeout(t)
     pending.clear()

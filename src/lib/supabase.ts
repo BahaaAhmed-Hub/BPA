@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { strainAwareFetch } from './serverStrain'
 
 /** Exported so nothing has to re-read the environment variable and fall back
  *  differently. `?? ''` for an unset variable yields a *relative* URL, which
@@ -6,7 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key'
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: strainAwareFetch } })
 
 /** Which Supabase project this build talks to. Baked in at build time from a
  *  GitHub secret, so it is not obvious from anywhere in the app — and running

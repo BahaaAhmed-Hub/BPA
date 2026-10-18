@@ -116,8 +116,8 @@ Two tokens carried every failure:
 Habits, tasks and finance stay in step **while both devices are open** — no reload.
 `startLiveSync(userId, handlers)` (App.tsx, 3 auth call sites) asks the owning store to
 reload; it never applies row deltas. Woken by Postgres change events (~1s, needs
-`20260004_realtime.sql`) and by a poll + visibility/focus/online pull (45s alone,
-5 min once Realtime is confirmed). Finance had no `loadFromDB()` caller at all before this.
+`20260004_realtime.sql`) and by a poll + visibility/focus/online pull (3 min alone — it was 45s, 23 reads
+each time — and 5 min once Realtime is confirmed; `scripts/live-sync-poll.mjs`). Finance had no `loadFromDB()` caller at all before this.
 
 Three rules any change here must keep:
 - **`markLocalWrite(domain)`** on every write path, or a reload pulls the old row back
@@ -142,6 +142,18 @@ Three rules any change here must keep:
   `scheduleDbSync(next, [id])` — with `[]` for the two pushes that are not
   edits: the hydration push-back, and a reorder (order is not a column, so
   nothing about a task travels when it moves).
+- **Coming back to the tab pulls a domain only if it has not been read in the last
+  minute** (`WAKE_MIN_GAP_MS`). A pull is one read per table — 23 — and `focus` fires on
+  every alt-tab, so each used to re-read the whole account. `online` is exempt: whatever
+  was missed offline has to be read. `scripts/live-sync-wake.mjs` — five alt-tabs went
+  from 115 reads to 0, and a return after a minute still pulls.
+- **A server that is failing is left alone** (`src/lib/serverStrain.ts`). The Supabase
+  client's `fetch` notes every answer from `/rest/v1/` and `/auth/v1/`; a 5xx, 408, 429 or
+  dropped connection starts a wait — 15s, doubling to 5 minutes — and `liveSync.run` queues
+  its pull behind it, one domain at a time, so recovery starts as a probe rather than 23
+  reads. **A round of failures counts once** (a failed pull is 23 failures at the same
+  moment), and any other answer resets it. A 402/403 is a refusal, not strain, and edge
+  functions are not counted. Writes are never held. `scripts/server-backoff.mjs`.
 - **Push the hydration merge back only when it differs from what the server just sent**,
   or two open devices trade writes forever.
 
