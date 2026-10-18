@@ -2049,7 +2049,11 @@ export function CalendarIntelligence() {
   function outcomeTarget(calendarId: string) {
     const canWrite = (c: CalWithAccount) => c.accessRole === 'owner' || c.accessRole === 'writer'
     const asked = allCalendars.find(c => c.id === calendarId)
-    const cal = asked && canWrite(asked) ? asked : allCalendars.find(c => c.primary && canWrite(c))
+    // A read-only meeting calendar falls back to the main calendar of the
+    // **same account**, and only then to any account's main one — a Teradix
+    // meeting's follow-up belongs in Teradix's diary, not the first primary found.
+    const sameAccount = asked ? allCalendars.find(c => c.primary && canWrite(c) && c.accountEmail === asked.accountEmail) : undefined
+    const cal = asked && canWrite(asked) ? asked : sameAccount ?? allCalendars.find(c => c.primary && canWrite(c))
     return cal ?? null
   }
 

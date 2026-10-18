@@ -298,6 +298,28 @@ deletes the task and the link. Controls: the first run, on the code before the
 `belongsTo` fix, offered nothing; before the single list, focus was `body`
 after a tick.
 
+## Calendar — what a meeting files stays on the meeting's calendar and account
+Tasks made in the outcome window used to be `company: 'personal'` unless a company
+had claimed the calendar by id, and carried no `calendarId` — so a follow-up to a
+meeting on a connected account was scheduled to the default diary.
+- **`taskFor` stamps `calendarId`** — only when `cachedCalendar()` says it is
+  writable; a read-only calendar would be refused on scheduling.
+- **`resolveTaskCalendar` finds the account from the calendar** when the company
+  names none (`cachedCalendar` reads `cal-intel-cals-cache`). A company's account
+  still wins; before, a task's own `calendarId` on a connected account was written
+  with the primary token.
+- **`companyForCalendar`** falls back to the one company bound to the calendar's
+  account; two on one account stays unanswered rather than guessed.
+- **Events box**: a read-only meeting calendar falls back to the main calendar of
+  the **same account** first, then any account's.
+`scripts/meeting-outcome-lands-on-calendar.mjs [task|ambiguous|readonly|claimed|primary|events]`
+— 6 modes against a connected account (`ceo@teradix.com`, its own token) beside the
+signed-in one. The task is read off `professor-tasks` and `resolveTaskCalendar` is run in
+the page on it; the follow-up event is read off the edge-function body. Control: the same
+harness on the code before the fix fails every mode — the task is `personal` on `primary`
+with no account, the follow-up goes to `a@x.com`. It does not drive the scheduler's own
+write (a dated task's auto-push), only the target every scheduler resolves.
+
 ## Calendar — the Expenses box files drafts, behind the lock
 `outcome/ExpensesBox.tsx`. Money is the one kind with rules of its own, and each
 of them is Finance's, not this window's:
