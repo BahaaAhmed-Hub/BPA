@@ -61,7 +61,7 @@ export function AmountPill({ type, amount, currency, direction, muted }: {
     : inn ? 'color-mix(in srgb, var(--sb-positive) 12%, transparent)'
     : 'var(--sb-field)'
   const color = muted ? 'var(--sb-ink-4)'
-    : out ? 'var(--sb-negative)' : inn ? 'var(--sb-positive)' : 'var(--sb-ink-3)'
+    : out ? 'var(--sb-negative-deep)' : inn ? 'var(--sb-positive-deep)' : 'var(--sb-ink-3)'
   return (
     <span style={{
       display: 'inline-block', flexShrink: 0,

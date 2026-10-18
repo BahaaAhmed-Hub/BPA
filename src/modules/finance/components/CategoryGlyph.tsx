@@ -14,7 +14,11 @@ export function CategoryGlyph({ icon, size = 18, color }: {
   if (icon && (icon.startsWith('data:') || icon.startsWith('http'))) {
     return <img src={icon} alt="" style={{ width: size, height: size, objectFit: 'cover', borderRadius: 'var(--sb-r-chip)' }} />
   }
-  return <span style={{ fontSize: size, lineHeight: 1 }}>{icon || '📁'}</span>
+  // An emoji is drawn in its own colours and ignores `color`, so what the span
+  // inherits from the medallion (the category's hue, measured for a line icon)
+  // changes nothing the eye sees — but it is the colour a text-style symbol is
+  // drawn in, and the audit holds it to 4.5 on the tint. Ink reads on every ground.
+  return <span style={{ fontSize: size, lineHeight: 1, color: color ?? 'var(--sb-ink-1)' }}>{icon || '📁'}</span>
 }
 
 /** The icon as text, for the one place that cannot take a component: an

@@ -185,7 +185,7 @@ function MoneyCalendar({
             const isSelected = dateStr === selectedDay
             const net        = dayNetMap.get(dateStr) ?? 0
             const payees     = dayTxMap.get(dateStr) ?? []
-            const netColor   = net > 0 ? 'var(--sb-positive)' : net < 0 ? 'var(--sb-negative)' : 'var(--sb-ink-4)'
+            const netColor   = net > 0 ? POSITIVE_DEEP : net < 0 ? NEGATIVE_DEEP : 'var(--sb-ink-4)'
 
             return (
               <div
@@ -336,8 +336,8 @@ export function TodayScreen() {
         </div>
         {todayTx.length > 0 && (
           <div style={{ display: 'flex', gap: 16, paddingBottom: 3 }}>
-            <span style={{ fontSize: 'var(--sb-t-body-s)', color: NEGATIVE, fontWeight: 600 }}>{acct(-todayExp, { currency: base })}</span>
-            <span style={{ fontSize: 'var(--sb-t-body-s)', color: POSITIVE, fontWeight: 600 }}>{acct(todayInc, { currency: base })}</span>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', color: NEGATIVE_DEEP, fontWeight: 600 }}>{acct(-todayExp, { currency: base })}</span>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', color: POSITIVE_DEEP, fontWeight: 600 }}>{acct(todayInc, { currency: base })}</span>
           </div>
         )}
       </div>
@@ -423,11 +423,11 @@ export function TodayScreen() {
             )
             return (
               <div style={{ marginTop: 16, paddingTop: 12, borderTop: `var(--sb-border-width) solid ${C.border}` }}>
-                {line('In',  acct(inc, { currency: base }), GREEN)}
-                {line('Out', acct(-exp, { currency: base }), RED)}
-                {line('Net', acct(net, { currency: base }), net >= 0 ? GREEN : RED, true)}
+                {line('In',  acct(inc, { currency: base }), POSITIVE_DEEP)}
+                {line('Out', acct(-exp, { currency: base }), NEGATIVE_DEEP)}
+                {line('Net', acct(net, { currency: base }), net >= 0 ? POSITIVE_DEEP : NEGATIVE_DEEP, true)}
                 {waiting > 0 && (
-                  <div style={{ fontSize: 'var(--sb-t-micro)', color: RED, marginTop: 7, textAlign: 'right' }}>
+                  <div style={{ fontSize: 'var(--sb-t-micro)', color: NEGATIVE_DEEP, marginTop: 7, textAlign: 'right' }}>
                     {waiting} not paid yet, so not counted
                   </div>
                 )}

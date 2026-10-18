@@ -1379,7 +1379,7 @@ export function HabitsModule() {
               {/* Drag handle */}
               <span draggable onDragStart={() => { dragHabitIdx.current = i }}
                 title="Drag to reorder"
-                style={{ color: 'var(--sb-border)', flexShrink: 0, cursor: 'grab', display: 'flex' }}>
+                style={{ color: 'var(--sb-ink-4)', flexShrink: 0, cursor: 'grab', display: 'flex' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="9" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/>
                   <circle cx="15" cy="6" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="15" cy="18" r="1.2"/>

@@ -198,6 +198,7 @@ const AUDIT = () => {
       fg: `rgb(${Math.round(fg.r)},${Math.round(fg.g)},${Math.round(fg.b)})`,
       bg: `rgb(${Math.round(ground.r)},${Math.round(ground.g)},${Math.round(ground.b)})`,
       size: Math.round(size * 10) / 10,
+      style: (el.getAttribute('style') || '').slice(0, 320),
       where: (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : el.tagName),
     })
   }
@@ -606,6 +607,13 @@ for (const theme of THEMES) {
     await page.waitForTimeout(800)
     if (await page.locator('[data-meeting-backlink="task"]').count() !== 1) throw new Error('the task shows no meeting chip')
   })
+  // These two need nothing from the screens above but the rail, so a filtered run
+  // can reach them: INK_ONLY='what came out|Habits|Finance' measures the Finance
+  // screens with the outcome fixture's entries on them.
+  if (process.env.INK_ONLY) {
+    await visit('Habits', async () => { await page.keyboard.press('Escape'); await page.locator('[data-side-rail] button[aria-label="Habits"]').click() })
+    await visit('Finance', async () => { await page.keyboard.press('Escape'); await page.locator('[data-side-rail] button[aria-label="Finance"]').click() })
+  }
   // INK_ONLY stops here: everything below depends on the screens before it, so
   // a filter on `visit` alone would leave later steps clicking in a page that
   // never got where they expect.
@@ -907,7 +915,7 @@ for (const theme of THEMES) {
     for (const v of blind) console.log(`     ${v.label}${v.why ? ` — ${v.why}` : ` — opened but only ${v.nodes ?? 0} elements on it`}`)
   }
   for (const f of rows.slice(0, 14)) {
-    console.log(`   ${String(f.ratio).padStart(5)} (need ${f.need})  ${f.fg.padEnd(18)} on ${f.bg.padEnd(18)} ${String(f.size).padStart(5)}px  ${f.screen} · ${JSON.stringify(f.text)}`)
+    console.log(`   ${String(f.ratio).padStart(5)} (need ${f.need})  ${f.fg.padEnd(18)} on ${f.bg.padEnd(18)} ${String(f.size).padStart(5)}px  ${f.screen} · ${JSON.stringify(f.text)}  ${f.where}${f.n > 1 ? ` ×${f.n}` : ''}${process.env.INK_STYLE ? '\n        ' + f.style : ''}`)
   }
   await page.context().close()
 }
