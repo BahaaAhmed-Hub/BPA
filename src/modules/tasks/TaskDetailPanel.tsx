@@ -3,6 +3,7 @@
 // top, then the title, one row of pickers, the attribute chips, subtasks,
 // notes, attachments and the activity log, over a Cancel / Save footer.
 
+import { MeetingBacklink } from '@/components/MeetingBacklink'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   X, ChevronDown, ChevronRight,
@@ -352,6 +353,9 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
           gap: 8, marginTop: 12,
         }}>
+          {/* Where it came from, when a meeting made it or moved it */}
+          <MeetingBacklink kind="task" recordId={task.id} style={{ gridColumn: '1 / -1' }} />
+
           {/* Schedule — the widest value, so it takes the full row */}
           <div ref={dateRef} style={{ gridColumn: '1 / -1', position: 'relative' }}>
             <button onClick={() => setDatePickerOpen(o => !o)} style={{ ...CELL, width: '100%' }}>

@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Check, ExternalLink, AlertCircle, Shield, Copy, Trash2, CheckSquare, Plus,
-  CalendarPlus, Repeat, X,
+  CalendarPlus, Repeat, X, CopyPlus,
 } from 'lucide-react'
 import { formatTime } from '@/modules/tasks/SchedulePopover'
 import {
@@ -55,6 +55,8 @@ import {
   type WindowRow,
 } from '@/lib/booking'
 import type { OutcomeEvent } from './MeetingOutcome'
+import type { OutcomeCalendarPort, OutcomeEventRef, PortResult } from './outcome/shared'
+import { OutcomesCard } from './outcome/OutcomesCard'
 import { useFocusClass, useCompanyFocus } from '@/lib/companyFocus'
 import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
@@ -1140,6 +1142,7 @@ function EventContextMenu({
   onClose,
   onViewDetails,
   onStatusToggle,
+  onDuplicate,
   onDelete,
 }: {
   event: GCalEventExt
@@ -1148,6 +1151,7 @@ function EventContextMenu({
   onClose: () => void
   onViewDetails: () => void
   onStatusToggle: (s: EventStatus) => void
+  onDuplicate: () => void
   onDelete: () => void
 }) {
   const menuRef = useRef<HTMLDivElement>(null)
@@ -1264,6 +1268,7 @@ function EventContextMenu({
         { disabled: !event.htmlLink })}
       {item('copy-details', <Copy size={ICON.sm} />, 'Copy Details',
         () => navigator.clipboard.writeText(formatCopyDetails()).catch(() => {}))}
+      {item('duplicate',    <CopyPlus size={ICON.sm} />, 'Duplicate Event', onDuplicate)}
 
       <div style={sep} />
 
@@ -1906,6 +1911,8 @@ export function CalendarIntelligence() {
       when: s0 ? fmtPopupDate(s0, e0, !ev.start?.dateTime) : undefined,
       calendarId: ev.calendarId,
       htmlLink: ev.htmlLink,
+      ...(ev.description ? { notes: ev.description } : {}),
+      date: ev.start?.dateTime ? localDateStr(new Date(ev.start.dateTime)) : ev.start?.date,
     }
   }
 
@@ -1946,7 +1953,40 @@ export function CalendarIntelligence() {
     setNewEventDraft({ dateStr: localDateStr(when), startMin, endMin: startMin + len, anchorX: 0, anchorY: 0 })
   }
 
-  const { askAboutOutcome, outcomePrompt } = useMeetingOutcome(openFollowUp)
+  /** A copy of an event, handed to the composer rather than written at once:
+   *  a duplicate that lands on top of the original is only useful once you
+   *  have moved it, so it opens with the same title, calendar, place, notes,
+   *  guests and hours and waits for you to pick the day. Replies and the Meet
+   *  link do not travel — nobody has answered a meeting that does not exist,
+   *  and a conference belongs to the event it was minted for. */
+  function openDuplicate(ev: GCalEventExt) {
+    const startIso = ev.start?.dateTime
+    const endIso = ev.end?.dateTime
+    const s0 = startIso ? new Date(startIso) : null
+    const e0 = endIso ? new Date(endIso) : null
+    const nextHour = Math.min(22, new Date().getHours() + 1) * 60
+    const startMin = s0 ? s0.getHours() * 60 + s0.getMinutes() : nextHour
+    const endMin = s0 && e0
+      ? startMin + Math.max(15, Math.round((e0.getTime() - s0.getTime()) / 60000))
+      : startMin + 60
+    setSelectedEvent(null)
+    setCtxMenu(null)
+    setNewEventSeed({
+      title: ev.summary ?? '',
+      calId: ev.calendarId,
+      ...(ev.location ? { location: ev.location } : {}),
+      ...(ev.description ? { notes: ev.description } : {}),
+      invitees: (ev.attendees ?? [])
+        .filter(a => !a.self && a.email)
+        .map(a => ({ email: a.email, ...(a.optional ? { optional: true } : {}) })),
+    })
+    setNewEventDraft({
+      dateStr: localDateStr(s0 ?? (ev.start?.date ? new Date(`${ev.start.date}T12:00:00`) : new Date())),
+      startMin, endMin, anchorX: 0, anchorY: 0, drawn: true,
+    })
+  }
+
+  const { askAboutOutcome, outcomePrompt } = useMeetingOutcome(openFollowUp, buildOutcomePort())
 
   // ── Calendar visibility ─────────────────────────────────────────────────────
   function toggleCal(id: string) {
@@ -1970,6 +2010,142 @@ export function CalendarIntelligence() {
     e.stopPropagation()
     setSelectedEvent(null)
     setCtxMenu({ event: ev, x: e.clientX, y: e.clientY })
+  }
+
+  /** What the outcome window may ask of the calendar. Every write goes the way
+   *  the calendar's own writes go: a connected account through its edge function
+   *  (its token is never in the browser), the primary account with its own. The
+   *  window never builds a Google request, so a rule here cannot be missed there. */
+  function outcomeRefOf(ev: GCalEventExt): OutcomeEventRef {
+    const p2 = (n: number) => String(n).padStart(2, '0')
+    const s0 = ev.start?.dateTime ? new Date(ev.start.dateTime) : null
+    const e0 = ev.end?.dateTime ? new Date(ev.end.dateTime) : null
+    const hm = (d: Date | null) => d ? `${p2(d.getHours())}:${p2(d.getMinutes())}` : ''
+    return {
+      id: ev.id,
+      title: ev.summary ?? '',
+      calendarId: ev.calendarId ?? '',
+      date: s0 ? localDateStr(s0) : (ev.start?.date ?? ''),
+      startTime: hm(s0), endTime: hm(e0), allDay: !s0,
+      guests: (ev.attendees ?? []).filter(a => !a.self && a.email).map(a => ({ email: a.email, ...(a.displayName ? { name: a.displayName } : {}) })),
+      ...(ev.location ? { location: ev.location } : {}),
+      ...(ev.recurringEventId ? { seriesId: ev.recurringEventId } : {}),
+    }
+  }
+
+  /** The calendar a new event may be written to: the one asked for when it can
+   *  be written to, else your own main one. A read-only calendar is not a place
+   *  to put a follow-up, and saying so beats a refusal from Google. */
+  /** Google's refusal, as a person would say it: the primary account's helper
+   *  hands back `403: {"error":{…"message":"Forbidden"}}`, which is the body of a
+   *  response and not something to put on screen. */
+  function readableWhy(why?: string): string {
+    if (!why) return ''
+    const m = /^(\d{3}):\s*(\{[\s\S]*\})\s*$/.exec(why)
+    if (!m) return why
+    try { const msg = (JSON.parse(m[2]!) as { error?: { message?: string } }).error?.message; return msg ? `${m[1]} ${msg}` : m[1]! } catch { return why }
+  }
+
+  function outcomeTarget(calendarId: string) {
+    const canWrite = (c: CalWithAccount) => c.accessRole === 'owner' || c.accessRole === 'writer'
+    const asked = allCalendars.find(c => c.id === calendarId)
+    const cal = asked && canWrite(asked) ? asked : allCalendars.find(c => c.primary && canWrite(c))
+    return cal ?? null
+  }
+
+  function buildOutcomePort(): OutcomeCalendarPort {
+   return {
+    find: id => {
+      const ev = (events as GCalEventExt[]).find(e => e.id === id)
+      return ev ? outcomeRefOf(ev) : null
+    },
+    later: id => {
+      const all = events as GCalEventExt[]
+      const src = all.find(e => e.id === id)
+      if (!src?.recurringEventId) return []
+      const at = new Date(src.start.dateTime ?? `${src.start.date}T00:00:00`).getTime()
+      return all
+        .filter(e => e.id !== id && e.recurringEventId === src.recurringEventId
+          && new Date(e.start.dateTime ?? `${e.start.date}T00:00:00`).getTime() > at)
+        .sort((a, b) => new Date(a.start.dateTime ?? a.start.date ?? '').getTime() - new Date(b.start.dateTime ?? b.start.date ?? '').getTime())
+        .slice(0, 3).map(outcomeRefOf)
+    },
+    target: calendarId => {
+      const c = outcomeTarget(calendarId)
+      return c ? { id: c.id, name: c.summaryOverride ?? c.summary } : null
+    },
+    create: async (i, calendarId): Promise<PortResult> => {
+      const cal = outcomeTarget(calendarId)
+      if (!cal) return { ok: false, error: 'There is no calendar here that you can write to.' }
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      const body: GCalEventCreate = {
+        summary: i.title,
+        start: { dateTime: `${i.date}T${i.startTime}:00`, timeZone: tz },
+        end:   { dateTime: `${i.date}T${i.endTime}:00`,   timeZone: tz },
+        ...(i.location ? { location: i.location } : {}),
+        ...(i.notes ? { description: i.notes } : {}),
+        ...(i.invitees.length ? { attendees: i.invitees.map(email => ({ email })) } : {}),
+      }
+      let created: GCalEvent | null = null
+      let why: string | undefined
+      if (cal.accountId) {
+        const r = await efCreateEvent(cal.accountId, cal.id, body)
+        created = r.event; why = r.error
+      } else {
+        const token = await refreshPrimaryToken() || cal.accountToken
+        if (!token) return { ok: false, error: 'Google needs reconnecting before this can be written.' }
+        const r = await createCalendarEventWithToken(token, cal.id, body)
+        created = r.event; why = r.error
+      }
+      if (!created) return { ok: false, error: why ? `Google would not create it — ${readableWhy(why)}` : 'Google would not create it.' }
+      // An answer is not an event until it says which one and when. A body with
+      // neither put on the grid is drawn by reading `start.dateTime` of nothing
+      // — the whole screen goes with it — and the thread would claim an event
+      // that does not exist.
+      if (!created.id || !created.start) return { ok: false, error: 'Google answered, but not with an event — nothing was created.' }
+      const made = { ...created, calendarId: cal.id, calendarColor: calEffectiveColor(cal) } as GCalEventExt
+      setEvents(prev => [...prev, made])
+      return { ok: true, event: outcomeRefOf(made) }
+    },
+    patch: async (id, p): Promise<PortResult> => {
+      const ev = (events as GCalEventExt[]).find(e => e.id === id)
+      if (!ev) return { ok: false, error: 'That event is not on screen any more.' }
+      const cur = outcomeRefOf(ev)
+      const tz = ev.start.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+      const date = p.date ?? cur.date
+      const st = p.startTime ?? cur.startTime
+      // Moving the start moves the end with it: an event that begins at 14:00
+      // and still ends at 11:00 is one Google refuses, and what a person means
+      // by "start it later" is the same length, later.
+      const mins = (t: string) => { const [h, m] = t.split(':').map(Number); return (h ?? 0) * 60 + (m ?? 0) }
+      let en = p.endTime ?? cur.endTime
+      if (p.startTime !== undefined && p.endTime === undefined && cur.startTime && cur.endTime) {
+        const end = mins(st) + (mins(cur.endTime) - mins(cur.startTime))
+        en = `${String(Math.floor(end / 60) % 24).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`
+      }
+      const patch: Partial<GCalEventCreate> = {
+        ...(p.title !== undefined ? { summary: p.title } : {}),
+        ...((p.date !== undefined || p.startTime !== undefined || p.endTime !== undefined) && !cur.allDay
+          ? { start: { dateTime: `${date}T${st}:00`, timeZone: tz }, end: { dateTime: `${date}T${en}:00`, timeZone: tz } } : {}),
+      }
+      const updated = await handleUpdateEvent(ev, patch)
+      if (!updated) return { ok: false, error: 'Google would not save that change.' }
+      return { ok: true, event: outcomeRefOf({ ...ev, ...updated } as GCalEventExt) }
+    },
+    remove: async id => {
+      const ev = (events as GCalEventExt[]).find(e => e.id === id)
+      const cal = ev ? allCalendars.find(c => c.id === ev.calendarId) : null
+      if (!ev || !cal || !ev.calendarId) return false
+      let ok = false
+      if (cal.accountId) ok = await efDeleteEvent(cal.accountId, ev.calendarId, ev.id)
+      else {
+        const token = await refreshPrimaryToken() || cal.accountToken
+        ok = token ? await deleteCalendarEventWithToken(token, ev.calendarId, ev.id) : false
+      }
+      if (ok) setEvents(prev => prev.filter(e => e.id !== id))
+      return ok
+    },
+   }
   }
 
   async function handleDeleteEvent(ev: GCalEventExt) {
@@ -3578,6 +3754,11 @@ export function CalendarIntelligence() {
               void handleUpdateEvent(ev, { reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: v }] } })
             }}
             extra={<>
+              {/* What came out of it — first, because for a meeting that is done it is
+                  the thing to find, and the way back into the window. */}
+              <OutcomesCard
+                eventId={ev.id} done={eventStatuses[ev.id] === 'done'}
+                onReopen={() => { const o = outcomeOf(ev.id); if (o) askAboutOutcome(o) }} />
               {/* What the Professor has read about this meeting. */}
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>Prep</span>
@@ -3712,6 +3893,7 @@ export function CalendarIntelligence() {
             toggleStatus(ctxMenu.event.id, s)
             setCtxMenu(null)
           }}
+          onDuplicate={() => openDuplicate(ctxMenu.event)}
           onDelete={() => void handleDeleteEvent(ctxMenu.event)}
         />
       )}

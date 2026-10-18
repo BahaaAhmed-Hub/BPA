@@ -83,6 +83,32 @@ const BOOKING_SLOTS = (() => {
   }
 })()
 
+// The outcome window files money and habits, and the audit serves neither for
+// any other screen — so the rest of the audit is unchanged by this. It is turned
+// on inside that one visit (`outcomeFixture`), because the stores load at boot
+// and a screen that has no account to file against is a screen that never
+// draws a draft.
+let outcomeFixture = false
+const OUTCOME = (() => {
+  const pad = n => String(n).padStart(2, '0')
+  const now = new Date()
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  const U = 'u1', T0 = '2026-01-01T00:00:00.000Z'
+  const tx = (id, over) => ({ id, user_id: U, account_id: 'oa1', to_account_id: null, category_id: 'oc1', amount: 100, currency: 'EGP',
+    tx_type: 'expense', payee: id, date: today, paid_at: today, note: null, is_cleared: true, is_recurring: false, tags: [], attachments: [], created_at: T0, ...over })
+  return {
+    finance_accounts: [{ id: 'oa1', user_id: U, name: 'Cash — Work', bank: '', account_type: 'payment', currency: 'EGP', balance: 0, emoji: '💵', color: '#0C8140', sort_order: 0, is_active: true, created_at: T0 }],
+    finance_categories: [
+      { id: 'oc1', user_id: U, name: 'Meals', icon: '🍽', color: '#0C8140', tx_type: 'expense', sort_order: 0, is_system: false, created_at: T0 },
+      { id: 'oc2', user_id: U, name: 'Transport', icon: '🚕', color: '#1F4E7A', tx_type: 'expense', sort_order: 1, is_system: false, created_at: T0 }],
+    finance_transactions: [tx('Lunch — Zomato', { amount: 640, paid_at: null, is_cleared: false }), tx('Old taxi', { category_id: 'oc2', amount: 120 })],
+    habits: [
+      { id: 'oh1', user_id: U, name: 'Networking', emoji: '🤝', color: '#7F77DD', frequency: 'daily', is_active: true, created_at: T0, type: 'boolean' },
+      { id: 'oh2', user_id: U, name: 'Walk', emoji: '🚶', color: '#E0944A', frequency: 'daily', is_active: true, created_at: '2026-01-02T00:00:00.000Z', type: 'quantity', goal: 8000, unit: 'steps' }],
+    habit_logs: [{ habit_id: 'oh2', user_id: U, date: today, completed: false, quantity: 5200 }],
+  }
+})()
+
 const AUDIT = () => {
   // Chrome computes color-mix() to `color(srgb 0.9 0.8 0.7)` — 0..1, not
   // 0..255. Read as 0..255 every mix audits as near-black.
@@ -366,6 +392,7 @@ for (const theme of THEMES) {
     if (u.includes('/storage/v1/object/library/')) return u.endsWith('.png') ? r.fulfill({ status: 200, contentType: 'image/png', body: LIB_PNG }) : r.fulfill({ status: 200, contentType: 'application/pdf', body: LIB_PDF })
     const t = /\/rest\/v1\/([a-z_]+)/.exec(u)?.[1]
     const GET = r.request().method() === 'GET'
+    if (outcomeFixture && t && OUTCOME[t] && GET) return r.fulfill({ json: OUTCOME[t] })
     if (t && SHOPPING[t] && GET) return r.fulfill({ json: SHOPPING[t] })
     if (t && LIBRARY[t] && GET) return r.fulfill({ json: LIBRARY[t] })
     if (t === 'rpc' || u.includes('/rpc/has_module')) {
@@ -448,6 +475,9 @@ for (const theme of THEMES) {
     localStorage.setItem('shopping-layout', 'list')
   }, [session, cals, theme])
 
+  // A crash is the commonest way for a screen to measure nothing, and the
+  // blindness warning says *that* it did, not *why*.
+  page.on('pageerror', e => console.log('   [pageerror]', String(e).slice(0, 220)))
   await page.goto(`http://localhost:${process.argv[2]}/BPA/`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3400)
   // Measured, not assumed: a theme that did not apply is a run about another
@@ -467,6 +497,9 @@ for (const theme of THEMES) {
   // lean page — the stranger's booking page is 32 elements and all of them
   // real — says its own floor rather than being reported as never opened.
   const visit = async (label, go, floor = 40) => {
+    // INK_ONLY=<text>[|<text>…] runs only the screens whose name contains one of them: a screen
+    // being worked on does not need the other forty re-measured each time.
+    if (process.env.INK_ONLY && !process.env.INK_ONLY.split('|').some(t => label.includes(t))) return
     let opened = true
     try { await go() } catch (e) { opened = false; seen.push({ label, pairs: 0, why: String(e).split('\n')[0].slice(0, 70) }) }
     if (!opened) return
@@ -487,11 +520,99 @@ for (const theme of THEMES) {
     await page.waitForTimeout(1600)
     await page.locator('.event-card').first().click()
   })
+  // (the window above is closed by the next screen's first move)
+  // The outcome window, every box open: what comes out of a meeting that is
+  // done. It draws on tints (a box's own colour mixed into the card), on fills
+  // (Confirm, Mark finished) and on the habit and book rows — so all four boxes
+  // are opened before it is measured, or the screen only tests the first.
+  await visit('Calendar · what came out of it', async () => {
+    outcomeFixture = true
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(2500)
+    await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
+    await page.waitForTimeout(1400)
+    await page.locator('.event-card').first().hover()
+    await page.waitForTimeout(350)
+    const at = await page.evaluate(() => {
+      const x = [...document.querySelectorAll('button')].find(e => /Mark done/i.test(e.getAttribute('aria-label') ?? e.title ?? ''))
+      if (!x) return null
+      const r = x.getBoundingClientRect()
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+    })
+    if (!at) throw new Error('no done tick on the first event')
+    await page.mouse.move(at.x, at.y); await page.waitForTimeout(120); await page.mouse.down(); await page.mouse.up()
+    await page.waitForTimeout(900)
+    const dlg = page.locator('[role="dialog"][aria-label^="What came out of"]')
+    if (await dlg.count() !== 1) throw new Error('the outcome window did not open')
+    for (const id of ['tasks', 'expenses', 'habits', 'books', 'events']) {
+      const box = dlg.locator(`[data-outcome-box="${id}"]`)
+      if (await box.count() === 0) throw new Error(`the ${id} box is not drawn`)
+      if (await box.getAttribute('data-open') !== '1') await box.locator('button[aria-expanded]').first().click()
+      await page.waitForTimeout(250)
+    }
+    // And act on each, so the states that only exist afterwards are measured
+    // too: a draft with its Confirm, a habit ticked, a task done and a sitting
+    // logged are all drawn on fills the resting boxes never show. Tolerant by
+    // design — the fixture has what it has — but each step says what it did.
+    const acted = []
+    const tryDo = async (what, fn) => { try { await fn(); acted.push(what) } catch (e) { console.log(`   · outcome window could not do "${what}": ${String(e).split('\n')[0].slice(0, 110)}`) } }
+    await tryDo('a task is added', async () => {
+      await dlg.getByLabel('Add a task from this meeting').fill('Send the proposal')
+      await dlg.locator('[data-outcome-box="tasks"]').getByRole('button', { name: 'Add', exact: true }).click({ timeout: 2000 })
+    })
+    await tryDo('an expense is drafted', async () => {
+      const ex = dlg.locator('[data-outcome-box="expenses"]')
+      await ex.getByPlaceholder('Amount').fill('85', { timeout: 2000 })
+      await ex.getByRole('button', { name: 'Add as draft' }).click({ timeout: 2000 })
+    })
+    await tryDo('a habit is ticked', async () => {
+      await dlg.locator('[data-outcome-box="habits"]').getByRole('checkbox').first().click({ timeout: 2000 })
+    })
+    await tryDo('a book is quoted', async () => {
+      const bk = dlg.locator('[data-outcome-box="books"]')
+      await bk.getByLabel(/Save a quote from/).first().fill('A line worth keeping', { timeout: 2000 })
+      await bk.getByRole('button', { name: 'Add quote' }).first().click({ timeout: 2000 })
+    })
+    if (process.env.INK_DEBUG) for (const id of ['tasks','expenses','habits','books','events']) console.log(`   [${id}]`, (await dlg.locator(`[data-outcome-box="${id}"]`).innerText()).replace(/\n+/g,' | ').slice(0,260))
+    // The audit's Google answers a write with an empty body, so this lands on
+    // the refusal — a state worth measuring in its own right (the error line).
+    await tryDo('an event is scheduled (or refused, and said so)', async () => {
+      const ev = dlg.locator('[data-outcome-box="events"]')
+      await ev.getByRole('button', { name: /^Schedule$/ }).click({ timeout: 2000 })
+      await page.waitForTimeout(900)
+    })
+    console.log(`   · outcome window acted on: ${acted.join(', ') || 'nothing'}`)
+    await page.waitForTimeout(400)
+  })
   // Booking: the owner's panel, and the same week with the open-hours bands on
   // it. The public page is a different document entirely — it renders above
   // the sign-in gate, with no session — so it is audited by its own file
   // rather than from in here.
+  // The two ends of the thread, reached from the window just acted on: the
+  // meeting's own card listing what was filed, and a task saying where it came
+  // from. Each throws if its thing is not there, so a screen that never drew the
+  // element is named blind rather than called clean.
+  await visit('Calendar · outcomes on the meeting', async () => {
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
+    await page.locator('.event-card').first().click()
+    await page.waitForTimeout(1200)
+    if (await page.locator('[data-outcomes-card]').count() !== 1) throw new Error('the event panel has no Outcomes card')
+  })
+  await visit('Tasks · a task made in a meeting', async () => {
+    await page.locator('[data-side-rail] button[aria-label="Tasks"]').click()
+    await page.waitForTimeout(1500)
+    await page.getByText('Send the proposal', { exact: true }).first().click({ timeout: 4000 })
+    await page.waitForTimeout(800)
+    if (await page.locator('[data-meeting-backlink="task"]').count() !== 1) throw new Error('the task shows no meeting chip')
+  })
+  // INK_ONLY stops here: everything below depends on the screens before it, so
+  // a filter on `visit` alone would leave later steps clicking in a page that
+  // never got where they expect.
+  if (!process.env.INK_ONLY) {
+  outcomeFixture = false
   await visit('Calendar · booking panel', async () => {
+    await page.keyboard.press('Escape')
     await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
     await page.waitForTimeout(1400)
     await page.getByRole('button', { name: /^Booking$/ }).click()
@@ -770,6 +891,7 @@ for (const theme of THEMES) {
     if (await t.count()) { await t.click(); await page.waitForTimeout(700) }
   })
 
+  } // end of the INK_ONLY gate
 
   // One row per distinct colour pair across the whole theme.
   const uniq = new Map()

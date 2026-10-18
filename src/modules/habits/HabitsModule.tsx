@@ -1,3 +1,4 @@
+import { MeetingBacklink } from '@/components/MeetingBacklink'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { WALL_PALETTE } from '@/lib/palettes'
 import { Button, Segmented } from '@/components/ui'
@@ -799,6 +800,9 @@ function HabitDetailPanel({
           <X size={ICON.sm} />
         </button>
       </div>
+
+      {/* Meetings this habit was logged from — only when there are any */}
+      <MeetingBacklink kind="habit" recordId={habit.id} verb="Logged from" />
 
       {/* Today — the one thing you came here to change */}
       <div style={{ background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '12px 13px' }}>

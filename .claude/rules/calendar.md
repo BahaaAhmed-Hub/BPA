@@ -235,6 +235,293 @@ assertions. Control: the tick writes the status and asks nothing.
   funnel all three of those call sites went through, which is why asking there
   covers the doors nobody has thought of yet.
 
+## Calendar — a drawn span keeps the end it was drawn to
+`cal-compose-memory`'s usual length applies only to a draft with no end of its
+own (`+ New event`, a seed). The grid sets `drawn: true` on the draft and the
+panel skips the memory for it; before, any drag opened as one hour once a
+duration had been remembered. **Duplicate Event** sets it too — a copy keeps the
+event's own hours — and opens the composer through `seed` (title, calendar,
+place, notes, guests), without replies or the Meet link.
+
+## Calendar — the outcome window is a box per kind, and every record keeps its thread
+`MeetingOutcome.tsx` is one 800px window with a box per kind of output; a box
+opens **in place** and shows what is already related to the meeting, with the
+tools to tick it, change it or add something new. **No box opens another
+panel** — a panel would take the window and the rest of what was being filed.
+All five boxes are built — **Tasks**, **Expenses**, **Habits**, **Books** and
+**Events** — each on the same `OutcomeBox` shell (`outcome/shared.tsx`, one file per kind beside it).
+**Any number of boxes can be open at once**, Tasks to begin with: it was an
+accordion at first, which closed the box being worked on to show the next, and
+the design draws two open side by side.
+- **Everything writes as you go, and each row takes itself back.** The old
+  type-lines → review → save form held work in a window that vanished when it
+  closed. A tick is `toggleComplete`; an edit is `updateTask`; a new task is
+  `addTask`; **Undo** on a row reopens a ticked one, or deletes one made here.
+  Closing the window costs nothing, because nothing is waiting in it.
+- **The thread is its own list, not a column on four tables**
+  (`lib/meetingOutcomes.ts`, key `cal-outcome-links`, a prefSync key). Entry:
+  meeting → record, `role: 'made'` (this window created it) or `'touched'` (it
+  existed and was ticked or edited here). Both directions are a lookup —
+  `linksForEvent`, `linksForRecord`. **A removal is a tombstone** (`gone`),
+  because the list is *joined* across devices and a join only adds: an entry
+  absent here would come straight back from the other. The later `at` wins.
+  Undoing a tick removes the link that tick made; undoing one on a task *made
+  here* keeps it, since the task still came from the meeting.
+- **"This company's" is two fields.** A company made since the four legacy tags
+  is `companyId`; Teradix, DX and the others of the four are the `company` tag
+  alone with **no** `companyId` — the server keeps both in `company_tag`. The
+  first cut asked only `companyId` and offered **nothing** for the company most
+  people have. The harness seeded the server's real snake_case rows (`company_tag`,
+  `due_date`) rather than the store's shape, which is what showed it.
+- **A row must not change parent when ticked.** Linked rows were drawn first in
+  their own array, so a tick moved the row between two lists, React remounted
+  it, and focus fell onto `body` — a keyboard user ticked a box and lost their
+  place. One list in date order does not move.
+- **`gcalEventId` is never the meeting's.** A dated task earns a block of its
+  own from App's auto-push and *that* id lands in it; what must not happen is
+  the meeting's id there, which would hand the task the meeting's hour so that
+  ticking one finished the other. The link to the meeting is `links: [htmlLink]`
+  and the ledger.
+- **Read my notes offers, never writes.** It reads the event's own description,
+  or opens a paste box when there is none, and the action items come back as
+  dashed rows inside the Tasks box with **Add** — the extractor failing leaves
+  the box exactly as usable. Pasted links still draw `LinkPreviews` cards.
+The old section above describes the type-lines-then-review form this replaced;
+its script, `meeting-outcome-becomes-tasks.mjs`, is retired.
+`scripts/meeting-outcome-hub.mjs [tasks|dismiss|links|followup|keys]` — against
+a server serving its real row shape: the company's open task is offered and
+**another company's and a finished one are not**; a tick completes it, writes
+the link and moves the count, and Undo reopens it and tombstones the link; an
+edit inside the row reaches the store and links; a new task carries the company,
+date and a note of where it came from and links as `made`, and Undo on it
+deletes the task and the link. Controls: the first run, on the code before the
+`belongsTo` fix, offered nothing; before the single list, focus was `body`
+after a tick.
+
+## Calendar — the Expenses box files drafts, behind the lock
+`outcome/ExpensesBox.tsx`. Money is the one kind with rules of its own, and each
+of them is Finance's, not this window's:
+- **An expense made here is an unpaid entry — a draft.** No `paidAt`, not
+  cleared, so `unpaid.ts` keeps it out of every balance, envelope and report and
+  the feeds draw it dotted. A figure typed into a calendar window is a guess
+  about money; **Confirm** is the ledger's own "paid" gesture (`paidAt` = the
+  entry's day, or today if that day has not come) and Undo on it makes it a
+  draft again. It is written with `upsertTransaction`, which saves and follows
+  the year — never the legacy `addTransaction`, which only touches the store.
+- **The lock stands.** The budget left and the unpaid bills are exactly what the
+  lock exists to hide, and a calendar window would be a way round it. Locked, the
+  box says *Locked*, renders **nothing** of the ledger (measured: no payee, no
+  amount, no account name) and asks for the same password or device check, in
+  place; `useFinanceLock`'s own `unlock` and the `finance:lockChanged` event
+  mean the rest of the app agrees.
+- **A module that is off is not drawn** (`moduleIsOff('finance')`) and was never
+  loaded — the harness asserts the box is absent **and** that no `finance_*`
+  table was read.
+- **No figure is claimed that cannot be checked.** "N left of M" is said only
+  for a plain monthly budget in force that month (`loadRules`, `activeIn`,
+  `monthlyAmount`, not `isDated`), counting **settled** entries by `whenPaid`
+  across the category and its sub-categories, and only when every one converts
+  (`convert` → null for a currency nobody has a rate for). Otherwise nothing: a
+  wrong "left" is worse than none. The draft is not in it, so the line moves
+  when you confirm, not when you add — the form says so.
+- **"Near this day", not "for Teradix".** Entries carry no company, so the
+  unpaid bills offered are those dated within a week of the meeting, said as such.
+  The account and category open on what was last filed for this company
+  (`outcome-expense-memory`, this device only).
+- **`MoneyInput` commits the value its parent holds**, not what was typed — a
+  row passing a fixed `value` wrote the *old* amount on blur. The row keeps its
+  own draft amount. (Found by the harness: `[85]` where `[85, 95]` was meant.)
+`scripts/meeting-outcome-expenses.mjs [expenses|lock|off|fx]` — against the
+real row shapes (`account_id`, `paid_at`, `tx_type`…): the near unpaid bill is
+offered and an old one, a paid one are not; a filed draft reaches the ledger
+unpaid with the meeting's day and its origin; confirming writes the payment date
+and the envelope goes from 580 left to 60 over, Undo puts it back; an edit
+reaches the ledger; Undo on a made entry issues the DELETE. The lock mode is
+its own control (the `expenses` run, unlocked, shows all of it), as is `fx`.
+
+## Calendar — the Habits box logs against the meeting's own day
+`outcome/HabitsBox.tsx`. A habit counted in the moment is counted; one
+remembered at ten at night is guessed. Everything here is the Habits module's:
+- **`commitHabitLogs` is the only write path**, and the Habits page reads its
+  logs once on mount, so every write here also fires
+  `professor:habitLogsUpdated`. A tick is a date in `professor-habit-logs`; a
+  measured habit writes its quantity and is **ticked when the goal is met** —
+  the same rule as the page's `setQuantity` — and one tap adds `stepFor(habit)`
+  (1,000 for steps), never 1.
+- **A habit has no meeting on it, so none is invented.** Nothing in a habit says
+  it is about meetings, and guessing from a name would be a rule nobody agreed
+  to. Every *active* habit is offered for the meeting's day; the ones **logged
+  from another meeting before** (the ledger, `kind: 'habit'`) lead and say
+  "from meetings". The order depends on that and the habits' own order, never on
+  what was just ticked, so a row stays where it was. The fixture makes Stretching
+  come first naturally and Networking only by the ledger, or the ordering claim
+  would be vacuous.
+- **The share leads, the tally supports** (`dayTotals`): "22% of Sat, 17 Oct",
+  not "0 of 3" — 5,200 of 8,000 steps beside two unticked habits is a fifth of
+  the day. A part-day is never drawn ticked.
+- **A change is remembered as it was.** Undo — or flipping the control back by
+  hand — restores the first state and takes the link the change made, so the
+  meeting never claims a tick that no longer exists. The link is `touched`; only
+  a habit **made here** is `made`, and its Undo deletes the habit *and its days*,
+  as the page's own delete does.
+- **A new habit is a done-or-not or a measured one**, daily/weekdays/weekly, with
+  "count this day as done" for the first kind. Not drawn when the plan has no
+  Habits (`moduleIsOff('habits')`).
+`scripts/meeting-outcome-habits.mjs [habits|off]` — 37 assertions against the
+real `habits` / `habit_logs` shapes: the log, the quantity and the goal tick on
+localStorage; after the 1.5s debounce the server gets `completed: true` and
+`quantity: 8200`; each Undo; a made habit reaching the server and then gone.
+
+## Calendar — the Books box logs a sitting, because progress is derived
+`outcome/BooksBox.tsx`. The Library's rules, not this window's:
+- **Two switches, either turns it off** (`libraryIsOff()`: the plan and Settings →
+  Library); an off Library is not drawn and nothing of it is read. While the shelf
+  loads the box says "Fetching your library…", never "no books".
+- **Logging pages is a reading session.** Progress is the furthest page any session
+  reached and is never stored on the book, so **Undo is deleting that session** and
+  nothing else needs putting back. A sitting needs minutes (the table refuses
+  without), so the form carries them, **pre-answered with the length of the last
+  sitting**; the day is the meeting's, capped at today. A page past the end is refused
+  naming the page count and sends nothing. `+10 / +20` move the page from where you are.
+  The first sitting on a want-to-read book starts it (the store does that).
+- **A change is remembered as it was**, per book and per session: finishing keeps
+  `startedOn` and dates `finishedOn`; **Undo finish** restores exactly the status and dates
+  from before. The link is `touched` and goes only when nothing this window did to the book
+  is outstanding — and **only after this window had changed something**. The first version
+  removed it in an effect that also ran on mount, which would have deleted a link made in an
+  earlier sitting.
+- **A quote is its own record** (`OutcomeKind` gained `'quote'`): filed with its page,
+  linked `made`; deleting a book made here takes its quotes' links with it, since the server
+  cascades them.
+- **Found the way the Library finds it** (`lookupBooks`, both catalogues). One down is
+  named; both down says so and offers **Add "…" as typed**, never "not found". A book
+  already on the shelf (`shelfMatch`) says so and offers **Start reading** rather than a
+  second copy — and that path has to hand the book back so it is linked and undoable
+  (the first version started it and linked nothing).
+- **Optional migrations stay optional.** No sessions table: the pages form is replaced by a
+  line naming `20260030`, and the box claims **no page** it cannot read off a log (asserted).
+  No quotes table: the quote form is hidden.
+- **Not built: "mentioned in your notes".** Read my notes extracts tasks; picking book titles
+  out of prose is a second extractor and a guess about what counts as a book.
+`scripts/meeting-outcome-books.mjs [books|missing|off]` — 55 assertions against the real
+`library_*` row shapes with both catalogues faked and switchable.
+
+## Calendar — the outcome window's ink, measured on every box and in the acted-on states
+`scripts/ink-audit.mjs` has a screen for it (**Calendar · what came out of it**), and the
+first honest run found three Glass failures the resting window had hidden:
+- **A fixed text colour on a fill is only right where the card is opaque white.** I had used
+  `--sb-card` as the text on every dark or coloured fill. In Glass the card is a 5% wash, so
+  it read **1.01:1** on the ink fill, and `--sb-info` is a *light* blue there (1.04). The themes
+  already declare the pairs: **`--sb-ink-on-dark` on `--sb-ink-1`**, **`--sb-accent-ink` on
+  `--sb-accent`**, **`--sb-ink-on-fill` on a semantic fill** (positive, info). The primary
+  button's own CSS says so; reaching for the card token was the mistake.
+- **A tint mixed into `--sb-card` is a mid-tone in Glass.** The habit row's caption read 4.19
+  and the box header's 4.48; mixing into **`--sb-overlay`**, the one opaque surface, fixed both
+  (the rule `shell.md` already states, met again).
+- **The first audit measured one box of four, and said 0 failing.** The window was an
+  accordion, so opening Books closed Tasks, Expenses and Habits before the measurement. The
+  screen now opens all four and **acts on each** (adds a task, drafts an expense, ticks a
+  habit, saves a quote) so the states that only exist afterwards — a Draft with Confirm, a
+  ticked row, a done task — are on the page. It prints what it did and what it could not, since
+  a step that silently does nothing is the same trap again: the first run did one of four.
+- **The audit serves no finance or habit data for any other screen**, so a small fixture is
+  switched on inside this one visit only (`outcomeFixture`, then a reload because the stores
+  load at boot). Every other screen is measured exactly as before.
+- **`INK_ONLY=<text>`** runs only the screens whose name contains it and stops there: the later
+  steps depend on the earlier ones, so filtering `visit` alone left them clicking in a page
+  that had not got where they expected (the first attempt timed out on a Library tab).
+Result: **0 failing pairs in all four themes**, with all four boxes open and acted on.
+
+## Calendar — the Events box writes through a port, and inviting is the one thing that leaves the building
+`outcome/EventsBox.tsx`, and `OutcomeCalendarPort` in `outcome/shared.tsx`. What a
+meeting most often leaves behind is another meeting; this schedules it, moves the
+next in the series, and takes back what it made, without leaving the window.
+- **The window never builds a Google request.** The calendar hands it a port
+  (`buildOutcomePort` in `CalendarIntelligence`: `find`, `later`, `target`,
+  `create`, `patch`, `remove`) and every write goes the way the calendar's own
+  writes go — a connected account through its edge function (its token is never in
+  the browser), the primary account with its own. A rule added to those paths cannot
+  be missed here. It is a **hoisted function**, not a `const`: the hook that takes
+  it is called earlier in the component than the line that would define a const.
+- **Guests begin off, and the form says what scheduling will do.** An event written
+  with attendees is emailed by Google the moment it exists, and an email cannot be
+  taken back. So the "Invite" row is switches that start **off** and reset after
+  every schedule, the caption reads "Google will email 1 person the invitation" or
+  "No one is invited unless you switch them on", and **you are never in the list**
+  (`self` is filtered). The design drew them pre-switched on; an outward action
+  should not be implied by a default.
+- **Undo on an event made here is a real DELETE** — Google has no undelete — and for
+  one with guests it is a cancellation they receive; the button's title says so. A
+  delete Google refuses keeps the row and says it is still on the calendar. **Undo
+  move** is a second PATCH putting the first state back. Closing the window undoes
+  nothing, as everywhere here.
+- **A refusal says why and writes nothing**: no row, no link, no count. The primary
+  helper hands back `403: {"error":{…}}`, which is a response body and not a thing to
+  put on screen, so `readableWhy` reads it ("403 Forbidden"); asserted.
+- **Changing only the start keeps the length.** An event starting at 14:00 and still
+  ending at 11:00 is one Google refuses, and "start it later" means the same length,
+  later.
+- **Read-only calendars are not written to.** The follow-up goes to the meeting's
+  calendar when it can be written to, else to your own main one, and the form names
+  which ("On Teradix Ltd" / "On a@x.com"); with neither, the form is not offered and
+  says why. The first version would have tried the read-only one and been refused.
+- **Only what is on screen is claimed.** The next occurrence of a series is offered
+  when it is already loaded and labelled "in view, same series"; the box does not
+  ask Google for the rest of the series. Rows are one list in date order, so a move
+  does not change a row's parent (focus).
+- **The footer's Next meeting is gone** — the box is the next meeting — and the
+  composer is one press away as **Open the full form**, for what the quick form does
+  not do (a Meet link, a repeat). It stays in the footer only for a window given no
+  calendar port, so the way to a next meeting is never lost.
+`scripts/meeting-outcome-events.mjs [events|fallback|readonly|full]` — 41
+assertions with Google served and able to refuse: the POST read as the calendar sent
+it (calendar, title, day and hours, location, attendees absent), an invite going out
+as exactly the one person, an edit keeping the length, Undo as a DELETE, a move and its
+undo as two PATCHes, a 403 leaving nothing behind, a read-only calendar falling back
+to the main one, and none writable offering no form. The ink audit screen now opens
+and acts on all five boxes, and is 0 failing pairs in all four themes.
+
+## Calendar — the thread read from the other end: a chip on each record, a card on the meeting
+`components/MeetingBacklink.tsx` (the chip) and `outcome/OutcomesCard.tsx` (the
+meeting's list). The ledger (`meetingOutcomes.ts`) is written by the boxes and read
+here; nothing about a record's own table changed.
+- **One chip, five places, drawn only when there is something to say.** "From:" on a
+  task (`TaskDetailPanel`), "Filed from:" on an entry (`TransactionModal`, in a row
+  that itself only exists when there is a link — a label with nothing beside it says
+  nothing), "Logged from:" on a habit (its record), "Saved during:" on a quote and
+  "Worked on in:" on a book. It takes only a placement style from its caller, so it
+  never leaves an empty box in a grid. A click is `focusOn` the calendar with the
+  event id and **the day** — the ledger now keeps `eventDate`, so the click lands on
+  the right week; a link made before that was kept still reads and just cannot jump.
+- **The title is the one the meeting had then**, kept in the ledger, so "From: Client
+  lunch" survives the event being renamed or deleted.
+- **The meeting lists what it produced — in counts, never amounts.** The card is in the
+  event panel, which is not behind the finance lock; "1 expense filed" says what happened
+  and the figure stays where something asks who you are. Tasks are listed by title (and
+  struck through when done, each opening the task); habits by name; books and quotes as
+  counts. **Reopen** brings the window back: everything in it is derived from the stores
+  and the ledger, so it shows what was filed — the session-only Undo buttons are not
+  restored, because they are about *this sitting*.
+- **Drawn for a meeting that is done, or has anything filed; absent otherwise.** A card
+  saying "nothing yet" on every event would be noise on the busiest screen. A done
+  meeting always has it, which is how the window is reopened after being closed. It is
+  the **first** of the panel's extras, because the first placement (last) put it under the
+  fold and under the assistant's button; Reopen sits beside the label for the same reason.
+- **A refusal that is not a refusal crashed the grid.** The audit's Google answered a
+  create with an empty body; `createCalendarEventWithToken` treats any ok response as an
+  event, so `{}` went onto the grid and the render read `start.dateTime` of nothing — the
+  whole screen went, and the audit reported it as "only 3 elements". The port now needs an
+  **id and a start** before it believes an answer, and says "Google answered, but not with
+  an event" (asserted: the page stays up, nothing is linked).
+`scripts/meeting-outcome-backlinks.mjs [meeting|tasks|habits|library|finance]` — a linked
+record per module with an unlinked control beside each, and a positive "the panel is open"
+before every "has no chip" (the first finance run clicked the calendar cell's copy of the
+payee, the form never opened, and the control would have passed for nothing). The ink audit
+gained **Calendar · outcomes on the meeting** and **Tasks · a task made in a meeting**, and a
+`pageerror` line, since a crash is the commonest reason a screen measures nothing and the
+blindness warning only says that it did. `INK_ONLY` takes `a|b|c`. 0 failing pairs in all four
+themes over the three outcome screens.
+
 ## Booking — letting somebody outside put an hour on the calendar
 Two things, kept apart because they answer different questions. **Meeting
 plans** (`meeting_plans`) are the predefined calls an outsider picks from —
