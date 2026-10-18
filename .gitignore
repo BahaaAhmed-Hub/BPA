@@ -33,3 +33,4 @@ supabase/.temp/
 # `scripts/memory-is-all-there.mjs` run against a fresh clone is what caught it.
 .claude/*
 !.claude/rules/
+!.claude/settings.json
