@@ -36,6 +36,20 @@ export interface CalendarTarget {
   wantedAccountId?: string
 }
 
+/** What the calendar cache knows about one calendar: whose account it is on and
+ *  whether it can be written to. `cal-intel-cals-cache` is written by the
+ *  calendar and is the only place a bare calendar id is tied to an account. */
+export function cachedCalendar(calendarId: string | undefined):
+  { accountEmail: string; writable: boolean } | undefined {
+  if (!calendarId) return undefined
+  try {
+    const raw = localStorage.getItem('cal-intel-cals-cache')
+    const cals = raw ? (JSON.parse(raw) as { id: string; accountEmail?: string; accessRole?: string }[]) : []
+    const c = cals.find(x => x.id === calendarId)
+    return c ? { accountEmail: c.accountEmail ?? '', writable: c.accessRole === 'owner' || c.accessRole === 'writer' } : undefined
+  } catch { return undefined }
+}
+
 /** In order: what the task itself says, then what its company says, then the
  *  default calendar. */
 export function resolveTaskCalendar(
@@ -48,7 +62,14 @@ export function resolveTaskCalendar(
     (task.companyId && c.id === task.companyId) ||
     (tag && (c.id.toLowerCase() === tag || c.name.toLowerCase() === tag)))
 
-  const account = co?.accountId ? loadAccounts().find(a => a.id === co.accountId) : undefined
+  // A task that names its own calendar is written to the account that calendar
+  // lives on, whatever company it carries — a company only supplies the account
+  // when the task has no calendar of its own. Without this a task filed on a
+  // connected account's calendar was written with the primary token.
+  const fromCalendar = !co?.accountId && task.calendarId
+    ? loadAccounts().find(a => a.email && a.email.toLowerCase() === cachedCalendar(task.calendarId)?.accountEmail.toLowerCase())
+    : undefined
+  const account = co?.accountId ? loadAccounts().find(a => a.id === co.accountId) : fromCalendar
   const onOtherAccount = account && !account.isPrimary
   // `primary` is the id the app uses for "the account you signed in with", and
   // it is deliberately absent from `professor-connected-accounts`. Anything

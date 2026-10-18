@@ -45,6 +45,8 @@ import { loadDynamicCompanies, getVisibleUsers, isOpenTask } from '@/types'
 import type { DynamicCompany, Priority, Task } from '@/types'
 import { ICON, STROKE } from '@/lib/type'
 import { useInkOn } from '@/lib/ink'
+import { cachedCalendar } from '@/lib/taskCalendar'
+import { loadAccounts } from '@/lib/multiAccount'
 import LinkPreviews from '../../components/LinkPreviews'
 import {
   addOutcomeLink, removeOutcomeLink, linksForEvent, linksForRecord, subscribeOutcomeLinks,
@@ -69,7 +71,16 @@ type Users = ReturnType<typeof getVisibleUsers>
  *  the wrong name. */
 export function companyForCalendar(calendarId: string | undefined): DynamicCompany | undefined {
   if (!calendarId) return undefined
-  return loadDynamicCompanies().find(c => !c.hidden && c.calendarId === calendarId)
+  const companies = loadDynamicCompanies().filter(c => !c.hidden)
+  const claimed = companies.find(c => c.calendarId === calendarId)
+  if (claimed) return claimed
+  // Not claimed by calendar, but the calendar sits on an account that exactly
+  // one company is bound to: the meeting is that company's. Two companies on one
+  // account is a question the calendar cannot answer, so it stays unanswered.
+  const email = cachedCalendar(calendarId)?.accountEmail.toLowerCase()
+  const acct = email ? loadAccounts().find(a => !a.isPrimary && a.email?.toLowerCase() === email) : undefined
+  const onAccount = acct ? companies.filter(c => c.accountId === acct.id) : []
+  return onAccount.length === 1 ? onAccount[0] : undefined
 }
 
 const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
@@ -120,6 +131,11 @@ function taskFor(event: OutcomeEvent, co: DynamicCompany | undefined, t: {
     quadrant: t.box ?? placementForNew({ dueDate: t.due || undefined, priority: t.priority || undefined }),
     company: (co?.id ?? 'personal') as Task['company'],
     ...(co?.id ? { companyId: co.id } : {}),
+    // The meeting's own calendar, so the task is written to the same calendar
+    // and account the meeting was on — not to whichever default applies. Only
+    // when it can be written to: a task pointed at a read-only calendar would be
+    // refused by Google the moment it was scheduled.
+    ...(event.calendarId && cachedCalendar(event.calendarId)?.writable ? { calendarId: event.calendarId } : {}),
     status: 'open' as const,
     completed: false,
     ...(t.due ? { dueDate: t.due } : {}),

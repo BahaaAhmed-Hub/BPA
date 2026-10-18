@@ -298,6 +298,22 @@ deletes the task and the link. Controls: the first run, on the code before the
 `belongsTo` fix, offered nothing; before the single list, focus was `body`
 after a tick.
 
+## Calendar — what a meeting files stays on the meeting's calendar and account
+Tasks made in the outcome window used to be `company: 'personal'` unless a company
+had claimed the calendar by id, and carried no `calendarId` — so a follow-up to a
+meeting on a connected account was scheduled to the default diary.
+- **`taskFor` stamps `calendarId`** — only when `cachedCalendar()` says it is
+  writable; a read-only calendar would be refused on scheduling.
+- **`resolveTaskCalendar` finds the account from the calendar** when the company
+  names none (`cachedCalendar` reads `cal-intel-cals-cache`). A company's account
+  still wins; before, a task's own `calendarId` on a connected account was written
+  with the primary token.
+- **`companyForCalendar`** falls back to the one company bound to the calendar's
+  account; two on one account stays unanswered rather than guessed.
+- **Events box**: a read-only meeting calendar falls back to the main calendar of
+  the **same account** first, then any account's.
+Build-verified only; no harness yet.
+
 ## Calendar — the Expenses box files drafts, behind the lock
 `outcome/ExpensesBox.tsx`. Money is the one kind with rules of its own, and each
 of them is Finance's, not this window's:
