@@ -72,6 +72,13 @@ const QUIET_MS = 3000
 /** A floor on how often a domain reloads, whatever is asking. */
 const MIN_GAP_MS = 4000
 
+/** Coming back to the tab pulls a domain only if it has not been read this
+ *  recently. Each pull is one read per table — 23 in all — and focus fires on
+ *  every alt-tab, so without a floor a person switching windows all day asked the
+ *  server for the whole account each time. A longer absence still pulls at once;
+ *  anything shorter is covered by Realtime or the poll below. */
+const WAKE_MIN_GAP_MS = 60_000
+
 const POLL_WITH_REALTIME_MS = 5 * 60_000
 const POLL_ALONE_MS         = 45_000
 
@@ -104,9 +111,11 @@ async function run(domain: LiveDomain): Promise<void> {
   try { await fn() } catch { /* offline, or signed out mid-flight */ }
 }
 
-/** Reload everything now — the tab just came back, or the network did. */
-export function refreshAllNow(): void {
-  for (const d of DOMAINS) if (refetchers.has(d)) schedule(d, 0)
+/** Reload everything now — the tab just came back, or the network did.
+ *  `minAgeMs` skips a domain read more recently than that. */
+export function refreshAllNow(minAgeMs = 0): void {
+  const now = Date.now()
+  for (const d of DOMAINS) if (refetchers.has(d) && now - lastRun[d] >= minAgeMs) schedule(d, 0)
 }
 
 export interface LiveSyncHandlers {
@@ -152,11 +161,14 @@ export function startLiveSync(userId: string, handlers: LiveSyncHandlers): () =>
   // ── Pull ───────────────────────────────────────────────────────────────────
   const wake = () => {
     if (document.visibilityState !== 'visible') return
-    refreshAllNow()
+    refreshAllNow(WAKE_MIN_GAP_MS)
   }
+  // The network coming back is not a tab switch: whatever was missed while
+  // offline has to be read, however recently the last pull ran.
+  const back = () => { if (document.visibilityState === 'visible') refreshAllNow() }
   document.addEventListener('visibilitychange', wake)
   window.addEventListener('focus', wake)
-  window.addEventListener('online', wake)
+  window.addEventListener('online', back)
 
   // A single slow tick rather than three timers. It is the whole feature when
   // Realtime is off, and a backstop for a dropped socket when it is on.
@@ -173,7 +185,7 @@ export function startLiveSync(userId: string, handlers: LiveSyncHandlers): () =>
     clearInterval(tick)
     document.removeEventListener('visibilitychange', wake)
     window.removeEventListener('focus', wake)
-    window.removeEventListener('online', wake)
+    window.removeEventListener('online', back)
     void supabase.removeChannel(channel)
     for (const t of pending.values()) clearTimeout(t)
     pending.clear()

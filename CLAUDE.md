@@ -142,6 +142,11 @@ Three rules any change here must keep:
   `scheduleDbSync(next, [id])` — with `[]` for the two pushes that are not
   edits: the hydration push-back, and a reorder (order is not a column, so
   nothing about a task travels when it moves).
+- **Coming back to the tab pulls a domain only if it has not been read in the last
+  minute** (`WAKE_MIN_GAP_MS`). A pull is one read per table — 23 — and `focus` fires on
+  every alt-tab, so each used to re-read the whole account. `online` is exempt: whatever
+  was missed offline has to be read. `scripts/live-sync-wake.mjs` — five alt-tabs went
+  from 115 reads to 0, and a return after a minute still pulls.
 - **Push the hydration merge back only when it differs from what the server just sent**,
   or two open devices trade writes forever.
 
