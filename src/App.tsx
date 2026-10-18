@@ -17,6 +17,7 @@ import { LibraryModule } from './modules/library/LibraryModule'
 import { ASK_EVENT } from './lib/assistantBridge'
 import { NameListener } from './modules/assistant/NameListener'
 import { useLibraryStore } from './modules/library/libraryStore'
+import { useProjectStore } from './store/projectStore'
 import { libraryIsOff, useLibraryOff } from './modules/library/libraryPrefs'
 import { useUIStore } from './store/uiStore'
 import { cachedModules, fetchModules, forgetEntitlements, moduleIsOff, useModules } from './lib/entitlements'
@@ -815,6 +816,7 @@ async function loadAllFromDB(
     // iPad — each device saw only what it had entered itself.
     off('finance') ? Promise.resolve() : useFinanceStore.getState().loadFromDB(),
     libraryIsOff() ? Promise.resolve() : useLibraryStore.getState().loadFromDB(),
+    useProjectStore.getState().loadFromDB(),
     // Companies
     loadCompaniesFromDB().then(companies => {
       if (companies.length === 0) return
@@ -920,7 +922,7 @@ async function loadAllFromDB(
 /** Wipe every user-specific key from localStorage and reset in-memory stores. */
 function clearUserData(clearTasks: () => void, clearHabits: () => void) {
   const userKeys = [
-    'professor-tasks', 'professor-habits', 'professor-habit-logs',
+    'professor-tasks', 'professor-projects', 'professor-habits', 'professor-habit-logs',
     'professor-companies', 'professor-company-users', 'professor-connected-accounts',
     'professor-review-hours', 'professor-section-order',
     'cal-view-mode', 'cal-hidden-calendars', 'cal-intel-hidden', 'cal-list-cache',
@@ -942,6 +944,7 @@ function clearUserData(clearTasks: () => void, clearHabits: () => void) {
   clearTasks()
   clearHabits()
   useLibraryStore.getState().clearAll()
+  useProjectStore.getState().clearAll()
   saveAccounts([])
 }
 
@@ -968,6 +971,7 @@ function App() {
       // Asked at call time, not at start: the person can switch the Library on
       // while the app is open, and a handler fixed at boot would never wake.
       library: async () => { if (!libraryIsOff()) await useLibraryStore.getState().loadFromDB() },
+      projects: () => useProjectStore.getState().loadFromDB(),
     })
     // Shopping has its own Realtime channel — start it alongside liveSync.
     // It tears its own previous channel down, as this function does above.

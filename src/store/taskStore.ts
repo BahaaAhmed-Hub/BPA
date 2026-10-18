@@ -67,6 +67,7 @@ function toRow(t: Task): TaskRow {
     gcalEventId: t.gcalEventId, parentTaskId: t.parentTaskId,
     capturedVia: t.capturedVia,
     checklist: t.checklist, attachments: t.attachments, links: t.links,
+    projectId: t.projectId, milestoneId: t.milestoneId,
   }
 }
 
@@ -94,6 +95,8 @@ function fromRow(r: TaskRow): Task {
     ...(r.checklist?.length   ? { checklist:   r.checklist as Task['checklist'] }     : {}),
     ...(r.attachments?.length ? { attachments: r.attachments as Task['attachments'] } : {}),
     ...(r.links?.length       ? { links:       r.links }                              : {}),
+    ...(r.projectId   != null ? { projectId:   r.projectId }   : {}),
+    ...(r.milestoneId != null ? { milestoneId: r.milestoneId } : {}),
   }
 }
 
@@ -290,6 +293,10 @@ interface TaskState {
   reorderQuadrant: (activeId: string, overId: string) => void
   clearAll: () => void
   toggleUrgent: (id: string) => void
+  /** A project was deleted: its tasks are kept and simply stop pointing at it. */
+  clearProject: (projectId: string) => void
+  /** A milestone was deleted: its tasks keep the project and lose the phase. */
+  clearMilestone: (milestoneId: string) => void
   deleteTask: (id: string) => void
   toggleComplete: (id: string) => void
   setStatus: (id: string, status: TaskStatus) => void
@@ -590,6 +597,24 @@ export const useTaskStore = create<TaskState>()(
           scheduleDbSync(next, [])
           return { tasks: next }
         })
+      },
+
+      clearProject: projectId => {
+        const hit = get().tasks.filter(t => t.projectId === projectId)
+        if (!hit.length) return
+        const next = get().tasks.map(t =>
+          t.projectId === projectId ? { ...t, projectId: undefined, milestoneId: undefined } : t)
+        set({ tasks: next })
+        scheduleDbSync(next, hit.map(t => t.id))
+      },
+
+      clearMilestone: milestoneId => {
+        const hit = get().tasks.filter(t => t.milestoneId === milestoneId)
+        if (!hit.length) return
+        const next = get().tasks.map(t =>
+          t.milestoneId === milestoneId ? { ...t, milestoneId: undefined } : t)
+        set({ tasks: next })
+        scheduleDbSync(next, hit.map(t => t.id))
       },
 
       toggleUrgent: (id) => {

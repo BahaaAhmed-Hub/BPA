@@ -47,6 +47,41 @@ read, never seeded); push the hydration merge back only when it differs from
 what the server sent. A task's `projectId` rides the existing task push, so
 `scheduleDbSync(next, [id])` must name the task it touched.
 
+## Chunk 1 — what exists, and what was measured
+`20260042_projects.sql`, `modules/projects/{types,projectDb}.ts`, `store/projectStore.ts`,
+`scripts/project-sync.mjs [create|elsewhere|refused|edit-wins|orphan|orphan-patch]`.
+- **Rows are pushed by id, never by "everything not in my list".** `saveTasksToDB`
+  deletes whatever is missing from the list it is handed; a device that has not
+  finished loading could use that to wipe the account. Projects push the dirty
+  rows and delete only tombstoned ids (`professor-projects-deleted`, 30 days).
+- **No foreign key on `tasks.project_id`.** Tasks push on their own debounce, so a
+  task can arrive before its project and a key would reject the whole task push.
+  Orphaning is the app's job: `deleteProject` clears the task locally
+  (`taskStore.clearProject`) and on the server (`orphanProjectTasks`, a direct
+  update — the one path that also reaches a task this device has not loaded).
+  `projectOfTask()` reads a task whose project is gone as unassigned.
+- **The task columns are sent only when needed** (a task holds a project, or a row
+  has come back carrying `project_id`), so a database without 20260042 keeps saving
+  every task; a rejection naming the columns retries without them, losing only
+  those two rather than falling to the pre-20260003 base.
+- **Links dedupe on (project, kind, ref)**, not id: two devices linking one thing
+  mint two ids, and the server's wins on reload.
+- **Not done yet:** the sync-gap banner (`SyncEntity` has no `projects`), the plan
+  entitlement gate (own-rows RLS only), and any screen.
+- **Measured, with a control per defence** (remove it, the named assertion fails):
+  tombstones (orphan: resurrection), the dirty set (refused/elsewhere: the project
+  is read as deleted elsewhere), the edited set (edit-wins: server's name returns),
+  `clearProject` (orphan), the direct server update (orphan-patch — task pushes are
+  refused in that mode, so nothing else can clear the row). 37 assertions.
+- **The harness trap, hit on the first controls:** Vite appends `?t=<n>` to a
+  module URL once its file has been edited, so `import('/BPA/src/store/x.ts')`
+  returns a *second copy* of the store — one the app never reads and liveSync never
+  reloads. The controls then mutated the app's copy while the harness drove the
+  original and "passed". `project-sync.mjs` takes the URL from
+  `performance.getEntriesByType('resource')` and asserts it found it.
+  Likewise assert the reload really happened (`reads.projects` rose) before
+  claiming anything survived one.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and
