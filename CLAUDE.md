@@ -147,6 +147,13 @@ Three rules any change here must keep:
   every alt-tab, so each used to re-read the whole account. `online` is exempt: whatever
   was missed offline has to be read. `scripts/live-sync-wake.mjs` — five alt-tabs went
   from 115 reads to 0, and a return after a minute still pulls.
+- **A server that is failing is left alone** (`src/lib/serverStrain.ts`). The Supabase
+  client's `fetch` notes every answer from `/rest/v1/` and `/auth/v1/`; a 5xx, 408, 429 or
+  dropped connection starts a wait — 15s, doubling to 5 minutes — and `liveSync.run` queues
+  its pull behind it, one domain at a time, so recovery starts as a probe rather than 23
+  reads. **A round of failures counts once** (a failed pull is 23 failures at the same
+  moment), and any other answer resets it. A 402/403 is a refusal, not strain, and edge
+  functions are not counted. Writes are never held. `scripts/server-backoff.mjs`.
 - **Push the hydration merge back only when it differs from what the server just sent**,
   or two open devices trade writes forever.
 

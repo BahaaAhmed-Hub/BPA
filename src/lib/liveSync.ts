@@ -20,6 +20,7 @@
 // The poll backs right off once Realtime is confirmed working, so it costs a
 // request every few minutes rather than every few seconds.
 
+import { backoffLeft } from './serverStrain'
 import { supabase } from '@/lib/supabase'
 
 export type LiveDomain = 'habits' | 'tasks' | 'finance' | 'library'
@@ -106,6 +107,12 @@ async function run(domain: LiveDomain): Promise<void> {
   if (quietFor > 0) { schedule(domain, quietFor); return }
   const gap = MIN_GAP_MS - (now - lastRun[domain])
   if (gap > 0) { schedule(domain, gap); return }
+
+  // The server has been failing: leave it alone until its wait runs out, one
+  // domain at a time so the first read back is not 23 at once. Queued, not
+  // dropped — whatever was missed is read once it is answering.
+  const strained = backoffLeft()
+  if (strained > 0) { schedule(domain, strained + 500 * DOMAINS.indexOf(domain)); return }
 
   lastRun[domain] = now
   try { await fn() } catch { /* offline, or signed out mid-flight */ }
