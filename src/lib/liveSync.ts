@@ -81,7 +81,10 @@ const MIN_GAP_MS = 4000
 const WAKE_MIN_GAP_MS = 60_000
 
 const POLL_WITH_REALTIME_MS = 5 * 60_000
-const POLL_ALONE_MS         = 45_000
+/** With no Realtime this poll is the whole feature, so it is as slow as a second
+ *  device can bear to wait. It was 45s: 23 reads, ~80 times an hour, for every
+ *  open tab, to catch the occasional edit made somewhere else. */
+const POLL_ALONE_MS         = 3 * 60_000
 
 let realtimeReady = false
 

@@ -116,8 +116,8 @@ Two tokens carried every failure:
 Habits, tasks and finance stay in step **while both devices are open** — no reload.
 `startLiveSync(userId, handlers)` (App.tsx, 3 auth call sites) asks the owning store to
 reload; it never applies row deltas. Woken by Postgres change events (~1s, needs
-`20260004_realtime.sql`) and by a poll + visibility/focus/online pull (45s alone,
-5 min once Realtime is confirmed). Finance had no `loadFromDB()` caller at all before this.
+`20260004_realtime.sql`) and by a poll + visibility/focus/online pull (3 min alone — it was 45s, 23 reads
+each time — and 5 min once Realtime is confirmed; `scripts/live-sync-poll.mjs`). Finance had no `loadFromDB()` caller at all before this.
 
 Three rules any change here must keep:
 - **`markLocalWrite(domain)`** on every write path, or a reload pulls the old row back
