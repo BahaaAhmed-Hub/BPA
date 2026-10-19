@@ -67,7 +67,7 @@ export function Step5Tasks({ data, onChange }: Props) {
             <div style={{ width: 'var(--sb-h-nav)', height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-negative)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-on-fill)', fontWeight: 800, fontSize: 'var(--sb-t-h2)' }}>✓</div>
             <div>
               <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Todoist</div>
-              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Task manager</div>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Task manager</div>
             </div>
           </div>
 
@@ -97,7 +97,7 @@ export function Step5Tasks({ data, onChange }: Props) {
           )}
 
           {loading && (
-            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)' }}>
+            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>
               <div style={{ animation: 'spin 1s linear infinite', display: 'inline-block', marginRight: 8 }}>⟳</div>
               Fetching tasks…
             </div>
@@ -122,10 +122,10 @@ export function Step5Tasks({ data, onChange }: Props) {
                 <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Trello</span>
                 <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-accent) 12.0%, transparent)', color: 'var(--sb-accent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent) 25.0%, transparent)' }}>Coming Soon</span>
               </div>
-              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Project boards</div>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Project boards</div>
             </div>
           </div>
-          <div style={{ padding: '10px 12px', borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-accent) 6.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent) 15.0%, transparent)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
+          <div style={{ padding: '10px 12px', borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-accent) 6.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent) 15.0%, transparent)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
             Trello integration is coming soon. Stay tuned!
           </div>
         </div>
@@ -140,7 +140,7 @@ export function Step5Tasks({ data, onChange }: Props) {
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={selectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-accent)', fontSize: 'var(--sb-t-body-s)' }}>Select all</button>
-              <button onClick={deselectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)' }}>Deselect all</button>
+              <button onClick={deselectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)' }}>Deselect all</button>
             </div>
           </div>
           <div style={{ maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, paddingRight: 4 }}>
@@ -149,17 +149,17 @@ export function Step5Tasks({ data, onChange }: Props) {
                 <input type="checkbox" checked={data.selectedTaskIds.has(t.id)} onChange={() => toggleTask(t.id)} style={{ accentColor: 'var(--sb-accent)', width: 14, height: 14, flexShrink: 0 }} />
                 {t.priority > 1 && <div style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: PRIORITY_COLORS[t.priority], flexShrink: 0 }} />}
                 <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.content}</span>
-                {t.due && <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>{t.due}</span>}
+                {t.due && <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flexShrink: 0 }}>{t.due}</span>}
               </label>
             ))}
           </div>
-          <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+          <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
             {data.selectedTaskIds.size} task{data.selectedTaskIds.size !== 1 ? 's' : ''} will be imported to your Inbox, tagged as "todoist".
           </p>
         </div>
       )}
 
-      <p style={{ margin: '16px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontStyle: 'italic' }}>
+      <p style={{ margin: '16px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontStyle: 'italic' }}>
         You can skip this step and import tasks manually later.
       </p>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

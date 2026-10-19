@@ -158,7 +158,7 @@ export default function AdminPanel() {
           <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)' }}>
             No users are readable from this account.
           </p>
-          <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+          <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
             That is what an ordinary account sees here — the policies answer, not the page.
             If you expect to be an admin, the row goes into <code>public.admins</code> by hand
             with the service role; nothing in the app can mint one.
@@ -202,7 +202,7 @@ export default function AdminPanel() {
                       textTransform: 'uppercase', color: 'var(--sb-ink-3)',
                     }}>{u.plan}</span>
                   </div>
-                  <div style={{ marginTop: 3, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+                  <div style={{ marginTop: 3, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                     {u.email}
                     {u.status !== 'active' && u.status !== 'none' && ` · ${u.status}`}
                     {n > 0 && ` · ${n} exception${n > 1 ? 's' : ''}`}
@@ -211,7 +211,7 @@ export default function AdminPanel() {
               )
             })}
             {!shown.length && (
-              <p style={{ margin: 0, padding: 14, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
+              <p style={{ margin: 0, padding: 14, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
                 Nobody matches “{q}”.
               </p>
             )}
@@ -223,7 +223,7 @@ export default function AdminPanel() {
               <p style={{ margin: '0 0 2px', fontSize: 'var(--sb-t-h2)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                 {open.full_name || open.email}
               </p>
-              <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+              <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                 {open.email} · on <strong>{open.plan}</strong>
                 {open.status === 'none' ? ' (no subscription row — free by default)' : ` (${open.status})`}
                 {' · joined '}{when(open.created_at)}
@@ -253,11 +253,11 @@ export default function AdminPanel() {
                             background: live === undefined ? 'var(--sb-ink-4)'
                               : live ? 'var(--sb-positive)' : 'var(--sb-negative)',
                           }} />
-                          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+                          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                             {live === undefined ? 'asking the server…' : live ? 'they can see it' : 'they cannot'}
                           </span>
                         </div>
-                        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 2 }}>
+                        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2 }}>
                           {m.core
                             ? 'Core — cannot be revoked by a plan or an override'
                             : byPlan ? `The ${open.plan} plan includes it` : `The ${open.plan} plan does not`}
@@ -276,7 +276,7 @@ export default function AdminPanel() {
                 })}
               </div>
 
-              <p style={{ margin: '12px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+              <p style={{ margin: '12px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                 <strong>Plan</strong> follows whatever the plan says, now and later.
                 <strong> On</strong> and <strong>Off</strong> are exceptions that outlive a plan change —
                 which is the point of them, and the reason each asks you for a sentence.
@@ -289,7 +289,7 @@ export default function AdminPanel() {
       {!loading && !!users.length && tab === 'plans' && (
         <Card style={{ padding: 16 }}>
           <div style={EYEBROW}>WHAT EACH PLAN INCLUDES</div>
-          <p style={{ margin: '0 0 12px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+          <p style={{ margin: '0 0 12px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
             This is the default for everybody on the plan. A user with an exception keeps it.
           </p>
           <div style={{ overflowX: 'auto' }}>
@@ -307,7 +307,7 @@ export default function AdminPanel() {
                   <tr key={m.id} style={{ borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
                     <td style={{ padding: '8px 10px 8px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', fontWeight: 600 }}>
                       {m.label}
-                      {m.core && <span style={{ marginLeft: 6, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontWeight: 400 }}>core</span>}
+                      {m.core && <span style={{ marginLeft: 6, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontWeight: 400 }}>core</span>}
                     </td>
                     {planNames.map(p => {
                       const on = plans.some(r => r.plan === p && r.module_id === m.id)
@@ -334,7 +334,7 @@ export default function AdminPanel() {
       {!loading && !!users.length && tab === 'audit' && (
         <Card style={{ padding: 16 }}>
           <div style={EYEBROW}>EVERY EXCEPTION, NEWEST FIRST</div>
-          <p style={{ margin: '0 0 12px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+          <p style={{ margin: '0 0 12px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
             The overrides themselves, not a second table. A change that left no row was undone,
             and the current state already says so.
           </p>
@@ -346,7 +346,7 @@ export default function AdminPanel() {
               <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>
                 <strong>{label(r.module_id)}</strong> {r.enabled ? 'granted to' : 'revoked from'} {emailOf(r.user_id)}
               </div>
-              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 2 }}>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2 }}>
                 {when(r.set_at)}
                 {r.by ? ` · by ${emailOf(r.by)}` : ''}
                 {r.note ? ` · “${r.note}”` : ' · no reason was given'}

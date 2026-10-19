@@ -248,7 +248,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
               <div style={{ width: 40, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                 {Array.from({ length: HOURS_END - HOURS_START }, (_, i) => (
                   <div key={i} style={{ height: HOUR_HEIGHT, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 2, flexShrink: 0 }}>
-                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1 }}>{hourLabel(i + HOURS_START)}</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1 }}>{hourLabel(i + HOURS_START)}</span>
                   </div>
                 ))}
               </div>
@@ -797,14 +797,14 @@ function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onCh
             style={{
               width: 32, height: 32, borderRadius: 9, border: 'none', flexShrink: 0,
               background: input.trim() && !loading ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-              color: input.trim() && !loading ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+              color: input.trim() && !loading ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
               cursor: input.trim() && !loading ? 'pointer' : 'default',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'background 0.15s, color 0.15s',
             }}
           ><Sparkles size={14} /></button>
         </div>
-        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', textAlign: 'center', marginTop: 5, letterSpacing: '0.02em' }}>
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textAlign: 'center', marginTop: 5, letterSpacing: '0.02em' }}>
           Enter to send · Shift+Enter for new line
         </div>
       </div>
@@ -864,7 +864,7 @@ function GoalCard({ goal, blocks, onDelete, onToggle }: { goal: IdealGoal; block
       <div style={{ height: 5, borderRadius: 2.5, background: 'var(--sb-field)', overflow: 'hidden' }}>
         <div style={{ height: '100%', borderRadius: 2.5, background: pct >= 100 ? 'var(--sb-positive)' : goal.color, width: `${pct}%`, transition: 'width 0.3s' }} />
       </div>
-      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 4, textTransform: 'capitalize' }}>{goal.horizon} · {goal.category}</div>
+      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 4, textTransform: 'capitalize' }}>{goal.horizon} · {goal.category}</div>
     </div>
   )
 }
@@ -888,7 +888,7 @@ function RuleCard({ rule, onDelete, onToggle }: { rule: IdealRule; onDelete: () 
         </button>
       </div>
       {open && <div style={{ marginTop: 8, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>{rule.description}</div>}
-      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 6, textTransform: 'capitalize' }}>{rule.ruleType.replace('-', ' ')} · from {rule.createdFrom.replace('-', ' ')}</div>
+      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 6, textTransform: 'capitalize' }}>{rule.ruleType.replace('-', ' ')} · from {rule.createdFrom.replace('-', ' ')}</div>
     </div>
   )
 }

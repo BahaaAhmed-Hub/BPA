@@ -64,7 +64,7 @@ function Count({ n, on }: { n: number; on: boolean }) {
   return (
     <span style={{
       fontVariantNumeric: 'tabular-nums',
-      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
       opacity: on ? 0.7 : 1,
     }}>{n}</span>
   )
@@ -419,7 +419,7 @@ export function SmartView({
         )}
 
         {shown.length === 0 ? (
-          <div style={{ padding: '22px 16px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+          <div style={{ padding: '22px 16px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
             {loading ? 'Reading…' : view === 'all' ? 'No mail in the last thirty days.' : here.empty}
           </div>
         ) : (
@@ -460,10 +460,10 @@ export function SmartView({
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '42%',
                     }}>{t.subject}</span>
                     <span style={{
-                      flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+                      flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     }}>{t.awaitingCustomer ? 'Awaiting customer — no follow-up needed' : (t.need || t.fromName)}</span>
-                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flexShrink: 0 }}>
                       {when(t.lastAt)}
                     </span>
                   </button>
@@ -620,7 +620,7 @@ function Row({
             mistake. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{t.fromName}</span>
-          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{when(t.lastAt)}</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{when(t.lastAt)}</span>
           {/* ── Whether you have answered ─────────────────────────────────
               This used to sit at the left of the *actions* row, where it had a
               whole line to itself whenever the buttons wrapped away from it —
@@ -629,7 +629,7 @@ function Row({
           {t.kind === 'invitation' ? <InviteChip />
             : answerable ? <ReplyChip t={t} /> : <KindChip kind={t.kind} />}
           {boxLabel && (
-            <span title={t.accountEmail} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+            <span title={t.accountEmail} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
               {boxLabel}
             </span>
           )}

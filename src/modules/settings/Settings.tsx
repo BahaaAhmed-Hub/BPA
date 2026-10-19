@@ -419,7 +419,7 @@ function DRow({ label, sub, children, last }: {
     }}>
       <div style={{ minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{label}</p>
-        {sub && <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{sub}</p>}
+        {sub && <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.35 }}>{sub}</p>}
       </div>
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>{children}</div>
     </div>
@@ -517,7 +517,7 @@ function ProfileSection({
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{s.fullName || name || 'Professor User'}</p>
           <p style={{
-            margin: '2px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', lineHeight: 1.3,
+            margin: '2px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{[email, tzLabel].filter(Boolean).join(' · ')}</p>
         </div>
@@ -573,7 +573,7 @@ function ProfileSection({
             width: 'var(--sb-h-nav)', height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-sm)', flexShrink: 0, padding: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-            color: tzSyncing ? 'var(--sb-ink-4)' : 'var(--sb-ink-3)',
+            color: tzSyncing ? 'var(--sb-ink-3)' : 'var(--sb-ink-3)',
             cursor: tzSyncing ? 'default' : 'pointer',
           }}>
           <LocateFixed size={ICON.md} style={tzSyncing ? { opacity: 0.5 } : undefined} />
@@ -761,12 +761,12 @@ function CompanyLogoPicker({ co, onPick }: {
           aria-label={`Remove the logo for ${co.name}`}
           style={{
             background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
           }}>
           Remove
         </button>
       ) : (
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Logo</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Logo</span>
       )}
       {why && (
         <span data-logo-why style={{
@@ -923,7 +923,7 @@ function CompanyCard({
             ...selectStyle, fontSize: 'var(--sb-t-meta)', padding: '3px 8px', maxWidth: 168, flexShrink: 0,
             borderColor: co.accountId ? 'var(--sb-positive-tint)' : 'var(--sb-border)',
             background: co.accountId ? 'color-mix(in srgb, var(--sb-positive) 8.0%, transparent)' : 'var(--sb-card)',
-            color: co.accountId ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
+            color: co.accountId ? 'var(--sb-positive)' : 'var(--sb-ink-3)',
           }}>
           <option value="">{accounts.length > 0 ? 'Link an account…' : 'No accounts connected'}</option>
           {accounts.map(a => <option key={a.id} value={a.id}>{a.isPrimary ? `${a.email} (this account)` : a.email}</option>)}
@@ -1240,7 +1240,7 @@ function SettingsHabitForm({
               style={{
                 width: 46, height: 46, borderRadius: 'var(--sb-r-nav)', padding: 0, cursor: 'pointer', overflow: 'hidden',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 'var(--sb-t-h2)', color: 'var(--sb-ink-4)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                fontSize: 'var(--sb-t-h2)', color: 'var(--sb-ink-3)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
               }}>
               {s.image
                 ? <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -1268,12 +1268,12 @@ function SettingsHabitForm({
               if (!file) return
               try { update({ image: await readHabitImage(file) }) } catch { /* not a usable image */ }
             }} />
-          {!s.image && <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-meta)' }}>Picture</span>}
+          {!s.image && <span style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)' }}>Picture</span>}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
           <EmojiBtn value={s.emoji || '🎯'} onSelect={v => update({ emoji: v })} size={46} />
-          <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-meta)' }}>Icon</span>
+          <span style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)' }}>Icon</span>
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1365,7 +1365,7 @@ function SettingsHabitForm({
         <button onClick={() => valid && onSave(s)} disabled={!valid}
           style={{
             height: 38, padding: '0 18px', borderRadius: 'var(--sb-r-pill)', border: 'none',
-            background: valid ? 'var(--sb-accent)' : 'var(--sb-field)', color: valid ? 'var(--sb-accent-ink)' : 'var(--sb-ink-4)',
+            background: valid ? 'var(--sb-accent)' : 'var(--sb-field)', color: valid ? 'var(--sb-accent-ink)' : 'var(--sb-ink-4)', // ui-guard: ink-ok
             fontSize: 'var(--sb-t-label)', fontWeight: 600, fontFamily: 'inherit',
             cursor: valid ? 'pointer' : 'default',
             display: 'flex', gap: 6, alignItems: 'center',
@@ -1467,12 +1467,12 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
       </p>
 
       {movement.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>
+        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
           Nothing to link yet. Add a habit about walking, running, steps or distance and it appears
           here.
         </p>
       ) : !ready ? (
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>Looking…</p>
+        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Looking…</p>
       ) : links === null ? (
         <div style={{
           fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)', lineHeight: 1.55, maxWidth: 720,
@@ -1493,11 +1493,11 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 13px' }}>
                   <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', flex: 1, minWidth: 0 }}>
                     {h.name}
-                    <span style={{ fontWeight: 400, color: 'var(--sb-ink-4)' }}> · {METRIC_LABEL[metric]}</span>
+                    <span style={{ fontWeight: 400, color: 'var(--sb-ink-3)' }}> · {METRIC_LABEL[metric]}</span>
                   </span>
                   {link ? (
                     <>
-                      <span style={{ fontSize: 'var(--sb-t-meta)', color: link.lastSeenAt ? 'var(--sb-positive)' : 'var(--sb-ink-4)' }}>
+                      <span style={{ fontSize: 'var(--sb-t-meta)', color: link.lastSeenAt ? 'var(--sb-positive)' : 'var(--sb-ink-3)' }}>
                         {link.lastSeenAt
                           ? `last sent ${new Date(link.lastSeenAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
                           : 'nothing sent yet'}
@@ -1557,7 +1557,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
                         holding the number from step 2.</li>
                       <li>Run it once by hand. The line above turns green when the first number lands.</li>
                     </ol>
-                    <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>
+                    <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
                       The address is the whole credential and it feeds this one habit — it can read nothing
                       and write nowhere else. Unlink to make it stop working.
                     </p>
@@ -1604,7 +1604,7 @@ function HabitsSection() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingBottom: 14, marginBottom: 4, borderBottom: 'var(--sb-border-width) solid var(--sb-border)' }}>
         <div style={{ flex: '1 1 150px', minWidth: 0, maxWidth: 200 }}>
           <div style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>Default view</div>
-          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 2 }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2 }}>
             {HABIT_VIEWS.find(v => v.id === habitView)?.hint}
           </div>
         </div>
@@ -1631,7 +1631,7 @@ function HabitsSection() {
             />
             <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: h.color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{h.name}</span>
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flexShrink: 0, whiteSpace: 'nowrap' }}>
               {describeHabit(h)}
             </span>
             <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
@@ -1847,7 +1847,7 @@ function TaskStatusesSection() {
               padding: '9px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
               background: overIdx === i ? 'rgba(var(--sb-accent-rgb),0.10)' : 'transparent',
             }}>
-            <span title="Drag to reorder" style={{ display: 'flex', color: 'var(--sb-ink-4)', cursor: 'grab', flexShrink: 0 }}>
+            <span title="Drag to reorder" style={{ display: 'flex', color: 'var(--sb-ink-3)', cursor: 'grab', flexShrink: 0 }}>
               <GripVertical size={ICON.sm} />
             </span>
             <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: s.color, flexShrink: 0 }} />
@@ -2181,7 +2181,7 @@ function AccountsSection({
               {(() => {
                 const linked = companies.filter(c => c.accountId === acc.id)
                 if (linked.length === 0) {
-                  return <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>No company uses this account yet</p>
+                  return <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>No company uses this account yet</p>
                 }
                 return (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, margin: '5px 0 0' }}>
@@ -2548,7 +2548,7 @@ function AIVoiceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettin
           style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, width: '100%' }} />
       </FieldRow>
 
-      <p style={{ margin: '14px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Your mail and tasks are never used to train the model.</p>
+      <p style={{ margin: '14px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Your mail and tasks are never used to train the model.</p>
     </div>
   )
 }
@@ -2579,7 +2579,7 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
           today-marker is drawn in it. It changes as you click. */}
       <div style={{ paddingBottom: 16, borderBottom: 'var(--sb-border-width) solid var(--sb-border)', marginBottom: 14 }}>
         <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Accent</p>
-        <p style={{ margin: '0 0 11px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
+        <p style={{ margin: '0 0 11px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
           Every highlight in the app — chips, bars, the ring on today.
         </p>
         <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
@@ -2645,7 +2645,7 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
           which is the other half of what changes. */}
       <div style={{ paddingTop: 16, borderTop: 'var(--sb-border-width) solid var(--sb-border)', marginTop: 6 }}>
         <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Theme</p>
-        <p style={{ margin: '0 0 11px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
+        <p style={{ margin: '0 0 11px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
           Surfaces, ink, accent and typeface, for the whole app.
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
@@ -3258,7 +3258,7 @@ function FinanceSecuritySection() {
                   Remove from this device
                 </button>
               ) : (
-                <button style={canBio ? solid : { ...pill, color: 'var(--sb-ink-4)', cursor: 'default' }}
+                <button style={canBio ? solid : { ...pill, color: 'var(--sb-ink-3)', cursor: 'default' }}
                   disabled={!canBio} onClick={() => void addPasskey()}>
                   Set up on this device
                 </button>
@@ -3292,7 +3292,7 @@ function FinanceSecuritySection() {
             </p>
           )}
 
-          <p style={{ margin: '12px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.55, maxWidth: 660 }}>
+          <p style={{ margin: '12px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.55, maxWidth: 660 }}>
             The password is stored as a salted hash and never leaves your account. A passkey never
             leaves the device that made it — each device you use registers its own, and the password
             is what gets you in on one that has not.
@@ -3604,7 +3604,7 @@ function FinanceSection() {
             face value or left out of every total. */}
         <div style={{ padding: '4px 0 2px' }}>
           <div style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontWeight: 500 }}>Exchange rates</div>
-          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 2, marginBottom: 10, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2, marginBottom: 10, lineHeight: 1.5 }}>
             What one unit is worth in {currency}. Set by hand — there is no rate feed in here,
             and a stale one would be its own kind of wrong. A currency left blank stays out of
             the totals rather than being guessed at.
@@ -3631,7 +3631,7 @@ function FinanceSection() {
                       width: 72, background: 'transparent', border: 'none', outline: 'none',
                       fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', textAlign: 'right', padding: 0,
                     }} />
-                  <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{currency}</span>
+                  <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{currency}</span>
                 </label>
               ))}
           </div>
@@ -3650,7 +3650,7 @@ function FinanceSection() {
         {/* Order categories by */}
         <div style={{ marginTop: 14 }}>
           <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)', marginBottom: 8 }}>ORDER CATEGORIES BY</div>
-          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginBottom: 8 }}>Biggest spend first keeps the two problems at the top</div>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginBottom: 8 }}>Biggest spend first keeps the two problems at the top</div>
           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
             {([
               { v: 'spend',  label: 'Biggest spend' },
@@ -3846,7 +3846,7 @@ function FinanceSection() {
           </div>
 
           {reminders.length === 0 && (
-            <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', padding: '10px 0' }}>
+            <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', padding: '10px 0' }}>
               Nothing scheduled. Rent on the 1st, school fees on the 5th — that sort of thing.
             </div>
           )}
@@ -3905,7 +3905,7 @@ function FinanceSection() {
 
                 <span style={{ flex: 1 }} />
 
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', whiteSpace: 'nowrap' as const }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' as const }}>
                   {r.enabled && nextUp
                     ? `next ${new Date(`${nextUp.date}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · ${reminderTitle(cat, budgetRules[r.categoryId], nextUp.monthKey)}`
                     : r.enabled ? 'nothing left this year' : 'off'}
@@ -3920,13 +3920,13 @@ function FinanceSection() {
                   style={{
                     width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
+                    background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
                   }}>×</button>
               </div>
             )
           })}
           {reminders.some(r => r.enabled) && (
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 8 }}>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 8 }}>
               Tasks are made for the next {reminders[0]?.monthsAhead ?? 3} months and topped up as
               time passes. Deleting one from the board does not bring it back.
             </div>
@@ -4014,7 +4014,7 @@ function ShoppingSettingsBlock() {
           </DRow>
 
           {lastRefreshed && (
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginLeft: 0, marginBottom: 12 }}>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginLeft: 0, marginBottom: 12 }}>
               Last auto-refresh: {new Date(lastRefreshed).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
             </div>
           )}
@@ -4167,13 +4167,13 @@ function BillingSection() {
                 ) : (
                   <>
                     <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>${price}</span>
-                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>/mo</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>/mo</span>
                   </>
                 )}
               </div>
 
               {/* billing note */}
-              <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', minHeight: 14, lineHeight: 1.4 }}>
+              <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', minHeight: 14, lineHeight: 1.4 }}>
                 {plan.monthlyPrice === 0
                   ? 'No card required'
                   : cycle === 'annual'
@@ -4224,11 +4224,11 @@ function BillingSection() {
               <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Professor Pro</span>
               <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
             </div>
-            <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>Renews 14 March 2027</p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>Renews 14 March 2027</p>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <p style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>$300</p>
-            <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>per year</p>
+            <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>per year</p>
           </div>
         </div>
       </div>
@@ -4268,7 +4268,7 @@ function BillingSection() {
             <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.desc}</span>
             <span style={{ fontSize: 'var(--sb-t-label)', fontFamily: 'var(--sb-font-num)', fontWeight: 600, color: 'var(--sb-ink-1)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{inv.amount}</span>
             <button title={`Download ${inv.date} invoice`} style={{
-              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)',
+              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)',
               padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0,
             }}><Download size={ICON.sm} /></button>
           </div>
@@ -4280,7 +4280,7 @@ function BillingSection() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
         marginTop: 18, paddingTop: 16, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
       }}>
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>
+        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
           Cancelling keeps your data readable until the term ends.
         </p>
         <GhostPill tone="rust">Cancel plan</GhostPill>
@@ -4311,7 +4311,7 @@ function NotificationsMatrixSection() {
   }
 
   const ChHead = ({ label }: { label: string }) => (
-    <div style={{ width: 44, textAlign: 'center', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.09em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>{label}</div>
+    <div style={{ width: 44, textAlign: 'center', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.09em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>{label}</div>
   )
   const ChToggle = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
     <div style={{ width: 44, display: 'flex', justifyContent: 'center' }}>
@@ -4343,14 +4343,14 @@ function NotificationsMatrixSection() {
                   empty for reasons nobody can see. */}
               {dormantWhy(e.id, events) && (
                 <span style={{
-                  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontWeight: 500,
+                  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontWeight: 500,
                   padding: '1px 7px', borderRadius: 'var(--sb-r-pill)',
                   background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-hairline)',
                   whiteSpace: 'nowrap',
                 }}>{dormantWhy(e.id, events)}</span>
               )}
             </p>
-            <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.3 }}>{e.sub}</p>
+            <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.3 }}>{e.sub}</p>
           </div>
           <div style={{ display: 'flex', gap: 0, flexShrink: 0 }}>
             <ChToggle on={e.push}   onClick={() => toggleChannel(e.id, 'push')} />
@@ -4365,14 +4365,14 @@ function NotificationsMatrixSection() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: quietOn ? 10 : 0 }}>
           <div>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Quiet hours</p>
-            <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Nothing but the morning brief gets through</p>
+            <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Nothing but the morning brief gets through</p>
           </div>
           <Toggle checked={quietOn} onChange={setQuietOn} />
         </div>
         {quietOn && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <input type="time" value={quietStart} onChange={e => setQStart(e.target.value)} style={{ padding: '5px 10px', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }} />
-            <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)' }}>to</span>
+            <span style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)' }}>to</span>
             <input type="time" value={quietEnd} onChange={e => setQEnd(e.target.value)} style={{ padding: '5px 10px', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }} />
           </div>
         )}
@@ -4464,7 +4464,7 @@ function IntegrationsSection() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Connected tools</p>
-            <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Tasks and notes flow both ways — nothing is deleted on either side</p>
+            <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Tasks and notes flow both ways — nothing is deleted on either side</p>
           </div>
           <Button variant="accent" style={{ flexShrink: 0 }}>
             <Plus size={ICON.sm} /> <span style={{ whiteSpace: 'nowrap' }}>Add integration</span>
@@ -4489,7 +4489,7 @@ function IntegrationsSection() {
                     <span style={{
                       fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)',
                       background: tool.status === 'connected' ? 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)' : 'color-mix(in srgb, var(--sb-ink-4) 12.0%, transparent)',
-                      color: tool.status === 'connected' ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
+                      color: tool.status === 'connected' ? 'var(--sb-positive)' : 'var(--sb-ink-3)',
                       textTransform: 'uppercase',
                     }}>{tool.status === 'connected' ? 'Connected' : 'Not connected'}</span>
                   </div>
@@ -4519,7 +4519,7 @@ function IntegrationsSection() {
           ))}
         </div>
 
-        <p style={{ margin: '8px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
+        <p style={{ margin: '8px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
           Last sync 07:12 — 14 tasks in, 3 completions pushed out. Tokens live on the server.{' '}
           <button style={{ background: 'none', border: 'none', color: 'var(--sb-positive)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Sync now</button>
         </p>
@@ -4530,7 +4530,7 @@ function IntegrationsSection() {
       <div style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
-            <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Connections</p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>Connections</p>
             <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
               Tokens let the MCP server, Siri Shortcuts, and Telegram act as you. Each is shown once — copy it before closing.
             </p>
@@ -4557,10 +4557,10 @@ function IntegrationsSection() {
             />
             <button onClick={() => void handleCreateToken()} disabled={!newLabel.trim()} style={{
               padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', border: 'none',
-              background: newLabel.trim() ? 'var(--sb-ink-1)' : 'var(--sb-border)', color: newLabel.trim() ? 'var(--sb-page)' : 'var(--sb-ink-4)',
+              background: newLabel.trim() ? 'var(--sb-ink-1)' : 'var(--sb-border)', color: newLabel.trim() ? 'var(--sb-page)' : 'var(--sb-ink-4)', // ui-guard: ink-ok
               fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: newLabel.trim() ? 'pointer' : 'not-allowed',
             }}>Generate</button>
-            <button onClick={() => setCreatingToken(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: '4px', display: 'flex', alignItems: 'center' }}>
+            <button onClick={() => setCreatingToken(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '4px', display: 'flex', alignItems: 'center' }}>
               <X size={ICON.sm} />
             </button>
           </div>
@@ -4581,7 +4581,7 @@ function IntegrationsSection() {
               border: 'var(--sb-border-width) solid var(--sb-border)',
               fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: copied ? 'var(--sb-positive)' : 'var(--sb-ink-2)', cursor: 'pointer',
             }}>{copied ? 'Copied' : 'Copy'}</button>
-            <button onClick={() => setRevealedToken(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: '4px', display: 'flex', alignItems: 'center' }}>
+            <button onClick={() => setRevealedToken(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '4px', display: 'flex', alignItems: 'center' }}>
               <X size={ICON.sm} />
             </button>
           </div>
@@ -4601,12 +4601,12 @@ function IntegrationsSection() {
             }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{tok.label}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+                <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                   Created {new Date(tok.created_at).toLocaleDateString()}
                   {tok.last_used_at ? ` · Last used ${new Date(tok.last_used_at).toLocaleDateString()}` : ' · Never used'}
                 </p>
               </div>
-              <code style={{ fontSize: 'var(--sb-t-meta)', fontFamily: 'monospace', color: 'var(--sb-ink-4)', flexShrink: 0 }}>prof_sk_…</code>
+              <code style={{ fontSize: 'var(--sb-t-meta)', fontFamily: 'monospace', color: 'var(--sb-ink-3)', flexShrink: 0 }}>prof_sk_…</code>
               <button onClick={() => void handleRevoke(tok.id)} style={{
                 flexShrink: 0, padding: '4px 10px', borderRadius: 'var(--sb-r-chip)',
                 background: 'none', border: 'var(--sb-border-width) solid var(--sb-border)',
@@ -4620,7 +4620,7 @@ function IntegrationsSection() {
       {/* ── TELEGRAM ─────────────────────────────────────────────────────────── */}
       <div style={{ marginTop: 24 }}>
         <div style={{ marginBottom: 12 }}>
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Telegram</p>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>Telegram</p>
           <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
             Talk to Professor from Telegram — ask about tasks, habits and finances, or add things on the go.
           </p>
@@ -4640,7 +4640,7 @@ function IntegrationsSection() {
                   <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                     Chat #{link.chat_id}
                   </p>
-                  <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+                  <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                     Connected {new Date(link.linked_at).toLocaleDateString()}
                   </p>
                 </div>
@@ -4681,7 +4681,7 @@ function IntegrationsSection() {
               <li key={i} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.45 }}>{step}</li>
             ))}
           </ol>
-          <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>
+          <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
             The bot can read and add tasks, log habits, and check your balance. Full AI responses when an Anthropic key is set in Supabase.
           </p>
         </div>
@@ -4690,7 +4690,7 @@ function IntegrationsSection() {
       {/* ── SIRI SHORTCUTS ───────────────────────────────────────────────────── */}
       <div style={{ marginTop: 24, paddingTop: 20, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
         <div style={{ marginBottom: 12 }}>
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Siri Shortcuts</p>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>Siri Shortcuts</p>
           <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
             Say "Hey Siri, {siriName}" and talk to your AI naturally — add tasks, log habits, check your calendar, and more. This is the hands-free way, and the only one that works with the app closed or the screen locked.
           </p>
@@ -4716,7 +4716,7 @@ function IntegrationsSection() {
               >{t.label || 'Unnamed'}</button>
             ))}
             {tokens.filter(t => !t.revoked).length === 0 && (
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>No tokens yet — generate one in the Connections block above.</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>No tokens yet — generate one in the Connections block above.</span>
             )}
           </div>
         </div>
@@ -4769,7 +4769,7 @@ function IntegrationsSection() {
                     <li key={i} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>{step}</li>
                   ))}
                 </ol>
-                <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>
+                <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
                   You can also make specific shortcuts — e.g. one that always says "What's on today?" with no input step.
                   The URL is the whole credential; delete the token above to revoke access.
                 </p>
@@ -4798,7 +4798,7 @@ function SyncRulesSection() {
         }}>
           <div style={{ minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{row.label}</p>
-            <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{row.sub}</p>
+            <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{row.sub}</p>
           </div>
           <select style={{ fontSize: 'var(--sb-t-body-s)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '5px 10px', background: 'var(--sb-field)', color: 'var(--sb-ink-1)', cursor: 'pointer', flexShrink: 0 }}>
             <option>{row.value}</option>
@@ -4871,7 +4871,7 @@ function AutomationSection() {
           }}>
             <Toggle checked={rule.enabled} onChange={() => toggle(rule.id)} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: rule.enabled ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)', lineHeight: 1.3 }}>
+              <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: rule.enabled ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', lineHeight: 1.3 }}>
                 {rule.action}
               </p>
               <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
@@ -4884,7 +4884,7 @@ function AutomationSection() {
       </div>
 
       {/* Run log footer — what actually ran, not a number somebody typed. */}
-      <p style={{ margin: '14px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
+      <p style={{ margin: '14px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
         {todays.length === 0
           ? (runs.length === 0 ? 'Nothing has run yet.' : 'Nothing has run today.')
           : `${todays.length} ${todays.length === 1 ? 'run' : 'runs'} today · ${actions} ${actions === 1 ? 'action' : 'actions'} taken`}
@@ -4899,7 +4899,7 @@ function AutomationSection() {
         <div style={{ marginTop: 8, borderRadius: 'var(--sb-r-nav)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-field)', maxHeight: 260, overflowY: 'auto' }}>
           {runs.slice(0, 40).map((r, i) => (
             <div key={`${r.at}-${i}`} style={{ display: 'flex', gap: 10, padding: '8px 12px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', alignItems: 'baseline' }}>
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums', flexShrink: 0, width: 92 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', flexShrink: 0, width: 92 }}>
                 {new Date(r.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </span>
               <span style={{ minWidth: 0, flex: 1 }}>
@@ -4963,7 +4963,7 @@ function DataPrivacySection() {
               }}>
                 <div>
                   <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{item.label}</p>
-                  <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{item.sub}</p>
+                  <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{item.sub}</p>
                 </div>
                 <Toggle checked={on} onChange={setOn} />
               </div>
@@ -5066,7 +5066,7 @@ function AccountsAndCompaniesSection({
         <Mail size={ICON.sm} color="var(--sb-ink-3)" />
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Google accounts</p>
         {unusedAccounts > 0 && (
-          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
             {unusedAccounts} not used by any company
           </span>
         )}
@@ -5150,7 +5150,7 @@ function Card({ icon: Icon, title, sub, children, actions, muted }: {
           <div style={{ minWidth: 0 }}>
             <h3 style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h3)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1.25 }}>{title}</h3>
             {sub && <p style={{
-              margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35,
+              margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.35,
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
             }}>{sub}</p>}
           </div>
@@ -5667,8 +5667,8 @@ export function Settings() {
           <div style={{ padding: '12px 12px 8px', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px 12px', cursor: 'text' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', flex: 1, userSelect: 'none' }}>Find a setting</span>
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', opacity: 0.7 }}>⌘K</span>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', flex: 1, userSelect: 'none' }}>Find a setting</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', opacity: 0.7 }}>⌘K</span>
             </div>
           </div>
 
@@ -5676,7 +5676,7 @@ export function Settings() {
           <div style={{ padding: '0 12px', flex: 1, minHeight: 0 }}>
             {NAV_GROUPS.map(group => (
               <div key={group.label} style={{ marginBottom: 0 }}>
-                <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', padding: '7px 12px 3px', textTransform: 'uppercase' as const }}>
+                <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', padding: '7px 12px 3px', textTransform: 'uppercase' as const }}>
                   {group.label}
                 </div>
                 {group.ids.map(id => navItem(id))}
@@ -5686,7 +5686,7 @@ export function Settings() {
 
           {/* Footer */}
           <div style={{ padding: '10px 18px 11px', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', flexShrink: 0 }}>
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 7 }}>
               <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-positive)', flexShrink: 0 }} />
               Every change saves itself
             </div>
@@ -5696,7 +5696,7 @@ export function Settings() {
             <div
               title={`Built ${new Date(__BUILD_AT__).toLocaleString('en-GB')}`}
               style={{
-                marginTop: 5, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+                marginTop: 5, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
                 fontFamily: 'var(--sb-font-mono)', letterSpacing: '0.04em',
               }}>
               build {__BUILD_SHA__} · {new Date(__BUILD_AT__).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}

@@ -106,7 +106,7 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
       }}
       {...attributes} {...listeners}
     >
-      <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', marginTop: 1, flexShrink: 0 }}>⠿</span>
+      <span style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', marginTop: 1, flexShrink: 0 }}>⠿</span>
       <div style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: dot, marginTop: 4, flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -179,11 +179,11 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
         <div style={{ width: 4, minHeight: 24, borderRadius: 'var(--sb-r-chip)', background: color, flexShrink: 0, marginTop: 2 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{event.summary ?? '(No title)'}</div>
-          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', marginTop: 3 }}>
+          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 3 }}>
             {isAllDay ? fmtDate(startISO) : `${fmt(startISO)} – ${fmt(endISO)}`}
           </div>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2 }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2 }}>
           <X size={ICON.md} />
         </button>
       </div>
@@ -201,11 +201,11 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
         {attendees.length > 0 && (
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
             👥 {attendees.slice(0, 4).map(a => a.displayName ?? a.email).join(', ')}
-            {attendees.length > 4 && <span style={{ color: 'var(--sb-ink-4)' }}> +{attendees.length - 4} more</span>}
+            {attendees.length > 4 && <span style={{ color: 'var(--sb-ink-3)' }}> +{attendees.length - 4} more</span>}
           </div>
         )}
         {notes && (
-          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.5, borderTop: 'var(--sb-border-width) solid var(--sb-border)', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5, borderTop: 'var(--sb-border-width) solid var(--sb-border)', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
             {notes.slice(0, 300)}{notes.length > 300 ? '…' : ''}
           </div>
         )}
@@ -246,7 +246,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
       opacity: isPast ? 0.5 : 1,
     }}>
       <div style={{ width: 56, flexShrink: 0, display: 'flex', alignItems: 'flex-start', paddingTop: 6, paddingRight: 10, justifyContent: 'flex-end' }}>
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: isPast ? 'var(--sb-ink-4)' : 'var(--sb-ink-4)', fontWeight: 500 }}>{hourLabel(hour)}</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: isPast ? 'var(--sb-ink-3)' : 'var(--sb-ink-3)', fontWeight: 500 }}>{hourLabel(hour)}</span>
       </div>
       <div style={{ flex: 1, position: 'relative', borderLeft: 'var(--sb-border-width) solid var(--sb-info-tint)' }}>
         {isPast && !block && (
@@ -452,7 +452,7 @@ function AccountPickerOverlay({
             disabled={!selectedAcct} style={{
               flex: 2, padding: '9px', borderRadius: 'var(--sb-r-chip)',
               background: selectedAcct ? 'var(--sb-warning)' : 'var(--sb-hairline)', border: 'none',
-              color: selectedAcct ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 700,
+              color: selectedAcct ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 700, // ui-guard: ink-ok
               cursor: selectedAcct ? 'pointer' : 'default',
             }}>
             Add to Calendar
@@ -1069,7 +1069,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                       {sortBy === 'priority' ? '🔥 Priority' : '🕐 Newest'} ∨
                     </button>
                   </div>
-                  <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Drag to schedule · Creates GCal event automatically</p>
+                  <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Drag to schedule · Creates GCal event automatically</p>
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
                   {sortedTasks.map(task => (
@@ -1081,7 +1081,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                     />
                   ))}
                   {sortedTasks.length === 0 && (
-                    <div style={{ padding: '24px 12px', textAlign: 'center', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)' }}>
+                    <div style={{ padding: '24px 12px', textAlign: 'center', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)' }}>
                       No open tasks
                     </div>
                   )}
@@ -1116,7 +1116,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
             <button onClick={applyPlan} disabled={!blocks.length} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 'var(--sb-r-card)',
               background: blocks.length ? 'var(--sb-warning)' : 'var(--sb-hairline)', border: 'none',
-              color: blocks.length ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 700,
+              color: blocks.length ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 700, // ui-guard: ink-ok
               cursor: blocks.length ? 'pointer' : 'default', transition: 'all 0.15s',
             }}>
               <Check size={ICON.sm} /> Apply Plan

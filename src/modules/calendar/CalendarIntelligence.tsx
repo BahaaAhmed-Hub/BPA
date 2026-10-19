@@ -3100,7 +3100,7 @@ export function CalendarIntelligence() {
                         background: 'none', border: 'none', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 4,
                         padding: '0 9px 0 2px', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit',
-                        color: hidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)',
+                        color: hidden ? 'var(--sb-ink-3)' : 'var(--sb-ink-2)',
                       }}
                     >
                       <span style={{ maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -3214,7 +3214,7 @@ export function CalendarIntelligence() {
                     borderRadius: isToday ? '50%' : 0,
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     background: isToday ? 'var(--sb-ink-1)' : 'transparent',
-                    color: isToday ? 'var(--sb-ink-on-dark)' : outside ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
+                    color: isToday ? 'var(--sb-ink-on-dark)' : outside ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)',
                     fontFamily: DISPLAY, fontSize: 'var(--sb-t-h3)', fontWeight: 600, lineHeight: 1,
                     fontVariantNumeric: 'tabular-nums',
                   }}>{day.getDate()}</span>
@@ -3238,7 +3238,7 @@ export function CalendarIntelligence() {
                           // fill per calendar is what drowned the accent.
                           background: 'var(--sb-field)',
                           fontSize: 'var(--sb-t-meta)', fontWeight: 600,
-                          color: st === 'cancelled' ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
+                          color: st === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                         <span aria-hidden style={{
@@ -3249,7 +3249,7 @@ export function CalendarIntelligence() {
                             competing with four titles; it earns its place only
                             where the cell is quiet enough to read. */}
                         {t && shown.length <= 2 && (
-                          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: 'var(--sb-ink-4)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: 'var(--sb-ink-3)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                             {String(t.getHours()).padStart(2, '0')}:{String(t.getMinutes()).padStart(2, '0')}
                           </span>
                         )}
@@ -3300,7 +3300,7 @@ export function CalendarIntelligence() {
                   <span style={{
                     fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500,
                     letterSpacing: '0.14em', textTransform: 'uppercase' as const,
-                    color: isToday ? 'var(--sb-accent-deep)' : 'var(--sb-ink-4)',
+                    color: isToday ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)',
                   }}>{DAY_LABELS[day.getDay()]}</span>
                   <div style={{
                     fontFamily: DISPLAY, fontSize: isToday ? 18 : 22, fontWeight: 600,
@@ -3322,7 +3322,7 @@ export function CalendarIntelligence() {
           {/* All-day events strip — only shown when the week has at least one all-day event */}
           {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
             <div style={{ display: 'flex', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0, minHeight: 22 }}>
-              <div style={{ width: 84, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 12, paddingTop: 8, fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500, color: 'var(--sb-ink-4)', letterSpacing: '0.14em', textTransform: 'uppercase' as const }}>
+              <div style={{ width: 84, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 12, paddingTop: 8, fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500, color: 'var(--sb-ink-3)', letterSpacing: '0.14em', textTransform: 'uppercase' as const }}>
                 All Day
               </div>
               {weekDays.map(day => {
@@ -3439,7 +3439,7 @@ export function CalendarIntelligence() {
                         title={`${w.temp}°C`}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 1,
-                          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums',
+                          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums',
                         }}>
                         <span style={{ fontSize: 'var(--sb-t-meta)', lineHeight: 1 }}>{weatherGlyph(w.code)}</span>
                         {w.temp}°
@@ -3638,7 +3638,7 @@ export function CalendarIntelligence() {
 
       {/* Loading spinner overlay */}
       {loadingEvents && (
-        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', pointerEvents: 'none' }}>
           <div style={{ width: 14, height: 14, border: 'var(--sb-border-emphasis) solid var(--sb-border)', borderTopColor: 'var(--sb-ink-1)', borderRadius: 'var(--sb-r-pill)', animation: 'spin 0.7s linear infinite' }} />
           Loading…
         </div>
@@ -3650,7 +3650,7 @@ export function CalendarIntelligence() {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--sb-accent-tint) 93.0%, transparent)', opacity: 0.9, pointerEvents: 'none' }}>
           <div style={{ textAlign: 'center' }}>
             <Calendar size={36} color="var(--sb-border)" />
-            <p style={{ margin: '12px 0 0', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)' }}>Connect Google Calendar to see your events</p>
+            <p style={{ margin: '12px 0 0', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)' }}>Connect Google Calendar to see your events</p>
           </div>
         </div>
       )}
@@ -3789,7 +3789,7 @@ export function CalendarIntelligence() {
               )}
               {(prep?.talkingPoints ?? []).map((pt, i) => (
                 <span key={i} style={{ display: 'flex', gap: 7, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>
-                  <span style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }}>·</span>{pt}
+                  <span style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }}>·</span>{pt}
                 </span>
               ))}
               {ev.htmlLink && (
@@ -3815,7 +3815,7 @@ export function CalendarIntelligence() {
                         onClick={() => focusOn({ module: 'tasks', id: t.id })}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 7,
-                          fontSize: 'var(--sb-t-meta)', color: t.completed || t.status === 'done' ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)',
+                          fontSize: 'var(--sb-t-meta)', color: t.completed || t.status === 'done' ? 'var(--sb-ink-3)' : 'var(--sb-ink-2)',
                           textDecoration: t.completed || t.status === 'done' ? 'line-through' : 'none',
                           background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
                         }}
@@ -3960,7 +3960,7 @@ export function CalendarIntelligence() {
                 <input type="time" defaultValue={hhmmOf(w.start_min)} aria-label="Open from"
                   onChange={e => { const v = minOf(e.target.value); if (v !== null && v < w.end_min) void patchWindow(w.id, { start_min: v }) }}
                   style={{ ...fld, flex: 1, minWidth: 84 }} />
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>to</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>to</span>
                 <input type="time" defaultValue={hhmmOf(w.end_min)} aria-label="Open until"
                   onChange={e => { const v = minOf(e.target.value); if (v !== null && v > w.start_min) void patchWindow(w.id, { end_min: v }) }}
                   style={{ ...fld, flex: 1, minWidth: 84 }} />
@@ -3989,7 +3989,7 @@ export function CalendarIntelligence() {
               {kind === 'weekly' && (
                 <>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>every</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>every</span>
                     <select value={w.repeat?.interval ?? 1}
                       onChange={e => void patchWindow(w.id, { repeat: { ...w.repeat, kind: 'weekly', interval: Number(e.target.value) } })}
                       aria-label="How often it comes round" style={{ ...fld, cursor: 'pointer' }}>
@@ -3997,7 +3997,7 @@ export function CalendarIntelligence() {
                     </select>
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>until</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>until</span>
                     <input type="date" value={w.repeat?.until ?? ''}
                       onChange={e => void patchWindow(w.id, { repeat: { ...w.repeat, kind: 'weekly', until: e.target.value || null } })}
                       aria-label="The last week it applies" style={{ ...fld, flex: 1 }} />

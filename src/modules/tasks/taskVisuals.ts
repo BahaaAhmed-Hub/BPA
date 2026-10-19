@@ -50,7 +50,7 @@ export const slotEmpty: React.CSSProperties = {
   ...slotFilled,
   background: 'transparent',
   border: '1px dashed var(--sb-border)',
-  color: 'var(--sb-ink-4)',
+  color: 'var(--sb-ink-3)',
 }
 
 /** Scheduled reads olive — it is the one slot that means "this has a block". */
@@ -181,7 +181,7 @@ export function sortUrgentFirst(tasks: Task[]): Task[] {
 const STATUS_GROUPS: { key: string; label: string; color: string }[] = [
   { key: 'open',      label: 'Open',      color: 'var(--sb-ink-3)' },
   { key: 'done',      label: 'Done',      color: 'var(--sb-positive)' },
-  { key: 'cancelled', label: 'Cancelled', color: 'var(--sb-ink-4)' },
+  { key: 'cancelled', label: 'Cancelled', color: 'var(--sb-ink-3)' },
 ]
 
 /** One grouping implementation shared by the board, the matrix and the rail. */
@@ -224,7 +224,7 @@ export function buildTaskGroups(tasks: Task[], groupBy: Exclude<TaskGroupBy, 'no
         key: k,
         label: u?.name ?? 'Unassigned',
         emoji: '👤',
-        color: u?.companyColor ?? 'var(--sb-ink-4)',
+        color: u?.companyColor ?? 'var(--sb-ink-3)',
         tasks: sortUrgentFirst(ts),
       }
     })
@@ -254,6 +254,6 @@ export function buildTaskGroups(tasks: Task[], groupBy: Exclude<TaskGroupBy, 'no
     .filter(([k]) => k !== '__none')
     .map(([k, ts]) => {
       const co = companies.find(c => c.id === k)
-      return { key: k, label: co?.name ?? k, emoji: '🏢', color: co?.color ?? 'var(--sb-ink-4)', tasks: sortUrgentFirst(ts) }
+      return { key: k, label: co?.name ?? k, emoji: '🏢', color: co?.color ?? 'var(--sb-ink-3)', tasks: sortUrgentFirst(ts) }
     })
 }

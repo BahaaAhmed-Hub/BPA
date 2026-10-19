@@ -130,7 +130,7 @@ export const QUADRANT_META: Record<Quadrant, { label: string; sub: string; color
   do:       { label: 'Do',        sub: 'Urgent + Important',         color: 'var(--sb-negative)' },
   schedule: { label: 'Schedule',  sub: 'Not Urgent + Important',     color: 'var(--sb-info)' },
   delegate: { label: 'Delegate',  sub: 'Urgent + Not Important',     color: 'var(--sb-positive)' },
-  eliminate:{ label: 'Eliminate', sub: 'Not Urgent + Not Important', color: 'var(--sb-ink-4)' },
+  eliminate:{ label: 'Eliminate', sub: 'Not Urgent + Not Important', color: 'var(--sb-ink-3)' },
 }
 
 // ─── Task Type ───────────────────────────────────────────────────────────────
@@ -178,7 +178,7 @@ export const PRIORITY_META: Record<Priority, { label: string; color: string; tin
   P0: { label: 'P0', color: 'var(--sb-negative)', tint: 'rgba(198,40,40,0.11)',  border: 'rgba(198,40,40,0.30)' },
   P1: { label: 'P1', color: 'var(--sb-accent-deep)', tint: 'rgba(var(--sb-accent-rgb),0.22)', border: 'rgba(var(--sb-accent-rgb),0.55)' },
   P2: { label: 'P2', color: 'var(--sb-ink-3)', tint: 'var(--sb-field)',               border: 'var(--sb-border)' },
-  P3: { label: 'P3', color: 'var(--sb-ink-4)', tint: 'var(--sb-field)',               border: 'var(--sb-border)' },
+  P3: { label: 'P3', color: 'var(--sb-ink-3)', tint: 'var(--sb-field)',               border: 'var(--sb-border)' },
 }
 
 // ─── Task ────────────────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ export type BoardStatus = 'backlog' | 'planned' | 'in-progress' | 'blocked' | 'd
 // Where a card stands is a meaning too: not started, planned, moving, stuck,
 // late, finished.
 export const BOARD_STATUS_META: Record<BoardStatus, { label: string; color: string }> = {
-  backlog:        { label: 'Backlog',      color: 'var(--sb-ink-4)' },
+  backlog:        { label: 'Backlog',      color: 'var(--sb-ink-3)' },
   planned:        { label: 'Planned',      color: 'var(--sb-info)' },
   'in-progress':  { label: 'In Progress',  color: 'var(--sb-accent)' },
   blocked:        { label: 'Blocked',      color: 'var(--sb-negative)' },

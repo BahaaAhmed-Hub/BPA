@@ -177,7 +177,7 @@ function MonthPicker({ byDay, month, onMonth, chosen, onChoose, canGoBack, canGo
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-          <span key={i} style={{ textAlign: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-4)' }}>{d}</span>
+          <span key={i} style={{ textAlign: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)' }}>{d}</span>
         ))}
         {cells.map((date, i) => {
           if (!date) return <span key={`x${i}`} />
@@ -194,7 +194,7 @@ function MonthPicker({ byDay, month, onMonth, chosen, onChoose, canGoBack, canGo
                 height: 38, borderRadius: 'var(--sb-r-sm)', cursor: has ? 'pointer' : 'default',
                 fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 700 : 500,
                 background: on ? 'var(--sb-ink-1)' : has ? 'var(--sb-field)' : 'transparent',
-                color: on ? 'var(--sb-ink-on-dark)' : has ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
+                color: on ? 'var(--sb-ink-on-dark)' : has ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                 border: `var(--sb-border-width) solid ${on ? 'var(--sb-ink-1)' : has ? 'var(--sb-border)' : 'transparent'}`,
               }}>
               {Number(date.slice(8))}
@@ -537,7 +537,7 @@ function BookFace({ handle, wanted }: { handle: string; wanted?: string }) {
                   }}>
                   {sending ? 'Booking…' : answer?.requires_approval ? 'Ask for this time' : 'Book it'}
                 </button>
-                <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+                <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                   {answer?.requires_approval
                     ? 'It is not booked until it is accepted — you will hear either way.'
                     : 'You will get a calendar invitation, and a link to cancel or move it.'}
@@ -547,7 +547,7 @@ function BookFace({ handle, wanted }: { handle: string; wanted?: string }) {
           </>
         )}
 
-        <p style={{ margin: '4px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', textAlign: 'center' }}>
+        <p style={{ margin: '4px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textAlign: 'center' }}>
           Times shown in {zoneLabel(tz)}
         </p>
       </div>

@@ -37,8 +37,8 @@ const CO_NAME: Record<string, string> = {
 
 const ENERGY_META = [
   null,
-  { label: 'Depleted', color: 'var(--sb-ink-4)' },
-  { label: 'Low',      color: 'var(--sb-ink-4)' },
+  { label: 'Depleted', color: 'var(--sb-ink-3)' },
+  { label: 'Low',      color: 'var(--sb-ink-3)' },
   { label: 'Steady',   color: 'var(--sb-info)' },
   { label: 'Energized',color: 'var(--sb-positive)' },
   { label: 'Peak',     color: 'var(--sb-info)' },

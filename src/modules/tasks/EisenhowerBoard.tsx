@@ -77,7 +77,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
 
   const groups = groupBy !== 'none'
     ? buildTaskGroups(tasks, groupBy)
-    : [{ key: 'all', label: '', color: 'var(--sb-ink-4)', emoji: '', tasks: sortUrgentFirst(tasks) }]
+    : [{ key: 'all', label: '', color: 'var(--sb-ink-3)', emoji: '', tasks: sortUrgentFirst(tasks) }]
 
   return (
     <div ref={setNodeRef} style={{
@@ -102,7 +102,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
         }}>{spec.badge}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{spec.title}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{spec.sub}</p>
+          <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.35 }}>{spec.sub}</p>
         </div>
         <span style={{ paddingTop: 2 }}><CountBadge value={tasks.length} /></span>
         {/* Adding to a quadrant is a small, frequent thing, so it is a small

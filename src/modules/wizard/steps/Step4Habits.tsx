@@ -101,7 +101,7 @@ export function Step4Habits({ data, onChange }: Props) {
               )}
               <div style={{ fontSize: 'var(--sb-t-h2)', marginBottom: 6 }}>{t.emoji}</div>
               <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', marginBottom: 2 }}>{t.name}</div>
-              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                 {t.type === 'quantity' ? `${(t as {goal?: number}).goal} ${(t as {unit?: string}).unit}` : 'Daily check'}
               </div>
             </button>
@@ -112,7 +112,7 @@ export function Step4Habits({ data, onChange }: Props) {
       {/* Divider */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <div style={{ flex: 1, height: 1, background: 'var(--sb-border)' }} />
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>or add your own</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>or add your own</span>
         <div style={{ flex: 1, height: 1, background: 'var(--sb-border)' }} />
       </div>
 
@@ -124,8 +124,8 @@ export function Step4Habits({ data, onChange }: Props) {
               <span style={{ fontSize: 'var(--sb-t-h2)' }}>{h.emoji}</span>
               <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: h.color, flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{h.name}</span>
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{h.frequency}</span>
-              <button onClick={() => removeCustom(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{h.frequency}</span>
+              <button onClick={() => removeCustom(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
                 <X size={ICON.sm} />
               </button>
             </div>
@@ -167,14 +167,14 @@ export function Step4Habits({ data, onChange }: Props) {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <Button variant="accent" onClick={addCustom}>Add</Button>
-            <button onClick={() => setAddingCustom(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)' }}>Cancel</button>
+            <button onClick={() => setAddingCustom(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)' }}>Cancel</button>
           </div>
         </div>
       ) : (
         <button onClick={() => setAddingCustom(true)} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 'var(--sb-r-chip)',
           background: 'transparent', border: '1px dashed var(--sb-border)',
-          color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
+          color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
           width: '100%', justifyContent: 'center',
         }}>
           + Custom habit

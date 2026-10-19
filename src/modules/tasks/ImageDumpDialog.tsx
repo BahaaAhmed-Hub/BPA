@@ -138,11 +138,11 @@ export function ImageDumpDialog({ onClose }: Props) {
           <Sparkles size={16} color="#F5D14E" strokeWidth={2} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1, #191712)' }}>Scan task list</div>
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4, #9B9180)', marginTop: 1 }}>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3, #9B9180)', marginTop: 1 }}>
               Upload a photo or PDF — AI reads every task, you review before pushing
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4, #9B9180)', padding: 4, display: 'flex' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3, #9B9180)', padding: 4, display: 'flex' }}>
             <X size={16} />
           </button>
         </div>
@@ -178,7 +178,7 @@ export function ImageDumpDialog({ onClose }: Props) {
                 <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1, #191712)', marginBottom: 6 }}>
                   Drop your task list here
                 </div>
-                <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4, #9B9180)', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3, #9B9180)', lineHeight: 1.5 }}>
                   Photo · Notebook scan · Whiteboard · PDF
                 </div>
                 <div style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, background: 'var(--sb-ink-1, #191712)', color: '#FFFFFF', fontSize: 'var(--sb-t-body)', fontWeight: 500 }}>
@@ -208,7 +208,7 @@ export function ImageDumpDialog({ onClose }: Props) {
                 </svg>
                 <style>{`@keyframes img-spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
                 <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1, #191712)' }}>Reading your task list…</div>
-                <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4, #9B9180)' }}>Claude is scanning and extracting tasks</div>
+                <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3, #9B9180)' }}>Claude is scanning and extracting tasks</div>
               </div>
             </div>
           )}
@@ -223,7 +223,7 @@ export function ImageDumpDialog({ onClose }: Props) {
               )}
               {tasks.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                  <div style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4, #9B9180)' }}>No tasks found in this file.</div>
+                  <div style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3, #9B9180)' }}>No tasks found in this file.</div>
                   <button onClick={() => { setStage('upload'); setPreview(null) }} style={{ marginTop: 12, padding: '7px 16px', borderRadius: 8, background: 'var(--sb-field, #FAF7EC)', border: '1px solid var(--sb-border, #E8E1CE)', color: '#6C6553', fontSize: 'var(--sb-t-body)', cursor: 'pointer' }}>
                     Try another file
                   </button>
@@ -236,7 +236,7 @@ export function ImageDumpDialog({ onClose }: Props) {
                       <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3, #6C6553)' }}>{included} of {tasks.length} selected</span>
                     </button>
                     <span style={{ flex: 1 }} />
-                    <button onClick={() => { setStage('upload'); setPreview(null); setTasks([]) }} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4, #9B9180)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <button onClick={() => { setStage('upload'); setPreview(null); setTasks([]) }} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3, #9B9180)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                       ← Try another file
                     </button>
                   </div>
@@ -260,7 +260,7 @@ export function ImageDumpDialog({ onClose }: Props) {
         {/* Footer */}
         {stage === 'review' && tasks.length > 0 && (
           <div style={{ padding: '14px 22px', borderTop: '1px solid var(--sb-hairline, #F0EBDC)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ flex: 1, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4, #9B9180)' }}>
+            <span style={{ flex: 1, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3, #9B9180)' }}>
               {included} task{included !== 1 ? 's' : ''} → Brain dump
             </span>
             <button onClick={onClose} style={{ padding: '7px 16px', borderRadius: 9, background: 'transparent', border: '1px solid var(--sb-border, #E8E1CE)', color: 'var(--sb-ink-3, #6C6553)', fontSize: 'var(--sb-t-body)', cursor: 'pointer' }}>
@@ -273,7 +273,7 @@ export function ImageDumpDialog({ onClose }: Props) {
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '8px 20px', borderRadius: 9, fontSize: 'var(--sb-t-body)', fontWeight: 600,
                 background: pushDone ? '#1D9E75' : (included === 0 ? 'var(--sb-border, #E8E1CE)' : 'var(--sb-ink-1, #191712)'),
-                border: 'none', color: included === 0 ? 'var(--sb-ink-4, #9B9180)' : '#FFFFFF',
+                border: 'none', color: included === 0 ? 'var(--sb-ink-3, #9B9180)' : '#FFFFFF',
                 cursor: included === 0 ? 'default' : 'pointer', transition: 'all 0.15s',
               }}
             >
@@ -331,7 +331,7 @@ function ReviewRow({ task, companies, notesOpen, onToggleNotes, onChange, onRemo
         <select value={task.quadrant ?? ''} onChange={e => onChange({ quadrant: (e.target.value || null) as Quadrant | null })}
           style={{
             ...inp, padding: '2px 8px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
-            color: q?.color ?? 'var(--sb-ink-4, #9B9180)',
+            color: q?.color ?? 'var(--sb-ink-3, #9B9180)',
             background: q ? `${q.color}14` : 'var(--sb-field, #FAF7EC)',
             border: `1px solid ${q ? `${q.color}40` : 'var(--sb-border, #E8E1CE)'}`,
             borderRadius: 20,
@@ -355,13 +355,13 @@ function ReviewRow({ task, companies, notesOpen, onToggleNotes, onChange, onRemo
 
         {/* Notes toggle */}
         {task.notes && (
-          <button onClick={onToggleNotes} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4, #9B9180)', padding: 0, display: 'flex' }}>
+          <button onClick={onToggleNotes} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3, #9B9180)', padding: 0, display: 'flex' }}>
             <ChevronDown size={13} style={{ transform: notesOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
           </button>
         )}
 
         {/* Remove */}
-        <button onClick={onRemove} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4, #9B9180)', padding: 0, display: 'flex' }}>
+        <button onClick={onRemove} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3, #9B9180)', padding: 0, display: 'flex' }}>
           <Trash2 size={12} />
         </button>
       </div>

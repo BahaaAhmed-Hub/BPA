@@ -73,7 +73,7 @@ export function Step6Done({ data }: Props) {
             <div style={{ fontSize: 'var(--sb-t-h1)', fontWeight: 800, color: s.color, lineHeight: 1 }}>
               <CountUp target={s.value} />
             </div>
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 4 }}>{s.label}</div>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 4 }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -84,7 +84,7 @@ export function Step6Done({ data }: Props) {
         </p>
       </div>
 
-      <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
+      <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
         Click <strong style={{ color: 'var(--sb-ink-1)' }}>Finish</strong> below to enter your workspace.
       </p>
 

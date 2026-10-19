@@ -139,7 +139,7 @@ function LoginScreen() {
                     fontWeight: 700, fontSize: 'var(--sb-t-h1)', color: 'var(--sb-ink-1)', letterSpacing: '-.02em',
                     fontVariantNumeric: 'tabular-nums',
                   }}>{s.value}</div>
-                  <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 2 }}>{s.label}</div>
+                  <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2 }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -200,7 +200,7 @@ function LoginScreen() {
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0' }}>
             <div style={{ flex: 1, height: 1, background: 'var(--sb-border)' }} />
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>or</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>or</span>
             <div style={{ flex: 1, height: 1, background: 'var(--sb-border)' }} />
           </div>
 
@@ -216,7 +216,7 @@ function LoginScreen() {
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 'var(--sb-r-sm)',
                 background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)',
+                color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)',
                 outline: 'none', cursor: 'not-allowed',
                 fontFamily: 'inherit', boxSizing: 'border-box',
               }}
@@ -233,7 +233,7 @@ function LoginScreen() {
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 'var(--sb-r-sm)',
                 background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)',
+                color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)',
                 outline: 'none', cursor: 'not-allowed',
                 fontFamily: 'inherit', boxSizing: 'border-box',
               }}
@@ -246,14 +246,14 @@ function LoginScreen() {
               width: '100%', padding: '12px',
               borderRadius: 'var(--sb-r-nav)',
               background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-              color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 600,
+              color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', fontWeight: 600,
               cursor: 'not-allowed', fontFamily: 'inherit',
             }}
           >
             Log in
           </button>
 
-          <p style={{ margin: '24px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', textAlign: 'center', lineHeight: 1.65 }}>
+          <p style={{ margin: '24px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textAlign: 'center', lineHeight: 1.65 }}>
             By continuing, you agree to our{' '}
             <span style={{ color: 'var(--sb-ink-2)', textDecoration: 'underline', cursor: 'pointer' }}>Terms</span>
             {' '}and{' '}
@@ -508,13 +508,13 @@ function NotificationBell() {
                   display: 'block', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', lineHeight: 1.35,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{n.title}</span>
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{n.detail}</span>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.35 }}>{n.detail}</span>
               </span>
             </button>
           ))}
 
           {count === 0 && (
-            <p style={{ margin: 0, padding: '18px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', lineHeight: 1.5, textAlign: 'center' }}>
+            <p style={{ margin: 0, padding: '18px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5, textAlign: 'center' }}>
               Nothing is waiting for you.
             </p>
           )}
@@ -528,7 +528,7 @@ function NotificationBell() {
           {/* A kind that is on and cannot speak yet says what it is waiting
               on. An empty bell for a reason is not the same as a quiet day. */}
           {dormant.map(d => (
-            <p key={d.setting.id} style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
+            <p key={d.setting.id} style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
               {d.setting.label} — {d.why}.
             </p>
           ))}
@@ -653,7 +653,7 @@ function YouCluster() {
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{user?.name ?? 'Your account'}</p>
                   <p style={{
-                    margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+                    margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{user?.email}</p>
                 </div>

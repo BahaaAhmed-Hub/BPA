@@ -113,7 +113,7 @@ function Card({ p }: { p: LinkPreview }) {
         }}>{p.title || p.tail}</span>
         <span style={{
           display: 'flex', alignItems: 'center', gap: 5,
-          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
           lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {showThumb && <Mark p={p} />}

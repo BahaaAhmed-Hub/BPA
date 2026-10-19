@@ -307,7 +307,7 @@ export function TaskCommand() {
                     }}
                   />
                   {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 9, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', display: 'flex', padding: 2 }}>
+                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 9, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 2 }}>
                       <X size={ICON.sm} />
                     </button>
                   )}

@@ -30,7 +30,7 @@ const ROW: React.CSSProperties = {
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
 }
 const GROUP_LABEL: React.CSSProperties = {
-  fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-4)',
+  fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)',
   textTransform: 'uppercase', padding: '10px 11px 5px',
 }
 const HAIRLINE: React.CSSProperties = { height: 1, background: 'var(--sb-hairline)', margin: '6px 4px' }

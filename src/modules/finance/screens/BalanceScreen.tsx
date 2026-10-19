@@ -134,7 +134,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
           flexShrink: 0, width: 18, height: 30, padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'none', border: 'none', borderRadius: 'var(--sb-r-chip)',
-          color: hovered || isDragging ? 'var(--sb-ink-4)' : 'var(--sb-border)',
+          color: hovered || isDragging ? 'var(--sb-ink-3)' : 'var(--sb-border)',
           cursor: isDragging ? 'grabbing' : 'grab',
           touchAction: 'none',
         }}>
@@ -171,7 +171,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
               background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? 'var(--sb-warning)' : 'var(--sb-ink-3)',
             }} />
           </div>
-          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 3, whiteSpace: 'nowrap' }}>
+          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 3, whiteSpace: 'nowrap' }}>
             {account.currency} {Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of {Math.round(limit).toLocaleString('en-US')}
           </span>
         </div>
@@ -644,7 +644,7 @@ export function BalanceScreen() {
               <input type="date" value={rangeFrom} max={rangeTo || undefined}
                 onChange={e => setRangeFrom(e.target.value)}
                 style={RANGE_FIELD} />
-              <span style={{ color: 'var(--sb-ink-4)' }}>›</span>
+              <span style={{ color: 'var(--sb-ink-3)' }}>›</span>
               <input type="date" value={rangeTo} min={rangeFrom || undefined}
                 onChange={e => setRangeTo(e.target.value)}
                 style={RANGE_FIELD} />

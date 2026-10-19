@@ -155,7 +155,7 @@ export function Step1Welcome({ data, onChange }: Props) {
           }}>
             <div style={{ fontSize: 'var(--sb-t-h1)', marginBottom: 8 }}>{f.emoji}</div>
             <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)', marginBottom: 4 }}>{f.title}</div>
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>{f.desc}</div>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>{f.desc}</div>
           </div>
         ))}
       </div>
@@ -234,7 +234,7 @@ export function Step1Welcome({ data, onChange }: Props) {
         </div>
       </div>
 
-      <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', textAlign: 'center', fontStyle: 'italic' }}>
+      <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', textAlign: 'center', fontStyle: 'italic' }}>
         This will only take about 2 minutes. Let's get started!
       </p>
     </div>

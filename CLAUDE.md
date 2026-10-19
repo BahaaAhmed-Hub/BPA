@@ -78,7 +78,7 @@ Every claim in those files was measured, and the method is the point:
 | Hairline | `#F0EBDC` |
 | Primary ink | `#191712` |
 | Muted ink | `#6C6553` |
-| Ghost ink | `#9B9180` |
+| Ghost ink (`--sb-ink-4`) | `#7C7565` — placeholders, disabled states and dividers only; readable text is `--sb-ink-3` |
 | Amber accent | `#F5D14E` |
 | Positive (green) | `#0C8140` — `POSITIVE` in `src/lib/moneyColors.ts` |
 | Negative (red) | `#C62828` — `NEGATIVE` in `src/lib/moneyColors.ts` |

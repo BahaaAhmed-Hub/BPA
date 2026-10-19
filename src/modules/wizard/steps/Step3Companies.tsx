@@ -63,14 +63,14 @@ export function Step3Companies({ data, onChange }: Props) {
               <div style={{ width: 14, height: 14, borderRadius: 'var(--sb-r-pill)', background: co.color, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{co.name}</span>
-                {co.emailDomain && <span style={{ marginLeft: 8, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{co.emailDomain}</span>}
+                {co.emailDomain && <span style={{ marginLeft: 8, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{co.emailDomain}</span>}
               </div>
               {acc && (
                 <span style={{ fontSize: 'var(--sb-t-meta)', padding: '2px 8px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', color: 'var(--sb-info)', flexShrink: 0 }}>
                   {acc.email.split('@')[0]}
                 </span>
               )}
-              <button onClick={() => remove(co.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 4, display: 'flex' }}>
+              <button onClick={() => remove(co.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex' }}>
                 <X size={ICON.sm} />
               </button>
             </div>
@@ -103,7 +103,7 @@ export function Step3Companies({ data, onChange }: Props) {
             <Button variant="accent" onClick={addCompany}>
               Add
             </Button>
-            <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)' }}>
+            <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)' }}>
               Cancel
             </button>
           </div>
@@ -112,14 +112,14 @@ export function Step3Companies({ data, onChange }: Props) {
         <button onClick={() => setAdding(true)} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 'var(--sb-r-chip)',
           background: 'transparent', border: '1px dashed var(--sb-border)',
-          color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
+          color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
           width: '100%', justifyContent: 'center',
         }}>
           + Add company
         </button>
       )}
 
-      <p style={{ margin: '16px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontStyle: 'italic' }}>
+      <p style={{ margin: '16px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontStyle: 'italic' }}>
         You can add more companies anytime in Settings.
       </p>
     </div>

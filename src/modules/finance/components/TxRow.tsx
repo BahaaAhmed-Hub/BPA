@@ -139,7 +139,7 @@ export function TxRow({
         </span>
         <span style={{
           display: 'flex', gap: 6, marginTop: 1, minWidth: 0,
-          fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)',
+          fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {meta}

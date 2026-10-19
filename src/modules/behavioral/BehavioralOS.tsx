@@ -70,7 +70,7 @@ function RankProgressBar({ score }: { score: number }) {
             left: `${thresholds[i]}%`,
             fontSize: 'var(--sb-t-micro)',
             letterSpacing: '0.08em',
-            color: score >= thresholds[i] ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)',
+            color: score >= thresholds[i] ? 'var(--sb-ink-3)' : 'var(--sb-ink-3)',
             textTransform: 'uppercase',
             whiteSpace: 'nowrap',
           }}>
@@ -291,7 +291,7 @@ export function BehavioralOS() {
                       <div style={{ fontSize: 36, fontWeight: 300, color: rank.score >= 60 ? 'var(--sb-accent)' : 'var(--sb-ink-3)', lineHeight: 1 }}>
                         {rank.score}
                       </div>
-                      <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4 }}>
+                      <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4 }}>
                         /&nbsp;100
                       </div>
                     </div>
@@ -347,7 +347,7 @@ export function BehavioralOS() {
           </div>
 
           {objectives.length === 0 ? (
-            <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', padding: '16px 0', borderTop: 'var(--sb-border-width) solid var(--sb-border)' }}>
+            <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', padding: '16px 0', borderTop: 'var(--sb-border-width) solid var(--sb-border)' }}>
               No open objectives. The field is clear.
             </div>
           ) : (
@@ -359,7 +359,7 @@ export function BehavioralOS() {
                   borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
                 }}>
                   <span style={{
-                    fontSize: 'var(--sb-t-meta)', letterSpacing: '0.1em', color: 'var(--sb-ink-4)',
+                    fontSize: 'var(--sb-t-meta)', letterSpacing: '0.1em', color: 'var(--sb-ink-3)',
                     width: 18, flexShrink: 0,
                   }}>
                     {String(i + 1).padStart(2, '0')}
@@ -401,7 +401,7 @@ export function BehavioralOS() {
                 <IdentityCard key={identity.id} identity={identity} />
               ))}
             </div>
-            <p style={{ marginTop: 14, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>
+            <p style={{ marginTop: 14, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
               Identities are inferred from repeated behavior over 30 days. They are not assigned — they are earned.
             </p>
           </section>
@@ -428,7 +428,7 @@ export function BehavioralOS() {
 
         {/* ── Last evaluated ─────────────────────────────────────────────── */}
         {lastEvaluated && (
-          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', letterSpacing: '0.05em' }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', letterSpacing: '0.05em' }}>
             Last evaluated {new Date(lastEvaluated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </div>
         )}

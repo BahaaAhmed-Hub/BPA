@@ -30,7 +30,7 @@ export function Label({ children, current, style }: {
   return (
     <span style={{
       fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500, letterSpacing: '.14em',
-      textTransform: 'uppercase', color: current ? 'var(--sb-accent-deep)' : 'var(--sb-ink-4)',
+      textTransform: 'uppercase', color: current ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)',
       ...style,
     }}>{children}</span>
   )
@@ -108,7 +108,7 @@ function StatusDisc({ state }: { state: RowState }) {
     </span>
   )
   return (
-    <span style={{ ...box, background: 'var(--sb-field)', color: 'var(--sb-ink-4)' }} title="Done">
+    <span style={{ ...box, background: 'var(--sb-field)', color: 'var(--sb-ink-3)' }} title="Done">
       <Check size={13} strokeWidth={STROKE.active} />
     </span>
   )
@@ -173,13 +173,13 @@ function EventRow({ row, first, now, onOpen }: {
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{
           display: 'block', fontSize: 'var(--sb-t-body)', fontWeight: 600,
-          color: off ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
+          color: off ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)',
           textDecoration: off ? 'line-through' : 'none', textDecorationThickness: 1.5,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{row.event.summary || '(no title)'}</span>
         {sub && (
           <span style={{
-            display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 1,
+            display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 1,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{sub}</span>
         )}
@@ -327,7 +327,7 @@ export function ProfessorCard({ rows, dayLabel }: { rows: RailEvent[]; dayLabel:
 
       {loading ? <Skeleton /> : (
         <span style={{
-          fontSize: 'var(--sb-t-h3)', lineHeight: 1.45, color: failed ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
+          fontSize: 'var(--sb-t-h3)', lineHeight: 1.45, color: failed ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)',
           fontVariantNumeric: 'tabular-nums',
         }}>{body}</span>
       )}
@@ -410,13 +410,13 @@ export function CalendarRail({ rows, dayLabel, onOpen }: {
         <span style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <Label current>{dayLabel}</Label>
           <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
             {sorted.length} event{sorted.length === 1 ? '' : 's'}
           </span>
         </span>
 
         {sorted.length === 0 && (
-          <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)', padding: '11px 0' }}>
+          <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', padding: '11px 0' }}>
             Nothing on this day.
           </span>
         )}

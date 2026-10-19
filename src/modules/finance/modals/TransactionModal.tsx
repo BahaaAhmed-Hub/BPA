@@ -321,7 +321,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)',
             }}>
               {currency}
-              <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)' }} />
+              <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-3)' }} />
             </span>
             <select value={currency}
               onChange={e => { setCurrencyTouched(true); setCurrency(e.target.value as Currency) }}
@@ -340,7 +340,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             style={{
               flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
               fontFamily: DISPLAY, fontSize: 'var(--sb-t-display)', fontWeight: 700, letterSpacing: '-0.03em',
-              color: amount > 0 ? typeColor : 'var(--sb-ink-4)', textAlign: 'right',
+              color: amount > 0 ? typeColor : 'var(--sb-ink-3)', textAlign: 'right',
               fontVariantNumeric: 'tabular-nums', padding: 0,
             }} />
         </div>
@@ -431,7 +431,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                     {CHANNEL_LABEL[c]}
                   </button>
                 ))}
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', alignSelf: 'center' }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', alignSelf: 'center' }}>
                   {spendAccount!.name} pays {cardScheme!.earn.pos} in person, {cardScheme!.earn.online} online
                 </span>
               </span>
@@ -469,7 +469,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
               <label onClick={openPicker} style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
                 {new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+                <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }} />
                 <input type="date" value={date} onChange={e => pickDate(e.target.value)}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', border: 'none', padding: 0, pointerEvents: 'none' }} />
               </label>
@@ -500,8 +500,8 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               <label onClick={openPicker} style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
                 {paidAt
                   ? new Date(paidAt + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-                  : <span style={{ color: 'var(--sb-ink-4)' }}>Pick the day</span>}
-                <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+                  : <span style={{ color: 'var(--sb-ink-3)' }}>Pick the day</span>}
+                <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }} />
                 <input type="date" value={paidAt}
                   onChange={e => { setPaidTouched(true); setPaidAt(e.target.value) }}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', border: 'none', padding: 0, pointerEvents: 'none' }} />
@@ -672,7 +672,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: filled ? 'rgba(var(--sb-accent-rgb),0.18)' : open ? 'var(--sb-field)' : 'transparent',
                   border: `var(--sb-border-width) solid ${filled ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
-                  color: filled ? 'var(--sb-ink-1)' : open ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)',
+                  color: filled ? 'var(--sb-ink-1)' : open ? 'var(--sb-ink-3)' : 'var(--sb-ink-3)',
                 }}>
                 <Icon size={17} strokeWidth={1.6} />
               </button>
@@ -695,7 +695,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
           <button onClick={handleSave} disabled={!canSave} style={{
             ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
             background: canSave ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-            border: 'none', color: canSave ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+            border: 'none', color: canSave ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)', // ui-guard: ink-ok
             cursor: canSave ? 'pointer' : 'default',
           }}>{isEdit ? 'Save changes' : 'Add transaction'}</button>
           <button onClick={onClose} style={{ ...PILL, color: 'var(--sb-ink-3)' }}>Cancel</button>

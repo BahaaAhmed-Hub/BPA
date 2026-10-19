@@ -209,7 +209,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               value={balance}
               onChange={setBalance}
             />
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 5, lineHeight: 1.45 }}>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 5, lineHeight: 1.45 }}>
               Where this account stood <b style={{ fontWeight: 600 }}>before the year you are looking at</b>.
               Entries move it from here — a card goes below zero as it is spent on, and
               back towards zero as it is paid off. Nothing is read from earlier years,
@@ -229,7 +229,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
                 value={creditLimit}
                 onChange={setCreditLimit}
               />
-              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 5, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 5, lineHeight: 1.45 }}>
                 The card's ceiling. Leave it at nothing and the card simply shows what is
                 owed, with no bar and no figure left.
               </div>

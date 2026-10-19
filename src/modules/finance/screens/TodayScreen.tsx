@@ -146,7 +146,7 @@ function MoneyCalendar({
         <button onClick={onPrevMonth} style={ROUND_BTN} title="Previous month">‹</button>
         <button onClick={onNextMonth} style={ROUND_BTN} title="Next month">›</button>
         <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.03em' }}>
-          {MONTH_NAMES[month]} <span style={{ color: 'var(--sb-ink-4)' }}>{year}</span>
+          {MONTH_NAMES[month]} <span style={{ color: 'var(--sb-ink-3)' }}>{year}</span>
         </span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           {chip('Out', monthOut > 0 ? acct(-monthOut) : '–', NEGATIVE_DEEP, NEGATIVE_TINT)}
@@ -172,7 +172,7 @@ function MoneyCalendar({
           {['SAT','SUN','MON','TUE','WED','THU','FRI'].map(d => (
             <div key={d} style={{
               textAlign: 'center' as const, fontSize: 'var(--sb-t-meta)', fontWeight: 700,
-              letterSpacing: '0.1em', color: 'var(--sb-ink-4)', padding: '2px 0 6px',
+              letterSpacing: '0.1em', color: 'var(--sb-ink-3)', padding: '2px 0 6px',
             }}>{d}</div>
           ))}
         </div>
@@ -217,7 +217,7 @@ function MoneyCalendar({
                   </span>
                 )}
                 {payees.slice(0, 2).map((p, pi) => (
-                  <span key={pi} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
+                  <span key={pi} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
                 ))}
               </div>
             )

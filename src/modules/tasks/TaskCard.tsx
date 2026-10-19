@@ -165,7 +165,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               flex: 1, margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               // An unnamed task reads as unnamed, not as a task called Untitled.
-              color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
+              color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
               fontStyle: task.title.trim() ? 'normal' : 'italic',
               lineHeight: 1.3, minWidth: 0,
               textDecoration: task.completed ? 'line-through' : 'none',
@@ -180,7 +180,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
               flexShrink: 0, marginTop: 2,
-              color: flaming ? 'var(--sb-negative)' : hovered ? 'var(--sb-ink-4)' : 'var(--sb-border)',
+              color: flaming ? 'var(--sb-negative)' : hovered ? 'var(--sb-ink-3)' : 'var(--sb-border)',
             }}>
             <Flame size={ICON.sm} strokeWidth={STROKE.rest} fill={flaming ? 'var(--sb-negative)' : 'none'} />
           </button>
@@ -190,7 +190,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         <div data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', margin: '3px 0 0 22px' }}>
           <p style={{
             margin: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
-            color: v.companyName ? v.companyColor : 'var(--sb-ink-4)', lineHeight: 1.3,
+            color: v.companyName ? v.companyColor : 'var(--sb-ink-3)', lineHeight: 1.3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             cursor: 'pointer',
           }}>{v.companyName || 'No company'}</p>
@@ -212,7 +212,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         {/* Meta line */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 9, margin: '3px 0 0 22px',
-          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', minWidth: 0,
+          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', minWidth: 0,
           // a narrow column (panel open) clips the trailing meta rather than
           // letting it run under the attribute rail
           overflow: 'hidden', whiteSpace: 'nowrap',

@@ -225,7 +225,7 @@ export function SetupWizard({ onClose }: Props) {
                 <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
                   Step {step} of {TOTAL_STEPS}
                 </span>
-                <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 5 }}>
                   ✦ The Professor Setup
                 </span>
               </div>
@@ -251,7 +251,7 @@ export function SetupWizard({ onClose }: Props) {
                 })}
               </div>
             </div>
-            <button onClick={handleSkip} title="Skip setup" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: '2px 4px', display: 'flex', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, marginTop: -2, transition: 'color 0.15s' }}>
+            <button onClick={handleSkip} title="Skip setup" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '2px 4px', display: 'flex', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, marginTop: -2, transition: 'color 0.15s' }}>
               <X size={ICON.lg} />
             </button>
           </div>
@@ -284,7 +284,7 @@ export function SetupWizard({ onClose }: Props) {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {step === 1 && (
-                <button onClick={handleSkip} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)', padding: '4px 8px' }}>
+                <button onClick={handleSkip} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', padding: '4px 8px' }}>
                   Skip for now
                 </button>
               )}

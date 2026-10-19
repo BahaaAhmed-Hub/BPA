@@ -87,7 +87,7 @@ function Count({ n, on }: { n: number; on: boolean }) {
   return (
     <span style={{
       fontVariantNumeric: 'tabular-nums',
-      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
       opacity: on ? 0.7 : 1,
     }}>{n}</span>
   )
@@ -1437,7 +1437,7 @@ export function InboxModule() {
           style={{
             display: 'flex', alignItems: 'center', gap: 8, height: 30, padding: '0 8px',
             borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--sb-ink-4)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+            color: 'var(--sb-ink-3)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
             letterSpacing: '0.12em', textTransform: 'uppercase',
           }}>
           {railOpen ? <ChevronDown size={ICON.sm} /> : <ChevronRight size={ICON.sm} />}
@@ -1598,7 +1598,7 @@ export function InboxModule() {
                     </div>
                     <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: isRead ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
                       {email.subject}
-                      <span style={{ fontWeight: 400, color: 'var(--sb-ink-4)' }}> — {email.preview}</span>
+                      <span style={{ fontWeight: 400, color: 'var(--sb-ink-3)' }}> — {email.preview}</span>
                     </p>
                   </div>
                   <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, flexShrink: 0 }}>
@@ -1611,7 +1611,7 @@ export function InboxModule() {
                         maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>{accountLabel(email.account.email, email.account.isPrimary)}</span>
                     )}
-                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                     {fmtRelTime(email.receivedAt)}
                     </span>
                   </span>
@@ -1705,7 +1705,7 @@ export function InboxModule() {
               control whose active option already carries an arrow. */}
           <span className="mail-sort-label" style={{
             fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
-            textTransform: 'uppercase', color: 'var(--sb-ink-4)', flexShrink: 0,
+            textTransform: 'uppercase', color: 'var(--sb-ink-3)', flexShrink: 0,
           }}>Sort</span>
           <Segmented
             size="sm"
@@ -1758,7 +1758,7 @@ export function InboxModule() {
 
             {/* Only where the sender offers a way off the list. */}
             {mailClass === 'newsletter' && inClass.some(e => unsubscribeLink(e.headers)) && (
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                 {inClass.filter(e => unsubscribeLink(e.headers)).length} offer an unsubscribe link
               </span>
             )}
@@ -2120,7 +2120,7 @@ export function InboxModule() {
               }} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flex: 1, minWidth: 0 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flex: 1, minWidth: 0 }}>
                 Leaves from {selectedEmail.account.email}
               </span>
               <button
@@ -2196,14 +2196,14 @@ export function InboxModule() {
 
             <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
               <div style={{ flex: 1, padding: '12px 14px', background: CLASS_META[selectedTriage.result.classification].bg, border: `var(--sb-border-width) solid ${alpha(CLASS_META[selectedTriage.result.classification].color, 18.8)}`, borderRadius: 'var(--sb-r-chip)' }}>
-                <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
+                <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: CLASS_META[selectedTriage.result.classification].color }}>
                   {(() => { const C = CLASS_META[selectedTriage.result.classification].Icon; return <C size={ICON.sm} strokeWidth={STROKE.active} /> })()}
                   {CLASS_META[selectedTriage.result.classification].label}
                 </div>
               </div>
               <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: `var(--sb-border-width) solid ${alpha(URGENCY_META[selectedTriage.result.urgency].color, 18.8)}`, borderRadius: 'var(--sb-r-chip)' }}>
-                <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
+                <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: URGENCY_META[selectedTriage.result.urgency].color }}>
                   {(() => { const U = URGENCY_META[selectedTriage.result.urgency].Icon; return <U size={ICON.sm} strokeWidth={STROKE.active} /> })()}
                   {URGENCY_META[selectedTriage.result.urgency].label}
@@ -2211,7 +2211,7 @@ export function InboxModule() {
               </div>
               {selectedTriage.result.followUpDate && (
                 <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)' }}>
-                  <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
+                  <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
                   <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{selectedTriage.result.followUpDate}</div>
                 </div>
               )}

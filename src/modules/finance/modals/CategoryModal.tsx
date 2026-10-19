@@ -157,11 +157,11 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
               <span style={{ ...PILL, flex: 1, justifyContent: 'space-between' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   {parent && <CategoryGlyph icon={parent.icon} size={15} color="var(--sb-ink-3)" />}
-                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: parent ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: parent ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)' }}>
                     {parent ? parent.name : 'Nothing — it stands on its own'}
                   </span>
                 </span>
-                <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+                <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }} />
               </span>
               <select value={parentId} onChange={e => setParentId(e.target.value)}
                 style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
@@ -192,7 +192,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
           <button onClick={handleSave} disabled={!canSave} style={{
             ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
             background: canSave ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-            border: 'none', color: canSave ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+            border: 'none', color: canSave ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)', // ui-guard: ink-ok
             cursor: canSave ? 'pointer' : 'default',
           }}>{isEdit ? 'Save changes' : 'Add category'}</button>
           <button onClick={onClose} style={{ ...PILL, color: 'var(--sb-ink-3)' }}>Cancel</button>
