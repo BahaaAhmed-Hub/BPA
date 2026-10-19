@@ -1277,3 +1277,36 @@ img { max-width: 100%; }
   .ai-fab, .ai-window, .ai-window[data-shown="false"], .ai-resize-grip { transition: none; }
   .ai-fab:hover { transform: none; }
 }
+
+
+/* ─── The shell on a narrow screen ────────────────────────────────────────────
+   The rail is a column beside the page, 90px of a 390px phone, and <main> is
+   overflow-x: hidden — so on a phone the page was both squeezed and cut off,
+   with no way to scroll to what was cut. Measured with
+   scripts/responsive-audit.mjs: at 390px, 38 elements on Tasks and 57 on
+   Habits sat past the right edge, unreachable.
+
+   Below 720px the rail turns ninety degrees into a bar under the page (the
+   shape every phone app uses, and under the thumb), the mark steps aside, and
+   <main> may scroll sideways, so a wide module degrades to a pan instead of a
+   crop. The rail's own layout is inline, hence the !important: it is the only
+   thing that outranks an inline style.                                       */
+@media (max-width: 900px) {
+  .app-main { overflow-x: auto !important; }
+  /* The calendar's control cluster is flex-shrink: 0 so it never squeezes on a
+     desktop; on a narrower window that is what kept it 884px wide inside a
+     390px header (and 974px inside a 678px one). */
+  [data-cal-header] > div { flex-shrink: 1 !important; max-width: 100%; }
+}
+@media (max-width: 720px) {
+  .app-shell { flex-direction: column-reverse !important; }
+  .app-rail-col { height: auto !important; width: 100%; flex-direction: row !important; }
+  .app-rail-col [data-be-mark] { display: none !important; }
+  .app-rail-col > div:not([data-be-mark]) { width: 100%; flex: none !important; }
+  [data-side-rail] { height: auto !important; width: 100%; flex-direction: row !important; padding: 6px 8px !important; overflow-x: auto !important; overflow-y: hidden !important; justify-content: center; }
+  [data-side-rail] > div { margin: 0 !important; flex-direction: row !important; align-items: center; }
+  [data-side-rail] > div > div { flex-direction: row !important; padding: 5px 8px !important; }
+  /* The assistant's button lives in the bottom-right corner, which is now the
+     bar's: it sits above it instead of on top of the last tab. */
+  .ai-fab { bottom: calc(84px + env(safe-area-inset-bottom)) !important; }
+}
