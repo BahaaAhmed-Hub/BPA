@@ -22,6 +22,7 @@ import type { DbCalendarEvent, DbTask } from '@/types/database'
 import { isOpenTask, loadVisibleCompanies } from '@/types'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
+import { Skeleton } from '@/components/ui'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -538,10 +539,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
               Today's calendar
             </label>
             {eventsLoading && (
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <RefreshCw size={ICON.sm} style={{ animation: 'spin 1s linear infinite' }} />
-                Loading…
-              </span>
+              <span style={{ width: 88 }}><Skeleton h={12} label="Loading today's calendar" /></span>
             )}
           </div>
 

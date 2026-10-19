@@ -36,7 +36,7 @@ import type { DbUser } from '@/types/database'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
-import { Segmented, Pill, Card } from '@/components/ui'
+import { Segmented, Pill, Card, Skeleton } from '@/components/ui'
 import { tagOfMail, type MailTag } from '@/lib/mailCompany'
 import { isBusinessAccount } from '@/lib/businessAccounts'
 import { KIND_NEED, canNeedAction } from '@/lib/mailKinds'
@@ -350,6 +350,7 @@ export function InboxModule() {
   const [searchQuery,    setSearchQuery]    = useState('')
   const [nextPageToken,  setNextPageToken]  = useState<string | undefined>(undefined)
   const [loadingMore,    setLoadingMore]    = useState(false)
+  const moreSentinel = useRef<HTMLDivElement>(null)
   const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set())
   /** Which row is swiped open. One at a time, or a tap belongs to nobody. */
   const [swipedId,   setSwipedId]   = useState<string | null>(null)
@@ -1266,6 +1267,16 @@ export function InboxModule() {
     finally { setLoadingMore(false) }
   }, [nextPageToken, loadingMore, viewed, emails, folder])
 
+  // The next page loads as the end of the list comes into view; the button
+  // below stays, as the way to ask when scrolling is not what is happening.
+  useEffect(() => {
+    const el = moreSentinel.current
+    if (!el || !nextPageToken || loadingMore || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(hits => { if (hits.some(h => h.isIntersecting)) void handleLoadMore() }, { rootMargin: '240px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [nextPageToken, loadingMore, handleLoadMore, emails.length])
+
   // ─── Acting on mail, one row or a selection ────────────────────────────────
   //
   // Every one of these is undoable, because the two ways in are a swipe and a
@@ -1861,14 +1872,16 @@ export function InboxModule() {
           </div>
         )}
 
+        {nextPageToken && <div ref={moreSentinel} aria-hidden style={{ height: 1 }} />}
         {nextPageToken && (
           <button
             onClick={() => void handleLoadMore()}
             disabled={loadingMore}
             style={{ width: '100%', padding: '9px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loadingMore ? 0.5 : 1 }}
           >
-            <RefreshCw size={ICON.sm} style={{ animation: loadingMore ? 'spin 1s linear infinite' : 'none' }} />
-            {loadingMore ? 'Loading…' : 'Load more emails'}
+            {loadingMore
+              ? <span style={{ width: 140 }}><Skeleton h={12} label="Loading more emails" /></span>
+              : <><RefreshCw size={ICON.sm} /> Load more emails</>}
           </button>
         )}
       </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { CAL_COLORS } from '@/lib/palettes'
 import { useInkOn, useInkOnKeeping } from '@/lib/ink'
-import { Button } from '@/components/ui'
+import { Button, Skeleton } from '@/components/ui'
 import {
   ChevronLeft, ChevronRight, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, Eye, EyeOff,
@@ -3639,9 +3639,8 @@ export function CalendarIntelligence() {
 
       {/* Loading spinner overlay */}
       {loadingEvents && (
-        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', pointerEvents: 'none' }}>
-          <div style={{ width: 14, height: 14, border: 'var(--sb-border-emphasis) solid var(--sb-border)', borderTopColor: 'var(--sb-ink-1)', borderRadius: 'var(--sb-r-pill)', animation: 'spin 0.7s linear infinite' }} />
-          Loading…
+        <div style={{ position: 'absolute', bottom: 18, right: 22, width: 112, pointerEvents: 'none' }}>
+          <Skeleton h={14} label="Loading events" />
         </div>
       )}
 

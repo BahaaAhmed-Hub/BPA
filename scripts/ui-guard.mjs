@@ -27,7 +27,7 @@ const SRC = join(ROOT, 'src')
 const FIXTURE = join(ROOT, 'scripts', 'fixtures', 'ui-guard-bad.tsx')
 
 /** Rules that fail a bare `node scripts/ui-guard.mjs`. Add one per phase. */
-const ENFORCED = new Set(['type', 'ink', 'hex', 'palette', 'quadrant', 'emoji', 'dialog', 'unfinished'])
+const ENFORCED = new Set(['type', 'ink', 'hex', 'palette', 'quadrant', 'emoji', 'dialog', 'unfinished', 'loading'])
 
 const args = process.argv.slice(2)
 const flag = n => args.includes(`--${n}`)
