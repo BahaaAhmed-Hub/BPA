@@ -250,7 +250,7 @@ function TaskRow({ task, users, linkedHere, editing, madeHere, onTick, onEdit, o
               <button key={u.id} onClick={() => patch({ owner: task.owner === u.id ? undefined : u.id })}
                 aria-pressed={task.owner === u.id} aria-label={u.name} style={{ ...chip(task.owner === u.id), paddingLeft: 6 }}>
                 <span style={{
-                  width: 24, height: 24, borderRadius: '50%', fontSize: 11, fontWeight: 700,
+                  width: 24, height: 24, borderRadius: '50%', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
                 }}>{initialsOf(u.name)}</span>{u.name.split(' ')[0]}

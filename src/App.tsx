@@ -1388,7 +1388,7 @@ function App() {
       {/* The rail is a column beside the page, not a bar above it, so the
           shell is a row. It keeps its own height and only the module scrolls
           — the same contract the header had, turned ninety degrees. */}
-      <div style={{
+      <div className="app-shell" style={{
         width: '100%',
         maxWidth: 1560,
         display: 'flex',
@@ -1403,7 +1403,7 @@ function App() {
             the content column, which left it floating off both the rail and
             the cards, over neither. Decoration beside controls that do
             things, so no `title`. `amber` is the sign-in screen's colourway. */}
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+        <div className="app-rail-col" style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           <div data-be-mark aria-hidden style={{ height: MARK_ROW, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <BeLogo variant="amber" size={52} />
           </div>
@@ -1414,7 +1414,7 @@ function App() {
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           <YouCluster />
           <SyncGapBanner />
-          <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', background: 'var(--sb-page)' }}>
+          <main className="app-main" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', background: 'var(--sb-page)' }}>
             <ActiveModule />
           </main>
         </div>

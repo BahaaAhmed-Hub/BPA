@@ -7,6 +7,7 @@ import type { Task } from '@/types'
 import { TaskRow } from './TaskRow'
 import { buildTaskGroups, sortUrgentFirst, type TaskGroupBy } from './taskVisuals'
 import { CountBadge } from './controls'
+import { EmptyState } from '@/components/ui'
 
 export function TaskListView({ tasks, onOpen, hideCompleted, groupBy, filteredTaskIds }: {
   tasks: Task[]
@@ -29,9 +30,7 @@ export function TaskListView({ tasks, onOpen, hideCompleted, groupBy, filteredTa
   return (
     <div ref={listRef} style={{ padding: '4px 28px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       {visible.length === 0 && (
-        <p style={{ margin: 0, padding: '40px 0', textAlign: 'center', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)' }}>
-          Nothing here.
-        </p>
+        <EmptyState>Nothing here.</EmptyState>
       )}
       {groups.map(g => (
         <div key={g.key} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

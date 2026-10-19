@@ -47,6 +47,7 @@ import { ICON, STROKE } from '@/lib/type'
 import { dayTotals, spanTotals } from '@/lib/habitProgress'
 import { DailyQuoteCard } from '@/modules/library/DailyQuoteCard'
 import { LOZENGE } from '../../components/SideRail'
+import { EmptyState } from '@/components/ui'
 
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 
@@ -142,7 +143,7 @@ function CardHead({ title, meta, children }: {
 
 function LinkOut({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} style={{
+    <button className="sb-hit" onClick={onClick} style={{
       ...GHOST_BTN, gap: 5, color: MUTED, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit', flexShrink: 0,
     }}>
       {label} <ArrowRight size={ICON.sm} strokeWidth={STROKE.active} />
@@ -1490,7 +1491,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
       </CardHead>
 
       {habits.length === 0 ? (
-        <div style={{ padding: '18px 16px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>No habits yet.</div>
+        <EmptyState compact>No habits yet.</EmptyState>
       ) : (
         <div style={{ padding: '10px 16px 14px' }}>
           {/* Column heads */}
@@ -2221,7 +2222,7 @@ export function TodayPage() {
                   ].filter(Boolean).join(' · ')
                   return (
                     <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: `var(--sb-border-width) solid ${HAIR}` }}>
-                      <button
+                      <button className="sb-hit"
                         onClick={() => toggleComplete(t.id)}
                         title="Complete"
                         style={{

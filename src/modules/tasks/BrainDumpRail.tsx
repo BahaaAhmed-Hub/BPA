@@ -134,7 +134,7 @@ function DumpCard({ task, onOpen, onDelete }: {
         opacity: isDragging ? 0.4 : 1,
       }}
     >
-      <span data-nm {...listeners} {...attributes} title="Drag into a quadrant"
+      <span className="sb-hit" data-nm {...listeners} {...attributes} title="Drag into a quadrant"
         style={{ cursor: 'grab', touchAction: 'none', color: 'var(--sb-ink-4)', display: 'flex', paddingTop: 2, flexShrink: 0 }}>
         <GripVertical size={ICON.sm} strokeWidth={STROKE.rest} />
       </span>
@@ -146,7 +146,7 @@ function DumpCard({ task, onOpen, onDelete }: {
             fontStyle: task.title.trim() ? 'normal' : 'italic',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{task.title.trim() || 'Untitled'}</p>
-          <button
+          <button className="sb-hit"
             data-nm
             onClick={e => { e.stopPropagation(); onDelete() }}
             title="Delete task"

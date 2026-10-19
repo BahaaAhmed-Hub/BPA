@@ -1097,12 +1097,12 @@ export function HabitsModule() {
 
         {/* Week bars — click a day to read it, arrows to walk the weeks */}
         <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-          <button onClick={() => stepWeek(-1)} title="Previous week"
+          <button className="sb-hit" onClick={() => stepWeek(-1)} title="Previous week"
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
             <ChevronLeft size={ICON.sm} />
           </button>
 
-          <span style={{ display: 'flex', alignItems: 'flex-end', gap: 7 }}>
+          <span style={{ display: 'flex', alignItems: 'flex-end', gap: 0 }}>
             {days.map((d, i) => {
               const pct = weekBars[i]
               const isT = d === today
@@ -1116,6 +1116,9 @@ export function HabitsModule() {
                   title={new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                    // 24px is WCAG's floor for a target; the bar inside stays 12px wide, so the
+                    // row's look is the same and each day gets the room to be pressed.
+                    minWidth: 24,
                     background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                     opacity: future ? 0.45 : 1, fontFamily: 'inherit',
                   }}>
@@ -1132,7 +1135,7 @@ export function HabitsModule() {
             })}
           </span>
 
-          <button onClick={() => stepWeek(1)} disabled={isCurrentWeek} title="Next week"
+          <button className="sb-hit" onClick={() => stepWeek(1)} disabled={isCurrentWeek} title="Next week"
             style={{ background: 'none', border: 'none', cursor: isCurrentWeek ? 'default' : 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex', opacity: isCurrentWeek ? 0.3 : 1 }}>
             <ChevronRight size={ICON.sm} />
           </button>
@@ -1317,14 +1320,14 @@ export function HabitsModule() {
 
           {/* Week nav */}
           <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <button onClick={() => setWeekAnchor(d => offsetDays(d, -7))}
+            <button className="sb-hit" aria-label="Previous week" title="Previous week" onClick={() => setWeekAnchor(d => offsetDays(d, -7))}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 0, display: 'flex' }}>
               <ChevronLeft size={ICON.sm} />
             </button>
             <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: isCurrentWeek ? 'var(--sb-ink-1)' : 'var(--sb-ink-2)', minWidth: 120, textAlign: 'center' }}>
               {isCurrentWeek ? 'This week' : 'Week'} · {fmtWeekRange(weekAnchor)}
             </span>
-            <button onClick={() => setWeekAnchor(d => offsetDays(d, 7))} disabled={isCurrentWeek}
+            <button className="sb-hit" aria-label="Next week" title="Next week" onClick={() => setWeekAnchor(d => offsetDays(d, 7))} disabled={isCurrentWeek}
               style={{ background: 'none', border: 'none', cursor: isCurrentWeek ? 'default' : 'pointer', color: 'var(--sb-ink-3)', padding: 0, display: 'flex', opacity: isCurrentWeek ? 0.3 : 1 }}>
               <ChevronRight size={ICON.sm} />
             </button>

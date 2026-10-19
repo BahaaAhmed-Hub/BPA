@@ -179,7 +179,7 @@ export function ReviewView({ onOpenBook }: { onOpenBook: (bookId: string) => voi
       </blockquote>
 
       {!revealed ? (
-        <div><Button variant="accent" onClick={() => setRevealed(true)}>Show the words <kbd style={{ fontSize: 11, opacity: 0.7, marginLeft: 4 }}>space</kbd></Button></div>
+        <div><Button variant="accent" onClick={() => setRevealed(true)}>Show the words <kbd style={{ fontSize: 'var(--sb-t-meta)', opacity: 0.7, marginLeft: 4 }}>space</kbd></Button></div>
       ) : (
         <>
           {myNotes.length > 0 && (

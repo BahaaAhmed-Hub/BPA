@@ -180,7 +180,7 @@
      its weight, tracking and case are the level's own and are set with it —
      see lib/type.ts, where the same nine are style objects to spread.
 
-       micro    10    700  .12em  uppercase   gutters, capsed captions
+       micro    11    700  .12em  uppercase   gutters, capsed captions
        meta     11.5  500                     times, notes, the second line
        body-s   12.5  400                     dense body — rows, feeds
        body     13.5  400                     the default
@@ -193,7 +193,7 @@
      The first six are the readability floor and stay here. The last three —
      h2, h1 and display — are the theme's voice rather than its legibility,
      and are declared with the surfaces above. */
-  --sb-t-micro:   10px;
+  --sb-t-micro:   11px;
   --sb-t-meta:    11.5px;
   --sb-t-body-s:  12.5px;
   --sb-t-body:    13.5px;
@@ -203,6 +203,12 @@
   /* Icon sizes. lucide takes its size as an attribute rather than a style, so
      lib/type.ts holds the same three as numbers; these are for CSS that draws
      its own glyphs. */
+  /* The shortest a pressable control may be. Themes set their own heights
+     (Warm Minimal's pill is 30, and a pill inside a 3px track is 24); this is
+     the floor under all of them, so a compact theme is denser but never
+     smaller than a thumb can hit. Touch raises it. */
+  --sb-h-min: 30px;
+
   --sb-icon-sm: 14px;
   --sb-icon-md: 16px;
   --sb-icon-lg: 18px;
@@ -224,7 +230,7 @@ html, body {
   background: var(--sb-page);
   color: var(--sb-ink-1);
   font-family: var(--sb-font-ui);
-  font-size: 14px;
+  font-size: var(--sb-t-body);
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -250,6 +256,18 @@ html, body {
   outline: 2px solid var(--sb-ink-1);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--sb-accent-tint);
+}
+/* An inline `outline: none` outranks every stylesheet rule above, so a control
+   that carries one has no focus ring at all — 72 do, and a keyboard user cannot
+   see where they are in them. !important is the only thing that outranks an
+   inline style, and the selector reaches exactly those elements, so a control
+   that draws its own indicator in CSS (.sb-ev-field, .cal-ctl) is left alone.
+   scripts/focus-ring-audit.mjs is the measure. */
+[style*="outline: none"]:focus-visible,
+[style*="outline:none"]:focus-visible,
+[style*="outline-style: none"]:focus-visible {
+  outline: 2px solid var(--sb-ink-1) !important;
+  outline-offset: 2px;
 }
 input:focus-visible,
 textarea:focus-visible,
@@ -319,7 +337,7 @@ textarea:focus,
   justify-content: center;
   gap: 7px;
   flex-shrink: 0;
-  height: var(--sb-h-pill);
+  height: max(var(--sb-h-min), var(--sb-h-pill));
   padding: 0 16px;
   border-radius: var(--sb-r-pill);
   border: var(--sb-border-width) solid transparent;
@@ -333,10 +351,30 @@ textarea:focus,
   transition: background 120ms ease-out, color 120ms ease-out,
               border-color 120ms ease-out, box-shadow 120ms ease-out;
 }
-.sb-btn[data-size="sm"] { height: calc(var(--sb-h-pill) - 6px); padding: 0 12px; font-size: var(--sb-t-body-s); gap: 6px; }
+.sb-btn[data-size="sm"] { height: max(var(--sb-h-min), calc(var(--sb-h-pill) - 6px)); padding: 0 12px; font-size: var(--sb-t-body-s); gap: 6px; }
 .sb-btn[data-block]     { width: 100%; }
-.sb-btn[data-icon-only] { width: var(--sb-h-pill); padding: 0; }
-.sb-btn[data-icon-only][data-size="sm"] { width: calc(var(--sb-h-pill) - 6px); }
+.sb-btn[data-icon-only] { width: max(var(--sb-h-min), var(--sb-h-pill)); padding: 0; }
+.sb-btn[data-icon-only][data-size="sm"] { width: max(var(--sb-h-min), calc(var(--sb-h-pill) - 6px)); }
+
+/* EmptyState ----------------------------------------------------------------- */
+.sb-empty { padding: 40px 16px; text-align: center; color: var(--sb-ink-3); }
+.sb-empty-title { font-size: var(--sb-t-label); font-weight: 600; color: var(--sb-ink-1); margin-bottom: 4px; }
+.sb-empty-body { font-size: var(--sb-t-body); line-height: 1.5; max-width: 52ch; margin: 0 auto; }
+.sb-empty-action { margin-top: 14px; display: flex; justify-content: center; }
+.sb-empty[data-compact] { padding: 10px 0; text-align: left; }
+.sb-empty[data-compact] .sb-empty-body { font-size: var(--sb-t-body-s); margin: 0; max-width: none; }
+
+/* A small control keeps its small look and gets a bigger target. WCAG 2.2 (2.5.8)
+   asks 24px; Apple and Material ask 44-48px on touch. The extra area is a
+   transparent ::after, so nothing moves and nothing is redrawn — a 14px bin
+   icon is still 14px, and a press 5px off it still lands. `inset` is measured
+   from the padding box, so a bordered control (the 2px tick) reaches that much
+   less past its visible edge; the pad is sized with that in mind. Use it on icon-sized
+   controls only: a control that is already wide gains nothing, and the area
+   steals the pixels beside it from whatever is next door. */
+.sb-hit { position: relative; --sb-hit-pad: 6px; }
+.sb-hit::after { content: ''; position: absolute; inset: calc(-1 * var(--sb-hit-pad)); }
+@media (pointer: coarse) { .sb-hit { --sb-hit-pad: 16px; } :root { --sb-h-min: 40px; } }
 /* A disabled control is still text somebody has to read. Half-opacity grey on
    cream is 2.2:1, and it was the only signal that the control was off; muted
    ink on the field colour is 4.7:1, and aria-disabled says it out loud. */
@@ -461,7 +499,7 @@ textarea:focus,
   justify-content: center;
   gap: 6px;
   flex-shrink: 0;
-  height: var(--sb-h-pill);
+  height: max(var(--sb-h-min), var(--sb-h-pill));
   padding: 0 14px;
   border: var(--sb-border-width) solid var(--sb-border);
   border-radius: var(--sb-r-pill);
@@ -514,7 +552,7 @@ textarea:focus,
   gap: 6px;
   /* Inside a 3px track, so the control it sits in is --sb-h-pill tall and
      moves with the theme like every other control. */
-  height: calc(var(--sb-h-pill) - 6px);
+  height: max(var(--sb-h-min), calc(var(--sb-h-pill) - 6px));
   padding: 0 12px;
   border: none;
   border-radius: var(--sb-r-pill);
@@ -538,8 +576,8 @@ textarea:focus,
 }
 .sb-segmented-opt:disabled { color: var(--sb-ink-4); cursor: default; }
 
-.sb-segmented[data-size="sm"] .sb-segmented-opt { height: calc(var(--sb-h-pill) - 10px); padding: 0 10px; font-size: var(--sb-t-meta); gap: 5px; }
-.sb-segmented[data-size="lg"] .sb-segmented-opt { height: calc(var(--sb-h-pill) - 4px); padding: 0 14px; font-size: var(--sb-t-body); }
+.sb-segmented[data-size="sm"] .sb-segmented-opt { height: max(calc(var(--sb-h-min) - 2px), calc(var(--sb-h-pill) - 10px)); padding: 0 10px; font-size: var(--sb-t-meta); gap: 5px; }
+.sb-segmented[data-size="lg"] .sb-segmented-opt { height: max(calc(var(--sb-h-min) + 2px), calc(var(--sb-h-pill) - 4px)); padding: 0 14px; font-size: var(--sb-t-body); }
 
 /* The event panel's values. Plain text in the row until the pointer or the
    keyboard reaches one, which is when it becomes evident that it is editable.
@@ -1029,8 +1067,8 @@ img { max-width: 100%; }
   writing-mode: vertical-rl; transform: rotate(180deg); overflow: hidden; white-space: nowrap;
   font-family: var(--sb-font-num); letter-spacing: .01em;
 }
-.lib-spine-title { min-height: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 650; font-size: 12.5px; }
-.lib-spine-author { flex: 0 1 38%; min-height: 0; overflow: hidden; text-overflow: ellipsis; font-size: 10px; opacity: .85; font-weight: 500; letter-spacing: .04em; }
+.lib-spine-title { min-height: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 650; font-size: var(--sb-t-body-s); }
+.lib-spine-author { flex: 0 1 38%; min-height: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--sb-t-micro); opacity: .85; font-weight: 500; letter-spacing: .04em; }
 .lib-mark {
   position: absolute; left: 50%; bottom: 9px; width: 15px; height: 15px; margin-left: -7.5px; border-radius: 50%;
   display: grid; place-items: center; font-size: 8.5px; font-weight: 700; line-height: 1;
@@ -1238,4 +1276,37 @@ img { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   .ai-fab, .ai-window, .ai-window[data-shown="false"], .ai-resize-grip { transition: none; }
   .ai-fab:hover { transform: none; }
+}
+
+
+/* ─── The shell on a narrow screen ────────────────────────────────────────────
+   The rail is a column beside the page, 90px of a 390px phone, and <main> is
+   overflow-x: hidden — so on a phone the page was both squeezed and cut off,
+   with no way to scroll to what was cut. Measured with
+   scripts/responsive-audit.mjs: at 390px, 38 elements on Tasks and 57 on
+   Habits sat past the right edge, unreachable.
+
+   Below 720px the rail turns ninety degrees into a bar under the page (the
+   shape every phone app uses, and under the thumb), the mark steps aside, and
+   <main> may scroll sideways, so a wide module degrades to a pan instead of a
+   crop. The rail's own layout is inline, hence the !important: it is the only
+   thing that outranks an inline style.                                       */
+@media (max-width: 900px) {
+  .app-main { overflow-x: auto !important; }
+  /* The calendar's control cluster is flex-shrink: 0 so it never squeezes on a
+     desktop; on a narrower window that is what kept it 884px wide inside a
+     390px header (and 974px inside a 678px one). */
+  [data-cal-header] > div { flex-shrink: 1 !important; max-width: 100%; }
+}
+@media (max-width: 720px) {
+  .app-shell { flex-direction: column-reverse !important; }
+  .app-rail-col { height: auto !important; width: 100%; flex-direction: row !important; }
+  .app-rail-col [data-be-mark] { display: none !important; }
+  .app-rail-col > div:not([data-be-mark]) { width: 100%; flex: none !important; }
+  [data-side-rail] { height: auto !important; width: 100%; flex-direction: row !important; padding: 6px 8px !important; overflow-x: auto !important; overflow-y: hidden !important; justify-content: center; }
+  [data-side-rail] > div { margin: 0 !important; flex-direction: row !important; align-items: center; }
+  [data-side-rail] > div > div { flex-direction: row !important; padding: 5px 8px !important; }
+  /* The assistant's button lives in the bottom-right corner, which is now the
+     bar's: it sits above it instead of on top of the last tab. */
+  .ai-fab { bottom: calc(84px + env(safe-area-inset-bottom)) !important; }
 }

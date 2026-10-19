@@ -15,6 +15,7 @@ import type { ShoppingStore } from './types'
 import { ITEM_CATEGORIES } from './types'
 import { suggestStoresForCountry } from './storeSuggestions'
 import { notify } from '@/lib/undo'
+import { inputDenseStyle as inputStyle } from '@/lib/fields'
 
 const C = {
   card:   'var(--sb-card)',
@@ -38,11 +39,6 @@ export const COUNTRY_OPTIONS = [
   { code: 'DE', label: 'Germany' },
 ]
 
-const inputStyle: React.CSSProperties = {
-  fontSize: 12, padding: '5px 7px', borderRadius: 6, width: '100%',
-  border: `1px solid ${C.border}`, background: C.field, color: C.ink1,
-  fontFamily: 'inherit', minWidth: 0,
-}
 
 function IconPlus({ size = 13 }: { size?: number }) {
   return (
@@ -103,7 +99,7 @@ function useHeldText(value: string, push: (v: string) => void) {
 function Field({ label, children, grow = 1 }: { label: string; children: React.ReactNode; grow?: number }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: `${grow} 1 0`, minWidth: 0 }}>
-      <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', color: C.ink4, textTransform: 'uppercase' }}>{label}</span>
+      <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: C.ink4, textTransform: 'uppercase' }}>{label}</span>
       {children}
     </label>
   )
@@ -133,7 +129,7 @@ function CategoryPills({ selected, onToggle }: { selected: string[]; onToggle: (
         return (
           <button key={c} type="button" onClick={() => onToggle(c)}
             style={{
-              fontSize: 11, padding: '3px 8px', borderRadius: 8, cursor: 'pointer',
+              fontSize: 'var(--sb-t-meta)', padding: '3px 8px', borderRadius: 8, cursor: 'pointer',
               border: `1px solid ${on ? C.accent : C.border}`,
               background: on ? `color-mix(in srgb, ${C.accent} 22%, ${C.card})` : C.field,
               color: on ? C.ink1 : C.ink3,
@@ -172,16 +168,16 @@ function StoreRow({ store, itemCount, last, onUpdate, onDelete }: {
     <div style={{ borderBottom: last ? 'none' : `1px solid ${C.border}` }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px' }}>
         <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.ink1 }}>{store.name}</div>
-          <div style={{ fontSize: 11, color: C.ink4, marginTop: 1, wordBreak: 'break-all' }}>{store.url}</div>
+          <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: C.ink1 }}>{store.name}</div>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, marginTop: 1, wordBreak: 'break-all' }}>{store.url}</div>
           {store.categories.length > 0 && (
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
               {store.categories.map(c => (
-                <span key={c} style={{ fontSize: 10, padding: '1px 6px', borderRadius: 8, background: C.field, color: C.ink3, border: `1px solid ${C.border}` }}>{c}</span>
+                <span key={c} style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 8, background: C.field, color: C.ink3, border: `1px solid ${C.border}` }}>{c}</span>
               ))}
             </div>
           )}
-          <div style={{ fontSize: 10, color: C.ink4, marginTop: 3 }}>
+          <div style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, marginTop: 3 }}>
             {itemCount > 0
               ? `Checked for ${itemCount} item${itemCount === 1 ? '' : 's'}`
               : store.categories.length
@@ -199,11 +195,11 @@ function StoreRow({ store, itemCount, last, onUpdate, onDelete }: {
 
         {confirm ? (
           <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
-            <span style={{ fontSize: 11, color: C.ink3 }}>Remove?</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3 }}>Remove?</span>
             <button onClick={() => { onDelete(); setConfirm(false) }}
-              style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 5, background: C.neg, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: 'pointer' }}>Yes</button>
+              style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '2px 8px', borderRadius: 5, background: C.neg, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: 'pointer' }}>Yes</button>
             <button onClick={() => setConfirm(false)}
-              style={{ fontSize: 11, padding: '2px 8px', borderRadius: 5, background: C.field, color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}>No</button>
+              style={{ fontSize: 'var(--sb-t-meta)', padding: '2px 8px', borderRadius: 5, background: C.field, color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}>No</button>
           </div>
         ) : (
           <button onClick={() => setConfirm(true)} title="Remove store"
@@ -230,7 +226,7 @@ function StoreRow({ store, itemCount, last, onUpdate, onDelete }: {
           </Field>
           {store.url && (
             <a href={store.url} target="_blank" rel="noreferrer"
-              style={{ fontSize: 11, color: C.ink3, alignSelf: 'flex-start' }}>
+              style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, alignSelf: 'flex-start' }}>
               Open {store.name} ↗
             </a>
           )}
@@ -295,25 +291,25 @@ export function StoresTab({ stores, userId, itemCounts, onAddStore, onUpdateStor
 
       {showForm ? (
         <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink1, marginBottom: 2 }}>Add store</div>
+          <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 700, color: C.ink1, marginBottom: 2 }}>Add store</div>
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <select value={country} onChange={e => setCountry(e.target.value)}
               style={{ ...inputStyle, width: 'auto' }}>
               {COUNTRY_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
             </select>
-            <span style={{ fontSize: 11, color: C.ink4 }}>Quick-pick:</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>Quick-pick:</span>
           </div>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {suggestions.map(s => (
               <button key={s.url} onClick={() => applyTemplate(s)}
-                style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9, border: `1px solid ${C.border}`, background: C.field, color: C.ink1, cursor: 'pointer' }}>
+                style={{ fontSize: 'var(--sb-t-meta)', padding: '3px 9px', borderRadius: 9, border: `1px solid ${C.border}`, background: C.field, color: C.ink1, cursor: 'pointer' }}>
                 {s.name}
               </button>
             ))}
           </div>
 
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Store name" style={{ ...inputStyle, fontSize: 13, padding: '7px 10px' }} />
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Store name" style={{ ...inputStyle, fontSize: 'var(--sb-t-body)', padding: '7px 10px' }} />
           <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" style={{ ...inputStyle, padding: '7px 10px' }} />
 
           <Field label="Categories">
@@ -322,18 +318,18 @@ export function StoresTab({ stores, userId, itemCounts, onAddStore, onUpdateStor
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleAdd} disabled={!name.trim() || !url.trim()}
-              style={{ flex: 1, fontSize: 13, fontWeight: 600, padding: '8px', borderRadius: 9, background: C.ink1, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: name.trim() && url.trim() ? 'pointer' : 'not-allowed' }}>
+              style={{ flex: 1, fontSize: 'var(--sb-t-body)', fontWeight: 600, padding: '8px', borderRadius: 9, background: C.ink1, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: name.trim() && url.trim() ? 'pointer' : 'not-allowed' }}>
               Add store
             </button>
             <button onClick={() => { setShowForm(false); setName(''); setUrl(''); setSelCats([]) }}
-              style={{ fontSize: 13, padding: '8px 14px', borderRadius: 9, background: C.field, color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}>
+              style={{ fontSize: 'var(--sb-t-body)', padding: '8px 14px', borderRadius: 9, background: C.field, color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}>
               Cancel
             </button>
           </div>
         </div>
       ) : (
         <button onClick={() => setShowForm(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.ink4, background: 'none', border: `1px dashed ${C.border}`, borderRadius: 10, padding: '10px 14px', cursor: 'pointer', alignSelf: 'flex-start' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--sb-t-body-s)', color: C.ink4, background: 'none', border: `1px dashed ${C.border}`, borderRadius: 10, padding: '10px 14px', cursor: 'pointer', alignSelf: 'flex-start' }}>
           <IconPlus /> Add a store
         </button>
       )}
@@ -341,8 +337,8 @@ export function StoresTab({ stores, userId, itemCounts, onAddStore, onUpdateStor
       {stores.length === 0 && !showForm && (
         <div style={{ textAlign: 'center', paddingTop: 40, color: C.ink4 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }} aria-hidden>🏪</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: C.ink3 }}>No stores yet</div>
-          <div style={{ fontSize: 12, color: C.ink4, marginTop: 4 }}>Add stores to enable price tracking and trip optimization.</div>
+          <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: C.ink3 }}>No stores yet</div>
+          <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink4, marginTop: 4 }}>Add stores to enable price tracking and trip optimization.</div>
         </div>
       )}
     </div>

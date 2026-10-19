@@ -973,7 +973,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           <span title={displayTitle(event.summary)} style={{
             writingMode: 'vertical-rl' as const,
             textOrientation: 'mixed' as const,
-            fontFamily: SANS, fontSize: 11.5, fontWeight: 600,
+            fontFamily: SANS, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
             color: evInk, lineHeight: 1.2,
             overflow: 'hidden', textOverflow: 'ellipsis',
             whiteSpace: 'nowrap' as const,
@@ -2827,7 +2827,7 @@ export function CalendarIntelligence() {
                 reported once already. So it draws only while a lens is on, and
                 it is about the lens rather than about the week. */}
             {lensName && (
-              <span style={{ fontSize: 14, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
                 {(() => {
                   const scope = calView === 'month' ? monthCells : weekDays
                   const keys = new Set(scope.map(localDateStr))
@@ -2914,7 +2914,7 @@ export function CalendarIntelligence() {
                       height: 26, padding: '0 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
                       background: on ? 'var(--sb-ink-1)' : 'transparent',
                       color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-                      fontFamily: 'inherit', fontSize: 12.5, fontWeight: on ? 600 : 500,
+                      fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500,
                     }}>{label}</button>
                 )
               })}
@@ -2944,7 +2944,7 @@ export function CalendarIntelligence() {
               style={{
                 height: 34, boxSizing: 'border-box', padding: '0 15px', borderRadius: 999, flexShrink: 0,
                 background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                color: 'var(--sb-ink-1)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+                color: 'var(--sb-ink-1)', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer',
               }}>Today</button>
             <button
               className="cal-ctl"
@@ -2969,7 +2969,7 @@ export function CalendarIntelligence() {
                 height: 'var(--sb-h-pill)', boxSizing: 'border-box', padding: '0 14px', borderRadius: 999,
                 background: 'var(--sb-card)', color: 'var(--sb-ink-1)',
                 border: 'var(--sb-border-width) solid var(--sb-border)',
-                cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               }}>
               <Sparkles size={13} strokeWidth={STROKE.active} /> Ideal Week
             </button>
@@ -2992,7 +2992,7 @@ export function CalendarIntelligence() {
                 background: openHours || showBooking ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                 color: openHours || showBooking ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-1)',
                 border: openHours || showBooking ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
-                cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               }}>
               <CalendarPlus size={13} strokeWidth={STROKE.active} /> Booking
             </button>
@@ -3014,7 +3014,7 @@ export function CalendarIntelligence() {
                 height: 34, boxSizing: 'border-box', padding: '0 16px 0 13px', borderRadius: 999,
                 background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
                 border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: 13, fontWeight: 600,
+                fontSize: 'var(--sb-t-body)', fontWeight: 600,
               }}>
               <Plus size={15} strokeWidth={STROKE.active} /> New event
             </button>
@@ -3099,7 +3099,7 @@ export function CalendarIntelligence() {
                       style={{
                         background: 'none', border: 'none', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 4,
-                        padding: '0 9px 0 2px', fontSize: 12.5, fontFamily: 'inherit',
+                        padding: '0 9px 0 2px', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit',
                         color: hidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)',
                       }}
                     >
@@ -3215,7 +3215,7 @@ export function CalendarIntelligence() {
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     background: isToday ? 'var(--sb-ink-1)' : 'transparent',
                     color: isToday ? 'var(--sb-ink-on-dark)' : outside ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
-                    fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, lineHeight: 1,
+                    fontFamily: DISPLAY, fontSize: 'var(--sb-t-h3)', fontWeight: 600, lineHeight: 1,
                     fontVariantNumeric: 'tabular-nums',
                   }}>{day.getDate()}</span>
 
@@ -3237,7 +3237,7 @@ export function CalendarIntelligence() {
                           // colour is the 3px rail and nothing else — a tinted
                           // fill per calendar is what drowned the accent.
                           background: 'var(--sb-field)',
-                          fontSize: 11.5, fontWeight: 600,
+                          fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                           color: st === 'cancelled' ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
@@ -3249,7 +3249,7 @@ export function CalendarIntelligence() {
                             competing with four titles; it earns its place only
                             where the cell is quiet enough to read. */}
                         {t && shown.length <= 2 && (
-                          <span style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--sb-ink-4)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                          <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 500, color: 'var(--sb-ink-4)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                             {String(t.getHours()).padStart(2, '0')}:{String(t.getMinutes()).padStart(2, '0')}
                           </span>
                         )}
@@ -3273,7 +3273,7 @@ export function CalendarIntelligence() {
                       onClick={ev => { ev.stopPropagation(); setPickedDay(ds) }}
                       style={{
                         alignSelf: 'flex-start', padding: 0, border: 'none', background: 'transparent',
-                        cursor: 'pointer', fontFamily: MONO, fontSize: 10.5, fontWeight: 500,
+                        cursor: 'pointer', fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500,
                         letterSpacing: '.06em', color: 'var(--sb-accent-deep)',
                       }}>+{dayEvents.length - shown.length} more</button>
                   )}
@@ -3298,7 +3298,7 @@ export function CalendarIntelligence() {
               return (
                 <div key={ds} style={{ flex: 1, textAlign: 'center', padding: '16px 0 12px', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   <span style={{
-                    fontFamily: MONO, fontSize: 10.5, fontWeight: 500,
+                    fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500,
                     letterSpacing: '0.14em', textTransform: 'uppercase' as const,
                     color: isToday ? 'var(--sb-accent-deep)' : 'var(--sb-ink-4)',
                   }}>{DAY_LABELS[day.getDay()]}</span>
@@ -3322,7 +3322,7 @@ export function CalendarIntelligence() {
           {/* All-day events strip — only shown when the week has at least one all-day event */}
           {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
             <div style={{ display: 'flex', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0, minHeight: 22 }}>
-              <div style={{ width: 84, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 12, paddingTop: 8, fontFamily: MONO, fontSize: 9.5, fontWeight: 500, color: 'var(--sb-ink-4)', letterSpacing: '0.14em', textTransform: 'uppercase' as const }}>
+              <div style={{ width: 84, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 12, paddingTop: 8, fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500, color: 'var(--sb-ink-4)', letterSpacing: '0.14em', textTransform: 'uppercase' as const }}>
                 All Day
               </div>
               {weekDays.map(day => {
@@ -3339,7 +3339,7 @@ export function CalendarIntelligence() {
                             style={{
                               alignSelf: 'flex-start', height: 20, padding: '0 9px',
                               background: 'var(--sb-accent-tint2)', color: 'var(--sb-accent-deep)',
-                              fontFamily: MONO, fontSize: 10.5, fontWeight: 500,
+                              fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500,
                               borderRadius: 999, border: 'none', cursor: 'pointer',
                               whiteSpace: 'nowrap' as const,
                             }}
@@ -3371,7 +3371,7 @@ export function CalendarIntelligence() {
                             }} />
                             {evStatus === 'done' && <Check size={ICON.sm} strokeWidth={STROKE.active} style={{ flexShrink: 0, color: 'var(--sb-positive-deep)' }} />}
                             <span style={{
-                              fontSize: 11.5, fontWeight: 500,
+                              fontSize: 'var(--sb-t-meta)', fontWeight: 500,
                               color: 'var(--sb-ink-1)',
                               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
                               textDecoration: evStatus === 'cancelled' ? 'line-through' : 'none',
@@ -3431,7 +3431,7 @@ export function CalendarIntelligence() {
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
                     whiteSpace: 'nowrap',
                   }}>
-                    <span style={{ fontFamily: MONO, fontSize: 10.5, color: 'var(--sb-ink-3)', fontWeight: 500, letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', fontWeight: 500, letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums' }}>
                       {fmtHourLabel(h)}
                     </span>
                     {w && (
@@ -3439,9 +3439,9 @@ export function CalendarIntelligence() {
                         title={`${w.temp}°C`}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 1,
-                          fontSize: 11.5, color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums',
+                          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums',
                         }}>
-                        <span style={{ fontSize: 11, lineHeight: 1 }}>{weatherGlyph(w.code)}</span>
+                        <span style={{ fontSize: 'var(--sb-t-meta)', lineHeight: 1 }}>{weatherGlyph(w.code)}</span>
                         {w.temp}°
                       </span>
                     )}
@@ -3564,11 +3564,11 @@ export function CalendarIntelligence() {
                           borderRadius: 14, pointerEvents: 'none', boxSizing: 'border-box',
                           padding: '3px 8px', overflow: 'hidden',
                         }}>
-                          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                             {fmtShort(minToIso(ds, sMin))} – {fmtShort(minToIso(ds, eMin))}
                           </div>
                           {h >= 34 && (
-                            <div style={{ fontSize: 10.5, color: 'var(--sb-accent-deep)', fontVariantNumeric: 'tabular-nums' }}>
+                            <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-accent-deep)', fontVariantNumeric: 'tabular-nums' }}>
                               {(() => {
                                 const m = eMin - sMin
                                 return m < 60 ? `${m} min`

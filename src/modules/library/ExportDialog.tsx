@@ -84,7 +84,7 @@ export function ExportDialog({ quotes, onClose }: { quotes: Quote[]; onClose: ()
           <div>
             <Eyebrow>{files.length ? `${quotes.length} quote${quotes.length === 1 ? '' : 's'} · ${files.length} file${files.length === 1 ? '' : 's'}${files.length > 1 ? ' — showing the first' : ''}` : 'Nothing to export'}</Eyebrow>
             <textarea readOnly value={preview} aria-label="Preview" rows={10} style={{
-              width: '100%', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12, lineHeight: 1.5,
+              width: '100%', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.5,
               background: 'var(--sb-field)', color: 'var(--sb-ink-1)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 10,
             }} />
           </div>

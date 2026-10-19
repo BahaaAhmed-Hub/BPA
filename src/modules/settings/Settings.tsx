@@ -4,7 +4,7 @@
 import { isBusinessAccount, setBusinessAccount } from '@/lib/businessAccounts'
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { C_COLORS, STATUS_COLORS_PRESETS } from '@/lib/palettes'
-import { Button, Segmented, Pill } from '@/components/ui'
+import { Button, Segmented, Pill, EmptyState } from '@/components/ui'
 import { NAV_H } from '@/App'
 import {
   Plus, Trash2, LogIn, LogOut,
@@ -106,6 +106,7 @@ interface AppSettings {
 interface CompanyUser { id: string; name: string; email?: string }
 
 import { CompanyMark } from '@/components/CompanyMark'
+import { inputStyle, selectStyle } from '@/lib/fields'
 import { logoFromFile, imageFrom, LOGO_ACCEPT } from '@/lib/companyLogo'
 
 interface CompanyRow {
@@ -315,16 +316,6 @@ async function checkSupabase(): Promise<boolean> {
 
 // ─── CHUNK 2: Shared UI atoms ─────────────────────────────────────────────────
 
-const inputStyle: React.CSSProperties = {
-  background: 'var(--sb-field)',
-  border: 'var(--sb-border-width) solid var(--sb-border)',
-  borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-1)',
-  fontSize: 'var(--sb-t-body)', padding: '7px 11px', outline: 'none',
-  fontFamily: 'var(--sb-font-ui)', width: '100%', boxSizing: 'border-box' as const,
-}
-const selectStyle: React.CSSProperties = {
-  ...inputStyle, cursor: 'pointer', width: 'auto',
-}
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   const accent = 'var(--sb-accent)'
@@ -974,7 +965,7 @@ function CompanyCard({
       {usersOpen && (
         <div style={{ borderTop: 'var(--sb-border-width) solid var(--sb-border)', padding: '8px 14px 10px 46px' }}>
           {users.length === 0 && (
-            <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-border)', fontStyle: 'italic' }}>No members yet</p>
+            <EmptyState compact>No members yet</EmptyState>
           )}
 
           {users.map(u => {
@@ -4122,7 +4113,7 @@ function BillingSection() {
   return (
     <div>
       {/* ── Eyebrow ── */}
-      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 14 }}>PLAN</div>
+      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 14 }}>PLAN</div>
 
       {/* ── Billing cycle toggle ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
@@ -4159,10 +4150,10 @@ function BillingSection() {
             >
               {/* plan name + current badge */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontFamily: 'var(--sb-font-display)', fontSize: 13, fontWeight: 700, color: 'var(--sb-ink-1)' }}>{plan.name}</span>
+                <span style={{ fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-body)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{plan.name}</span>
                 {isCurrent && (
                   <span style={{
-                    fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
+                    fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
                     background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
                     padding: '2px 6px', borderRadius: 'var(--sb-r-chip)',
                   }}>CURRENT</span>
@@ -4176,13 +4167,13 @@ function BillingSection() {
                 ) : (
                   <>
                     <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>${price}</span>
-                    <span style={{ fontSize: 11, color: 'var(--sb-ink-4)' }}>/mo</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>/mo</span>
                   </>
                 )}
               </div>
 
               {/* billing note */}
-              <p style={{ margin: '0 0 10px', fontSize: 10, color: 'var(--sb-ink-4)', minHeight: 14, lineHeight: 1.4 }}>
+              <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', minHeight: 14, lineHeight: 1.4 }}>
                 {plan.monthlyPrice === 0
                   ? 'No card required'
                   : cycle === 'annual'
@@ -4195,7 +4186,7 @@ function BillingSection() {
                 {plan.features.map(f => (
                   <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 5 }}>
                     <Check size={10} style={{ color: 'var(--sb-positive)', flexShrink: 0, marginTop: 2 }} strokeWidth={STROKE.active} />
-                    <span style={{ fontSize: 11, color: 'var(--sb-ink-2)', lineHeight: 1.4 }}>{f}</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.4 }}>{f}</span>
                   </div>
                 ))}
               </div>
@@ -4203,18 +4194,18 @@ function BillingSection() {
               {/* CTA */}
               {isCurrent ? (
                 <div style={{
-                  ...PILL_BASE, justifyContent: 'center', fontSize: 11, fontWeight: 600,
+                  ...PILL_BASE, justifyContent: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                   background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
                   cursor: 'default',
                 }}>Current plan</div>
               ) : plan.id === 'free' ? (
                 <button
-                  style={{ ...PILL_BASE, justifyContent: 'center', fontSize: 11, cursor: 'pointer', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', fontFamily: 'inherit', fontWeight: 500 }}
+                  style={{ ...PILL_BASE, justifyContent: 'center', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', fontFamily: 'inherit', fontWeight: 500 }}
                   onClick={() => alert('Downgrade to Free — not yet connected')}
                 >Downgrade</button>
               ) : (
                 <button
-                  style={{ ...PILL_BASE, justifyContent: 'center', fontSize: 11, cursor: 'pointer', color: 'var(--sb-ink-1)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', fontFamily: 'inherit', fontWeight: 600 }}
+                  style={{ ...PILL_BASE, justifyContent: 'center', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', color: 'var(--sb-ink-1)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', fontFamily: 'inherit', fontWeight: 600 }}
                   onClick={() => alert('Upgrade — not yet connected')}
                 >Upgrade to {plan.name}</button>
               )}
@@ -4224,19 +4215,19 @@ function BillingSection() {
       </div>
 
       {/* ── Current plan summary ── */}
-      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 8 }}>SUBSCRIPTION</div>
+      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 8 }}>SUBSCRIPTION</div>
 
       <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>Professor Pro</span>
-              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
+              <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Professor Pro</span>
+              <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
             </div>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>Renews 14 March 2027</p>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <p style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>$300</p>
+            <p style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>$300</p>
             <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>per year</p>
           </div>
         </div>
@@ -4264,7 +4255,7 @@ function BillingSection() {
       {/* ── Invoices ── */}
       <div style={{ marginTop: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>INVOICES</div>
+          <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>INVOICES</div>
           <button style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>Download all</button>
         </div>
         {INVOICES.map((inv, i) => (
@@ -4539,7 +4530,7 @@ function IntegrationsSection() {
       <div style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
-            <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Connections</p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Connections</p>
             <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
               Tokens let the MCP server, Siri Shortcuts, and Telegram act as you. Each is shown once — copy it before closing.
             </p>
@@ -4583,7 +4574,7 @@ function IntegrationsSection() {
             background: 'color-mix(in srgb, var(--sb-positive) 8%, transparent)',
             border: 'var(--sb-border-width) solid var(--sb-positive)',
           }}>
-            <code style={{ flex: 1, fontSize: 11, fontFamily: 'monospace', color: 'var(--sb-ink-1)', wordBreak: 'break-all', lineHeight: 1.5 }}>{revealedToken}</code>
+            <code style={{ flex: 1, fontSize: 'var(--sb-t-meta)', fontFamily: 'monospace', color: 'var(--sb-ink-1)', wordBreak: 'break-all', lineHeight: 1.5 }}>{revealedToken}</code>
             <button onClick={copyToken} style={{
               flexShrink: 0, padding: '5px 11px', borderRadius: 'var(--sb-r-chip)',
               background: copied ? 'color-mix(in srgb, var(--sb-positive) 14%, transparent)' : 'var(--sb-card)',
@@ -4598,7 +4589,7 @@ function IntegrationsSection() {
 
         {/* Token list */}
         {tokens.length === 0 && !creatingToken && (
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', padding: '10px 0' }}>No tokens yet.</p>
+          <EmptyState compact>No tokens yet.</EmptyState>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
           {tokens.map((tok, i) => (
@@ -4615,7 +4606,7 @@ function IntegrationsSection() {
                   {tok.last_used_at ? ` · Last used ${new Date(tok.last_used_at).toLocaleDateString()}` : ' · Never used'}
                 </p>
               </div>
-              <code style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--sb-ink-4)', flexShrink: 0 }}>prof_sk_…</code>
+              <code style={{ fontSize: 'var(--sb-t-meta)', fontFamily: 'monospace', color: 'var(--sb-ink-4)', flexShrink: 0 }}>prof_sk_…</code>
               <button onClick={() => void handleRevoke(tok.id)} style={{
                 flexShrink: 0, padding: '4px 10px', borderRadius: 'var(--sb-r-chip)',
                 background: 'none', border: 'var(--sb-border-width) solid var(--sb-border)',
@@ -4629,7 +4620,7 @@ function IntegrationsSection() {
       {/* ── TELEGRAM ─────────────────────────────────────────────────────────── */}
       <div style={{ marginTop: 24 }}>
         <div style={{ marginBottom: 12 }}>
-          <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Telegram</p>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Telegram</p>
           <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
             Talk to Professor from Telegram — ask about tasks, habits and finances, or add things on the go.
           </p>
@@ -4644,7 +4635,7 @@ function IntegrationsSection() {
                 padding: '9px 13px', borderRadius: 'var(--sb-r-nav)',
                 background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
               }}>
-                <span style={{ fontSize: 18, lineHeight: 1 }}>💬</span>
+                <span style={{ fontSize: 'var(--sb-t-h2)', lineHeight: 1 }}>💬</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                     Chat #{link.chat_id}
@@ -4684,7 +4675,7 @@ function IntegrationsSection() {
             {[
               'Generate a token above (label it "Telegram")',
               'Open Telegram and search for your Professor bot',
-              <>Send: <code style={{ fontSize: 11, fontFamily: 'monospace', background: 'var(--sb-card)', padding: '1px 5px', borderRadius: 4 }}>/connect prof_sk_…</code></>,
+              <>Send: <code style={{ fontSize: 'var(--sb-t-meta)', fontFamily: 'monospace', background: 'var(--sb-card)', padding: '1px 5px', borderRadius: 4 }}>/connect prof_sk_…</code></>,
               'That\'s it — just talk to it naturally after that',
             ].map((step, i) => (
               <li key={i} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.45 }}>{step}</li>
@@ -4699,7 +4690,7 @@ function IntegrationsSection() {
       {/* ── SIRI SHORTCUTS ───────────────────────────────────────────────────── */}
       <div style={{ marginTop: 24, paddingTop: 20, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
         <div style={{ marginBottom: 12 }}>
-          <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Siri Shortcuts</p>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Siri Shortcuts</p>
           <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
             Say "Hey Siri, {siriName}" and talk to your AI naturally — add tasks, log habits, check your calendar, and more. This is the hands-free way, and the only one that works with the app closed or the screen locked.
           </p>
@@ -4771,7 +4762,7 @@ function IntegrationsSection() {
                   {[
                     <>On iPhone or iPad, open <b>Shortcuts</b> → <b>+</b> → name it <em>{siriName}</em> — Siri answers to the shortcut’s name</>,
                     <>Add action: <b>Ask for Input</b> — prompt "What do you want to ask {siriName}?"</>,
-                    <>Add action: <b>Get Contents of URL</b> → paste the URL above (replace <code style={{ fontFamily: 'monospace', fontSize: 10 }}>{'{ShortcutInput}'}</code> with the "Provided Input" variable)</>,
+                    <>Add action: <b>Get Contents of URL</b> → paste the URL above (replace <code style={{ fontFamily: 'monospace', fontSize: 'var(--sb-t-micro)' }}>{'{ShortcutInput}'}</code> with the "Provided Input" variable)</>,
                     <>Add action: <b>Speak Text</b> — set input to the result from the previous step</>,
                     <>Then say <b>"Hey Siri, {siriName}"</b>. Its name is the phrase; no extra setting is needed</>,
                   ].map((step, i) => (

@@ -367,12 +367,13 @@ export function TodayScreen() {
 
           {/* Which day the calendar is pointing at. A day from another month
               stops applying the moment the calendar is paged away from it. */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
               {showingDay ? dayLabel(selectedDay) : MONTH_NAMES[viewMonth]}
             </span>
             {showingDay && (
               <button
+                className="sb-hit"
                 onClick={() => setSelectedDay('')}
                 style={{
                   marginLeft: 'auto', background: 'none', border: 'none', padding: 0,

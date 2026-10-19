@@ -100,7 +100,7 @@ export function ForecastRulesCard({ rules, state, onChange, currency }: {
   return (
     <details style={CARD}>
       <summary style={SUMMARY}>
-        <span style={{ color: 'var(--sb-ink-4)', fontSize: 12 }}>▸</span>
+        <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)' }}>▸</span>
         What the forecast assumes
         <span style={WHY}>
           {applied} of {rules.length} applied
@@ -260,7 +260,7 @@ export function OwnRulesCard({ state, onChange, currency }: {
   return (
     <details style={CARD}>
       <summary style={SUMMARY}>
-        <span style={{ color: 'var(--sb-ink-4)', fontSize: 12 }}>▸</span>
+        <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)' }}>▸</span>
         Your own rules
         <span style={WHY}>
           {state.own.length === 0

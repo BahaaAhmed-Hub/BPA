@@ -29,7 +29,7 @@ export function Label({ children, current, style }: {
 }) {
   return (
     <span style={{
-      fontFamily: MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: '.14em',
+      fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500, letterSpacing: '.14em',
       textTransform: 'uppercase', color: current ? 'var(--sb-accent-deep)' : 'var(--sb-ink-4)',
       ...style,
     }}>{children}</span>
@@ -168,18 +168,18 @@ function EventRow({ row, first, now, onOpen }: {
       <StatusDisc state={st} />
       <span style={{
         width: 52, flexShrink: 0, textAlign: 'right',
-        fontSize: 11.5, color: 'var(--sb-ink-2)', fontVariantNumeric: 'tabular-nums',
+        fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', fontVariantNumeric: 'tabular-nums',
       }}>{hhmm(row.event)}</span>
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{
-          display: 'block', fontSize: 13.5, fontWeight: 600,
+          display: 'block', fontSize: 'var(--sb-t-body)', fontWeight: 600,
           color: off ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
           textDecoration: off ? 'line-through' : 'none', textDecorationThickness: 1.5,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{row.event.summary || '(no title)'}</span>
         {sub && (
           <span style={{
-            display: 'block', fontSize: 11.5, color: 'var(--sb-ink-4)', marginTop: 1,
+            display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 1,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{sub}</span>
         )}
@@ -213,12 +213,12 @@ function Clash({ pair, mins, now, onOpen, onReschedule }: {
       <span style={{
         alignSelf: 'flex-start', height: 19, display: 'inline-flex', alignItems: 'center',
         padding: '0 7px', borderRadius: 6, background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
-        fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase',
+        fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase',
       }}>Clash</span>
       {pair.map((r, i) => (
         <EventRow key={r.event.id} row={r} first={i === 0} now={now} onOpen={() => onOpen(r)} />
       ))}
-      <span style={{ fontSize: 12.5, color: 'var(--sb-accent-deep)', fontVariantNumeric: 'tabular-nums' }}>
+      <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)', fontVariantNumeric: 'tabular-nums' }}>
         {mins} min overlap{bothWant ? ' · both need you' : ''}
       </span>
       <button
@@ -228,7 +228,7 @@ function Clash({ pair, mins, now, onOpen, onReschedule }: {
         style={{
           alignSelf: 'flex-start', height: 30, padding: '0 12px', borderRadius: 999,
           background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-          color: 'var(--sb-ink-2)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+          color: 'var(--sb-ink-2)', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
           cursor: 'pointer', marginTop: 3,
         }}>Reschedule later one</button>
     </div>
@@ -316,18 +316,18 @@ export function ProfessorCard({ rows, dayLabel }: { rows: RailEvent[]; dayLabel:
     <div style={{ ...CARD, gap: 11 }}>
       <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
         <PMark size={26} />
-        <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--sb-ink-1)' }}>Professor</span>
+        <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Professor</span>
         <span style={{ flex: 1 }} />
         <span style={{
           height: 19, display: 'inline-flex', alignItems: 'center', padding: '0 7px', borderRadius: 6,
           background: 'var(--sb-accent-tint2)', color: 'var(--sb-accent-deep)',
-          fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase',
+          fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase',
         }}>Beta</span>
       </span>
 
       {loading ? <Skeleton /> : (
         <span style={{
-          fontSize: 15, lineHeight: 1.45, color: failed ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
+          fontSize: 'var(--sb-t-h3)', lineHeight: 1.45, color: failed ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
           fontVariantNumeric: 'tabular-nums',
         }}>{body}</span>
       )}
@@ -345,7 +345,7 @@ export function ProfessorCard({ rows, dayLabel }: { rows: RailEvent[]; dayLabel:
               title="Open the events this is about"
               style={{
                 height: 34, padding: '0 16px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: 13, fontWeight: 600,
+                fontSize: 'var(--sb-t-body)', fontWeight: 600,
                 background: i === 0 ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                 border: i === 0 ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
                 color: i === 0 ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-2)',
@@ -410,13 +410,13 @@ export function CalendarRail({ rows, dayLabel, onOpen }: {
         <span style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <Label current>{dayLabel}</Label>
           <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 11.5, color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums' }}>
             {sorted.length} event{sorted.length === 1 ? '' : 's'}
           </span>
         </span>
 
         {sorted.length === 0 && (
-          <span style={{ fontSize: 13, color: 'var(--sb-ink-4)', padding: '11px 0' }}>
+          <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)', padding: '11px 0' }}>
             Nothing on this day.
           </span>
         )}
