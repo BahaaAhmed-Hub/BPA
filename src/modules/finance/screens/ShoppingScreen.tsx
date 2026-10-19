@@ -14,20 +14,9 @@ import { loadRules } from '../modals/BudgetRuleModal'
 import { Segmented } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import { notify } from '@/lib/undo'
+import { C } from '@/lib/palette'
 
 // ─── Sunlit Bento tokens used ─────────────────────────────────────────────────
-const C = {
-  page:    'var(--sb-page)',
-  card:    'var(--sb-card)',
-  field:   'var(--sb-field)',
-  border:  'var(--sb-border)',
-  ink1:    'var(--sb-ink-1)',
-  ink3:    'var(--sb-ink-3)',
-  ink4:    'var(--sb-ink-4)',
-  accent:  'var(--sb-accent)',
-  pos:     'var(--sb-positive)',
-  neg:     'var(--sb-negative)',
-} as const
 
 // ─── Small icon components ────────────────────────────────────────────────────
 
@@ -682,7 +671,7 @@ const GROUP_ICONS = ['🛒', '🥦', '💊', '🏠', '👕', '🎮', '📚', '�
 function AddGroupModal({ onAdd, onClose }: AddGroupModalProps) {
   const [name, setName]             = useState('')
   const [icon, setIcon]             = useState('🛒')
-  const [_color, _setColor]         = useState('#F5D14E')
+  const [_color, _setColor]         = useState('#F5D14E') // ui-guard: user-colour
   const [scheduledDate, setDate]    = useState('')
   const [recurrence, setRecurrence] = useState<ShoppingGroup['recurrence']>('none')
 

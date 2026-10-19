@@ -23,19 +23,8 @@ import {
 import type { ShoppingGroup, ShoppingItem, ShoppingStore } from './types'
 import { ItemFields, type EnvelopeRow } from './ItemFields'
 import { useFillsTheWindow } from '@/lib/fillsTheWindow'
+import { C } from '@/lib/palette'
 
-const C = {
-  page:   'var(--sb-page)',
-  card:   'var(--sb-card)',
-  field:  'var(--sb-field)',
-  border: 'var(--sb-border)',
-  ink1:   'var(--sb-ink-1)',
-  ink3:   'var(--sb-ink-3)',
-  ink4:   'var(--sb-ink-4)',
-  accent: 'var(--sb-accent)',
-  pos:    'var(--sb-positive)',
-  neg:    'var(--sb-negative)',
-} as const
 
 /** The column an item with no list lives in. Not a group id — a group can
  *  never have this id, because every group id is a uuid. */

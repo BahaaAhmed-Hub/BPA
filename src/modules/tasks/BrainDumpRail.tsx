@@ -306,7 +306,7 @@ export function BrainDumpRail({ tasks, onOpen }: {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
               height: 32, padding: '0 12px', borderRadius: 'var(--sb-r-sm)',
               background: 'rgba(245,209,78,0.12)', border: '1px solid rgba(245,209,78,0.4)',
-              color: '#D4A827', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
+              color: 'var(--sb-accent-deep)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
               cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
             }}
           >

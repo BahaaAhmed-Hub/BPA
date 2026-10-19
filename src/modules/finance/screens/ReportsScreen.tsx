@@ -5,6 +5,7 @@ import { settled, whenPaid } from '../unpaid'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { Segmented } from '@/components/ui'
 import { compact } from '../format'
+import { C } from '@/lib/palette'
 
 // ─── Donut chart helpers ───────────────────────────────────────────────────────
 
@@ -109,20 +110,6 @@ function colourFor(rows: { id: string; own?: string }[]): Map<string, string> {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ReportsScreen(_props?: any) {
-  const C = {
-    bg:        'var(--sb-page)',
-    surface:   'var(--sb-card)',
-    amberBg:   'rgba(var(--sb-accent-rgb),0.12)',
-    border:    'var(--sb-border)',
-    borderSt:  'var(--sb-border)',
-    divFaint:  'var(--sb-border)',
-    amber:     'var(--sb-accent)',
-    textPri:   'var(--sb-ink-1)',
-    textMuted: 'var(--sb-ink-3)',
-    textDim:   'var(--sb-ink-4)',
-    red:       'var(--sb-negative)',
-    green:     'var(--sb-positive)',
-  }
 
   const { transactions, categories } = useFinanceStore()
 
@@ -220,7 +207,7 @@ export function ReportsScreen(_props?: any) {
 
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden', background: C.bg }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden', background: C.page }}>
       <style>{`
         /* Animations, not transitions: a mark that has only just mounted has no
            previous value to transition from, and asking React to paint a zero
@@ -294,11 +281,11 @@ export function ReportsScreen(_props?: any) {
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '5px 8px 5px 12px',
-            background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-nav)',
+            background: C.card, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-nav)',
           }}>
             <input type="date" value={rangeFrom} max={rangeTo || undefined}
               onChange={e => setRangeFrom(e.target.value)} style={RANGE_FIELD} />
-            <span style={{ color: C.textDim }}>›</span>
+            <span style={{ color: C.ink4 }}>›</span>
             <input type="date" value={rangeTo} min={rangeFrom || undefined}
               onChange={e => setRangeTo(e.target.value)} style={RANGE_FIELD} />
             <span style={{ width: 1, alignSelf: 'stretch', background: C.border, margin: '0 2px' }} />
@@ -315,7 +302,7 @@ export function ReportsScreen(_props?: any) {
                     padding: '4px 9px', borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
                     fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: on ? 700 : 500,
                     background: on ? 'var(--sb-ink-1)' : 'transparent',
-                    color: on ? 'var(--sb-ink-on-dark)' : C.textDim,
+                    color: on ? 'var(--sb-ink-on-dark)' : C.ink4,
                   }}>
                   {label}
                 </button>
@@ -327,7 +314,7 @@ export function ReportsScreen(_props?: any) {
         {REPORT_DATA.length === 0 ? (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            height: 200, color: C.textMuted, fontSize: 'var(--sb-t-body)',
+            height: 200, color: C.ink3, fontSize: 'var(--sb-t-body)',
           }}>
             No expenses in {periodLabel}
           </div>
@@ -343,7 +330,7 @@ export function ReportsScreen(_props?: any) {
                     {/* Track */}
                     <circle
                       cx={DONUT_CX} cy={DONUT_CY} r={DONUT_R}
-                      fill="none" stroke={C.divFaint} strokeWidth={DONUT_SW}
+                      fill="none" stroke={C.border} strokeWidth={DONUT_SW}
                     />
                     {/* Segments */}
                     {segments.map((seg, i) => (
@@ -366,7 +353,7 @@ export function ReportsScreen(_props?: any) {
                     {/* Center hole */}
                     <circle
                       cx={DONUT_CX} cy={DONUT_CY} r={40}
-                      fill={C.bg}
+                      fill={C.page}
                       stroke={C.border}
                       strokeWidth={1}
                     />
@@ -395,11 +382,11 @@ export function ReportsScreen(_props?: any) {
                   {segments.map((seg, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 12, height: 12, borderRadius: 'var(--sb-r-chip)', background: seg.color, flexShrink: 0 }} />
-                      <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: C.textPri }}>{seg.name}</span>
-                      <span style={{ fontSize: 'var(--sb-t-body-s)', color: C.textMuted, marginRight: 8 }}>
+                      <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: C.ink1 }}>{seg.name}</span>
+                      <span style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink3, marginRight: 8 }}>
                         {Math.round(seg.pct * 100)}%
                       </span>
-                      <span style={{ fontSize: 'var(--sb-t-label)', color: C.textPri, fontWeight: 600, minWidth: 72, textAlign: 'right' }}>
+                      <span style={{ fontSize: 'var(--sb-t-label)', color: C.ink1, fontWeight: 600, minWidth: 72, textAlign: 'right' }}>
                         {seg.amt.toLocaleString('en-US')}
                       </span>
                     </div>
@@ -414,15 +401,15 @@ export function ReportsScreen(_props?: any) {
                 {REPORT_DATA.map((d, i) => (
                   <div key={i}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 'var(--sb-t-label)', color: C.textPri }}>{d.name}</span>
-                      <span style={{ fontSize: 'var(--sb-t-label)', color: C.textPri, fontWeight: 600 }}>
+                      <span style={{ fontSize: 'var(--sb-t-label)', color: C.ink1 }}>{d.name}</span>
+                      <span style={{ fontSize: 'var(--sb-t-label)', color: C.ink1, fontWeight: 600 }}>
                         {d.amt.toLocaleString('en-US')}
                       </span>
                     </div>
                     <div style={{
                       height: 30,
                       borderRadius: 'var(--sb-r-chip)',
-                      background: C.surface,
+                      background: C.card,
                       overflow: 'hidden',
                       border: `var(--sb-border-width) solid ${C.border}`,
                     }}>

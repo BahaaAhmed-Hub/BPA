@@ -12,21 +12,13 @@ import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { isoDate } from '../dates'
 import { TxRow, txDate } from '../components/TxRow'
+import { C } from '@/lib/palette'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
 const RED   = NEGATIVE
 const GREEN = POSITIVE
 
-const C = {
-  bg:      'var(--sb-page)',
-  surface: 'var(--sb-card)',
-  border:  'var(--sb-border)',
-  textPri: 'var(--sb-ink-1)',
-  textDim: 'var(--sb-ink-2)',
-  textMuted: 'var(--sb-ink-3)',
-  accent:  'var(--sb-ink-1)',
-}
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -326,7 +318,7 @@ export function TodayScreen() {
   const todayInc = todayTx.filter(t => t.type === 'income').reduce((s, t) => s + conv(t), 0)
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: C.bg, flexDirection: 'column' }}>
+    <div style={{ display: 'flex', height: '100%', background: C.page, flexDirection: 'column' }}>
 
       {/* Header bar */}
       <div style={{ flexShrink: 0, borderBottom: `var(--sb-border-width) solid ${C.border}`, padding: '12px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
@@ -368,7 +360,7 @@ export function TodayScreen() {
           {/* Which day the calendar is pointing at. A day from another month
               stops applying the moment the calendar is paged away from it. */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, textTransform: 'uppercase', color: C.ink3, letterSpacing: '0.8px' }}>
               {showingDay ? dayLabel(selectedDay) : MONTH_NAMES[viewMonth]}
             </span>
             {showingDay && (
@@ -377,7 +369,7 @@ export function TodayScreen() {
                 onClick={() => setSelectedDay('')}
                 style={{
                   marginLeft: 'auto', background: 'none', border: 'none', padding: 0,
-                  fontSize: 'var(--sb-t-meta)', color: C.textMuted, cursor: 'pointer', textDecoration: 'underline',
+                  fontSize: 'var(--sb-t-meta)', color: C.ink3, cursor: 'pointer', textDecoration: 'underline',
                 }}>
                 All of {MONTH_NAMES[viewMonth]}
               </button>
@@ -389,7 +381,7 @@ export function TodayScreen() {
               {feed.map(tx => renderTxRow(tx))}
             </div>
           ) : (
-            <div style={{ fontSize: 'var(--sb-t-body)', color: C.textMuted, textAlign: 'center', padding: '32px 0' }}>
+            <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink3, textAlign: 'center', padding: '32px 0' }}>
               {showingDay
                 ? `Nothing on ${dayLabel(selectedDay)}`
                 : `No transactions in ${MONTH_NAMES[viewMonth]}`}
@@ -413,7 +405,7 @@ export function TodayScreen() {
               }}>
                 <span style={{
                   fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
-                  textTransform: 'uppercase' as const, color: C.textMuted,
+                  textTransform: 'uppercase' as const, color: C.ink3,
                 }}>{label}</span>
                 <span style={{
                   marginLeft: 'auto', fontFamily: 'var(--sb-font-num)',

@@ -4,6 +4,7 @@ import {
 } from 'lucide-react'
 import { sendMail, escapeHtml, type MailAccount, type MailAttachment } from '@/lib/gmail'
 import { ICON } from '@/lib/type'
+import { C } from '@/lib/palette'
 
 // ─── Writing one ─────────────────────────────────────────────────────────────
 //
@@ -33,23 +34,19 @@ export interface ComposeSeed {
   inReplyTo?: string
 }
 
-const C = {
-  card: 'var(--sb-card)', field: 'var(--sb-field)', border: 'var(--sb-border)', hair: 'var(--sb-hairline)',
-  ink: 'var(--sb-ink-1)', muted: 'var(--sb-ink-3)', ghost: 'var(--sb-ink-4)', amber: 'var(--sb-accent)', red: 'var(--sb-negative)',
-}
 
 const LABEL: React.CSSProperties = {
-  width: 46, flexShrink: 0, fontSize: 'var(--sb-t-meta)', color: C.ghost, paddingTop: 7,
+  width: 46, flexShrink: 0, fontSize: 'var(--sb-t-meta)', color: C.ink4, paddingTop: 7,
 }
 const INPUT: React.CSSProperties = {
   flex: 1, minWidth: 0, height: 30, padding: '0 9px', borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box',
   background: C.field, border: `var(--sb-border-width) solid ${C.border}`,
-  fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: C.ink, outline: 'none',
+  fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: C.ink1, outline: 'none',
 }
 const TOOL: React.CSSProperties = {
   width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', display: 'flex', alignItems: 'center',
   justifyContent: 'center', background: 'transparent', border: 'none',
-  color: C.muted, cursor: 'pointer', padding: 0,
+  color: C.ink3, cursor: 'pointer', padding: 0,
 }
 
 const MODE_LABEL: Record<ComposeMode, string> = {
@@ -156,7 +153,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
         display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
         borderBottom: `var(--sb-border-width) solid ${C.hair}`, background: 'var(--sb-header)',
       }}>
-        <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink }}>{MODE_LABEL[seed.mode]}</span>
+        <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink1 }}>{MODE_LABEL[seed.mode]}</span>
         <span style={{ flex: 1 }} />
         <button onClick={onClose} title="Discard" style={TOOL}><X size={ICON.sm} /></button>
       </div>
@@ -170,7 +167,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
           <span style={{ position: 'relative', display: 'flex', flex: 1, minWidth: 0 }}>
             <span style={{ ...INPUT, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{from}</span>
-              <ChevronDown size={ICON.sm} style={{ color: C.ghost, flexShrink: 0 }} />
+              <ChevronDown size={ICON.sm} style={{ color: C.ink4, flexShrink: 0 }} />
             </span>
             <select value={from} onChange={e => setFrom(e.target.value)}
               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
@@ -219,7 +216,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
             minHeight: 150, maxHeight: '32vh', overflowY: 'auto', marginTop: 3,
             padding: '10px 11px', borderRadius: 'var(--sb-r-chip)', background: C.field,
             border: `var(--sb-border-width) solid ${C.border}`, outline: 'none',
-            fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', lineHeight: 1.55, color: C.ink,
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', lineHeight: 1.55, color: C.ink1,
           }}
         />
 
@@ -229,26 +226,26 @@ export function Composer({ seed, accounts, onClose, onSent }: {
               <span key={i} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 8px',
                 borderRadius: 'var(--sb-r-pill)', background: C.field, border: `var(--sb-border-width) solid ${C.border}`,
-                fontSize: 'var(--sb-t-meta)', color: C.muted,
+                fontSize: 'var(--sb-t-meta)', color: C.ink3,
               }}>
                 <Paperclip size={ICON.sm} />
                 {f.file.name} · {fmtBytes(f.file.size)}
                 <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))}
-                  title="Remove" style={{ ...TOOL, width: 14, height: 14, color: C.ghost }}>
+                  title="Remove" style={{ ...TOOL, width: 14, height: 14, color: C.ink4 }}>
                   <X size={ICON.sm} />
                 </button>
               </span>
             ))}
             {/* Google's own limit, and worth saying before the send fails. */}
             {total > 24 * 1024 * 1024 && (
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.red, alignSelf: 'center' }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.neg, alignSelf: 'center' }}>
                 Over 25 MB — Gmail will refuse it. Send a link instead.
               </span>
             )}
           </div>
         )}
 
-        {error && <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: C.red, lineHeight: 1.5 }}>{error}</p>}
+        {error && <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: C.neg, lineHeight: 1.5 }}>{error}</p>}
       </div>
 
       {/* Send, and the handful of things worth doing to the words first */}
@@ -259,8 +256,8 @@ export function Composer({ seed, accounts, onClose, onSent }: {
         <button onClick={() => void send()} disabled={sending}
           style={{
             display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 15px',
-            borderRadius: 'var(--sb-r-sm)', background: C.amber, border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent)',
-            color: C.ink, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+            borderRadius: 'var(--sb-r-sm)', background: C.accent, border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent)',
+            color: C.ink1, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
             cursor: sending ? 'default' : 'pointer', boxShadow: 'var(--sb-shadow-accent)',
           }}>
           <Send size={ICON.sm} /> {sending ? 'Sending…' : 'Send'}
@@ -279,7 +276,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
         </button>
         <input ref={fileRef} type="file" multiple hidden onChange={e => { void attach(e.target.files); e.target.value = '' }} />
         <span style={{ flex: 1 }} />
-        <button onClick={onClose} title="Discard" style={{ ...TOOL, color: C.ghost }}><Trash2 size={ICON.sm} /></button>
+        <button onClick={onClose} title="Discard" style={{ ...TOOL, color: C.ink4 }}><Trash2 size={ICON.sm} /></button>
       </div>
     </div>
   )
