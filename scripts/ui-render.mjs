@@ -147,8 +147,12 @@ const MEASURE = ({ narrow, tap }) => {
     for (const el of document.body.querySelectorAll('button, a, [role=button]')) {
       if (!visible(el)) continue
       const r = el.getBoundingClientRect()
-      if (r.width < tap || r.height < tap) {
-        out.taps.push({ sel: name(el), w: Math.round(r.width), h: Math.round(r.height),
+      // `.sb-hit` extends the tappable area past the box with a pseudo-element
+      // (--sb-hit-pad each side); that is what a thumb meets, so it counts.
+      const pad = el.classList.contains('sb-hit') ? parseFloat(getComputedStyle(el).getPropertyValue('--sb-hit-pad')) || 0 : 0
+      const w = r.width + 2 * pad, h = r.height + 2 * pad
+      if (w < tap || h < tap) {
+        out.taps.push({ sel: name(el), w: Math.round(w), h: Math.round(h),
           text: (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 30) })
       }
     }
@@ -186,6 +190,7 @@ const RAIL = ['Today', 'Dashboard', 'Calendar', 'Mail', 'Tasks', 'Habits', 'Fina
 const results = []   // { theme, screen, opened, texts, fails: {type, emoji, narrow, tap}, ... }
 const dialogs = []   // { theme, screen, message }
 const topBar = []    // { theme, exists, opens }
+const calView = []   // { theme, picked }
 
 const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] })
 
@@ -195,7 +200,8 @@ for (const theme of THEMES) {
   let current = 'boot'
 
   const newPage = async ({ signedIn }) => {
-    const ctx = await br.newContext({ viewport: VIEW, timezoneId: 'Africa/Cairo', locale: 'en-GB', reducedMotion: 'reduce' })
+    // --narrow is a phone: touch, so `(pointer: coarse)` is true and the app's own hit areas apply.
+    const ctx = await br.newContext({ viewport: VIEW, timezoneId: 'Africa/Cairo', locale: 'en-GB', reducedMotion: 'reduce', ...(NARROW ? { hasTouch: true, isMobile: true, deviceScaleFactor: 2 } : {}) })
     await stub(ctx)
     const page = await ctx.newPage()
     page.on('pageerror', e => console.log('   [pageerror]', String(e).slice(0, 200)))
@@ -251,6 +257,11 @@ for (const theme of THEMES) {
         // The matrix is one view of several; ask for it by name if it is offered.
         await page.getByText('Matrix', { exact: true }).first().click({ timeout: 2000 }).catch(() => {})
       }
+      if (mod === 'Calendar' && opened && NARROW) {
+        // cal-view is stored as 'week' (see the init script): a phone-width window must still open on the day.
+        const picked = await page.evaluate(() => [...document.querySelectorAll('[data-cal-header] [role=tab]')].filter(b => b.getAttribute('aria-selected') === 'true').map(b => b.textContent.trim()))
+        calView.push({ theme, picked })
+      }
       await measure(page, mod, { opened })
     }
 
@@ -291,6 +302,13 @@ for (const theme of THEMES) {
     await settled(page, traffic, 8000, { shell: null, want: 'text=Intro call' })
     const has = await page.getByText('Intro call').count() > 0
     await measure(page, 'Public booking', { opened: has, shotName: 'public-booking' })
+    // The day grid is behind the choice of call: a stranger on a phone reaches it
+    // in one tap, and it is the screen the 7 columns have to fit on.
+    if (has) {
+      await page.getByText('Intro call').first().click({ timeout: 3000 }).catch(() => {})
+      const grid = await page.getByRole('button', { name: /times$/ }).first().waitFor({ timeout: 6000 }).then(() => true).catch(() => false)
+      await measure(page, 'Public booking · days', { opened: grid, shotName: 'public-booking-days' })
+    }
     await page.context().close()
   }
 }
@@ -299,7 +317,8 @@ await br.close()
 // ─── Verdicts ────────────────────────────────────────────────────────────────
 let failed = 0
 const fail = (s) => { failed++; console.log(`  ✗ ${s}`) }
-const head = (rows, f) => rows.slice(0, 4).map(f).join('; ') + (rows.length > 4 ? `; … (+${rows.length - 4})` : '')
+const MORE = process.env.UI_VERBOSE ? 1000 : 4
+const head = (rows, f) => rows.slice(0, MORE).map(f).join('; ') + (rows.length > MORE ? `; … (+${rows.length - MORE})` : '')
 
 const totals = { type: 0, emoji: 0, scroll: 0, tap: 0, unopened: 0 }
 for (const theme of THEMES) {
@@ -323,6 +342,12 @@ for (const t of topBar) {
   if (!t.exists) { failed++; console.log(`  ✗ ${t.theme}: no Search button in the top bar`) }
   else if (!t.opens) { failed++; console.log(`  ✗ ${t.theme}: Search is pressed and the command palette does not open`) }
   else console.log(`  ✓ ${t.theme}: Search opens the command palette`)
+}
+
+// P1.3 — below 760px the calendar opens on the day, though 'week' is what is stored.
+for (const c of calView) {
+  if (c.picked.length === 1 && c.picked[0] === 'Day') console.log(`  ✓ ${c.theme}: the calendar opens on Day at 375px`)
+  else { failed++; console.log(`  ✗ ${c.theme}: the calendar opened on [${c.picked.join(', ') || 'nothing selected'}] at 375px, expected Day`) }
 }
 
 // P0.4 — "Do now" must be the same colour wherever it is drawn: on Tasks and

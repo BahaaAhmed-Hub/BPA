@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Camera, Plus, Search, X } from 'lucide-react'
 import { Button, Card, Pill, Segmented } from '@/components/ui'
 import { CAPS, ICON } from '@/lib/type'
@@ -18,23 +18,12 @@ import { inputStyle } from './fieldStyle'
 import { loadLibraryView, OPEN_BOOK_EVENT, saveLibraryView, takePendingOpen, type LibraryView } from './libraryPrefs'
 import { useLibraryStore } from './libraryStore'
 import { STATUS_LABEL, type Book, type BookStatus } from './types'
+import { useNarrow } from '@/lib/useNarrow'
 
 // pdf.js is large; it loads the first time a book is opened to read, not with the app.
 const PdfReader = lazy(() => import('./PdfReader'))
 
 type StatusFilter = 'all' | BookStatus
-
-/** Under this the panel cannot sit beside the shelf — 300px of panel leaves a
- *  phone ~90px of books — so it replaces it, the way the Mail reader stacks. */
-const NARROW_PX = 760
-const narrowQuery = () => window.matchMedia(`(max-width: ${NARROW_PX}px)`)
-function useNarrow(): boolean {
-  return useSyncExternalStore(
-    cb => { const mq = narrowQuery(); mq.addEventListener('change', cb); return () => mq.removeEventListener('change', cb) },
-    () => narrowQuery().matches,
-    () => false,
-  )
-}
 
 export function LibraryModule() {
   const books = useLibraryStore(s => s.books)

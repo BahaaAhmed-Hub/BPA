@@ -1113,13 +1113,13 @@ export function HabitsModule() {
               return (
                 <button
                   key={d}
+                  className="hb-daycol"
                   onClick={() => setSelectedDay(d)}
                   title={new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                     // 24px is WCAG's floor for a target; the bar inside stays 12px wide, so the
                     // row's look is the same and each day gets the room to be pressed.
-                    minWidth: 24,
                     background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                     opacity: future ? 0.45 : 1, fontFamily: 'inherit',
                   }}>

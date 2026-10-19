@@ -74,6 +74,7 @@ import {
 import IdealWeekModal from './IdealWeekModal'
 import { LOZENGE } from '../../components/SideRail'
 import { askConfirm } from '@/lib/confirm'
+import { useNarrow } from '@/lib/useNarrow'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const HOUR_PX  = 64     // pixels per hour (Calendar 1.6: 64px/hr)
@@ -1302,6 +1303,9 @@ export function CalendarIntelligence() {
   const [calView,         setCalView]        = useState<'day' | 'week' | 'month'>(() => {
     try { return (localStorage.getItem('cal-view') as 'day' | 'week' | 'month') ?? 'week' } catch { return 'week' }
   })
+  // Seven columns do not fit a phone: a window that is (or becomes) narrow opens on the day. Not persisted — it is the window's answer, not a choice.
+  const narrowWindow = useNarrow()
+  useEffect(() => { if (narrowWindow) setCalView(v => v === 'week' ? 'day' : v) }, [narrowWindow])
   const firstDow  = useWeekStart()
   const weekStart = useMemo(() => getWeekStart(anchorDate, firstDow), [anchorDate, firstDow])
   // Seven columns need seven columns' worth of room; below that the week is

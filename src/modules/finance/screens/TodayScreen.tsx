@@ -161,7 +161,7 @@ function MoneyCalendar({
         padding: 14, boxShadow: 'var(--sb-shadow-control)',
       }}>
         {/* Day headers */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 6, marginBottom: 6 }}>
           {['SAT','SUN','MON','TUE','WED','THU','FRI'].map(d => (
             <div key={d} style={{
               textAlign: 'center' as const, fontSize: 'var(--sb-t-meta)', fontWeight: 700,
@@ -170,7 +170,7 @@ function MoneyCalendar({
           ))}
         </div>
         {/* Cells grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 6 }}>
           {cells.map((day, i) => {
             if (!day) return <div key={i} style={{ minHeight: 78 }} />
             const dateStr = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`

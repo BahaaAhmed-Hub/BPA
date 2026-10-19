@@ -4127,7 +4127,7 @@ function BillingSection() {
       </div>
 
       {/* ── Plan cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginBottom: 20 }}>
         {BILLING_PLANS.map(plan => {
           const isCurrent = plan.id === CURRENT_PLAN
           const price = cycle === 'annual' && plan.annualPrice > 0

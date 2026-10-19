@@ -264,7 +264,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 2 }}>
         {WEEKDAYS.map((w, i) => (
           <span key={i} style={{ textAlign: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', padding: '2px 0 4px' }}>{w}</span>
         ))}

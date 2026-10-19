@@ -185,7 +185,7 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
           {draft.freq === 'WEEKLY' && (
             <>
               <div style={GROUP_LABEL}>On these days</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 5, padding: '0 8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 5, padding: '0 8px' }}>
                 {RRULE_DAYS.map((d, i) => (
                   <Cell key={d} on={!!draft.byDay?.includes(d)} label={DAY_INITIAL[i]} onClick={() => toggleDay(d)} />
                 ))}
@@ -219,7 +219,7 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
               </div>
 
               {monthlyMode === 'each' && draft.freq === 'MONTHLY' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, padding: '8px 8px 0' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 4, padding: '8px 8px 0' }}>
                   {Array.from({ length: 31 }, (_, i) => i + 1).map(n => (
                     <Cell key={n} on={!!draft.monthDays?.includes(n)} label={String(n)} onClick={() => toggleDate(n)} />
                   ))}

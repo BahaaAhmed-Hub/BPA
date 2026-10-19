@@ -224,7 +224,7 @@ export function ExecutiveDashboard() {
         </div>
 
         {/* Top metric cards — real data */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 24 }}>
           <MetricCard
             label="Active Tasks"
             value={activeTasks.length}
@@ -263,7 +263,7 @@ export function ExecutiveDashboard() {
         </div>
 
         {/* Second Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 24 }}>
           <MetricCard
             label="Today's Habits"
             value={`${habitProgress.pct}%`}
@@ -287,7 +287,7 @@ export function ExecutiveDashboard() {
         </div>
 
         {/* Bottom Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
           {/* Company Breakdown */}
           <div style={{
             background: 'var(--sb-card)',

@@ -111,3 +111,26 @@ for what each phase must move).
   Screenshots go to `screenshots/ui/<phase>/<theme>/` (git-ignored). The stub
   answers every read with `[]`, so screens are in their empty state — the same
   on every run, which is what makes a before/after pair comparable.
+
+### What the UI-unification phases added to those two
+- `ui-guard`: all nine rules are in `ENFORCED` now, so a bare `node scripts/ui-guard.mjs`
+  fails on any regression. Markers: `// ui-guard: ink-ok` (a disabled-state
+  `--sb-ink-4` text colour), `user-colour` (a default for a colour a person
+  picks), `type-ok` (SVG user units), `emoji-ok` and `emoji-start`/`emoji-end`
+  (emoji a person picks, a preset list, text written into Google). A marker
+  after a JSX element renders as text, so put one only on a line that ends in `,`.
+  Emoji defaults and fallbacks live in `src/lib/glyphs.ts`, outside `src/modules/`.
+- `ui-render` also asserts: "Do now" is the same computed colour on Tasks and
+  the Dashboard (`data-quadrant`), the top bar's Search opens the command
+  palette, and — with `--narrow` — the calendar opens on Day, the public
+  booking page's **day grid** (one tap in) fits, and no page scrolls sideways.
+  `--narrow` emulates a phone (`hasTouch` + `isMobile`), so `(pointer: coarse)`
+  holds and a `.sb-hit` control counts its hit pad toward the 36px floor.
+  `UI_VERBOSE=1` lists every failing target instead of the first four.
+- `undo-replaces-confirm.mjs` — a goal and an entry delete with no native
+  dialog, the server receives the DELETE, Undo sends the upsert; the
+  ConfirmDialog opens as an alertdialog, focus starts on Cancel, Escape answers
+  false. Control: on the code before P0.6 it sees the native dialog fire.
+- `skeleton-shows-while-loading.mjs` — Google's events held 1.5s: a
+  `[data-skeleton]` shows, then the event; `prefers-reduced-motion` stops the
+  pulse. `HOLD=never` is the control (the skeleton must not leave by itself).

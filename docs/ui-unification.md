@@ -234,5 +234,5 @@ If an existing harness breaks because it matched old text (e.g. "On fire! 🔥" 
 | P0.6 Dialogs → undo / ConfirmDialog | done | branch `claude/next-incomplete-phase-niej9p` |
 | P1.1 Hide unfinished | done | branch `claude/next-incomplete-phase-niej9p` |
 | P1.2 Loading states | done | branch `claude/next-incomplete-phase-niej9p` |
-| P1.3 Narrow layout | todo | |
+| P1.3 Narrow layout | done | branch `claude/next-incomplete-phase-niej9p` |
 | P2.x Structure | blocked — design first | |

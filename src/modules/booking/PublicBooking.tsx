@@ -175,7 +175,7 @@ function MonthPicker({ byDay, month, onMonth, chosen, onChoose, canGoBack, canGo
         <button onClick={() => step(1)} disabled={!canGoOn} aria-label="The month after"
           style={{ ...ROUNDBTN, opacity: canGoOn ? 1 : 0.35 }}><ChevronRight size={ICON.sm} /></button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 4 }}>
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
           <span key={i} style={{ textAlign: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)' }}>{d}</span>
         ))}

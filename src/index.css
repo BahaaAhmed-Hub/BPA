@@ -1310,3 +1310,15 @@ img { max-width: 100%; }
      bar's: it sits above it instead of on top of the last tab. */
   .ai-fab { bottom: calc(84px + env(safe-area-inset-bottom)) !important; }
 }
+
+/* ── A phone-width window: nothing you tap is smaller than a fingertip ────────
+   36px is the floor the UI-unification brief set (a thumb is ~44; 36 keeps the
+   dense screens dense). Controls that are already larger are unaffected; the
+   dot and swatch controls that are deliberately small carry `.sb-hit`, whose
+   own pseudo-element extends the tappable area instead. */
+/* The week bar's day columns: 24px (WCAG's floor) on a desktop; a thumb's on a phone. */
+.hb-daycol { min-width: 24px; }
+@media (max-width: 760px) { .hb-daycol { min-width: 36px; } }
+@media (max-width: 760px) {
+  button:not(.sb-hit), [role="button"]:not(.sb-hit), a[href]:not(.sb-hit) { min-height: 36px; min-width: 36px; }
+}
