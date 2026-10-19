@@ -49,8 +49,8 @@ async function open({ shopping, lock, module = 'finance' }) {
     localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
     localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: mod, themeId: 'sunlit-bento' }, version: 0 }))
     localStorage.setItem('shopping-settings', JSON.stringify({ enabled: shop, viewMode: 'byWeek', priceWatchFrequency: 'off', markCalendarDoneOnPurchase: false, markTaskDoneOnPurchase: false }))
-    if (lk) localStorage.setItem('finance-lock', JSON.stringify({ enabled: true, idleMinutes: 5, hash: 'x', salt: 'y' }))
-    sessionStorage.removeItem('finance-unlocked')
+    if (lk) localStorage.setItem('finance-lock', JSON.stringify({ enabled: true, relock: 'session', password: { salt: 'AAAA', hash: 'AAAA', rounds: 1000 } }))
+    sessionStorage.removeItem('finance-lock-session')
   }, [session, shopping, lock, module])
   const traffic = watchTraffic(page)
   await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
@@ -98,8 +98,7 @@ if (MODE === 'shopping' || MODE === 'all') {
     if (shopping) {
       await page.locator('[data-side-rail] button[aria-label="Shopping"]').click()
       await page.locator('[data-side-rail] button[aria-label="Shopping"][aria-current="page"]').waitFor({ timeout: 4000 })
-      const text = await page.evaluate(() => document.body.innerText)
-      ok('[shopping on] pressing it opens the shopping screen', /shopping list|No shopping lists yet|Stores|Board/i.test(text))
+      ok('[shopping on] pressing it opens the shopping module (its own marker, visible)', await page.locator('[data-shopping-module]').isVisible())
     }
     await ctx.close()
   }

@@ -236,4 +236,5 @@ If an existing harness breaks because it matched old text (e.g. "On fire! 🔥" 
 | P1.2 Loading states | done | branch `claude/next-incomplete-phase-niej9p` |
 | P1.3 Narrow layout | done | branch `claude/next-incomplete-phase-niej9p` |
 | P2.2 Split Settings | done | branch `claude/next-incomplete-phase-niej9p` — `Settings.tsx` 5,626 → 658 lines; 15 section files |
-| P2.1, P2.3–P2.5 | blocked — need product decisions | |
+| P2.3 Finance navigation | done | branch `claude/next-incomplete-phase-niej9p` — Money / Plan / Review groups; Shopping in the rail |
+| P2.1, P2.4, P2.5 | blocked — need product decisions | |

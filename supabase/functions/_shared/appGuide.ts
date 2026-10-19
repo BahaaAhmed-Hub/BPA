@@ -66,13 +66,13 @@ export const APP_GUIDE: Record<string, GuideEntry> = {
   finance: {
     title: 'Finance',
     where: 'Left rail → Finance (it may ask you to unlock it first)',
-    summary: 'The ledger and what it says: Today, Balance, Budget, Reports, Financials and Goals, and Shopping when it is on. Every figure is shown in your base currency; an entry keeps its own currency. An entry with no payment date is owed, not paid. A credit card is borrowed money, never cash; reward points are never money.',
+    summary: 'The ledger and what it says, in three groups: Money (Today, Balance, Budget), Plan (Goals, with the forecast inside it) and Review (Financials, Reports). Shopping is separate, in the left rail, when it is on. Every figure is shown in your base currency; an entry keeps its own currency. An entry with no payment date is owed, not paid. A credit card is borrowed money, never cash; reward points are never money.',
     can: ['Add, edit and delete entries (Bulk entry and a duplicate review exist too)', 'Budget envelopes and their spend', 'Goals with a plan for reaching them', 'Settings → Finance sets envelope style, figures, dates and alerts'],
     assistant: ['Answer money questions from the ledger (balances, spending by category, budgets, goals, price history)', 'Record, change and delete entries, change goals, rates and envelopes — each only after your OK'],
   },
   shopping: {
     title: 'Shopping',
-    where: 'Finance → Shopping (when it is switched on)',
+    where: 'Left rail → Shopping (when Settings → Finance switches it on; it asks you to unlock it like Finance does)',
     summary: 'Shopping lists grouped by store, with each item checked at the stores you choose and a price history.',
     can: ['Add and edit items where they are', 'Mark items purchased', 'See price history'],
     assistant: ['List items and groups, add an item, mark purchased, show price history'],

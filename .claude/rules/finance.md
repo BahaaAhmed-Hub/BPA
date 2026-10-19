@@ -937,3 +937,31 @@ values restored on the very same element: radius `0px`, ground `#FCFAF4`, no
 shadow, a bottom rule, and the bar spanning 90→1500 — the full width of
 `<main>`, which is the screenshot. The labels changed ground, so the ink audit
 re-ran: **0 failing pairs over 22 screens in all four themes.**
+
+## Finance — navigation is three groups, and Shopping left for the main menu
+UI-unification P2.3. `FinanceModule` draws one lozenge with **three groups in a
+fixed order**: Money (Today, Balance, Budget), Plan (Goals) and Review
+(Financials, Reports). A caption and a divider mark each group; below 760px the
+captions go and the divider alone remains (`.fin-group-cap`). The row is one
+44px line at every width.
+- **Forecast is not a screen** — it is the rules disclosure inside Goals, so
+  Plan holds one tab. Do not add a tab for it without a screen to open.
+- **Tabs are not draggable any more.** Dragging could only scramble the groups;
+  `finance-tab-order` is no longer read (a stale value is harmless) and a saved
+  `finance-active-screen` of `shopping` falls through to Today.
+- **Shopping is a module in the left rail**, not a Finance tab: `shoppingPrefs.ts`
+  (`shoppingEnabled`, `shoppingIsOff`, `useShoppingOff`) decides it — Settings →
+  Finance → Shopping must be on **and** Finance must be on for the plan. The
+  server has no `shopping` module row and does not need one: an unregistered id
+  is never "off" (`moduleIsOff`), so the plan question is asked of `finance`.
+- **It stays behind the finance lock.** `ShoppingModule` uses `useFinanceLock`
+  and renders the same `LockGate`: the lists are priced and hold purchase
+  history, and moving the screen must not move it out from under the door.
+  `unlock()` now dispatches `finance:lockChanged`, so unlocking one door opens
+  the other at once instead of at the hook's next 15s tick. *(Measured: Shopping
+  shows the gate when locked. Not measured: the cross-door unlock, which needs a
+  real password hash.)*
+- `scripts/finance-nav-groups.mjs [groups|shopping|lock]` — group names, order,
+  the one-line bar, the active tab moving; Shopping in the rail and in neither
+  place when off (with the rest of the rail asserted present, so "absent" is not
+  an empty rail); the lock gate. Control: the flat bar fails `groups`.

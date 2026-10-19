@@ -50,7 +50,8 @@ export function useFinanceLock() {
     return () => events.forEach(e => window.removeEventListener(e, touch))
   }, [locked, config.enabled])
 
-  const unlock = useCallback(() => { markActive(); setLocked(false) }, [])
+  // One lock, several doors (Finance, Shopping): say so, so every open door re-reads it rather than waiting for its tick.
+  const unlock = useCallback(() => { markActive(); setLocked(false); window.dispatchEvent(new CustomEvent('finance:lockChanged')) }, [])
   const relock = useCallback(() => { setLocked(true) }, [])
 
   return { locked: config.enabled && locked, config, unlock, relock }

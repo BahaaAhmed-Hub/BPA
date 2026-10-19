@@ -56,6 +56,8 @@ import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
 import { Search, Settings, LogOut, ShieldCheck } from 'lucide-react'
 import { ICON } from '@/lib/type'
+import { shoppingIsOff, useShoppingOff } from './modules/finance/shopping/shoppingPrefs'
+import { ShoppingModule } from './modules/finance/ShoppingModule'
 
 // ─── Sunlit Bento — Login screen (1A) ────────────────────────────────────────
 
@@ -329,6 +331,12 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
       <rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/>
     </svg>
   ),
+  // A basket: Shopping's own place in the menu, beside the ledger it used to be a tab of.
+  shopping: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 8h18l-1.8 10.2a2 2 0 0 1-2 1.8H6.8a2 2 0 0 1-2-1.8L3 8z"/><path d="M8 8l3-4M16 8l-3-4"/>
+    </svg>
+  ),
   // Three books standing, the middle one leaning — a shelf, which is what the
   // screen is. Collapsed, a missing glyph draws an empty pill.
   library: (
@@ -367,7 +375,7 @@ export const NAV_H = 'var(--sb-h-header)'
 
 /** The gate for a nav id. Library has a second switch of its own; every other
  *  module answers to the server alone. */
-const offHere = (id: string) => (id === 'library' ? libraryIsOff() : moduleIsOff(id))
+const offHere = (id: string) => (id === 'library' ? libraryIsOff() : id === 'shopping' ? shoppingIsOff() : moduleIsOff(id))
 
 const NAV_ITEMS = [
   { id: 'morning',   label: 'Today'    },
@@ -378,6 +386,8 @@ const NAV_ITEMS = [
   { id: 'tasks',     label: 'Tasks'    },
   { id: 'habits',    label: 'Habits'   },
   { id: 'finance',   label: 'Finance'  },
+  // Shopping used to be a tab inside Finance. It is its own place now — shown when Settings → Finance turns it on.
+  { id: 'shopping',  label: 'Shopping' },
   // Off for two reasons — the plan (`my_modules()`) or the person (Settings →
   // Library) — and either one hides it, so it is asked through `offHere`.
   { id: 'library',   label: 'Library'  },
@@ -708,6 +718,7 @@ function TopNav() {
   // reading it. RLS is what actually answers.
   useModules()
   useLibraryOff()
+  useShoppingOff()
   const navItems = NAV_ITEMS.filter(item => !offHere(item.id))
   // `activeModule` is persisted, so a plan that changed under a shut laptop
   // reopens on a tab that is no longer there. Land on the first one that is
@@ -737,6 +748,7 @@ function ActiveModule() {
   const everMounted  = useRef<Set<string>>(new Set([activeModule]))
   useModules()
   useLibraryOff()
+  useShoppingOff()
 
   // Track which modules have ever been active so we only mount them once.
   everMounted.current.add(activeModule)
@@ -760,6 +772,7 @@ function ActiveModule() {
       {everMounted.current.has('behavioral') && <div style={show('behavioral')}><BehavioralOS /></div>}
       {everMounted.current.has('planning')   && <div style={show('planning')}><PlanningAssistant /></div>}
       {everMounted.current.has('finance') && !moduleIsOff('finance')    && <div style={show('finance')}><FinanceModule /></div>}
+      {everMounted.current.has('shopping') && !shoppingIsOff()           && <div style={show('shopping')}><ShoppingModule /></div>}
       {everMounted.current.has('library') && !libraryIsOff()            && <div style={show('library')}><LibraryModule /></div>}
     </>
   )

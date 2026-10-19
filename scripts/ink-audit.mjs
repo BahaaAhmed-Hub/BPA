@@ -628,10 +628,9 @@ for (const theme of THEMES) {
   await visit('Finance', async () => { await page.locator('[data-side-rail] button[aria-label="Finance"]').click() })
   // Shopping: the list with an item open (every field of the editor), the board
   // (cards on a column ground), and the stores page with one opened.
+  // Shopping has its own place in the main rail (it was a tab inside Finance).
   const shoppingTab = async () => {
-    await page.locator('[data-side-rail] button[aria-label="Finance"]').click()
-    await page.waitForTimeout(1200)
-    await page.locator('button', { hasText: /^Shopping$/ }).first().click()
+    await page.locator('[data-side-rail] button[aria-label="Shopping"]').click()
     await page.waitForTimeout(1400)
   }
   await visit('Shopping · list + item editor', async () => {

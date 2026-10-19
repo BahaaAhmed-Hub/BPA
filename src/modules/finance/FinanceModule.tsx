@@ -7,7 +7,6 @@ import { BudgetScreen } from './screens/BudgetScreen'
 import { ReportsScreen } from './screens/ReportsScreen'
 import { ReflectionScreen } from './screens/ReflectionScreen'
 import { GoalsScreen } from './screens/GoalsScreen'
-import { ShoppingScreen } from './screens/ShoppingScreen'
 import { TransactionModal } from './modals/TransactionModal'
 import { BulkEntryModal } from './modals/BulkEntryModal'
 import { LockGate } from './FinanceLockScreen'
@@ -90,15 +89,6 @@ function IconLock({ color = 'currentColor' }: RailIconProps) {
   )
 }
 
-function IconShopping({ color = 'currentColor' }: RailIconProps) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-      <line x1="3" y1="6" x2="21" y2="6"/>
-      <path d="M16 10a4 4 0 0 1-8 0"/>
-    </svg>
-  )
-}
 
 function IconPlus({ color = 'currentColor' }: RailIconProps) {
   return (
@@ -117,17 +107,7 @@ function IconPlus({ color = 'currentColor' }: RailIconProps) {
 // Plan was a debt payoff drawn on sample data beside a Goals screen that planned
 // from the ledger. A card with a balance is a goal with a target of zero, so
 // the cards are in Goals now and there is one screen for what money has to do.
-type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect' | 'goals' | 'shopping'
-
-// Shopping is only shown when the user has enabled it in Settings.
-function shoppingEnabled(): boolean {
-  try {
-    const raw = localStorage.getItem('shopping-settings')
-    if (!raw) return false
-    const s = JSON.parse(raw) as { enabled?: boolean }
-    return s.enabled === true
-  } catch { return false }
-}
+type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect' | 'goals'
 
 type NavItem = { id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }
 
@@ -152,11 +132,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   ] },
 ]
 
-/** Shopping stays in this bar until it has a place of its own in the main menu. */
-function shoppingItems(): NavItem[] {
-  return shoppingEnabled() ? [{ id: 'shopping', label: 'Shopping', Icon: IconShopping }] : []
-}
-
 // ─── Finance Module ───────────────────────────────────────────────────────────
 
 export function FinanceModule() {
@@ -169,7 +144,8 @@ export function FinanceModule() {
 
   const [screen, setScreen] = useState<FinanceScreen>(() => {
     const saved = localStorage.getItem('finance-active-screen')
-    const known = NAV_GROUPS.some(g => g.items.some(n => n.id === saved)) || (saved === 'shopping' && shoppingEnabled())
+    // (a saved 'shopping' is from before it moved to the main menu — it falls through to Today)
+    const known = NAV_GROUPS.some(g => g.items.some(n => n.id === saved))
     return (known ? saved : 'today') as FinanceScreen
   })
 
@@ -180,13 +156,6 @@ export function FinanceModule() {
   const [addOpen, setAddOpen] = useState(false)
   const [bulkOpen, setBulkOpen] = useState(false)
 
-  // Shopping appears when Settings turns it on (the same tab gets a synthetic `storage` event).
-  const [shopItems, setShopItems] = useState<NavItem[]>(shoppingItems)
-  useEffect(() => {
-    function onStorage(e: StorageEvent) { if (e.key === 'shopping-settings') setShopItems(shoppingItems()) }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
   // A debt goal on Goals can send you to the account it is derived from.
   // Balances is not mounted at that moment, so the switch happens here and the
   // id is claimed by the screen once it is up (`takePendingAccount`).
@@ -205,7 +174,6 @@ export function FinanceModule() {
       case 'reports': return <ReportsScreen {...props} />
       case 'reflect': return <ReflectionScreen {...props} />
       case 'goals':    return <GoalsScreen />
-      case 'shopping': return <ShoppingScreen />
     }
   }
 
@@ -247,11 +215,11 @@ export function FinanceModule() {
         {/* Nav tabs — three groups, fixed order. The caption names the question the group answers;
             below a phone's width it goes and the divider alone says where one group ends. */}
         <nav aria-label="Finance sections" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1, overflowX: 'auto' }}>
-          {[...NAV_GROUPS, ...(shopItems.length ? [{ label: '', items: shopItems }] : [])].map((group, gi) => (
-            <div key={group.label || 'extra'} data-finance-group={group.label || undefined} role="group" aria-label={group.label || undefined}
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={group.label} data-finance-group={group.label} role="group" aria-label={group.label}
               style={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
               {gi > 0 && <span aria-hidden style={{ width: 1, height: 18, background: 'var(--sb-border)', margin: '0 8px', flexShrink: 0 }} />}
-              {group.label && <span className="fin-group-cap" style={{ ...T.micro, color: 'var(--sb-ink-3)', marginRight: 4 }}>{group.label}</span>}
+              <span className="fin-group-cap" style={{ ...T.micro, color: 'var(--sb-ink-3)', marginRight: 4 }}>{group.label}</span>
               {group.items.map(({ id, label, Icon }) => (
                 <NavRow
                   key={id}

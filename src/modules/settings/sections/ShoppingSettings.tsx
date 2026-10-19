@@ -38,7 +38,7 @@ export function ShoppingSettingsBlock() {
     <div style={{ borderTop: '1px solid var(--sb-border)', paddingTop: 28, marginTop: 28 }}>
       <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 12 }}>SHOPPING LIST</span>
 
-      <DRow label="Enable shopping list" sub="Adds a Shopping tab inside Finance">
+      <DRow label="Enable shopping list" sub="Adds Shopping to the main menu, behind the same finance lock">
         <Toggle checked={enabled} onChange={(v: boolean) => { setEnabled(v); save({ enabled: v }) }} />
       </DRow>
 
