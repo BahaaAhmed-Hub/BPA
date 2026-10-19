@@ -230,7 +230,7 @@ html, body {
   background: var(--sb-page);
   color: var(--sb-ink-1);
   font-family: var(--sb-font-ui);
-  font-size: 14px;
+  font-size: var(--sb-t-body);
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -1047,7 +1047,7 @@ img { max-width: 100%; }
   writing-mode: vertical-rl; transform: rotate(180deg); overflow: hidden; white-space: nowrap;
   font-family: var(--sb-font-num); letter-spacing: .01em;
 }
-.lib-spine-title { min-height: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 650; font-size: 12.5px; }
+.lib-spine-title { min-height: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 650; font-size: var(--sb-t-body-s); }
 .lib-spine-author { flex: 0 1 38%; min-height: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--sb-t-micro); opacity: .85; font-weight: 500; letter-spacing: .04em; }
 .lib-mark {
   position: absolute; left: 50%; bottom: 9px; width: 15px; height: 15px; margin-left: -7.5px; border-radius: 50%;

@@ -101,7 +101,7 @@ function BestPriceBadge({ item }: { item: ShoppingItem }) {
   if (!item.bestPrice) return null
   const isBelowTarget = item.targetPriceMax && item.bestPrice.price < item.targetPriceMax
   return (
-    <span style={{ fontSize: 11, color: isBelowTarget ? C.pos : C.ink3, display: 'flex', alignItems: 'center', gap: 3 }}>
+    <span style={{ fontSize: 'var(--sb-t-meta)', color: isBelowTarget ? C.pos : C.ink3, display: 'flex', alignItems: 'center', gap: 3 }}>
       {isBelowTarget && <span>↓</span>}
       {item.bestPrice.currency} {item.bestPrice.price.toLocaleString()} · {item.bestPrice.storeName}
     </span>
@@ -170,7 +170,7 @@ function ItemRow({ item, groups, stores, envelopes, onUpdate, onDelete, onPurcha
         {/* Name + meta. The name is the field you most want to correct, so it is
             editable where it is read rather than only down in the editor. */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink1, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: C.ink1, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {editName ? (
               <input
                 autoFocus
@@ -182,7 +182,7 @@ function ItemRow({ item, groups, stores, envelopes, onUpdate, onDelete, onPurcha
                   if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                   if (e.key === 'Escape') { setNameVal(item.name); setEditName(false) }
                 }}
-                style={{ fontSize: 13.5, fontWeight: 600, background: C.field, border: `1px solid ${C.accent}`, borderRadius: 6, padding: '2px 6px', color: C.ink1, minWidth: 140 }}
+                style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, background: C.field, border: `1px solid ${C.accent}`, borderRadius: 6, padding: '2px 6px', color: C.ink1, minWidth: 140 }}
               />
             ) : (
               <span
@@ -193,7 +193,7 @@ function ItemRow({ item, groups, stores, envelopes, onUpdate, onDelete, onPurcha
                 {item.name}
               </span>
             )}
-            <span style={{ fontSize: 11, color: C.ink4, fontWeight: 400 }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, fontWeight: 400 }}>
               {item.quantity}{item.unit ? ` ${item.unit}` : ''}
             </span>
             {item.priority > 0 && (
@@ -206,12 +206,12 @@ function ItemRow({ item, groups, stores, envelopes, onUpdate, onDelete, onPurcha
           <div style={{ marginTop: 2, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <BestPriceBadge item={item} />
             {purchased && item.finalPrice != null && (
-              <span style={{ fontSize: 11, color: C.pos }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.pos }}>
                 paid {item.currency} {item.finalPrice.toLocaleString()}
               </span>
             )}
             {!purchased && item.targetPriceMax && (
-              <span style={{ fontSize: 11, color: C.ink4 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>
                 max {item.currency} {item.targetPriceMax.toLocaleString()}
               </span>
             )}
@@ -254,9 +254,9 @@ function ItemRow({ item, groups, stores, envelopes, onUpdate, onDelete, onPurcha
       {/* Purchase confirm overlay */}
       {confirmPurchase && (
         <div style={{ borderTop: `1px solid ${C.border}`, padding: '12px 12px', background: `color-mix(in srgb, ${C.pos} 8%, ${C.card})` }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.ink1, marginBottom: 8 }}>Mark as purchased?</div>
+          <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink1, marginBottom: 8 }}>Mark as purchased?</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-            <label style={{ fontSize: 11, color: C.ink3 }}>
+            <label style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3 }}>
               Final price
               <input
                 type="number"
@@ -264,11 +264,11 @@ function ItemRow({ item, groups, stores, envelopes, onUpdate, onDelete, onPurcha
                 onClick={e => e.stopPropagation()}
                 onChange={e => setFinalPrice(e.target.value)}
                 placeholder="Actual price paid"
-                style={{ marginLeft: 6, fontSize: 12, padding: '3px 6px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.field, color: C.ink1, width: 100 }}
+                style={{ marginLeft: 6, fontSize: 'var(--sb-t-body-s)', padding: '3px 6px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.field, color: C.ink1, width: 100 }}
               />
             </label>
             {suggestedPaymentAccount && (
-              <span style={{ fontSize: 11, color: C.ink3, padding: '2px 8px', borderRadius: 6, background: C.field, border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, padding: '2px 8px', borderRadius: 6, background: C.field, border: `1px solid ${C.border}` }}>
                 Pay with <strong style={{ color: C.ink1 }}>{suggestedPaymentAccount}</strong>
               </span>
             )}
@@ -276,13 +276,13 @@ function ItemRow({ item, groups, stores, envelopes, onUpdate, onDelete, onPurcha
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => { onPurchase(parseFloat(finalPrice) || undefined); setConfirmPurchase(false) }}
-              style={{ fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 8, background: C.pos, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: 'pointer' }}
+              style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, padding: '5px 12px', borderRadius: 8, background: C.pos, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: 'pointer' }}
             >
               Confirm
             </button>
             <button
               onClick={() => setConfirmPurchase(false)}
-              style={{ fontSize: 12, padding: '5px 12px', borderRadius: 8, background: 'transparent', color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}
+              style={{ fontSize: 'var(--sb-t-body-s)', padding: '5px 12px', borderRadius: 8, background: 'transparent', color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}
             >
               Cancel
             </button>
@@ -375,12 +375,12 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
             onChange={e => setNameVal(e.target.value)}
             onBlur={() => { onUpdateGroup({ name: nameVal }); setEditName(false) }}
             onKeyDown={e => { if (e.key === 'Enter') { onUpdateGroup({ name: nameVal }); setEditName(false) } }}
-            style={{ flex: 1, fontSize: 15, fontWeight: 700, background: C.field, border: `1px solid ${C.accent}`, borderRadius: 6, padding: '3px 8px', color: C.ink1 }}
+            style={{ flex: 1, fontSize: 'var(--sb-t-h3)', fontWeight: 700, background: C.field, border: `1px solid ${C.accent}`, borderRadius: 6, padding: '3px 8px', color: C.ink1 }}
           />
         ) : (
           <span
             onDoubleClick={() => setEditName(true)}
-            style={{ flex: 1, fontSize: 15, fontWeight: 700, color: C.ink1, cursor: 'text' }}
+            style={{ flex: 1, fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: C.ink1, cursor: 'text' }}
           >
             {group.name}
           </span>
@@ -389,7 +389,7 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
         {/* Meta row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {group.scheduledDate && (
-            <span style={{ fontSize: 11, color: C.ink3, display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, display: 'flex', alignItems: 'center', gap: 3 }}>
               <IconCalendar size={11} />
               {new Date(group.scheduledDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
             </span>
@@ -421,7 +421,7 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
 
       {/* Affordability summary bar */}
       {groupTotal > 0 && (
-        <div style={{ padding: '0 16px 10px', fontSize: 11, color: C.ink3, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ padding: '0 16px 10px', fontSize: 'var(--sb-t-meta)', color: C.ink3, display: 'flex', gap: 8, alignItems: 'center' }}>
           <span>{activeItems.length} items · {items[0]?.currency ?? 'EGP'} {groupTotal.toLocaleString()} estimated</span>
           {linkedEnvBalance > 0 && (
             <span style={{ color: linkedEnvBalance >= groupTotal ? C.pos : C.neg }}>
@@ -448,7 +448,7 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
                     onClick={() => { onAddItemWithPrefill(name) }}
                     title={`Quick-add ${name}`}
                     style={{
-                      fontSize: 11, padding: '3px 9px', borderRadius: 10, cursor: 'pointer',
+                      fontSize: 'var(--sb-t-meta)', padding: '3px 9px', borderRadius: 10, cursor: 'pointer',
                       background: `color-mix(in srgb, var(--sb-accent) 20%, var(--sb-card))`, border: `1px solid color-mix(in srgb, var(--sb-accent) 60%, transparent)`, color: C.ink1,
                     }}
                   >
@@ -478,7 +478,7 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
           {/* Purchased items (collapsed by default) */}
           {purchasedItems.length > 0 && (
             <details style={{ marginTop: 4 }}>
-              <summary style={{ fontSize: 11, color: C.ink4, cursor: 'pointer', listStyle: 'none', padding: '4px 0' }}>
+              <summary style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, cursor: 'pointer', listStyle: 'none', padding: '4px 0' }}>
                 {purchasedItems.length} purchased
               </summary>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
@@ -505,7 +505,7 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
             onClick={onAddItem}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              fontSize: 12, color: C.ink4, background: 'none', border: `1px dashed ${C.border}`,
+              fontSize: 'var(--sb-t-body-s)', color: C.ink4, background: 'none', border: `1px dashed ${C.border}`,
               borderRadius: 8, padding: '7px 10px', cursor: 'pointer', marginTop: 2,
             }}
           >
@@ -521,7 +521,7 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
                 defaultValue={group.scheduledDate ?? ''}
                 onChange={e => onUpdateGroup({ scheduledDate: e.target.value || undefined })}
                 onBlur={() => setShowSchedulePicker(false)}
-                style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: `1px solid ${C.accent}`, background: C.field, color: C.ink1 }}
+                style={{ fontSize: 'var(--sb-t-meta)', padding: '3px 8px', borderRadius: 6, border: `1px solid ${C.accent}`, background: C.field, color: C.ink1 }}
               />
             ) : (
               <GroupActionButton
@@ -535,7 +535,7 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
                 value={group.recurrence}
                 onChange={e => { onUpdateGroup({ recurrence: e.target.value as ShoppingGroup['recurrence'] }); setShowRecurrencePicker(false) }}
                 onBlur={() => setShowRecurrencePicker(false)}
-                style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: `1px solid ${C.accent}`, background: C.field, color: C.ink1 }}
+                style={{ fontSize: 'var(--sb-t-meta)', padding: '3px 8px', borderRadius: 6, border: `1px solid ${C.accent}`, background: C.field, color: C.ink1 }}
               >
                 <option value="none">One-time</option>
                 <option value="daily">Daily</option>
@@ -565,7 +565,7 @@ function GroupActionButton({ label, onClick, danger }: { label: string; onClick:
     <button
       onClick={onClick}
       style={{
-        fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 6,
+        fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '3px 10px', borderRadius: 6,
         border: `1px solid ${danger ? C.neg + '40' : C.border}`,
         background: 'none', color: danger ? C.neg : C.ink3, cursor: 'pointer',
       }}
@@ -610,7 +610,7 @@ function AddItemModal({ groupId, currency, prefillName, onAdd, onClose }: AddIte
       onClick={onClose}>
       <div style={{ background: C.card, borderRadius: '16px 16px 0 0', padding: '20px 20px 32px', width: '100%', maxWidth: 480 }}
         onClick={e => e.stopPropagation()}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.ink1, marginBottom: 14 }}>Add item</div>
+        <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: C.ink1, marginBottom: 14 }}>Add item</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <input
             autoFocus
@@ -618,13 +618,13 @@ function AddItemModal({ groupId, currency, prefillName, onAdd, onClose }: AddIte
             onChange={e => setName(e.target.value)}
             placeholder="Item name"
             onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-            style={{ fontSize: 14, padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
+            style={{ fontSize: 'var(--sb-t-body)', padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
           />
           <div style={{ display: 'flex', gap: 8 }}>
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
-              style={{ flex: 1, fontSize: 12, padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
+              style={{ flex: 1, fontSize: 'var(--sb-t-body-s)', padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
             >
               {ITEM_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -633,13 +633,13 @@ function AddItemModal({ groupId, currency, prefillName, onAdd, onClose }: AddIte
               onChange={e => setQuantity(e.target.value)}
               placeholder="Qty"
               type="number"
-              style={{ width: 60, fontSize: 12, padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
+              style={{ width: 60, fontSize: 'var(--sb-t-body-s)', padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
             />
             <input
               value={unit}
               onChange={e => setUnit(e.target.value)}
               placeholder="unit"
-              style={{ width: 64, fontSize: 12, padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
+              style={{ width: 64, fontSize: 'var(--sb-t-body-s)', padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
             />
           </div>
           <input
@@ -647,19 +647,19 @@ function AddItemModal({ groupId, currency, prefillName, onAdd, onClose }: AddIte
             onChange={e => setMaxPrice(e.target.value)}
             placeholder={`Max price (${currency})`}
             type="number"
-            style={{ fontSize: 12, padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
+            style={{ fontSize: 'var(--sb-t-body-s)', padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
             <button
               onClick={handleAdd}
               disabled={!name.trim()}
-              style={{ flex: 1, fontSize: 13, fontWeight: 600, padding: '9px', borderRadius: 10, background: C.ink1, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: name.trim() ? 'pointer' : 'not-allowed' }}
+              style={{ flex: 1, fontSize: 'var(--sb-t-body)', fontWeight: 600, padding: '9px', borderRadius: 10, background: C.ink1, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: name.trim() ? 'pointer' : 'not-allowed' }}
             >
               Add
             </button>
             <button
               onClick={onClose}
-              style={{ fontSize: 13, padding: '9px 14px', borderRadius: 10, background: C.field, color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}
+              style={{ fontSize: 'var(--sb-t-body)', padding: '9px 14px', borderRadius: 10, background: C.field, color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}
             >
               Cancel
             </button>
@@ -697,7 +697,7 @@ function AddGroupModal({ onAdd, onClose }: AddGroupModalProps) {
       onClick={onClose}>
       <div style={{ background: C.card, borderRadius: '16px 16px 0 0', padding: '20px 20px 32px', width: '100%', maxWidth: 480 }}
         onClick={e => e.stopPropagation()}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.ink1, marginBottom: 14 }}>New shopping list</div>
+        <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: C.ink1, marginBottom: 14 }}>New shopping list</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Icon picker */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -715,7 +715,7 @@ function AddGroupModal({ onAdd, onClose }: AddGroupModalProps) {
             onChange={e => setName(e.target.value)}
             placeholder="List name"
             onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-            style={{ fontSize: 14, padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
+            style={{ fontSize: 'var(--sb-t-body)', padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
           />
 
           <div style={{ display: 'flex', gap: 8 }}>
@@ -723,12 +723,12 @@ function AddGroupModal({ onAdd, onClose }: AddGroupModalProps) {
               type="date"
               value={scheduledDate}
               onChange={e => setDate(e.target.value)}
-              style={{ flex: 1, fontSize: 12, padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
+              style={{ flex: 1, fontSize: 'var(--sb-t-body-s)', padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
             />
             <select
               value={recurrence}
               onChange={e => setRecurrence(e.target.value as ShoppingGroup['recurrence'])}
-              style={{ flex: 1, fontSize: 12, padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
+              style={{ flex: 1, fontSize: 'var(--sb-t-body-s)', padding: '6px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.field, color: C.ink1 }}
             >
               <option value="none">One-time</option>
               <option value="weekly">Weekly</option>
@@ -742,12 +742,12 @@ function AddGroupModal({ onAdd, onClose }: AddGroupModalProps) {
             <button
               onClick={handleAdd}
               disabled={!name.trim()}
-              style={{ flex: 1, fontSize: 13, fontWeight: 600, padding: '9px', borderRadius: 10, background: C.ink1, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: name.trim() ? 'pointer' : 'not-allowed' }}
+              style={{ flex: 1, fontSize: 'var(--sb-t-body)', fontWeight: 600, padding: '9px', borderRadius: 10, background: C.ink1, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: name.trim() ? 'pointer' : 'not-allowed' }}
             >
               Create list
             </button>
             <button onClick={onClose}
-              style={{ fontSize: 13, padding: '9px 14px', borderRadius: 10, background: C.field, color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}>
+              style={{ fontSize: 'var(--sb-t-body)', padding: '9px 14px', borderRadius: 10, background: C.field, color: C.ink3, border: `1px solid ${C.border}`, cursor: 'pointer' }}>
               Cancel
             </button>
           </div>
@@ -1054,7 +1054,7 @@ export function ShoppingScreen() {
             Shopping List
           </div>
           {activeTab === 'list' && totalEstimated > 0 && (
-            <div style={{ fontSize: 12, color: C.ink3, marginTop: 2 }}>
+            <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink3, marginTop: 2 }}>
               {currency} {totalEstimated.toLocaleString()} estimated across {enrichedItems.filter(i => i.status !== 'purchased').length} items
             </div>
           )}
@@ -1108,14 +1108,14 @@ export function ShoppingScreen() {
               onClick={() => void refreshPrices()}
               disabled={priceWatchLoading}
               title="Refresh all prices"
-              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.ink3, cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.ink3, cursor: 'pointer' }}
             >
               <IconRefresh size={13} /> {priceWatchLoading ? 'Checking…' : 'Refresh prices'}
             </button>
             {/* New list */}
             <button
               onClick={() => setShowAddGroup(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, background: C.ink1, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, padding: '6px 12px', borderRadius: 8, background: C.ink1, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: 'pointer' }}
             >
               <IconPlus size={13} /> New list
             </button>
@@ -1129,8 +1129,8 @@ export function ShoppingScreen() {
           {historyByPeriod.length === 0 && (
             <div style={{ textAlign: 'center', paddingTop: 60, color: C.ink4 }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>📋</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: C.ink3 }}>No purchase history yet</div>
-              <div style={{ fontSize: 12, color: C.ink4, marginTop: 4 }}>Items you mark as purchased will appear here.</div>
+              <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: C.ink3 }}>No purchase history yet</div>
+              <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink4, marginTop: 4 }}>Items you mark as purchased will appear here.</div>
             </div>
           )}
           {historyByPeriod.map(([key, period]) => (
@@ -1146,17 +1146,17 @@ export function ShoppingScreen() {
                       display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                       borderBottom: idx < period.items.length - 1 ? `1px solid ${C.border}` : 'none',
                     }}>
-                      <span style={{ fontSize: 13, color: C.pos }}>✓</span>
+                      <span style={{ fontSize: 'var(--sb-t-body)', color: C.pos }}>✓</span>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: C.ink1 }}>{item.name}</div>
-                        <div style={{ fontSize: 11, color: C.ink4, marginTop: 1 }}>
+                        <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: C.ink1 }}>{item.name}</div>
+                        <div style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, marginTop: 1 }}>
                           {item.category}
                           {store && ` · ${store.name}`}
                           {item.purchasedAt && ` · ${new Date(item.purchasedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
                         </div>
                       </div>
                       {item.finalPrice && (
-                        <span style={{ fontSize: 13, fontWeight: 600, color: C.ink1 }}>
+                        <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: C.ink1 }}>
                           {item.currency} {item.finalPrice.toLocaleString()}
                         </span>
                       )}
@@ -1292,7 +1292,7 @@ export function ShoppingScreen() {
         {loading && !activeGroups.length && !unscheduled.length && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 10, paddingTop: 60, color: C.ink4 }}>
             <Spinner />
-            <div style={{ fontSize: 13, color: C.ink3 }}>Fetching your lists…</div>
+            <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink3 }}>Fetching your lists…</div>
           </div>
         )}
 
@@ -1300,13 +1300,13 @@ export function ShoppingScreen() {
         {!loading && !activeGroups.length && !unscheduled.length && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 12, paddingTop: 60, color: C.ink4 }}>
             <span style={{ fontSize: 40 }}>🛒</span>
-            <div style={{ fontSize: 15, fontWeight: 600, color: C.ink3 }}>No shopping lists yet</div>
-            <div style={{ fontSize: 13, color: C.ink4, textAlign: 'center', maxWidth: 280 }}>
+            <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: C.ink3 }}>No shopping lists yet</div>
+            <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink4, textAlign: 'center', maxWidth: 280 }}>
               Create a list for your weekly groceries, monthly household items, or any shopping trip.
             </div>
             <button
               onClick={() => setShowAddGroup(true)}
-              style={{ marginTop: 8, fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 10, background: C.ink1, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: 'pointer' }}
+              style={{ marginTop: 8, fontSize: 'var(--sb-t-body)', fontWeight: 600, padding: '9px 18px', borderRadius: 10, background: C.ink1, color: 'var(--sb-ink-on-fill)', border: 'none', cursor: 'pointer' }}
             >
               New shopping list
             </button>

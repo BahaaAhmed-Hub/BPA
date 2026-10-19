@@ -123,7 +123,7 @@ function ItemCard({ item, groups, stores, envelopes, open, onOpen, onUpdate, onD
 
         <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={onOpen}>
           <div style={{
-            fontSize: 12.5, fontWeight: 600, color: C.ink1, lineHeight: 1.3,
+            fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink1, lineHeight: 1.3,
             textDecoration: purchased ? 'line-through' : 'none',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
@@ -213,18 +213,18 @@ function Column({
                 onChange={e => setNameVal(e.target.value)}
                 onBlur={() => { if (nameVal.trim()) onUpdateGroup({ name: nameVal.trim() }); setEditName(false) }}
                 onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') { setNameVal(group.name); setEditName(false) } }}
-                style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, background: C.field, border: `1px solid ${C.accent}`, borderRadius: 6, padding: '2px 6px', color: C.ink1 }}
+                style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body)', fontWeight: 700, background: C.field, border: `1px solid ${C.accent}`, borderRadius: 6, padding: '2px 6px', color: C.ink1 }}
               />
             ) : (
               <span
                 onClick={() => { if (group && onUpdateGroup) { setNameVal(group.name); setEditName(true) } }}
                 title={group ? 'Rename this list' : 'Items that are not on any list'}
-                style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.ink1, cursor: group ? 'text' : 'default', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body)', fontWeight: 700, color: C.ink1, cursor: group ? 'text' : 'default', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               >
                 {group?.name ?? 'No list'}
               </span>
             )}
-            <span style={{ fontSize: 11, color: C.ink4, flexShrink: 0 }}>{live.length}</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, flexShrink: 0 }}>{live.length}</span>
           </div>
 
           {(group?.scheduledDate || estimated > 0) && (
@@ -255,7 +255,7 @@ function Column({
             ))}
 
             {!live.length && !purchased.length && (
-              <div style={{ fontSize: 11, color: C.ink4, textAlign: 'center', padding: '18px 8px' }}>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, textAlign: 'center', padding: '18px 8px' }}>
                 {dragging ? 'Drop an item here' : 'Nothing on this list'}
               </div>
             )}
@@ -287,7 +287,7 @@ function Column({
               onClick={onAddItem}
               style={{
                 margin: '0 8px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                fontSize: 11.5, color: C.ink4, background: 'none', border: `1px dashed ${C.border}`,
+                fontSize: 'var(--sb-t-meta)', color: C.ink4, background: 'none', border: `1px dashed ${C.border}`,
                 borderRadius: 8, padding: '7px', cursor: 'pointer', flexShrink: 0,
               }}
             >
@@ -392,7 +392,7 @@ export function BoardView({
             onClick={onNewList}
             style={{
               width: 148, flexShrink: 0, alignSelf: 'flex-start', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: 6, fontSize: 12, color: C.ink4, background: 'none',
+              justifyContent: 'center', gap: 6, fontSize: 'var(--sb-t-body-s)', color: C.ink4, background: 'none',
               border: `1px dashed ${C.border}`, borderRadius: 14, padding: '14px 10px', cursor: 'pointer',
             }}
           >

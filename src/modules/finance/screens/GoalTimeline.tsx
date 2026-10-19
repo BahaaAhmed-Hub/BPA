@@ -384,7 +384,7 @@ function MonthFace({ cell, goals, paint, money, cells, onPick }: {
   const nav: React.CSSProperties = {
     width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
     border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)',
-    color: 'var(--sb-ink-3)', fontFamily: 'var(--sb-font-display)', fontWeight: 600, fontSize: 13,
+    color: 'var(--sb-ink-3)', fontFamily: 'var(--sb-font-display)', fontWeight: 600, fontSize: 'var(--sb-t-body)',
   }
 
   return (

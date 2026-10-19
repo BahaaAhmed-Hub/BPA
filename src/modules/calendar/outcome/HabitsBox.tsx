@@ -115,7 +115,7 @@ function HabitRow({ habit, day, done, qty, linkedHere, usual, changed, madeHere,
             {qty.toLocaleString()} / {habit.goal!.toLocaleString()}{habit.unit ? ` ${habit.unit}` : ''}
           </span>
           <button onClick={() => onStep(-step)} aria-label={`Remove ${step} ${habit.unit ?? ''} from ${habit.name}`}
-            style={{ ...chip(), width: 36, padding: 0, justifyContent: 'center', fontSize: 18 }}>−</button>
+            style={{ ...chip(), width: 36, padding: 0, justifyContent: 'center', fontSize: 'var(--sb-t-h2)' }}>−</button>
           <button onClick={() => onStep(step)} aria-label={`Add ${step} ${habit.unit ?? ''} to ${habit.name}`} style={chip()}>
             + {step.toLocaleString()}
           </button>

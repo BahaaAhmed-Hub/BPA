@@ -28,7 +28,7 @@ const TYPE_OPTS: { v: TaskType; emoji: string; label: string }[] = [
 const inp: React.CSSProperties = {
   background: 'var(--sb-field, #FAF7EC)',
   border: '1px solid var(--sb-border, #E8E1CE)',
-  borderRadius: 6, padding: '4px 8px', fontSize: 12,
+  borderRadius: 6, padding: '4px 8px', fontSize: 'var(--sb-t-body-s)',
   color: 'var(--sb-ink-1, #191712)', outline: 'none', fontFamily: 'inherit',
 }
 
@@ -137,8 +137,8 @@ export function ImageDumpDialog({ onClose }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 22px 14px', borderBottom: '1px solid var(--sb-hairline, #F0EBDC)' }}>
           <Sparkles size={16} color="#F5D14E" strokeWidth={2} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--sb-ink-1, #191712)' }}>Scan task list</div>
-            <div style={{ fontSize: 11.5, color: 'var(--sb-ink-4, #9B9180)', marginTop: 1 }}>
+            <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1, #191712)' }}>Scan task list</div>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4, #9B9180)', marginTop: 1 }}>
               Upload a photo or PDF — AI reads every task, you review before pushing
             </div>
           </div>
@@ -156,7 +156,7 @@ export function ImageDumpDialog({ onClose }: Props) {
               {error && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(180,82,58,0.07)', border: '1px solid rgba(180,82,58,0.2)', marginBottom: 16 }}>
                   <AlertTriangle size={13} color="#B4523A" />
-                  <span style={{ fontSize: 12.5, color: '#B4523A' }}>{error}</span>
+                  <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#B4523A' }}>{error}</span>
                 </div>
               )}
               <div
@@ -175,13 +175,13 @@ export function ImageDumpDialog({ onClose }: Props) {
                   <ImageIcon size={28} color="#C8BFA8" strokeWidth={1.5} />
                   <FileText size={28} color="#C8BFA8" strokeWidth={1.5} />
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--sb-ink-1, #191712)', marginBottom: 6 }}>
+                <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1, #191712)', marginBottom: 6 }}>
                   Drop your task list here
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--sb-ink-4, #9B9180)', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4, #9B9180)', lineHeight: 1.5 }}>
                   Photo · Notebook scan · Whiteboard · PDF
                 </div>
-                <div style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, background: 'var(--sb-ink-1, #191712)', color: '#FFFFFF', fontSize: 13, fontWeight: 500 }}>
+                <div style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, background: 'var(--sb-ink-1, #191712)', color: '#FFFFFF', fontSize: 'var(--sb-t-body)', fontWeight: 500 }}>
                   <Upload size={13} /> Choose file
                 </div>
               </div>
@@ -198,7 +198,7 @@ export function ImageDumpDialog({ onClose }: Props) {
               {preview?.type === 'application/pdf' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px', borderRadius: 12, background: 'var(--sb-field, #FAF7EC)', border: '1px solid var(--sb-border, #E8E1CE)' }}>
                   <FileText size={22} color="#6C6553" strokeWidth={1.5} />
-                  <span style={{ fontSize: 13, color: '#6C6553' }}>{preview.name}</span>
+                  <span style={{ fontSize: 'var(--sb-t-body)', color: '#6C6553' }}>{preview.name}</span>
                 </div>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
@@ -207,8 +207,8 @@ export function ImageDumpDialog({ onClose }: Props) {
                   <path d="M11 2 A9 9 0 0 1 20 11" stroke="#F5D14E" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
                 </svg>
                 <style>{`@keyframes img-spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--sb-ink-1, #191712)' }}>Reading your task list…</div>
-                <div style={{ fontSize: 12, color: 'var(--sb-ink-4, #9B9180)' }}>Claude is scanning and extracting tasks</div>
+                <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1, #191712)' }}>Reading your task list…</div>
+                <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4, #9B9180)' }}>Claude is scanning and extracting tasks</div>
               </div>
             </div>
           )}
@@ -223,8 +223,8 @@ export function ImageDumpDialog({ onClose }: Props) {
               )}
               {tasks.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                  <div style={{ fontSize: 14, color: 'var(--sb-ink-4, #9B9180)' }}>No tasks found in this file.</div>
-                  <button onClick={() => { setStage('upload'); setPreview(null) }} style={{ marginTop: 12, padding: '7px 16px', borderRadius: 8, background: 'var(--sb-field, #FAF7EC)', border: '1px solid var(--sb-border, #E8E1CE)', color: '#6C6553', fontSize: 13, cursor: 'pointer' }}>
+                  <div style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4, #9B9180)' }}>No tasks found in this file.</div>
+                  <button onClick={() => { setStage('upload'); setPreview(null) }} style={{ marginTop: 12, padding: '7px 16px', borderRadius: 8, background: 'var(--sb-field, #FAF7EC)', border: '1px solid var(--sb-border, #E8E1CE)', color: '#6C6553', fontSize: 'var(--sb-t-body)', cursor: 'pointer' }}>
                     Try another file
                   </button>
                 </div>
@@ -233,10 +233,10 @@ export function ImageDumpDialog({ onClose }: Props) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                     <button onClick={() => toggleAll(tasks.some(t => !t.include))} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0 }}>
                       {tasks.every(t => t.include) ? <CheckSquare size={14} color="var(--sb-ink-1, #191712)" /> : <Square size={14} color="#C8BFA8" />}
-                      <span style={{ fontSize: 12, color: 'var(--sb-ink-3, #6C6553)' }}>{included} of {tasks.length} selected</span>
+                      <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3, #6C6553)' }}>{included} of {tasks.length} selected</span>
                     </button>
                     <span style={{ flex: 1 }} />
-                    <button onClick={() => { setStage('upload'); setPreview(null); setTasks([]) }} style={{ fontSize: 11.5, color: 'var(--sb-ink-4, #9B9180)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <button onClick={() => { setStage('upload'); setPreview(null); setTasks([]) }} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4, #9B9180)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                       ← Try another file
                     </button>
                   </div>
@@ -260,10 +260,10 @@ export function ImageDumpDialog({ onClose }: Props) {
         {/* Footer */}
         {stage === 'review' && tasks.length > 0 && (
           <div style={{ padding: '14px 22px', borderTop: '1px solid var(--sb-hairline, #F0EBDC)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ flex: 1, fontSize: 12, color: 'var(--sb-ink-4, #9B9180)' }}>
+            <span style={{ flex: 1, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4, #9B9180)' }}>
               {included} task{included !== 1 ? 's' : ''} → Brain dump
             </span>
-            <button onClick={onClose} style={{ padding: '7px 16px', borderRadius: 9, background: 'transparent', border: '1px solid var(--sb-border, #E8E1CE)', color: 'var(--sb-ink-3, #6C6553)', fontSize: 13, cursor: 'pointer' }}>
+            <button onClick={onClose} style={{ padding: '7px 16px', borderRadius: 9, background: 'transparent', border: '1px solid var(--sb-border, #E8E1CE)', color: 'var(--sb-ink-3, #6C6553)', fontSize: 'var(--sb-t-body)', cursor: 'pointer' }}>
               Cancel
             </button>
             <button
@@ -271,7 +271,7 @@ export function ImageDumpDialog({ onClose }: Props) {
               disabled={included === 0 || pushDone}
               style={{
                 display: 'flex', alignItems: 'center', gap: 7,
-                padding: '8px 20px', borderRadius: 9, fontSize: 13, fontWeight: 600,
+                padding: '8px 20px', borderRadius: 9, fontSize: 'var(--sb-t-body)', fontWeight: 600,
                 background: pushDone ? '#1D9E75' : (included === 0 ? 'var(--sb-border, #E8E1CE)' : 'var(--sb-ink-1, #191712)'),
                 border: 'none', color: included === 0 ? 'var(--sb-ink-4, #9B9180)' : '#FFFFFF',
                 cursor: included === 0 ? 'default' : 'pointer', transition: 'all 0.15s',
@@ -318,19 +318,19 @@ function ReviewRow({ task, companies, notesOpen, onToggleNotes, onChange, onRemo
         {/* Title */}
         <input
           value={task.title} onChange={e => onChange({ title: e.target.value })}
-          style={{ ...inp, flex: 1, minWidth: 0, background: 'transparent', border: 'none', padding: 0, fontSize: 13, fontWeight: 500 }}
+          style={{ ...inp, flex: 1, minWidth: 0, background: 'transparent', border: 'none', padding: 0, fontSize: 'var(--sb-t-body)', fontWeight: 500 }}
         />
 
         {/* Type */}
         <select value={task.taskType} onChange={e => onChange({ taskType: e.target.value as TaskType })}
-          style={{ ...inp, padding: '2px 4px', fontSize: 13, width: 'auto', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+          style={{ ...inp, padding: '2px 4px', fontSize: 'var(--sb-t-body)', width: 'auto', background: 'transparent', border: 'none', cursor: 'pointer' }}>
           {TYPE_OPTS.map(o => <option key={o.v} value={o.v}>{o.emoji} {o.label}</option>)}
         </select>
 
         {/* Quadrant */}
         <select value={task.quadrant ?? ''} onChange={e => onChange({ quadrant: (e.target.value || null) as Quadrant | null })}
           style={{
-            ...inp, padding: '2px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            ...inp, padding: '2px 8px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
             color: q?.color ?? 'var(--sb-ink-4, #9B9180)',
             background: q ? `${q.color}14` : 'var(--sb-field, #FAF7EC)',
             border: `1px solid ${q ? `${q.color}40` : 'var(--sb-border, #E8E1CE)'}`,
@@ -344,14 +344,14 @@ function ReviewRow({ task, companies, notesOpen, onToggleNotes, onChange, onRemo
         <select
           value={companies.find(c => c.name.toLowerCase().includes((task.companyName ?? '').toLowerCase()))?.id ?? ''}
           onChange={e => { const co = companies.find(c => c.id === e.target.value); onChange({ companyName: co?.name ?? null }) }}
-          style={{ ...inp, padding: '2px 6px', fontSize: 11, cursor: 'pointer', width: 'auto', maxWidth: 100 }}>
+          style={{ ...inp, padding: '2px 6px', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', width: 'auto', maxWidth: 100 }}>
           <option value="">— Co.</option>
           {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
 
         {/* Due date */}
         <input type="date" value={task.dueDate ?? ''} onChange={e => onChange({ dueDate: e.target.value || null })}
-          style={{ ...inp, padding: '2px 6px', fontSize: 11, width: 'auto' }} />
+          style={{ ...inp, padding: '2px 6px', fontSize: 'var(--sb-t-meta)', width: 'auto' }} />
 
         {/* Notes toggle */}
         {task.notes && (
@@ -367,7 +367,7 @@ function ReviewRow({ task, companies, notesOpen, onToggleNotes, onChange, onRemo
       </div>
 
       {task.notes && notesOpen && (
-        <div style={{ padding: '0 12px 10px 34px', fontSize: 11.5, color: 'var(--sb-ink-3, #6C6553)', lineHeight: 1.5, borderTop: '1px solid var(--sb-hairline, #F0EBDC)', paddingTop: 8 }}>
+        <div style={{ padding: '0 12px 10px 34px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3, #6C6553)', lineHeight: 1.5, borderTop: '1px solid var(--sb-hairline, #F0EBDC)', paddingTop: 8 }}>
           {task.notes}
         </div>
       )}

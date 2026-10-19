@@ -4159,7 +4159,7 @@ function BillingSection() {
             >
               {/* plan name + current badge */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontFamily: 'var(--sb-font-display)', fontSize: 13, fontWeight: 700, color: 'var(--sb-ink-1)' }}>{plan.name}</span>
+                <span style={{ fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-body)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{plan.name}</span>
                 {isCurrent && (
                   <span style={{
                     fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
@@ -4176,7 +4176,7 @@ function BillingSection() {
                 ) : (
                   <>
                     <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>${price}</span>
-                    <span style={{ fontSize: 11, color: 'var(--sb-ink-4)' }}>/mo</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>/mo</span>
                   </>
                 )}
               </div>
@@ -4195,7 +4195,7 @@ function BillingSection() {
                 {plan.features.map(f => (
                   <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 5 }}>
                     <Check size={10} style={{ color: 'var(--sb-positive)', flexShrink: 0, marginTop: 2 }} strokeWidth={STROKE.active} />
-                    <span style={{ fontSize: 11, color: 'var(--sb-ink-2)', lineHeight: 1.4 }}>{f}</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.4 }}>{f}</span>
                   </div>
                 ))}
               </div>
@@ -4203,18 +4203,18 @@ function BillingSection() {
               {/* CTA */}
               {isCurrent ? (
                 <div style={{
-                  ...PILL_BASE, justifyContent: 'center', fontSize: 11, fontWeight: 600,
+                  ...PILL_BASE, justifyContent: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                   background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
                   cursor: 'default',
                 }}>Current plan</div>
               ) : plan.id === 'free' ? (
                 <button
-                  style={{ ...PILL_BASE, justifyContent: 'center', fontSize: 11, cursor: 'pointer', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', fontFamily: 'inherit', fontWeight: 500 }}
+                  style={{ ...PILL_BASE, justifyContent: 'center', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', fontFamily: 'inherit', fontWeight: 500 }}
                   onClick={() => alert('Downgrade to Free — not yet connected')}
                 >Downgrade</button>
               ) : (
                 <button
-                  style={{ ...PILL_BASE, justifyContent: 'center', fontSize: 11, cursor: 'pointer', color: 'var(--sb-ink-1)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', fontFamily: 'inherit', fontWeight: 600 }}
+                  style={{ ...PILL_BASE, justifyContent: 'center', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', color: 'var(--sb-ink-1)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', fontFamily: 'inherit', fontWeight: 600 }}
                   onClick={() => alert('Upgrade — not yet connected')}
                 >Upgrade to {plan.name}</button>
               )}
@@ -4230,13 +4230,13 @@ function BillingSection() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>Professor Pro</span>
+              <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Professor Pro</span>
               <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
             </div>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>Renews 14 March 2027</p>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <p style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>$300</p>
+            <p style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>$300</p>
             <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>per year</p>
           </div>
         </div>
@@ -4583,7 +4583,7 @@ function IntegrationsSection() {
             background: 'color-mix(in srgb, var(--sb-positive) 8%, transparent)',
             border: 'var(--sb-border-width) solid var(--sb-positive)',
           }}>
-            <code style={{ flex: 1, fontSize: 11, fontFamily: 'monospace', color: 'var(--sb-ink-1)', wordBreak: 'break-all', lineHeight: 1.5 }}>{revealedToken}</code>
+            <code style={{ flex: 1, fontSize: 'var(--sb-t-meta)', fontFamily: 'monospace', color: 'var(--sb-ink-1)', wordBreak: 'break-all', lineHeight: 1.5 }}>{revealedToken}</code>
             <button onClick={copyToken} style={{
               flexShrink: 0, padding: '5px 11px', borderRadius: 'var(--sb-r-chip)',
               background: copied ? 'color-mix(in srgb, var(--sb-positive) 14%, transparent)' : 'var(--sb-card)',
@@ -4615,7 +4615,7 @@ function IntegrationsSection() {
                   {tok.last_used_at ? ` · Last used ${new Date(tok.last_used_at).toLocaleDateString()}` : ' · Never used'}
                 </p>
               </div>
-              <code style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--sb-ink-4)', flexShrink: 0 }}>prof_sk_…</code>
+              <code style={{ fontSize: 'var(--sb-t-meta)', fontFamily: 'monospace', color: 'var(--sb-ink-4)', flexShrink: 0 }}>prof_sk_…</code>
               <button onClick={() => void handleRevoke(tok.id)} style={{
                 flexShrink: 0, padding: '4px 10px', borderRadius: 'var(--sb-r-chip)',
                 background: 'none', border: 'var(--sb-border-width) solid var(--sb-border)',
@@ -4644,7 +4644,7 @@ function IntegrationsSection() {
                 padding: '9px 13px', borderRadius: 'var(--sb-r-nav)',
                 background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
               }}>
-                <span style={{ fontSize: 18, lineHeight: 1 }}>💬</span>
+                <span style={{ fontSize: 'var(--sb-t-h2)', lineHeight: 1 }}>💬</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                     Chat #{link.chat_id}
@@ -4684,7 +4684,7 @@ function IntegrationsSection() {
             {[
               'Generate a token above (label it "Telegram")',
               'Open Telegram and search for your Professor bot',
-              <>Send: <code style={{ fontSize: 11, fontFamily: 'monospace', background: 'var(--sb-card)', padding: '1px 5px', borderRadius: 4 }}>/connect prof_sk_…</code></>,
+              <>Send: <code style={{ fontSize: 'var(--sb-t-meta)', fontFamily: 'monospace', background: 'var(--sb-card)', padding: '1px 5px', borderRadius: 4 }}>/connect prof_sk_…</code></>,
               'That\'s it — just talk to it naturally after that',
             ].map((step, i) => (
               <li key={i} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.45 }}>{step}</li>

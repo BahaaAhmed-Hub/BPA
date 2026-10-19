@@ -79,7 +79,7 @@ function useHeldText(value: string, push: (v: string) => void) {
 // ─── Primitives ──────────────────────────────────────────────────────────────
 
 const inputStyle: React.CSSProperties = {
-  fontSize: 12, padding: '5px 7px', borderRadius: 6, width: '100%',
+  fontSize: 'var(--sb-t-body-s)', padding: '5px 7px', borderRadius: 6, width: '100%',
   border: `1px solid ${C.border}`, background: C.field, color: C.ink1,
   fontFamily: 'inherit', minWidth: 0,
 }
@@ -177,7 +177,7 @@ function Choice<T extends string | number>({ label, value, onPush, options, grow
               type="button"
               onClick={() => onPush(o.value)}
               style={{
-                fontSize: 11, fontWeight: on ? 600 : 400, padding: '4px 10px', borderRadius: 7,
+                fontSize: 'var(--sb-t-meta)', fontWeight: on ? 600 : 400, padding: '4px 10px', borderRadius: 7,
                 cursor: 'pointer', whiteSpace: 'nowrap',
                 border: `1px solid ${on ? tint : C.border}`,
                 background: on ? `color-mix(in srgb, ${tint} 18%, ${C.card})` : C.field,
@@ -319,7 +319,7 @@ export function ItemFields({ item, groups, stores, envelopes, onUpdate, onDelete
                   onClick={() => toggleStore(s.id)}
                   title={picked ? `Checking ${s.name}` : inPlay ? `${s.name} — matched by category` : `Also check ${s.name}`}
                   style={{
-                    fontSize: 11, padding: '3px 9px', borderRadius: 10, cursor: 'pointer',
+                    fontSize: 'var(--sb-t-meta)', padding: '3px 9px', borderRadius: 10, cursor: 'pointer',
                     background: picked ? `color-mix(in srgb, ${C.accent} 22%, ${C.card})` : C.field,
                     color: picked || inPlay ? C.ink1 : C.ink3,
                     border: `1px ${inPlay && !picked ? 'dashed' : 'solid'} ${picked ? C.accent : C.border}`,
@@ -371,7 +371,7 @@ export function ItemFields({ item, groups, stores, envelopes, onUpdate, onDelete
         type="button"
         onClick={onDelete}
         style={{
-          alignSelf: 'flex-start', fontSize: 11, color: C.neg, background: 'none',
+          alignSelf: 'flex-start', fontSize: 'var(--sb-t-meta)', color: C.neg, background: 'none',
           border: 'none', cursor: 'pointer', padding: 0, marginTop: 2,
         }}
       >
