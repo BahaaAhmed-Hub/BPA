@@ -134,3 +134,22 @@ for what each phase must move).
 - `skeleton-shows-while-loading.mjs` — Google's events held 1.5s: a
   `[data-skeleton]` shows, then the event; `prefers-reduced-motion` stops the
   pulse. `HOLD=never` is the control (the skeleton must not leave by itself).
+
+### Splitting a big file without changing it (the Settings split)
+- `node scripts/split-module.mjs <file.tsx> <plan.json> [--dry]` moves named
+  top-level declarations into new files **from the AST**: each moves with the
+  comment above it, in order; a moved name anything else uses gets `export`; each
+  new file gets exactly the imports it uses (type names as `import type`);
+  the source re-exports what outside modules import. It **refuses** — naming both
+  sides — when a moved declaration uses something that stayed behind (circular) or
+  two new files would import each other. It matches by identifier name, so it
+  over-counts imports: run `node scripts/prune-imports.mjs` after, which removes
+  exactly what `tsc` reports unused. Neither is a refactoring tool — a `let` that
+  another file assigns (`onAIPush`) needs a setter first; `tsc` finds it.
+- `node scripts/settings-snapshot.mjs 5199 --save=<f>` / `--compare=<f>` hashes
+  the markup of all 15 Settings sections (clock times and React ids normalised).
+  Controls: two runs on the same code agree; changing one visible string flips
+  exactly the page that holds it (a *theme* change flips nothing — it is CSS
+  variables, so it is not a control). A section counts as opened only with
+  300+ chars of markup. Match nav entries by visible text — "Integrations" carries
+  a count badge and "AI" an icon with its own accessible name.

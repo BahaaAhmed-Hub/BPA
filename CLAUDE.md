@@ -104,7 +104,7 @@ Two tokens carried every failure:
 ## Key Files
 | File | What it does |
 |---|---|
-| `src/modules/settings/Settings.tsx` | All settings — nav groups, section components |
+| `src/modules/settings/Settings.tsx` | Settings **shell** — page routing and the section cards. Each section is `settings/sections/<Name>.tsx`; shared state/persistence is `model.ts`, nav data `nav.ts`, primitives `ui.tsx` |
 | `src/modules/tasks/TaskCard.tsx` | 3-row task card (9A design) |
 | `src/modules/habits/HabitsModule.tsx` | Habits table + 10B side detail panel |
 | `src/modules/finance/screens/BudgetScreen.tsx` | Budget + 20E envelope drill-down overlay |

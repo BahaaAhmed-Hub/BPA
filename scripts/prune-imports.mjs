@@ -34,8 +34,14 @@ for (let pass = 0; pass < 8; pass++) {
       // the specifier must sit inside an import statement
       let k = line - 1; while (k > 0 && !/^\s*import\b/.test(lines[k])) k--
       if (!/^\s*import\b/.test(lines[k])) continue
-      if (L.slice(col - 1, col - 1 + name.length) !== name) continue
-      let a = col - 1, b = col - 1 + name.length
+      let at = col - 1
+      if (L.slice(at, at + name.length) !== name) {
+        // an import whose every specifier is unused is reported at the statement, not the name
+        const m = new RegExp(`\\b${name.replace(/[$]/g, '\\$')}\\b`).exec(L)
+        if (!m) continue
+        at = m.index
+      }
+      let a = at, b = at + name.length
       const before = L.slice(0, a)
       const t = /(type\s+)$/.exec(before); if (t) a -= t[1].length
       // take the comma after it, else the comma before
