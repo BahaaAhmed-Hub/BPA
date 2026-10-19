@@ -152,7 +152,7 @@ function SenderAvatar({ name, email, size = 34 }: { name: string; email: string;
   // rather than from the theme: `--sb-ink-on-fill` is white in three of the
   // four themes, and white reads at 3.68 on this palette's cyan.
   return (
-    <div style={{ width: size, height: size, borderRadius: 'var(--sb-r-pill)', background: bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size < 30 ? 10 : 12, fontWeight: 700, color: inkOn(bg), letterSpacing: '0.02em' }}>
+    <div style={{ width: size, height: size, borderRadius: 'var(--sb-r-pill)', background: bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size < 30 ? 'var(--sb-t-micro)' : 'var(--sb-t-meta)', fontWeight: 700, color: inkOn(bg), letterSpacing: '0.02em' }}>
       {initials}
     </div>
   )
@@ -1564,7 +1564,7 @@ export function InboxModule() {
                         <span title={`${companyOf(email)!.label} — group by company to see them together`}
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
-                            fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 7px',
+                            fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 7px',
                             borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-2)',
                             background: companyOf(email)!.isCompany
                               ? `color-mix(in srgb, ${companyOf(email)!.color} 16%, transparent)`
@@ -1579,7 +1579,7 @@ export function InboxModule() {
                         </span>
                       )}
                       {classMeta && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: classMeta.bg, color: classMeta.color, fontWeight: 600 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-meta)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: classMeta.bg, color: classMeta.color, fontWeight: 600 }}>
                           <classMeta.Icon size={10} strokeWidth={STROKE.active} />
                           {classMeta.label}
                         </span>
@@ -1587,7 +1587,7 @@ export function InboxModule() {
                       {/* A bulk draft writes into eight messages at once; without
                           this the only way to know which got one is to open each. */}
                       {replyText[email.id]?.trim() && !sentIds.has(email.id) && (
-                        <span title="A reply is drafted and waiting — nothing has been sent" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.16)', color: 'var(--sb-ink-2)', fontWeight: 600 }}>
+                        <span title="A reply is drafted and waiting — nothing has been sent" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-meta)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.16)', color: 'var(--sb-ink-2)', fontWeight: 600 }}>
                           <FileEdit size={10} strokeWidth={STROKE.active} />
                           Draft
                         </span>
@@ -1607,11 +1607,11 @@ export function InboxModule() {
                         address say the same thing. */}
                     {multi && (
                       <span title={email.account.email} style={{
-                        fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: accountColor(email.account.email),
+                        fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: accountColor(email.account.email),
                         maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>{accountLabel(email.account.email, email.account.isPrimary)}</span>
                     )}
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                     {fmtRelTime(email.receivedAt)}
                     </span>
                   </span>
@@ -1999,20 +1999,20 @@ export function InboxModule() {
                   style={{
                     display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px',
                     borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                    fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', flexShrink: 0,
+                    fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flexShrink: 0,
                   }}>{accountLabel(selectedEmail.account.email, selectedEmail.account.isPrimary)}</span>
               )}
 
             </div>
             {selectedEmail.to && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline', lineHeight: 1.35 }}>
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)', minWidth: 18 }}>To</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', minWidth: 18 }}>To</span>
                 <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', wordBreak: 'break-word' }}>{selectedEmail.to}</span>
               </div>
             )}
             {selectedEmail.cc && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)', minWidth: 18 }}>CC</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', minWidth: 18 }}>CC</span>
                 <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', wordBreak: 'break-word' }}>{selectedEmail.cc}</span>
               </div>
             )}

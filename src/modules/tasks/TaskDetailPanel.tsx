@@ -456,7 +456,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               border: owner ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
               color: owner ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+              fontSize: 'var(--sb-t-meta)', fontWeight: 700,
             }}>{owner ? initials(owner.name) : <User size={ICON.sm} strokeWidth={STROKE.rest} />}</span>
             <span style={{ ...CELL_VALUE, color: owner ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
               {owner ? owner.name : 'Unassigned'}

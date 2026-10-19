@@ -431,7 +431,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                     {CHANNEL_LABEL[c]}
                   </button>
                 ))}
-                <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', alignSelf: 'center' }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', alignSelf: 'center' }}>
                   {spendAccount!.name} pays {cardScheme!.earn.pos} in person, {cardScheme!.earn.online} online
                 </span>
               </span>

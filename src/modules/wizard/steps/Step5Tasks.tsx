@@ -120,7 +120,7 @@ export function Step5Tasks({ data, onChange }: Props) {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Trello</span>
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-accent) 12.0%, transparent)', color: 'var(--sb-accent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent) 25.0%, transparent)' }}>Coming Soon</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-accent) 12.0%, transparent)', color: 'var(--sb-accent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent) 25.0%, transparent)' }}>Coming Soon</span>
               </div>
               <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Project boards</div>
             </div>

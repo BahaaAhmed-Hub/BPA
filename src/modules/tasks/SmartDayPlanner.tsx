@@ -114,27 +114,27 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
         </div>
         <div style={{ display: 'flex', gap: 5, marginTop: 4, flexWrap: 'wrap' }}>
           {priority && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: alpha(color, 8.2), color }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: alpha(color, 8.2), color }}>
               {priority}
             </span>
           )}
           {task.duration && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-info-tint)', color: 'var(--sb-ink-3)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-info-tint)', color: 'var(--sb-ink-3)' }}>
               {task.duration}m
             </span>
           )}
           {scheduled && !creating && !gcalDone && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent-tint)', color: 'var(--sb-warning)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent-tint)', color: 'var(--sb-warning)' }}>
               Scheduled
             </span>
           )}
           {creating && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-info-tint)', color: 'var(--sb-info)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-info-tint)', color: 'var(--sb-info)' }}>
               Adding…
             </span>
           )}
           {gcalDone && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-positive-tint)', color: 'var(--sb-positive)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-positive-tint)', color: 'var(--sb-positive)' }}>
               ✓ In Calendar
             </span>
           )}
@@ -306,7 +306,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
               )}
             </div>
             {evt.location && (
-              <span style={{ fontSize: 'var(--sb-t-micro)', color, opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {evt.location}</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color, opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {evt.location}</span>
             )}
           </div>
         ))}
@@ -333,7 +333,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
                 {taskTitle}
               </div>
               {block.gcalEventId && (
-                <div style={{ fontSize: 'var(--sb-t-micro)', color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>✓ Calendar</div>
+                <div style={{ fontSize: 'var(--sb-t-meta)', color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>✓ Calendar</div>
               )}
             </div>
             {onRemove && (
@@ -341,7 +341,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
                 onClick={e => { e.stopPropagation(); onRemove() }}
                 title={`Take "${taskTitle ?? 'this task'}" off the plan and off your calendar`}
                 aria-label={`Take "${taskTitle ?? 'this task'}" off the plan`}
-                style={{ background: 'color-mix(in srgb, var(--sb-ink-on-fill) 20%, transparent)', border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-on-fill)', padding: '1px 4px', fontSize: 'var(--sb-t-micro)', flexShrink: 0 }}
+                style={{ background: 'color-mix(in srgb, var(--sb-ink-on-fill) 20%, transparent)', border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-on-fill)', padding: '1px 4px', fontSize: 'var(--sb-t-meta)', flexShrink: 0 }}
               >
                 ×
               </button>
@@ -424,7 +424,7 @@ function AccountPickerOverlay({
                 <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acct.email}</div>
               </div>
               {acct.isPrimary && (
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, background: 'var(--sb-positive-tint)', color: 'var(--sb-positive)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>Primary</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, background: 'var(--sb-positive-tint)', color: 'var(--sb-positive)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>Primary</span>
               )}
             </button>
           ))}

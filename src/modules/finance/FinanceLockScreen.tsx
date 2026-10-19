@@ -179,7 +179,7 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
           {passkey && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 12px' }}>
               <div style={{ flex: 1, height: 1, background: 'var(--sb-hairline)' }} />
-              <span style={{ fontSize: 'var(--sb-t-micro)', letterSpacing: '0.1em', color: 'var(--sb-ink-4)', fontWeight: 600 }}>OR</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', letterSpacing: '0.1em', color: 'var(--sb-ink-4)', fontWeight: 600 }}>OR</span>
               <div style={{ flex: 1, height: 1, background: 'var(--sb-hairline)' }} />
             </div>
           )}

@@ -230,7 +230,7 @@ function TaskRow({ title, company, cancelled }: { title: string; company?: strin
         {title}
       </span>
       {company && (
-        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, color: COMPANY_COLORS[company] ?? 'var(--sb-ink-4)', background: alpha(COMPANY_COLORS[company] ?? 'var(--sb-ink-4)', 9.4), fontWeight: 500 }}>
+        <span style={{ fontSize: 'var(--sb-t-meta)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, color: COMPANY_COLORS[company] ?? 'var(--sb-ink-4)', background: alpha(COMPANY_COLORS[company] ?? 'var(--sb-ink-4)', 9.4), fontWeight: 500 }}>
           {company}
         </span>
       )}
@@ -388,7 +388,7 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {isToday && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-info)', background: 'color-mix(in srgb, var(--sb-info) 15.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-info)', background: 'color-mix(in srgb, var(--sb-info) 15.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
           )}
           <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: isToday ? 'var(--sb-info)' : 'var(--sb-ink-2)', whiteSpace: 'nowrap' }}>
             {dayLabel}

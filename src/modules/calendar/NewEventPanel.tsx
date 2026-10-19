@@ -1180,7 +1180,7 @@ export function NewEventPanel({
               <span style={{
                 width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: C.card,
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: C.bad,
+                fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: C.bad,
               }}>{f.kind}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 {f.fileUrl ? (
@@ -1325,7 +1325,7 @@ function PersonRow({
               height: 19, padding: '0 7px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
               display: 'inline-flex', alignItems: 'center',
               background: C.inset, border: `1px solid ${C.border}`, color: C.faint,
-              fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+              fontSize: 'var(--sb-t-meta)', fontWeight: 600,
             }}>Optional</span>
           )}
         </span>

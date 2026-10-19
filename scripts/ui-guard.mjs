@@ -104,11 +104,11 @@ const perLine = (ctx, test) => {
 const RULES = {
   type: {
     why: 'font sizes under 14px must be a --sb-t-* token (docs §P0.1)',
-    check: ctx => perLine(ctx, l => {
+    check: ctx => perLine(ctx, (l, raw) => {
       // The whole expression, so `tight ? 11.5 : 12.5` is caught as well as
       // `fontSize: 11` — but not `size * 0.5`, which is a ratio, not a size.
       const m = /fontSize\s*[:=]\s*\{?([^,}]*)/.exec(l)
-      return !!m && /(?<![\w.*/])(9|10|11|12|13)(\.5)?(?![\w.])/.test(m[1])
+      return !!m && !/ui-guard:\s*type-ok/.test(raw) && /(?<![\w.*/])(9|10|11|12|13)(\.5)?(?![\w.])/.test(m[1])
     }),
   },
   ink: {

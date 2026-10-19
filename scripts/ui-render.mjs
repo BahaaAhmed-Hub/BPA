@@ -113,7 +113,7 @@ const MEASURE = ({ narrow, tap }) => {
   const seenSmall = new Set(), seenEmoji = new Set()
 
   for (const el of document.body.querySelectorAll('*')) {
-    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'SVG', 'PATH', 'TITLE'].includes(el.tagName.toUpperCase())) continue
+    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'PATH'].includes(el.tagName.toUpperCase())) continue
     // The element's *own* text: its direct text nodes, not its children's.
     let own = ''
     for (const n of el.childNodes) if (n.nodeType === 3) own += n.textContent
@@ -121,7 +121,9 @@ const MEASURE = ({ narrow, tap }) => {
     if (own && visible(el)) {
       out.texts++
       const cs = getComputedStyle(el)
-      const px = parseFloat(cs.fontSize)
+      // SVG text is in the drawing's units; what the eye gets is that times the scale.
+      const scale = el instanceof SVGGraphicsElement && el.getScreenCTM() ? el.getScreenCTM().a : 1
+      const px = Math.round(parseFloat(cs.fontSize) * scale * 10) / 10
       const upper = cs.textTransform === 'uppercase'
       if (px < 11 || (px < 12 && !upper)) {
         const key = `${px}|${own.slice(0, 30)}`

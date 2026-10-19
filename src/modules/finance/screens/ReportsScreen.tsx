@@ -381,10 +381,10 @@ export function ReportsScreen(_props?: any) {
                     <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                       {dayRate > 0 ? `${dayRate.toLocaleString('en-US')}` : '–'}
                     </span>
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', marginTop: 2, letterSpacing: '0.08em', fontWeight: 700 }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2, letterSpacing: '0.08em', fontWeight: 700 }}>
                       EGP/DAY
                     </span>
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 4 }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 4 }}>
                       {TOTAL > 0 ? `${compact(TOTAL)} total` : 'no data'}
                     </span>
                   </div>

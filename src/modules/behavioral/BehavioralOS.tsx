@@ -96,7 +96,7 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
           transition: 'width 0.8s ease',
         }} />
       </div>
-      <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', width: 26, textAlign: 'right' }}>{value}</span>
+      <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', width: 26, textAlign: 'right' }}>{value}</span>
     </div>
   )
 }
@@ -162,7 +162,7 @@ function IdentityCard({ identity }: { identity: IdentityResult }) {
       <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)', letterSpacing: '0.03em', marginBottom: 4 }}>
         {identity.name}
       </div>
-      <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
+      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
         {identity.description}
       </div>
       {/* Score bar */}
@@ -235,7 +235,7 @@ export function BehavioralOS() {
                 Behavioral OS
               </h1>
               <span style={{
-                fontSize: 'var(--sb-t-micro)', letterSpacing: '0.18em', fontWeight: 600,
+                fontSize: 'var(--sb-t-meta)', letterSpacing: '0.18em', fontWeight: 600,
                 color: 'var(--sb-accent)', border: 'var(--sb-border-width) solid var(--sb-accent)',
                 padding: '3px 8px', borderRadius: 'var(--sb-r-chip)',
               }}>
@@ -301,7 +301,7 @@ export function BehavioralOS() {
                 <RankProgressBar score={rank.score} />
 
                 {nextRank && (
-                  <div style={{ marginTop: 20, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', letterSpacing: '0.03em' }}>
+                  <div style={{ marginTop: 20, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', letterSpacing: '0.03em' }}>
                     Next threshold: {nextRank.label} at {nextRank.threshold}
                   </div>
                 )}
@@ -359,7 +359,7 @@ export function BehavioralOS() {
                   borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
                 }}>
                   <span style={{
-                    fontSize: 'var(--sb-t-micro)', letterSpacing: '0.1em', color: 'var(--sb-ink-4)',
+                    fontSize: 'var(--sb-t-meta)', letterSpacing: '0.1em', color: 'var(--sb-ink-4)',
                     width: 18, flexShrink: 0,
                   }}>
                     {String(i + 1).padStart(2, '0')}
@@ -368,7 +368,7 @@ export function BehavioralOS() {
                     {t.title}
                   </span>
                   {t.dueDate && (
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', flexShrink: 0 }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flexShrink: 0 }}>
                       {new Date(t.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                   )}
@@ -401,7 +401,7 @@ export function BehavioralOS() {
                 <IdentityCard key={identity.id} identity={identity} />
               ))}
             </div>
-            <p style={{ marginTop: 14, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>
+            <p style={{ marginTop: 14, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>
               Identities are inferred from repeated behavior over 30 days. They are not assigned — they are earned.
             </p>
           </section>
@@ -428,7 +428,7 @@ export function BehavioralOS() {
 
         {/* ── Last evaluated ─────────────────────────────────────────────── */}
         {lastEvaluated && (
-          <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', letterSpacing: '0.05em' }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', letterSpacing: '0.05em' }}>
             Last evaluated {new Date(lastEvaluated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </div>
         )}

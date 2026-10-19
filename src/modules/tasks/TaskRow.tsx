@@ -170,7 +170,7 @@ export function TaskRow({ task, onOpen, dense }: {
               border: v.ownerInitials ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
               color: v.ownerInitials ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.02em',
+              fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.02em',
             }}
           >{v.ownerInitials ?? <User size={ICON.sm} strokeWidth={STROKE.rest} />}</span>
           <OverlaySelect

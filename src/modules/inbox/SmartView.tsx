@@ -104,7 +104,7 @@ function ReplyChip({ t }: { t: SmartThread }) {
       : 'You have not written in this thread.'}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-        fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: ink,
+        fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: ink,
       }}>
       <span aria-hidden>{mark}</span>{word}
     </span>
@@ -116,7 +116,7 @@ function InviteChip() {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-      fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-accent-deep)',
+      fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-accent-deep)',
     }}>
       <span aria-hidden>📅</span>Invitation
     </span>
@@ -142,7 +142,7 @@ function KindChip({ kind }: { kind: MailKind }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-      fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)',
+      fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
     }}>
       <span aria-hidden>{mark}</span>{word}
     </span>
@@ -463,7 +463,7 @@ export function SmartView({
                       flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     }}>{t.awaitingCustomer ? 'Awaiting customer — no follow-up needed' : (t.need || t.fromName)}</span>
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
                       {when(t.lastAt)}
                     </span>
                   </button>
@@ -598,7 +598,7 @@ function Row({
           {company && (
             <span title={`${company.label}${boxLabel ? ` · ${boxLabel}` : ''}`} style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-              fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 8px',
+              fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 8px',
               borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-2)',
               background: company.isCompany
                 ? `color-mix(in srgb, ${company.color} 16%, transparent)`
@@ -620,7 +620,7 @@ function Row({
             mistake. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{t.fromName}</span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>{when(t.lastAt)}</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{when(t.lastAt)}</span>
           {/* ── Whether you have answered ─────────────────────────────────
               This used to sit at the left of the *actions* row, where it had a
               whole line to itself whenever the buttons wrapped away from it —
@@ -629,7 +629,7 @@ function Row({
           {t.kind === 'invitation' ? <InviteChip />
             : answerable ? <ReplyChip t={t} /> : <KindChip kind={t.kind} />}
           {boxLabel && (
-            <span title={t.accountEmail} style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+            <span title={t.accountEmail} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
               {boxLabel}
             </span>
           )}
@@ -703,7 +703,7 @@ function Row({
             <span title="You have marked this one seen."
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
-                fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-positive)',
+                fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-positive)',
               }}>
               <Eye size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden /> Seen
             </span>

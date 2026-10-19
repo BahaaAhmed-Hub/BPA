@@ -212,7 +212,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         {/* Meta line */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 9, margin: '3px 0 0 22px',
-          fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', minWidth: 0,
+          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', minWidth: 0,
           // a narrow column (panel open) clips the trailing meta rather than
           // letting it run under the attribute rail
           overflow: 'hidden', whiteSpace: 'nowrap',
@@ -294,7 +294,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               ...(v.ownerInitials ? slotFilled : slotEmpty),
               borderRadius: 'var(--sb-r-pill)',
-              fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.02em',
+              fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.02em',
             }}
           >{v.ownerInitials ?? <User size={ICON.sm} strokeWidth={STROKE.rest} />}</div>
           <SlotSelect value={task.owner ?? ''} onChange={val => updateTask(task.id, { owner: val || undefined })}>

@@ -987,7 +987,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         // The micro *size*, not the micro level: a card's title is not a capsed
         // caption, and spreading T.micro would put it in capitals.
         fontFamily: SANS,
-        fontSize: 'var(--sb-t-micro)',
+        fontSize: 'var(--sb-t-meta)',
         fontWeight: 700,
         color: evInk,
         lineHeight: 1.25,
@@ -1039,14 +1039,14 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           return host ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, overflow: 'hidden' }}>
               <Video size={ICON.sm} color={evTimeInk} style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {host}
               </span>
             </div>
           ) : null
         })()}
         {showTime && (
-          <div style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: evTimeInk, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
             {fmtShort(event.start.dateTime!)}
             {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
           </div>
@@ -1054,7 +1054,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         {showHost && height >= 74 && event.location && !meetingHost(event) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3, overflow: 'hidden' }}>
             <MapPin size={ICON.sm} color={evTimeInk} style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {event.location}
             </span>
           </div>
@@ -3142,7 +3142,7 @@ export function CalendarIntelligence() {
 
         {/* Fetch error — keep but make subtle */}
         {fetchError && (
-          <div style={{ marginTop: 6, padding: '5px 10px', background: 'color-mix(in srgb, var(--sb-negative) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ marginTop: 6, padding: '5px 10px', background: 'color-mix(in srgb, var(--sb-negative) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <AlertCircle size={ICON.sm} /> {fetchError}
           </div>
         )}
@@ -3249,7 +3249,7 @@ export function CalendarIntelligence() {
                             competing with four titles; it earns its place only
                             where the cell is quiet enough to read. */}
                         {t && shown.length <= 2 && (
-                          <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 500, color: 'var(--sb-ink-4)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: 'var(--sb-ink-4)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                             {String(t.getHours()).padStart(2, '0')}:{String(t.getMinutes()).padStart(2, '0')}
                           </span>
                         )}
@@ -3273,7 +3273,7 @@ export function CalendarIntelligence() {
                       onClick={ev => { ev.stopPropagation(); setPickedDay(ds) }}
                       style={{
                         alignSelf: 'flex-start', padding: 0, border: 'none', background: 'transparent',
-                        cursor: 'pointer', fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500,
+                        cursor: 'pointer', fontFamily: MONO, fontSize: 'var(--sb-t-meta)', fontWeight: 500,
                         letterSpacing: '.06em', color: 'var(--sb-accent-deep)',
                       }}>+{dayEvents.length - shown.length} more</button>
                   )}
@@ -3339,7 +3339,7 @@ export function CalendarIntelligence() {
                             style={{
                               alignSelf: 'flex-start', height: 20, padding: '0 9px',
                               background: 'var(--sb-accent-tint2)', color: 'var(--sb-accent-deep)',
-                              fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500,
+                              fontFamily: MONO, fontSize: 'var(--sb-t-meta)', fontWeight: 500,
                               borderRadius: 999, border: 'none', cursor: 'pointer',
                               whiteSpace: 'nowrap' as const,
                             }}
@@ -3431,7 +3431,7 @@ export function CalendarIntelligence() {
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
                     whiteSpace: 'nowrap',
                   }}>
-                    <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', fontWeight: 500, letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontWeight: 500, letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums' }}>
                       {fmtHourLabel(h)}
                     </span>
                     {w && (
@@ -3525,7 +3525,7 @@ export function CalendarIntelligence() {
                           }}>
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
-                            fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-positive-deep)',
+                            fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-positive-deep)',
                             fontVariantNumeric: 'tabular-nums',
                           }}>
                             <CalendarPlus size={10} strokeWidth={STROKE.active} aria-hidden />
@@ -3533,12 +3533,12 @@ export function CalendarIntelligence() {
                             {repeats && <Repeat size={9} strokeWidth={STROKE.active} />}
                           </span>
                           {h >= 40 && (
-                            <span style={{ display: 'block', marginTop: 1, fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '.04em', color: 'var(--sb-positive-deep)' }}>
+                            <span style={{ display: 'block', marginTop: 1, fontSize: 'var(--sb-t-meta)', fontWeight: 600, letterSpacing: '.04em', color: 'var(--sb-positive-deep)' }}>
                               Open to book
                             </span>
                           )}
                           {h >= 64 && (
-                            <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 500, color: 'var(--sb-positive-deep)' }}>
+                            <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: 'var(--sb-positive-deep)' }}>
                               Calls &amp; meetings
                             </span>
                           )}
@@ -3568,7 +3568,7 @@ export function CalendarIntelligence() {
                             {fmtShort(minToIso(ds, sMin))} – {fmtShort(minToIso(ds, eMin))}
                           </div>
                           {h >= 34 && (
-                            <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-accent-deep)', fontVariantNumeric: 'tabular-nums' }}>
+                            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-deep)', fontVariantNumeric: 'tabular-nums' }}>
                               {(() => {
                                 const m = eMin - sMin
                                 return m < 60 ? `${m} min`

@@ -248,7 +248,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
               <div style={{ width: 40, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                 {Array.from({ length: HOURS_END - HOURS_START }, (_, i) => (
                   <div key={i} style={{ height: HOUR_HEIGHT, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 2, flexShrink: 0 }}>
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', lineHeight: 1 }}>{hourLabel(i + HOURS_START)}</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1 }}>{hourLabel(i + HOURS_START)}</span>
                   </div>
                 ))}
               </div>
@@ -524,11 +524,11 @@ function BlockChip({ block, hoursStart, hourHeight, isSelected, onClick, onDelet
         transition: 'box-shadow 0.15s',
       }}
     >
-      <div style={{ fontSize: Math.min(11, height / 2), fontWeight: 600, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: height < 28 ? 'nowrap' : 'normal' }}>
+      <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: height < 28 ? 'nowrap' : 'normal' }}>
         {block.title}
       </div>
       {height >= 40 && (
-        <div style={{ fontSize: 'var(--sb-t-micro)', color: '#ffffffCC', fontWeight: 500 }}>
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: '#ffffffCC', fontWeight: 500 }}>
           {block.blockType === 'hard' ? '🔒' : '·'} {block.category}
         </div>
       )}
@@ -742,7 +742,7 @@ function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onCh
                 <div style={{
                   marginTop: 8, paddingTop: 7, borderTop: '1px solid var(--sb-hairline)',
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  fontSize: 'var(--sb-t-micro)', color: 'var(--sb-positive)', fontWeight: 700, letterSpacing: '0.04em',
+                  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)', fontWeight: 700, letterSpacing: '0.04em',
                 }}>
                   <Check size={10} strokeWidth={3} />
                   {m.actions.length} action{m.actions.length !== 1 ? 's' : ''} applied to canvas
@@ -804,7 +804,7 @@ function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onCh
             }}
           ><Sparkles size={14} /></button>
         </div>
-        <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', textAlign: 'center', marginTop: 5, letterSpacing: '0.02em' }}>
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', textAlign: 'center', marginTop: 5, letterSpacing: '0.02em' }}>
           Enter to send · Shift+Enter for new line
         </div>
       </div>
@@ -864,7 +864,7 @@ function GoalCard({ goal, blocks, onDelete, onToggle }: { goal: IdealGoal; block
       <div style={{ height: 5, borderRadius: 2.5, background: 'var(--sb-field)', overflow: 'hidden' }}>
         <div style={{ height: '100%', borderRadius: 2.5, background: pct >= 100 ? 'var(--sb-positive)' : goal.color, width: `${pct}%`, transition: 'width 0.3s' }} />
       </div>
-      <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 4, textTransform: 'capitalize' }}>{goal.horizon} · {goal.category}</div>
+      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 4, textTransform: 'capitalize' }}>{goal.horizon} · {goal.category}</div>
     </div>
   )
 }
@@ -888,7 +888,7 @@ function RuleCard({ rule, onDelete, onToggle }: { rule: IdealRule; onDelete: () 
         </button>
       </div>
       {open && <div style={{ marginTop: 8, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>{rule.description}</div>}
-      <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 6, textTransform: 'capitalize' }}>{rule.ruleType.replace('-', ' ')} · from {rule.createdFrom.replace('-', ' ')}</div>
+      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 6, textTransform: 'capitalize' }}>{rule.ruleType.replace('-', ' ')} · from {rule.createdFrom.replace('-', ' ')}</div>
     </div>
   )
 }

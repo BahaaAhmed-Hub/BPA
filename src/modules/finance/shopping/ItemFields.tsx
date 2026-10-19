@@ -327,7 +327,7 @@ export function ItemFields({ item, groups, stores, envelopes, onUpdate, onDelete
               )
             })}
           </div>
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, marginTop: 3 }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, marginTop: 3 }}>
             {byCategory
               ? effective.length
                 ? `Nothing picked — checking the ${effective.length} store${effective.length === 1 ? '' : 's'} that carry ${item.category}.`

@@ -390,7 +390,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                 }}>
                   {INTERVALS.find(x => x.id === r.every)?.label ?? 'once'}
                   {repeats > 1 && (
-                    <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-3)' }}>×{repeats}</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)' }}>×{repeats}</span>
                   )}
                 </span>
                 <select value={r.every} onChange={e => patch(r.key, { every: e.target.value as Interval })}

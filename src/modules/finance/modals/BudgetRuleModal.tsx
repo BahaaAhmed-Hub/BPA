@@ -385,7 +385,7 @@ function LinesEditor({ rule, cur, onChange }: {
               fontFamily: DISPLAY, fontSize: 'var(--sb-t-body-s)',
             }} />
           <span style={{ ...PILL, flex: '1 1 110px', minWidth: 0, cursor: 'text', background: 'var(--sb-field)', gap: 6 }}>
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-4)', flexShrink: 0 }}>{cur}</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-4)', flexShrink: 0 }}>{cur}</span>
             <MoneyInput
               value={line.amount || 0}
               min={0}
@@ -928,7 +928,7 @@ export function BudgetRuleModal({
               in step with the label width by hand. */}
           <div style={{ ...ROW, marginTop: -4, alignItems: 'flex-start' }}>
             <span style={LABEL} />
-            <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+            <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
               {bucketMeta(bucketOf(rule)).name} — {bucketMeta(bucketOf(rule)).help}
             </p>
           </div>
@@ -1065,7 +1065,7 @@ export function BudgetRuleModal({
         {!parent && (<>
         <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '14px 0' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: subs.length ? 8 : 0 }}>
-          <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>
             SUB-CATEGORIES
           </span>
           <span style={{ flex: 1 }} />

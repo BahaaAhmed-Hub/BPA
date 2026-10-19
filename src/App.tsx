@@ -466,7 +466,7 @@ function NotificationBell() {
           <span style={{
             position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, padding: '0 4px',
             borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-negative)', color: 'var(--sb-ink-on-fill)',
-            fontSize: 'var(--sb-t-micro)', fontWeight: 700, lineHeight: '17px', textAlign: 'center',
+            fontSize: 'var(--sb-t-meta)', fontWeight: 700, lineHeight: '17px', textAlign: 'center',
             boxShadow: '0 0 0 2px var(--sb-header)',
           }}>{count > 9 ? '9+' : count}</span>
         )}
@@ -528,7 +528,7 @@ function NotificationBell() {
           {/* A kind that is on and cannot speak yet says what it is waiting
               on. An empty bell for a reason is not the same as a quiet day. */}
           {dormant.map(d => (
-            <p key={d.setting.id} style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
+            <p key={d.setting.id} style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
               {d.setting.label} — {d.why}.
             </p>
           ))}

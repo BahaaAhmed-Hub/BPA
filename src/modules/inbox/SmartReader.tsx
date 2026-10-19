@@ -103,7 +103,7 @@ function AttachmentChip({ msg, file, account }: { msg: GmailMessage; file: FileA
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4, maxWidth: '100%', padding: '3px 8px',
       border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
-      background: 'var(--sb-field)', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)',
+      background: 'var(--sb-field)', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
     }}>
       <Paperclip size={11} strokeWidth={STROKE.rest} />
       <span title={file.filename} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{file.filename}</span>
@@ -261,7 +261,7 @@ export function SmartReader({
             margin: 0, fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-body)',
             fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1.35,
           }}>{target.subject}</p>
-          <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+          <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
             {target.account.email}
             {messages && messages.length > 1 && <> · {messages.length} messages</>}
           </p>
@@ -403,7 +403,7 @@ export function SmartReader({
                   }}>{m.text.replace(/\s+/g, ' ').slice(0, 120)}</span>
                 )}
                 <span style={{ flex: shown ? 1 : undefined }} />
-                <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
                   {m.date ? new Date(m.date).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
                 </span>
               </button>
@@ -419,7 +419,7 @@ export function SmartReader({
                       row and absent when it is empty. */}
                   <div style={{
                     display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 10, rowGap: 2,
-                    margin: '0 0 9px', fontSize: 'var(--sb-t-micro)', lineHeight: 1.5,
+                    margin: '0 0 9px', fontSize: 'var(--sb-t-meta)', lineHeight: 1.5,
                   }}>
                     <Field label="From" value={m.from} />
                     <Field label="To" value={m.to} />

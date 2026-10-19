@@ -226,7 +226,7 @@ If an existing harness breaks because it matched old text (e.g. "On fire! 🔥" 
 | Phase | Status | PR |
 |---|---|---|
 | T0 Test tools | done | branch `claude/next-incomplete-phase-niej9p` (PR not opened yet) |
-| P0.1 Type floor | todo | |
+| P0.1 Type floor | done | branch `claude/next-incomplete-phase-niej9p` |
 | P0.2 Ink levels | todo | |
 | P0.3 One palette | todo | |
 | P0.4 Priority colours | todo | |

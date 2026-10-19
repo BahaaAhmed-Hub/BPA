@@ -139,7 +139,7 @@ function Stat({ label, value, tone, sub, help, terms }: {
           textUnderlineOffset: 5,
           width: 'fit-content', outline: 'none',
         }}>{value}</span>
-      {sub && <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4 }}>{sub}</span>}
+      {sub && <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>{sub}</span>}
       {open && terms && <Breakdown title={label} note={help} terms={terms} onClose={() => setOpen(false)} />}
     </span>
   )
@@ -176,7 +176,7 @@ function Breakdown({ title, note, terms, onClose }: {
           }}><X size={ICON.sm} /></button>
       </span>
       {note && (
-        <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink3, lineHeight: 1.5, marginBottom: 9 }}>{note}</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, lineHeight: 1.5, marginBottom: 9 }}>{note}</span>
       )}
       {terms.map((t, i) => (
         <span key={i} style={{
@@ -292,7 +292,7 @@ function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onG
         <span style={{
           width: 20, height: 20, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+          background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
         }}>{place}</span>
         {/* An account's picture arrives here as its icon — a data URL, which
             printed as text is a line of base64 where the name should be. */}
@@ -766,13 +766,13 @@ export function GoalsScreen(_props?: any) {
                 label that needs its own tooltip not to mislead is the bug, so
                 the ratio is said on the page. */}
             {policy === 'share' && (
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, lineHeight: 1.45, maxWidth: 230 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, lineHeight: 1.45, maxWidth: 230 }}>
                 Weighted by rank, not equal — number 1 gets twice what number 2
                 does, and three times number 3.
               </span>
             )}
             {policy === 'commit' && (
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: committed > capacity.surplus ? C.red : C.ink4, lineHeight: 1.45, maxWidth: 230 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: committed > capacity.surplus ? C.red : C.ink4, lineHeight: 1.45, maxWidth: 230 }}>
                 {committed <= 0
                   ? 'Nothing is committed yet — open a goal and set what goes into it each month.'
                   : committed > capacity.surplus
@@ -819,7 +819,7 @@ export function GoalsScreen(_props?: any) {
               style={{
                 border: 'none', cursor: 'pointer', padding: '3px 9px', borderRadius: 'var(--sb-r-pill)',
                 background: C.accentBg, color: C.ink2, fontFamily: 'inherit',
-                fontSize: 'var(--sb-t-micro)', fontWeight: 700, whiteSpace: 'nowrap',
+                fontSize: 'var(--sb-t-meta)', fontWeight: 700, whiteSpace: 'nowrap',
               }}>See the rules ↓</button>
           </div>
         </div>
@@ -924,13 +924,13 @@ export function GoalsScreen(_props?: any) {
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Target</span>
+                <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>Target</span>
                 <MoneyInput key={formTick} value={newTarget} min={0} onChange={setNewTarget}
                   placeholder="60,000"
                   style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
               </span>
               <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>By (optional)</span>
+                <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>By (optional)</span>
                 <input type="date" value={newBy} min={todayISO()}
                   onChange={e => setNewBy(e.target.value)}
                   style={{ ...FIELD, fontFamily: DISPLAY }} />
@@ -1073,7 +1073,7 @@ function WhatWouldChangeIt({ advice, sooner, money }: {
                         </span>
                       </div>
                     ))}
-                    <div style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, marginTop: 4, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, marginTop: 4, lineHeight: 1.5 }}>
                       What each costs a month, and what this combination takes from it. Filled
                       in the order a cut is least painful — what a budget says is guilt-free
                       first, rent last — so the ones at the bottom stay untouched.
@@ -1263,7 +1263,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
               {mine.slice(0, 14).map(r => (
                 <span key={r.month} title={`${monthLabel(r.month)} · ${money(Math.round(r.share!.amount))}`}
                   style={{
-                    fontSize: 'var(--sb-t-micro)', padding: '3px 8px', borderRadius: 'var(--sb-r-pill)',
+                    fontSize: 'var(--sb-t-meta)', padding: '3px 8px', borderRadius: 'var(--sb-r-pill)',
                     fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
                     background: r.share!.lands ? 'var(--sb-positive-tint)' : C.field,
                     color: r.share!.lands ? C.green : C.ink3,
@@ -1273,7 +1273,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
                   {monthLabel(r.month).replace(/ \d{4}$/, '')} {group(Math.round(r.share!.amount))}{r.share!.lands ? ' ✓' : ''}
                 </span>
               ))}
-              {mine.length > 14 && <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, alignSelf: 'center' }}>+{mine.length - 14} more months</span>}
+              {mine.length > 14 && <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, alignSelf: 'center' }}>+{mine.length - 14} more months</span>}
             </div>
           )}
         </div>
@@ -1332,12 +1332,12 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
           alignItems: 'end',
         }}>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Target</span>
+            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>Target</span>
             <MoneyInput value={target} min={0} onChange={setTarget}
               style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
           </span>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Saved so far</span>
+            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>Saved so far</span>
             {/* A money field renders zero as an empty box on purpose, so a
                 fresh one is not a "0" you have to delete first. Without a
                 placeholder that reads as a field that failed to load. */}
@@ -1345,7 +1345,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
               style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
           </span>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>By</span>
+            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>By</span>
             <input type="date" value={g.deadline ?? ''} min={todayISO()}
               onChange={e => onChange({ ...g, deadline: e.target.value || undefined, sub: e.target.value ? `by ${e.target.value}` : 'no deadline' })}
               style={{ ...FIELD, fontFamily: DISPLAY }} />
@@ -1354,7 +1354,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
               about the plan on screen is a field you have to be told to ignore. */}
           {policy === 'commit' && (
             <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-              <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Each month</span>
+              <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>Each month</span>
               <MoneyInput value={commit} min={0} onChange={setCommit} placeholder="nothing yet"
                 style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
             </span>

@@ -195,7 +195,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
   return (
     <span ref={box} style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
       <button type="button" onClick={() => setOpen(o => !o)}
-        style={{ ...PILL, height: h, padding: compact ? '0 10px' : '0 14px', fontSize: compact ? 12.5 : 13.5, flex: 1, justifyContent: 'space-between' }}>
+        style={{ ...PILL, height: h, padding: compact ? '0 10px' : '0 14px', fontSize: compact ? 'var(--sb-t-body-s)' : 'var(--sb-t-body)', flex: 1, justifyContent: 'space-between' }}>
         <span title={chosen?.parent ? `${chosen.label} — inside ${chosen.parent}` : undefined}
           style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {chosen ? <Glyph glyph={chosen.glyph} tint={chosen.tint} size={compact ? 18 : 22} /> : null}

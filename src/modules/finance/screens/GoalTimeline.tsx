@@ -146,11 +146,11 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
           fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-h3)', fontWeight: 600,
           letterSpacing: '-0.02em', color: 'var(--sb-ink-1)',
         }}>Every goal on one timeline</span>
-        <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
           one lane a goal · what goes into it each month
         </span>
         <span style={{ flex: 1 }} />
-        <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
           {cells.length} month{cells.length === 1 ? '' : 's'} · tap a month for it in full
         </span>
       </div>
@@ -193,7 +193,7 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
                     width: COL, flexShrink: 0, border: 'none', cursor: 'pointer', padding: '0 0 3px',
                     background: on ? 'var(--sb-accent-tint)' : 'transparent',
                     borderRadius: '4px 4px 0 0', fontFamily: 'var(--sb-font-num)',
-                    fontSize: m === 1 ? 10 : 9.5, fontWeight: m === 1 ? 700 : 600,
+                    fontSize: 'var(--sb-t-meta)', fontWeight: m === 1 ? 700 : 600,
                     color: m === 1 ? 'var(--sb-ink-2)' : 'var(--sb-ink-4)',
                   }}>
                   {m === 1 ? String(y) : MON[m - 1]}
@@ -239,14 +239,14 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
                     <span style={{
                       width: 18, height: 18, flexShrink: 0, borderRadius: 'var(--sb-r-chip)',
                       background: colour, color: '#fff', display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+                      justifyContent: 'center', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
                     }}>{rank + 1}</span>
                     <span style={{ minWidth: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600, lineHeight: 1.25 }}>
                       <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {g.name}
                       </span>
                       <span style={{
-                        display: 'block', fontWeight: 400, fontSize: 'var(--sb-t-micro)',
+                        display: 'block', fontWeight: 400, fontSize: 'var(--sb-t-meta)',
                         fontFamily: 'var(--sb-font-num)', fontVariantNumeric: 'tabular-nums',
                         color: 'var(--sb-ink-4)',
                       }}>
@@ -299,7 +299,7 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
                           )}
                           <span style={{
                             position: 'relative', zIndex: 1, fontFamily: 'var(--sb-font-num)',
-                            fontSize: 'var(--sb-t-micro)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+                            fontSize: 'var(--sb-t-meta)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
                             fontWeight: amt > 0 ? 600 : 400,
                             color: amt > 0 ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                             opacity: amt > 0 ? 1 : 0.45,
@@ -326,7 +326,7 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
                 fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', lineHeight: 1.25,
               }}>
                 Left on its own date
-                <span style={{ display: 'block', fontWeight: 400, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+                <span style={{ display: 'block', fontWeight: 400, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                   instalments, not goals
                 </span>
               </span>
@@ -344,7 +344,7 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
                         width: COL, flexShrink: 0, cursor: 'pointer', padding: 0, border: 'none',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: on ? 'var(--sb-accent-tint)' : 'transparent', fontFamily: 'var(--sb-font-num)',
-                        fontSize: 'var(--sb-t-micro)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+                        fontSize: 'var(--sb-t-meta)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
                         fontWeight: c.row.went > 0 ? 600 : 400,
                         color: c.row.went > 0 ? 'var(--sb-negative)' : 'var(--sb-ink-4)',
                         opacity: c.row.went > 0 ? 1 : 0.45,
@@ -397,7 +397,7 @@ function MonthFace({ cell, goals, paint, money, cells, onPick }: {
         <div style={{ fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-body)', fontWeight: 600, letterSpacing: '-0.02em' }}>
           {monthName(cell.row.month)}
         </div>
-        <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+        <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
           {at === 0 ? 'this month' : `${at} month${at === 1 ? '' : 's'} out`}
         </span>
       </div>

@@ -152,7 +152,7 @@ function RuleRow({ rule, currency, onToggle, onValue }: {
           </div>
         </div>
         <span style={{
-          marginLeft: 'auto', fontSize: 'var(--sb-t-micro)', fontWeight: 600, whiteSpace: 'nowrap',
+          marginLeft: 'auto', fontSize: 'var(--sb-t-meta)', fontWeight: 600, whiteSpace: 'nowrap',
           padding: '2px 9px', borderRadius: 'var(--sb-r-pill)',
           background: rule.yours ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
           border: 'var(--sb-border-width) solid var(--sb-border)',
@@ -177,7 +177,7 @@ function RuleRow({ rule, currency, onToggle, onValue }: {
           paddingTop: 10,
           borderTop: rule.dormant ? undefined : 'var(--sb-border-width) solid var(--sb-hairline)',
         }}>
-          <label style={{ ...EB, fontSize: 'var(--sb-t-micro)' }}>It uses</label>
+          <label style={{ ...EB, fontSize: 'var(--sb-t-meta)' }}>It uses</label>
           {isMoney
             ? <MoneyInput value={rule.value ?? 0} min={0} onChange={v => onValue(v)}
                 style={{ ...FIELD, width: 130, fontFamily: 'var(--sb-font-num)', fontWeight: 600 }} />
@@ -190,7 +190,7 @@ function RuleRow({ rule, currency, onToggle, onValue }: {
               style={{
                 height: 28, padding: '0 11px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
                 background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                color: 'var(--sb-ink-3)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                color: 'var(--sb-ink-3)', fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
               }}>Put the read figure back</button>
           )}
           <button onClick={() => setOpen(o => !o)}
@@ -331,7 +331,7 @@ export function OwnRulesCard({ state, onChange, currency }: {
               <Switch on={r.on} onChange={v => patch(r.id, { on: v })} label={r.what} />
               <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600 }}>
                 {r.what}
-                <span style={{ display: 'block', fontWeight: 400, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+                <span style={{ display: 'block', fontWeight: 400, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                   {phrase(r)}
                 </span>
               </span>

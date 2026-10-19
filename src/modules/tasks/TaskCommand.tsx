@@ -276,7 +276,7 @@ export function TaskCommand() {
               <SlidersHorizontal size={ICON.sm} strokeWidth={STROKE.rest} />
               Filters
               {activeFilterCount > 0 && (
-                <span style={{ height: 18, minWidth: 18, boxSizing: 'border-box', padding: '0 5px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ height: 18, minWidth: 18, boxSizing: 'border-box', padding: '0 5px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-meta)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {activeFilterCount}
                 </span>
               )}
@@ -314,7 +314,7 @@ export function TaskCommand() {
                 </div>
 
                 {/* Config section */}
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>TASK DISPLAY</span>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>TASK DISPLAY</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '2px 0 10px' }}>
                   <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>Hide completed tasks</span>
                   <span style={{ marginLeft: 'auto' }}>
@@ -326,7 +326,7 @@ export function TaskCommand() {
                 <div style={{ borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }} />
 
                 {/* Group by */}
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>GROUP TASKS BY</span>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>GROUP TASKS BY</span>
                 {(['none', 'status', 'type', 'company', 'owner'] as GroupBy[]).map(opt => (
                   <div key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 'var(--sb-h-pill)', padding: '0 9px', borderRadius: 'var(--sb-r-sm)', background: groupBy === opt ? 'var(--sb-accent-tint)' : 'transparent', cursor: 'pointer' }}>
                     <span style={{ width: 16, height: 16, boxSizing: 'border-box', borderRadius: 'var(--sb-r-pill)', border: `var(--sb-border-emphasis) solid ${groupBy === opt ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -348,7 +348,7 @@ export function TaskCommand() {
                 {/* Company filter */}
                 {companies.length > 0 && (
                   <>
-                    <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>COMPANY</span>
+                    <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>COMPANY</span>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {companies.map(co => (
                         <button key={co.id} onClick={() => setFilters(f => ({ ...f, company: f.company === co.id ? '' : co.id }))} style={{
@@ -366,7 +366,7 @@ export function TaskCommand() {
                 )}
 
                 {/* Type filter */}
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>TASK TYPE</span>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>TASK TYPE</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {TASK_TYPE_ORDER.map(type => {
                     const Icon = TASK_TYPE_ICON[type]
@@ -387,7 +387,7 @@ export function TaskCommand() {
                 {/* Owner filter */}
                 {ownerOptions.length > 0 && (
                   <>
-                    <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>OWNER</span>
+                    <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>OWNER</span>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {ownerOptions.map(u => (
                         <button key={u.id} onClick={() => setFilters(f => ({ ...f, owner: f.owner === u.id ? '' : u.id }))} style={{

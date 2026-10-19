@@ -266,7 +266,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
         {WEEKDAYS.map((w, i) => (
-          <span key={i} style={{ textAlign: 'center', fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-4)', padding: '2px 0 4px' }}>{w}</span>
+          <span key={i} style={{ textAlign: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-4)', padding: '2px 0 4px' }}>{w}</span>
         ))}
         {cells.map(d => {
           const iso = toISODate(d)

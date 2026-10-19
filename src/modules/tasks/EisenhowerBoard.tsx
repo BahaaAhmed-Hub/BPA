@@ -97,7 +97,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
           height: 22, padding: '0 8px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
           background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em',
+          fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.06em',
           whiteSpace: 'nowrap',
         }}>{spec.badge}</span>
         <div style={{ flex: 1, minWidth: 0 }}>

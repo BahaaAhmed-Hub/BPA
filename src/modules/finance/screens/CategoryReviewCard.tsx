@@ -167,7 +167,7 @@ function Row({ f, money, onKeep, onOpen }: {
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {f.evidence.map((e, i) => (
             <span key={i} style={{
-              fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-micro)',
+              fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)',
               color: 'var(--sb-ink-4)', background: 'var(--sb-field)',
               border: 'var(--sb-border-width) solid var(--sb-hairline)',
               borderRadius: 'var(--sb-r-chip)', padding: '2px 7px',

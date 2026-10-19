@@ -146,7 +146,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
           <span style={{
-            fontSize: 'var(--sb-t-micro)',
+            fontSize: 'var(--sb-t-meta)',
             fontWeight: 600,
             background: 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)',
             color: 'var(--sb-positive)',
@@ -241,7 +241,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
               position: 'absolute',
               top: 6,
               right: 6,
-              fontSize: 'var(--sb-t-micro)',
+              fontSize: 'var(--sb-t-meta)',
               fontWeight: 700,
               background: 'color-mix(in srgb, var(--sb-accent) 18.0%, transparent)',
               color: 'var(--sb-accent)',
@@ -261,7 +261,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
               position: 'absolute',
               top: 6,
               right: 6,
-              fontSize: 'var(--sb-t-micro)',
+              fontSize: 'var(--sb-t-meta)',
               fontWeight: 700,
               background: 'color-mix(in srgb, var(--sb-accent) 18.0%, transparent)',
               color: 'var(--sb-accent)',

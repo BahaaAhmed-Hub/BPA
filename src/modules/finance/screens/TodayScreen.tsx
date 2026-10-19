@@ -156,7 +156,7 @@ function MoneyCalendar({
               style={{
                 display: 'inline-flex', alignItems: 'center', borderRadius: 'var(--sb-r-pill)',
                 padding: '4px 10px', background: 'var(--sb-accent-tint)', color: 'var(--sb-accent-deep)',
-                fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.04em',
+                fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.04em',
               }}>{unrated.join(' ')} ?</span>
           )}
         </span>
@@ -171,7 +171,7 @@ function MoneyCalendar({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
           {['SAT','SUN','MON','TUE','WED','THU','FRI'].map(d => (
             <div key={d} style={{
-              textAlign: 'center' as const, fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+              textAlign: 'center' as const, fontSize: 'var(--sb-t-meta)', fontWeight: 700,
               letterSpacing: '0.1em', color: 'var(--sb-ink-4)', padding: '2px 0 6px',
             }}>{d}</div>
           ))}
@@ -217,7 +217,7 @@ function MoneyCalendar({
                   </span>
                 )}
                 {payees.slice(0, 2).map((p, pi) => (
-                  <span key={pi} style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
+                  <span key={pi} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
                 ))}
               </div>
             )
@@ -428,7 +428,7 @@ export function TodayScreen() {
                 {line('Out', acct(-exp, { currency: base }), RED)}
                 {line('Net', acct(net, { currency: base }), net >= 0 ? GREEN : RED, true)}
                 {waiting > 0 && (
-                  <div style={{ fontSize: 'var(--sb-t-micro)', color: RED, marginTop: 7, textAlign: 'right' }}>
+                  <div style={{ fontSize: 'var(--sb-t-meta)', color: RED, marginTop: 7, textAlign: 'right' }}>
                     {waiting} not paid yet, so not counted
                   </div>
                 )}

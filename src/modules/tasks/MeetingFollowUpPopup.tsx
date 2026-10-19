@@ -84,7 +84,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
         {/* Row number */}
         <span style={{
           width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-          background: 'var(--sb-field)', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+          background: 'var(--sb-field)', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
           color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {index + 1}
@@ -102,19 +102,19 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
         <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
           {q && (
             <span style={{
-              fontSize: 'var(--sb-t-micro)', padding: '1px 7px', borderRadius: 'var(--sb-r-chip)', fontWeight: 600,
+              fontSize: 'var(--sb-t-meta)', padding: '1px 7px', borderRadius: 'var(--sb-r-chip)', fontWeight: 600,
               background: alpha(q.color, 9.4), color: q.color,
             }}>
               {q.label}
             </span>
           )}
           {draft.dueDate && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
               {new Date(draft.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
           {owner && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-positive)', fontWeight: 500 }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)', fontWeight: 500 }}>
               → {owner.name.split(' ')[0]}
             </span>
           )}
@@ -131,7 +131,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
         <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Title */}
           <div>
-            <label style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', display: 'block', marginBottom: 4 }}>Title</label>
+            <label style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', display: 'block', marginBottom: 4 }}>Title</label>
             <input
               autoFocus
               value={draft.title}
@@ -142,7 +142,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
 
           {/* Quadrant selector */}
           <div>
-            <label style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', display: 'block', marginBottom: 6 }}>
+            <label style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', display: 'block', marginBottom: 6 }}>
               Eisenhower box <span style={{ color: 'var(--sb-ink-2)' }}>(leave as Inbox to decide later)</span>
             </label>
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -170,7 +170,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
           {/* Due date + Owner row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
-              <label style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', display: 'block', marginBottom: 4 }}>Due date</label>
+              <label style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', display: 'block', marginBottom: 4 }}>Due date</label>
               <input
                 type="date"
                 value={draft.dueDate}
@@ -179,7 +179,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
               />
             </div>
             <div>
-              <label style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', display: 'block', marginBottom: 4 }}>Owner</label>
+              <label style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', display: 'block', marginBottom: 4 }}>Owner</label>
               <select
                 value={draft.ownerId}
                 onChange={e => onChange({ ownerId: e.target.value })}
@@ -359,7 +359,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void handleAnalyze()
                 }}
               />
-              <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+              <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                 ⌘↵ to analyze · Leave empty to skip
               </p>
               {error && (

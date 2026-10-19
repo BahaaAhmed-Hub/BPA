@@ -165,7 +165,7 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
         <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
           {model.days.map(d => (
             <span key={d.iso} style={{
-              flex: 1, minWidth: 0, textAlign: 'center', fontSize: 'var(--sb-t-micro)',
+              flex: 1, minWidth: 0, textAlign: 'center', fontSize: 'var(--sb-t-meta)',
               color: d.isToday ? 'var(--sb-ink-on-dark)' : DIM,
             }}>{d.label}</span>
           ))}

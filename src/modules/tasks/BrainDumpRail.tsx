@@ -167,7 +167,7 @@ function DumpCard({ task, onOpen, onDelete }: {
             padding: '3px 8px', borderRadius: 'var(--sb-r-pill)',
             background: s.inferred ? 'var(--sb-accent-tint)' : 'var(--sb-page)',
             border: `var(--sb-border-width) solid ${s.inferred ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
-            fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)',
+            fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
           }}>
             {s.inferred
               ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Sparkles size={ICON.sm} strokeWidth={STROKE.rest} />AI</span>

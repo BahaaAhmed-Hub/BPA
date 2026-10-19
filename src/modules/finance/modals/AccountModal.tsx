@@ -364,7 +364,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
                         display: 'inline-flex', alignItems: 'center', gap: 4,
                         padding: '1px 7px', borderRadius: 'var(--sb-r-chip)',
                         background: 'var(--sb-negative-tint)', color: 'var(--sb-ink-2)',
-                        fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                        fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                       }}>Cash earns nothing</span>
                   </>
                 )}

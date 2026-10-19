@@ -181,14 +181,14 @@ function LinesChart({ series, hidden, onToggle, fmt, through }: {
             <line x1={PAD_L} x2={PAD_L + iw} y1={y(t)} y2={y(t)}
               stroke="var(--sb-hairline)" strokeWidth={1} />
             <text x={PAD_L - 8} y={y(t) + 3.5} textAnchor="end"
-              style={{ fontSize: 'var(--sb-t-micro)', fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)', fontVariantNumeric: 'tabular-nums' }}>
+              style={{ fontSize: 'var(--sb-t-meta)', fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)', fontVariantNumeric: 'tabular-nums' }}>
               {t === 0 ? '0' : group(Math.round(t))}
             </text>
           </g>
         ))}
         {MONTHS_SHORT.map((m, i) => (
           <text key={m} x={x(i)} y={H - 8} textAnchor="middle"
-            style={{ fontSize: 'var(--sb-t-micro)', fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)', opacity: i > last ? 0.35 : 1 }}>{m}</text>
+            style={{ fontSize: 'var(--sb-t-meta)', fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)', opacity: i > last ? 0.35 : 1 }}>{m}</text>
         ))}
 
         {shown.map(s => {
@@ -232,7 +232,7 @@ function LinesChart({ series, hidden, onToggle, fmt, through }: {
                 background: off ? 'transparent' : 'var(--sb-card)',
                 border: `var(--sb-border-width) solid ${off ? 'var(--sb-border)' : s.color}`,
                 color: off ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)',
-                fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 500,
+                fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 500,
                 opacity: off ? 0.55 : 1,
               }}>
               <span aria-hidden style={{
@@ -304,7 +304,7 @@ const HAIR = 'var(--sb-border-width) solid var(--sb-hairline)'
 function DropMark({ blocked }: { blocked?: boolean }) {
   return (
     <span style={{
-      fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em',
+      fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.06em',
       padding: '1px 7px', borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
       background: blocked ? 'var(--sb-field)' : 'var(--sb-accent-deep)',
       color: blocked ? 'var(--sb-ink-4)' : 'var(--sb-card)',
@@ -412,7 +412,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onS
               {row.cat.name}
             </span>
             {kids.length > 0 && !open && (
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-border)' }}>+{kids.length}</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-border)' }}>+{kids.length}</span>
             )}
             {overMe && (isOver || nestBlocked) && <DropMark blocked={nestBlocked} />}
             <span style={{ flex: 1 }} />
@@ -1221,7 +1221,7 @@ export function ReflectionScreen(_props?: any) {
                         <span style={{ flex: 1, minWidth: 0, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {t.payee?.trim() || categories.find(c => c.id === t.categoryId)?.name || 'Entry'}
                         </span>
-                        <span style={{ color: dupes.get(t.id) === 'day' ? 'var(--sb-accent-deep)' : 'var(--sb-border)', fontSize: 'var(--sb-t-micro)', fontWeight: 700 }}>
+                        <span style={{ color: dupes.get(t.id) === 'day' ? 'var(--sb-accent-deep)' : 'var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 700 }}>
                           {dupes.get(t.id) === 'day' ? 'SAME DAY' : 'SAME MONTH'}
                         </span>
                         <span style={{ fontFamily: 'var(--sb-font-num)', fontWeight: 600, color: 'var(--sb-ink-2)', fontVariantNumeric: 'tabular-nums' }}>
@@ -1259,14 +1259,14 @@ export function ReflectionScreen(_props?: any) {
                     <div style={{
                       display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10, paddingTop: 8,
                       borderTop: 'var(--sb-border-width) solid var(--sb-accent-tint)',
-                      fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)',
+                      fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
                     }}>
                       <span>{settled} checked and left alone</span>
                       <button onClick={forgetAllAcks}
                         title="Put every one you have checked back in the list"
                         style={{
                           background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                          color: 'var(--sb-ink-3)', textDecoration: 'underline', fontSize: 'var(--sb-t-micro)', fontFamily: 'inherit',
+                          color: 'var(--sb-ink-3)', textDecoration: 'underline', fontSize: 'var(--sb-t-meta)', fontFamily: 'inherit',
                         }}>show them again</button>
                     </div>
                   )}
@@ -1281,7 +1281,7 @@ export function ReflectionScreen(_props?: any) {
             </span>
           )}
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontSize: 'var(--sb-t-micro)', letterSpacing: '0.1em', fontWeight: 700, color: 'var(--sb-ink-4)' }}>NET THROUGH {throughLabel}</div>
+            <div style={{ fontSize: 'var(--sb-t-meta)', letterSpacing: '0.1em', fontWeight: 700, color: 'var(--sb-ink-4)' }}>NET THROUGH {throughLabel}</div>
             <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', color: netColor(totalNet) }}>
               {acct(totalNet, { currency: base, zero: '–' })}
             </div>
@@ -1289,7 +1289,7 @@ export function ReflectionScreen(_props?: any) {
                 *stock*, what the accounts hold. They differ by the opening
                 balances and by what Goals holds back, and one is not the other
                 being wrong. */}
-            <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}
               title={`What ${year} earned less what it spent. It is not what the accounts hold — that is the opening balances plus this, and it is on Balances and on Goals as "spare now".`}>
               what {year} netted, not what is held
             </div>
@@ -1339,18 +1339,18 @@ export function ReflectionScreen(_props?: any) {
                     display: 'inline-flex', alignItems: 'center', gap: 5, height: 20, padding: '0 8px',
                     borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
                     background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent-border)',
-                    color: 'var(--sb-ink-2)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                    color: 'var(--sb-ink-2)', fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                   }}>
                   picked in the table <X size={11} />
                 </button>
               )}
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                 {series.length - hiddenIds.size > 0
                   ? `${series.filter(x => !hiddenIds.has(x.id)).length} of ${series.length} on the chart · tap a line or its name to take it off`
                   : 'nothing on the chart — tap a name below to put one back'}
               </span>
               <span style={{ flex: 1 }} />
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                 dashed is spending, dotted is earning · {basis === 'paid' ? 'filed by the day the money moved' : 'filed by the day it is due'}
               </span>
             </div>
@@ -1371,7 +1371,7 @@ export function ReflectionScreen(_props?: any) {
           {/* Column headers */}
           <thead>
             <tr style={{ background: 'var(--sb-header)' }}>
-              <th style={{ width: NAME_W, minWidth: NAME_W, textAlign: 'left', padding: '8px 14px', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', position: 'sticky', top: 0, left: 0, background: 'var(--sb-header)', zIndex: 4, ...HEAD_EDGE }}>
+              <th style={{ width: NAME_W, minWidth: NAME_W, textAlign: 'left', padding: '8px 14px', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', position: 'sticky', top: 0, left: 0, background: 'var(--sb-header)', zIndex: 4, ...HEAD_EDGE }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <span>CATEGORY</span>
                   {foldable.length > 0 && (
@@ -1382,7 +1382,7 @@ export function ReflectionScreen(_props?: any) {
                         display: 'inline-flex', alignItems: 'center', gap: 4, height: 20,
                         padding: '0 7px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
                         background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
-                        fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '0.04em',
+                        fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600, letterSpacing: '0.04em',
                       }}>
                       {allOpen ? <ChevronsDownUp size={ICON.sm} strokeWidth={STROKE.active} /> : <ChevronsUpDown size={ICON.sm} strokeWidth={STROKE.active} />}
                       {allOpen ? 'COLLAPSE ALL' : 'EXPAND ALL'}
@@ -1571,7 +1571,7 @@ export function ReflectionScreen(_props?: any) {
                   nothing else on the screen changes. */}
               {drill.ids && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)' }}>HOW FAR BACK</span>
+                  <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)' }}>HOW FAR BACK</span>
                   {([[1, 'This year'], [3, '3 years'], [5, '5 years'], [Infinity, 'All']] as const).map(([n, label]) => {
                     const on = span === n
                     const reach = n === Infinity ? bounds : { first: year - Number(n) + 1, last: year }
@@ -1584,7 +1584,7 @@ export function ReflectionScreen(_props?: any) {
                           background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                           border: `var(--sb-border-width) solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
                           color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-                          fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                          fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                         }}>{label}</button>
                     )
                   })}
@@ -1719,7 +1719,7 @@ function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameW
   return (
     <tr style={{ background: 'var(--sb-hairline)', borderTop: 'var(--sb-border-width) solid var(--sb-border)', borderBottom: 'var(--sb-border-width) solid var(--sb-border)' }}>
       <td style={{ padding: '5px 14px', position: 'sticky', left: 0, background: 'var(--sb-hairline)', zIndex: 2 }}>
-        <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)' }}>{label}</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)' }}>{label}</span>
       </td>
       {monthTotals.map((v, i) => (
         <td key={i}

@@ -121,7 +121,7 @@ export function MonthsAheadCard({ ahead, currency, onOpenEntry }: {
             {ahead.months.map((m, i) => (
               (ahead.months.length <= 8 || i % 2 === 0) && (
                 <text key={m.month} x={geo.x(i)} y={geo.H - 4} textAnchor="middle"
-                  fontFamily="var(--sb-font-mono)" fontSize="7.5"
+                  fontFamily="var(--sb-font-mono)" fontSize="9" /* ui-guard: type-ok — SVG units, scaled by the viewBox */
                   fill={m.state === 'ok' ? 'var(--sb-ink-4)' : TONE[m.state].ink}>
                   {shortMonth(m.month).toUpperCase()}
                 </text>

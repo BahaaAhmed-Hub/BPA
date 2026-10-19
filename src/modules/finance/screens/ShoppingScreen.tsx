@@ -89,7 +89,7 @@ function AffordabilityChip({ item, envelopes }: { item: ShoppingItem; envelopes:
   const color  = ratio >= 1 ? C.pos : ratio >= 0.5 ? 'var(--sb-accent-deep)' : C.neg
   const label  = ratio >= 1 ? 'Affordable' : ratio >= 0.5 ? 'Tight' : 'Over budget'
   return (
-    <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color, letterSpacing: '0.06em', padding: '2px 6px', borderRadius: 4, background: `color-mix(in srgb, ${color} 15%, var(--sb-card))` }}>
+    <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color, letterSpacing: '0.06em', padding: '2px 6px', borderRadius: 4, background: `color-mix(in srgb, ${color} 15%, var(--sb-card))` }}>
       {label}
     </span>
   )
@@ -395,7 +395,7 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
             </span>
           )}
           {group.recurrence !== 'none' && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-accent-deep)', padding: '1px 6px', background: `color-mix(in srgb, var(--sb-accent) 20%, var(--sb-card))`, borderRadius: 4 }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-accent-deep)', padding: '1px 6px', background: `color-mix(in srgb, var(--sb-accent) 20%, var(--sb-card))`, borderRadius: 4 }}>
               {RECURRENCE_LABELS[group.recurrence]}
             </span>
           )}

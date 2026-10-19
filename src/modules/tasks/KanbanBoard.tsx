@@ -240,7 +240,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
               boxShadow: 'var(--sb-shadow-frame)',
             }}>
-              <p style={{ margin: 0, padding: '7px 9px 5px', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-4)' }}>BOARD COLUMNS</p>
+              <p style={{ margin: 0, padding: '7px 9px 5px', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-4)' }}>BOARD COLUMNS</p>
               {BOARD_TYPE_OPTIONS.map(opt => (
                 <button key={opt.id} onClick={() => { onBoardType(opt.id); setMenuOpen(false) }} style={{
                   width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,

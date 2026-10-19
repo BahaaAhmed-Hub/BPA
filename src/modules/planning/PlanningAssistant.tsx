@@ -205,7 +205,7 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
         <div style={{ width: 52, flexShrink: 0 }}>
           {DAY_HOURS.map(h => (
             <div key={h} style={{ height: HOUR_PX, display: 'flex', alignItems: 'flex-start', paddingTop: 4, paddingRight: 8, justifyContent: 'flex-end' }}>
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>
                 {h === 12 ? '12PM' : h < 12 ? `${h}AM` : `${h - 12}PM`}
               </span>
             </div>
@@ -244,7 +244,7 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
                       background: color, borderRadius: 'var(--sb-r-chip)',
                       padding: '2px 5px', overflow: 'hidden', cursor: 'context-menu',
                     }}>
-                    <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-on-fill)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-on-fill)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                       {evt.summary ?? 'Event'}
                     </div>
                   </div>

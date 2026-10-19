@@ -153,7 +153,7 @@ function money(v: number, cur: string) {
 
 function Legend({ swatch, label, line }: { swatch: string; label: string; line?: boolean }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
       <span style={{
         width: 10, height: line ? 1 : 8, borderRadius: line ? 0 : 'var(--sb-r-chip)',
         background: swatch, flexShrink: 0,
@@ -325,7 +325,7 @@ function CurBadge({ mixed, cur, currency, offset }: {
         ...(offset ? { position: 'absolute', bottom: -2, right: -4 } : {}),
         height: 14, padding: '0 4px', borderRadius: 'var(--sb-r-pill)',
         background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-        fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-4)',
+        fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-4)',
         display: 'flex', alignItems: 'center', flexShrink: 0,
       }}>{mixed[0]}</span>
   )
@@ -336,7 +336,7 @@ function DueChip({ day }: { day: number | undefined }) {
   if (day == null) return null
   return (
     <span title={`The money leaves on the ${ordinal(day)}.`}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-accent-deep)', whiteSpace: 'nowrap' }}>
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-deep)', whiteSpace: 'nowrap' }}>
       <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> the {ordinal(day)}
     </span>
   )
@@ -355,7 +355,7 @@ function SpanChip({ span, dates }: { span?: 'month' | 'year'; dates?: number }) 
     <span title={`A budget with dates on it is not a monthly allowance, so it is shown in full${
       dates ? ` — ${dates} ${dates === 1 ? 'date' : 'dates'}` : ''} and measured against the whole year.`}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+        display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-meta)', fontWeight: 700,
         letterSpacing: '0.06em', padding: '0 5px', borderRadius: 'var(--sb-r-chip)', whiteSpace: 'nowrap',
         background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-4)',
       }}>
@@ -424,11 +424,11 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                       <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-meta)', fontVariantNumeric: 'tabular-nums', textAlign: 'right', flexShrink: 0, lineHeight: 1.45 }}>
                         <span style={{ display: 'block', fontWeight: 600, color: over ? RUST : 'var(--sb-ink-1)' }}>{fig(actual)}</span>
                         {budgeted ? (
-                          <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', borderBottom: plannedFrom === 'parts' ? '1px dotted var(--sb-border)' : 'none' }}>
+                          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', borderBottom: plannedFrom === 'parts' ? '1px dotted var(--sb-border)' : 'none' }}>
                             {fig(planned)}
                           </span>
                         ) : (
-                          <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', fontFamily: 'inherit' }}>no budget</span>
+                          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontFamily: 'inherit' }}>no budget</span>
                         )}
                       </span>
                     </button>
@@ -457,7 +457,7 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                       </span>
                       <DueChip day={rules[child.cat.id]?.dueDay} />
                       <SpanChip span={child.span} dates={linesOf(rules[child.cat.id] ?? {}).length} />
-                      <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontVariantNumeric: 'tabular-nums', color: cOver ? RUST : 'var(--sb-ink-3)', flexShrink: 0 }}>
+                      <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-meta)', fontVariantNumeric: 'tabular-nums', color: cOver ? RUST : 'var(--sb-ink-3)', flexShrink: 0 }}>
                         {fig(child.actual)}{child.budgeted ? ` / ${fig(child.inEnvelope ?? child.planned)}` : ''}
                       </span>
                     </button>
@@ -630,7 +630,7 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
 
                       {middle && (
                         <span style={{
-                          position: 'relative', fontSize: roomy ? 11.5 : 10.5, fontWeight: 600, color: 'var(--sb-ink-1)',
+                          position: 'relative', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-1)',
                           lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>{cat.name || 'Untitled'}</span>
                       )}
@@ -640,17 +640,17 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
                       {middle && (
                         <span style={{
                           position: 'relative', fontFamily: 'var(--sb-font-num)',
-                          fontSize: roomy ? 16 : 12.5, fontWeight: 600,
+                          fontSize: roomy ? 16 : 'var(--sb-t-body-s)', fontWeight: 600,
                           color: over ? 'var(--sb-negative)' : 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1,
                         }}>{acct(actual)}</span>
                       )}
                       {roomy && (
                         budgeted ? (
-                          <span style={{ position: 'relative', fontSize: 'var(--sb-t-micro)', color: over ? 'var(--sb-negative)' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
+                          <span style={{ position: 'relative', fontSize: 'var(--sb-t-meta)', color: over ? 'var(--sb-negative)' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
                             of {acct(planned)}{over ? ' · burst' : ''}
                           </span>
                         ) : spent ? (
-                          <span style={{ position: 'relative', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>no budget</span>
+                          <span style={{ position: 'relative', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>no budget</span>
                         ) : null
                       )}
                       {roomy && <span style={{ position: 'relative' }}><DueChip day={rules[cat.id]?.dueDay} /></span>}
@@ -763,7 +763,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
             {money(total, currency)}
           </span>
           {stranded.length > 0 && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-accent-deep)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-deep)' }}>
               {stranded.join(' and ')} not added in — no rate set
             </span>
           )}
@@ -786,7 +786,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
             {parts.map(p => (
               <span key={p.id} title={p.help} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
-                fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)',
+                fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
               }}>
                 <span aria-hidden style={{ width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', background: p.color }} />
                 {p.name}
@@ -860,7 +860,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                       style={{
                         position: 'absolute', bottom: -2, right: -4, height: 14, padding: '0 4px',
                         borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                        fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center',
+                        fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center',
                       }}>{mixed[0]}</span>
                   )}
                 </span>
@@ -873,7 +873,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                   </span>
                   {budgeted ? (
                     <span style={{
-                      fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums',
+                      fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums',
                       // Dotted underline where the figure is the sum of its
                       // parts rather than something set on this category.
                       borderBottom: plannedFrom === 'parts' ? '1px dotted var(--sb-border)' : 'none',
@@ -885,7 +885,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', height: 16, padding: '0 7px',
                       borderRadius: 'var(--sb-r-pill)', border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-4)',
-                      fontSize: 'var(--sb-t-micro)', whiteSpace: 'nowrap',
+                      fontSize: 'var(--sb-t-meta)', whiteSpace: 'nowrap',
                     }}>set a budget</span>
                   )}
                   {/* 132,000 beside 6,000 reads as a category out of control
@@ -900,7 +900,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                     const said = versusLast(actual, prev)
                     return said ? (
                       <span title={`${money(prev, cur)} last month`}
-                        style={{ marginTop: 2, fontSize: 'var(--sb-t-micro)', lineHeight: 1.3, textAlign: 'center', color: said.worse ? RUST : 'var(--sb-positive)' }}>
+                        style={{ marginTop: 2, fontSize: 'var(--sb-t-meta)', lineHeight: 1.3, textAlign: 'center', color: said.worse ? RUST : 'var(--sb-positive)' }}>
                         {said.text}
                       </span>
                     ) : null
@@ -910,7 +910,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                       title={`The money leaves on the ${ordinal(dueDay)}. A task is on the board for it.`}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 2,
-                        fontSize: 'var(--sb-t-micro)', color: 'var(--sb-accent-deep)', whiteSpace: 'nowrap',
+                        fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-deep)', whiteSpace: 'nowrap',
                       }}>
                       <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> the {ordinal(dueDay)}
                     </span>
@@ -997,7 +997,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                   border: `1px dashed ${over ? 'var(--sb-positive)' : 'var(--sb-border)'}`,
                   background: over ? 'color-mix(in srgb, var(--sb-positive) 16.0%, transparent)' : 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: 8, fontSize: 'var(--sb-t-micro)', color: over ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
+                  padding: 8, fontSize: 'var(--sb-t-meta)', color: over ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
                   textAlign: 'center', lineHeight: 1.4,
                 }}>
                   Drop here to stand on its own
@@ -1016,7 +1016,7 @@ function SummaryLine({ label, actual, planned, color, currency, strong }: {
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '11px 0', borderBottom: strong ? 'none' : 'var(--sb-border-width) solid var(--sb-hairline)' }}>
-      <span style={{ fontSize: strong ? 12.5 : 11.5, fontWeight: strong ? 600 : 500, color: strong ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', letterSpacing: strong ? 0 : '0.02em' }}>
+      <span style={{ fontSize: strong ? 'var(--sb-t-body-s)' : 'var(--sb-t-meta)', fontWeight: strong ? 600 : 500, color: strong ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', letterSpacing: strong ? 0 : '0.02em' }}>
         {label}
       </span>
       <span style={{ flex: 1 }} />
@@ -1024,7 +1024,7 @@ function SummaryLine({ label, actual, planned, color, currency, strong }: {
         <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: strong ? 20 : 17, fontWeight: 600, letterSpacing: '-0.02em', color, fontVariantNumeric: 'tabular-nums' }}>
           {acct(actual)}
         </span>
-        <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums' }}>
           of {money(planned, currency)}
         </span>
       </span>
@@ -1541,7 +1541,7 @@ export function BudgetScreen(_props?: any) {
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 7, flexWrap: 'wrap' }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 10px',
-                borderRadius: 'var(--sb-r-pill)', fontSize: 'var(--sb-t-micro)', whiteSpace: 'nowrap',
+                borderRadius: 'var(--sb-r-pill)', fontSize: 'var(--sb-t-meta)', whiteSpace: 'nowrap',
                 background: 'color-mix(in srgb, var(--sb-accent) 14%, transparent)',
                 border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent) 40%, transparent)',
                 color: 'var(--sb-accent-deep)',
@@ -1554,7 +1554,7 @@ export function BudgetScreen(_props?: any) {
                 style={{
                   height: 24, padding: '0 10px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
                   background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                  color: 'var(--sb-ink-2)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                  color: 'var(--sb-ink-2)', fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                 }}>
                 Apply them to every month
               </button>
@@ -1600,7 +1600,7 @@ export function BudgetScreen(_props?: any) {
         {/* ── The year ─────────────────────────────────────────────────────── */}
         <div style={{ ...CARD, padding: '16px 18px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{year}</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{year}</span>
             <span style={{ flex: 1 }} />
             <Legend swatch={OLIVE} label="In" />
             <Legend swatch={RUST}  label="Out" />
@@ -1673,7 +1673,7 @@ export function BudgetScreen(_props?: any) {
                     } as React.CSSProperties} />
 
                   <span style={{
-                    position: 'relative', padding: '0 0 5px', fontSize: 'var(--sb-t-micro)',
+                    position: 'relative', padding: '0 0 5px', fontSize: 'var(--sb-t-meta)',
                     color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)', fontWeight: on ? 700 : 500,
                   }}>{MONTH_SHORT[x.m]}</span>
                 </button>
@@ -1997,7 +1997,7 @@ export function BudgetScreen(_props?: any) {
                         <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: RUST, fontFamily: 'var(--sb-font-num)' }}>
                           {acct(total, { currency })}
                         </div>
-                        <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>{txs.length} txns</div>
+                        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{txs.length} txns</div>
                       </div>
                     )
                   })}
@@ -2064,7 +2064,7 @@ export function BudgetScreen(_props?: any) {
                                     padding: '3px 7px', borderRadius: 'var(--sb-r-chip)', border: `var(--sb-border-width) solid ${active ? st.border : 'var(--sb-border)'}`,
                                     background: active ? st.bg : 'transparent',
                                     color: active ? st.color : 'var(--sb-ink-4)',
-                                    fontSize: 'var(--sb-t-micro)', fontWeight: active ? 700 : 400, cursor: 'pointer',
+                                    fontSize: 'var(--sb-t-meta)', fontWeight: active ? 700 : 400, cursor: 'pointer',
                                     transition: 'all 0.12s',
                                   }}>
                                   {st.label}
@@ -2082,7 +2082,7 @@ export function BudgetScreen(_props?: any) {
               {/* Footer summary */}
               <div style={{ flexShrink: 0, borderTop: 'var(--sb-border-width) solid var(--sb-border)', padding: '14px 24px', background: 'var(--sb-header)', display: 'flex', alignItems: 'center', gap: 20 }}>
                 <div>
-                  <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>
+                  <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>
                     TOTAL{drillUnrated.length > 0 && (
                       <span title={`No rate set for ${drillUnrated.join(', ')}, so it is not counted here`}
                         style={{ marginLeft: 5, color: 'var(--sb-warning)' }}>· {drillUnrated.join(' ')}</span>
@@ -2096,14 +2096,14 @@ export function BudgetScreen(_props?: any) {
                   <>
                     <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--sb-border)' }} />
                     <div>
-                      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>EXCLUDED</div>
+                      <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>EXCLUDED</div>
                       <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-4)', letterSpacing: '-0.02em' }}>
                         {acct(-excludedSpend, { currency })}
                       </div>
                     </div>
                     <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--sb-border)' }} />
                     <div>
-                      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>NET</div>
+                      <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>NET</div>
                       <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em' }}>
                         {acct(netSpend, { currency })}
                       </div>

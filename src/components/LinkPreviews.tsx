@@ -69,7 +69,7 @@ function Mark({ p }: { p: LinkPreview }) {
     <span aria-hidden style={{
       width: 18, height: 18, borderRadius: 5, display: 'grid', placeItems: 'center',
       background: 'var(--sb-accent-tint)', color: 'var(--sb-accent-deep)',
-      fontSize: 'var(--sb-t-micro)', fontWeight: 700, lineHeight: 1,
+      fontSize: 'var(--sb-t-meta)', fontWeight: 700, lineHeight: 1,
     }}>{letter}</span>
   )
 }
@@ -113,7 +113,7 @@ function Card({ p }: { p: LinkPreview }) {
         }}>{p.title || p.tail}</span>
         <span style={{
           display: 'flex', alignItems: 'center', gap: 5,
-          fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)',
+          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
           lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {showThumb && <Mark p={p} />}
