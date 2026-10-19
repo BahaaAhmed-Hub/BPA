@@ -1322,3 +1322,6 @@ img { max-width: 100%; }
 @media (max-width: 760px) {
   button:not(.sb-hit), [role="button"]:not(.sb-hit), a[href]:not(.sb-hit) { min-height: 36px; min-width: 36px; }
 }
+
+/* The Finance bar's group captions (Money · Plan · Review) go on a phone: the divider alone marks the group. */
+@media (max-width: 760px) { .fin-group-cap { display: none; } }
