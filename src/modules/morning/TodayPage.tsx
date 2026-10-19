@@ -142,7 +142,7 @@ function CardHead({ title, meta, children }: {
 
 function LinkOut({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} style={{
+    <button className="sb-hit" onClick={onClick} style={{
       ...GHOST_BTN, gap: 5, color: MUTED, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit', flexShrink: 0,
     }}>
       {label} <ArrowRight size={ICON.sm} strokeWidth={STROKE.active} />
@@ -2221,7 +2221,7 @@ export function TodayPage() {
                   ].filter(Boolean).join(' · ')
                   return (
                     <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: `var(--sb-border-width) solid ${HAIR}` }}>
-                      <button
+                      <button className="sb-hit"
                         onClick={() => toggleComplete(t.id)}
                         title="Complete"
                         style={{

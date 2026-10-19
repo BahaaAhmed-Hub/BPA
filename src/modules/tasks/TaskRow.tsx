@@ -56,7 +56,7 @@ export function TaskRow({ task, onOpen, dense }: {
         opacity: isDragging ? 0.35 : task.completed ? 0.55 : 1,
       }}
     >
-      <button
+      <button className="sb-hit"
         data-nm
         onClick={() => requestComplete(task)}
         title={task.completed ? 'Reopen' : 'Complete'}
@@ -110,7 +110,7 @@ export function TaskRow({ task, onOpen, dense }: {
           {/* Attributes — each one is its own control, so clicking an icon edits
               it rather than opening the task */}
           <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, color: 'var(--sb-ink-4)' }}>
-        <button
+        <button className="sb-hit"
           data-nm
           onClick={e => { e.stopPropagation(); toggleUrgent(task.id) }}
           title={flaming ? 'On fire — click to clear'
@@ -181,7 +181,7 @@ export function TaskRow({ task, onOpen, dense }: {
           />
         </ControlSlot>
 
-        <button
+        <button className="sb-hit"
           data-nm
           onClick={e => { e.stopPropagation(); deleteTask(task.id) }}
           title="Delete task"

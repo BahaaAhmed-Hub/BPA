@@ -132,7 +132,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
           {/* The tick and the bin, stacked: they are both about the card as a
               whole, and side by side they pushed the title into two lines. */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0, paddingTop: 1 }}>
-            <button
+            <button className="sb-hit"
               data-nm
               onClick={() => {
                 if (!task.completed && isMeetingTask(task.title)) setShowMeetingPopup(true)
@@ -150,7 +150,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               {task.completed && <Check size={ICON.sm} color="var(--sb-ink-on-fill)" strokeWidth={STROKE.active} />}
             </button>
 
-            <button data-nm
+            <button className="sb-hit" data-nm
               onClick={() => deleteTask(task.id)}
               title="Delete task"
               style={{
@@ -173,7 +173,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             }}
           >{task.title.trim() || 'Untitled'}</p>
 
-          <button data-nm onClick={() => toggleUrgent(task.id)}
+          <button className="sb-hit" data-nm onClick={() => toggleUrgent(task.id)}
             title={flaming ? 'On fire — click to clear'
               : task.urgent ? 'Was on fire — this task is no longer open'
               : 'Mark as on fire'}

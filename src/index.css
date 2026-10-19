@@ -203,6 +203,12 @@
   /* Icon sizes. lucide takes its size as an attribute rather than a style, so
      lib/type.ts holds the same three as numbers; these are for CSS that draws
      its own glyphs. */
+  /* The shortest a pressable control may be. Themes set their own heights
+     (Warm Minimal's pill is 30, and a pill inside a 3px track is 24); this is
+     the floor under all of them, so a compact theme is denser but never
+     smaller than a thumb can hit. Touch raises it. */
+  --sb-h-min: 30px;
+
   --sb-icon-sm: 14px;
   --sb-icon-md: 16px;
   --sb-icon-lg: 18px;
@@ -319,7 +325,7 @@ textarea:focus,
   justify-content: center;
   gap: 7px;
   flex-shrink: 0;
-  height: var(--sb-h-pill);
+  height: max(var(--sb-h-min), var(--sb-h-pill));
   padding: 0 16px;
   border-radius: var(--sb-r-pill);
   border: var(--sb-border-width) solid transparent;
@@ -333,10 +339,22 @@ textarea:focus,
   transition: background 120ms ease-out, color 120ms ease-out,
               border-color 120ms ease-out, box-shadow 120ms ease-out;
 }
-.sb-btn[data-size="sm"] { height: calc(var(--sb-h-pill) - 6px); padding: 0 12px; font-size: var(--sb-t-body-s); gap: 6px; }
+.sb-btn[data-size="sm"] { height: max(var(--sb-h-min), calc(var(--sb-h-pill) - 6px)); padding: 0 12px; font-size: var(--sb-t-body-s); gap: 6px; }
 .sb-btn[data-block]     { width: 100%; }
-.sb-btn[data-icon-only] { width: var(--sb-h-pill); padding: 0; }
-.sb-btn[data-icon-only][data-size="sm"] { width: calc(var(--sb-h-pill) - 6px); }
+.sb-btn[data-icon-only] { width: max(var(--sb-h-min), var(--sb-h-pill)); padding: 0; }
+.sb-btn[data-icon-only][data-size="sm"] { width: max(var(--sb-h-min), calc(var(--sb-h-pill) - 6px)); }
+
+/* A small control keeps its small look and gets a bigger target. WCAG 2.2 (2.5.8)
+   asks 24px; Apple and Material ask 44-48px on touch. The extra area is a
+   transparent ::after, so nothing moves and nothing is redrawn — a 14px bin
+   icon is still 14px, and a press 5px off it still lands. `inset` is measured
+   from the padding box, so a bordered control (the 2px tick) reaches that much
+   less past its visible edge; the pad is sized with that in mind. Use it on icon-sized
+   controls only: a control that is already wide gains nothing, and the area
+   steals the pixels beside it from whatever is next door. */
+.sb-hit { position: relative; --sb-hit-pad: 6px; }
+.sb-hit::after { content: ''; position: absolute; inset: calc(-1 * var(--sb-hit-pad)); }
+@media (pointer: coarse) { .sb-hit { --sb-hit-pad: 16px; } :root { --sb-h-min: 40px; } }
 /* A disabled control is still text somebody has to read. Half-opacity grey on
    cream is 2.2:1, and it was the only signal that the control was off; muted
    ink on the field colour is 4.7:1, and aria-disabled says it out loud. */
@@ -461,7 +479,7 @@ textarea:focus,
   justify-content: center;
   gap: 6px;
   flex-shrink: 0;
-  height: var(--sb-h-pill);
+  height: max(var(--sb-h-min), var(--sb-h-pill));
   padding: 0 14px;
   border: var(--sb-border-width) solid var(--sb-border);
   border-radius: var(--sb-r-pill);
@@ -514,7 +532,7 @@ textarea:focus,
   gap: 6px;
   /* Inside a 3px track, so the control it sits in is --sb-h-pill tall and
      moves with the theme like every other control. */
-  height: calc(var(--sb-h-pill) - 6px);
+  height: max(var(--sb-h-min), calc(var(--sb-h-pill) - 6px));
   padding: 0 12px;
   border: none;
   border-radius: var(--sb-r-pill);
@@ -538,8 +556,8 @@ textarea:focus,
 }
 .sb-segmented-opt:disabled { color: var(--sb-ink-4); cursor: default; }
 
-.sb-segmented[data-size="sm"] .sb-segmented-opt { height: calc(var(--sb-h-pill) - 10px); padding: 0 10px; font-size: var(--sb-t-meta); gap: 5px; }
-.sb-segmented[data-size="lg"] .sb-segmented-opt { height: calc(var(--sb-h-pill) - 4px); padding: 0 14px; font-size: var(--sb-t-body); }
+.sb-segmented[data-size="sm"] .sb-segmented-opt { height: max(calc(var(--sb-h-min) - 2px), calc(var(--sb-h-pill) - 10px)); padding: 0 10px; font-size: var(--sb-t-meta); gap: 5px; }
+.sb-segmented[data-size="lg"] .sb-segmented-opt { height: max(calc(var(--sb-h-min) + 2px), calc(var(--sb-h-pill) - 4px)); padding: 0 14px; font-size: var(--sb-t-body); }
 
 /* The event panel's values. Plain text in the row until the pointer or the
    keyboard reaches one, which is when it becomes evident that it is editable.

@@ -373,6 +373,7 @@ export function TodayScreen() {
             </span>
             {showingDay && (
               <button
+                className="sb-hit"
                 onClick={() => setSelectedDay('')}
                 style={{
                   marginLeft: 'auto', background: 'none', border: 'none', padding: 0,
