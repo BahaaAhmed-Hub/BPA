@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { Button, Card } from '@/components/ui'
-import { Bell, Search, Settings, LogOut } from 'lucide-react'
+import { Search, Settings, LogOut } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { signOut } from '@/lib/google'
@@ -69,16 +69,13 @@ export function TopBar({ title, subtitle }: TopBarProps) {
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 4 }}>
-        {[Search, Bell, Settings].map((Icon, i) => (
-          <Button
-            key={i}
-            variant="ghost"
-            iconOnly
-            onClick={i === 2 ? () => setActiveModule('settings') : undefined}
-          >
-            <Icon size={ICON.lg} strokeWidth={STROKE.rest} />
-          </Button>
-        ))}
+        <Button variant="ghost" iconOnly title="Search" aria-label="Search"
+          onClick={() => window.dispatchEvent(new Event('professor:openSearch'))}>
+          <Search size={ICON.lg} strokeWidth={STROKE.rest} />
+        </Button>
+        <Button variant="ghost" iconOnly title="Settings" aria-label="Settings" onClick={() => setActiveModule('settings')}>
+          <Settings size={ICON.lg} strokeWidth={STROKE.rest} />
+        </Button>
       </div>
 
       {/* Avatar + sign out */}

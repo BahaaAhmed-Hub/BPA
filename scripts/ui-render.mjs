@@ -185,6 +185,7 @@ async function stable(page, cap = 5000) {
 const RAIL = ['Today', 'Dashboard', 'Calendar', 'Mail', 'Tasks', 'Habits', 'Finance', 'Library']
 const results = []   // { theme, screen, opened, texts, fails: {type, emoji, narrow, tap}, ... }
 const dialogs = []   // { theme, screen, message }
+const topBar = []    // { theme, exists, opens }
 
 const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] })
 
@@ -253,6 +254,21 @@ for (const theme of THEMES) {
       await measure(page, mod, { opened })
     }
 
+    // P1.1 — the top bar's Search opens the command palette; it is not a dead button.
+    // Asserted to exist first, then that pressing it brings up the palette's field.
+    {
+      current = 'Top bar'
+      const search = page.locator('button[aria-label="Search everything"]')
+      const exists = await search.count() === 1
+      let opens = false
+      if (exists) {
+        await search.click()
+        opens = await page.getByPlaceholder(/^Search tasks, calendar/).first().isVisible({ timeout: 2500 }).catch(() => false)
+        await page.keyboard.press('Escape')
+      }
+      topBar.push({ theme, exists, opens })
+    }
+
     // Settings: behind the avatar menu, so reached by writing activeModule and reloading.
     current = 'Settings'
     await page.evaluate(() => {
@@ -300,6 +316,13 @@ for (const theme of THEMES) {
     }
   }
   for (const d of dialogs.filter(x => x.theme === theme)) fail(`native dialog on ${d.screen}: “${d.message}”`)
+}
+
+// P1.1 — Search in the top bar opens the palette.
+for (const t of topBar) {
+  if (!t.exists) { failed++; console.log(`  ✗ ${t.theme}: no Search button in the top bar`) }
+  else if (!t.opens) { failed++; console.log(`  ✗ ${t.theme}: Search is pressed and the command palette does not open`) }
+  else console.log(`  ✓ ${t.theme}: Search opens the command palette`)
 }
 
 // P0.4 — "Do now" must be the same colour wherever it is drawn: on Tasks and

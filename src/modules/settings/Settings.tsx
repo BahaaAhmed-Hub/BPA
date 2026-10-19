@@ -41,7 +41,6 @@ import {
   RELOCK_CHOICES, type DevicePasskey, type LockConfig, type Relock,
 } from '@/modules/finance/lock'
 import { LockGate } from '@/modules/finance/FinanceLockScreen'
-import { NotYet } from '@/components/ComingSoon'
 import { loadAutomationRules, saveAutomationRules, loadRunLog, runAutomation, AUTOMATION_EVENT, type AutomationRule, type RunEntry } from '@/lib/automation'
 import { connectAdditionalGoogleAccount, signInWithGoogle, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
 import { readScopes, cachedScopes, scopesAreStale, forgetScopes } from '@/lib/googleScopes'
@@ -4093,7 +4092,6 @@ const BILLING_PLANS: BillingPlan[] = [
       'Unlimited AI messages',
       'Full automation engine',
       'Priority support',
-      'Team seats (coming soon)',
     ],
   },
 ]
@@ -4389,24 +4387,9 @@ function NotificationsMatrixSection() {
 
 // ─── Integrations Section (11D) ───────────────────────────────────────────────
 
-interface Integration {
-  id: string; name: string; emoji: string; status: 'connected' | 'disconnected'
-  account: string; tags: string[]; syncMode: 'two-way' | 'import' | 'off'; enabled: boolean
-}
-
-const DEFAULT_INTEGRATIONS: Integration[] = [
-// ui-guard: emoji-start — each integration is drawn with its own mark
-  { id: 'notion',      name: 'Notion',      emoji: '📝', status: 'connected',    account: 'Bahaa · 4 databases',            tags: ['Tasks database', 'Meeting notes', 'Weekly review'], syncMode: 'two-way', enabled: true  },
-  { id: 'asana',       name: 'Asana',       emoji: '🎯', status: 'connected',    account: 'DX Technologies workspace',       tags: ['3 projects', 'My tasks', 'Due dates'],              syncMode: 'import',  enabled: true  },
-  { id: 'trello',      name: 'Trello',      emoji: '📋', status: 'connected',    account: 'Personal board',                  tags: ['Ideas board', 'Cards → dump'],                     syncMode: 'import',  enabled: false },
-  { id: 'apple-notes', name: 'Apple Notes', emoji: '🍎', status: 'disconnected', account: 'iCloud · eng.bahaa.a',            tags: ['Notes → dump', 'Needs iCloud sign-in'],            syncMode: 'off',     enabled: false },
-// ui-guard: emoji-end
-]
-
 function IntegrationsSection() {
   // The Shortcut is named after the assistant, so "Hey Siri, <name>" is how you call it with the app shut.
   const siriName = usePersona().name || 'Ask Professor'
-  const [integrations, setIntegrations] = useState<Integration[]>(DEFAULT_INTEGRATIONS)
   const [tokens, setTokens] = useState<UserToken[]>([])
   const [creatingToken, setCreatingToken] = useState(false)
   const [newLabel, setNewLabel] = useState('')
@@ -4452,83 +4435,8 @@ function IntegrationsSection() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  function toggleEnabled(id: string) {
-    setIntegrations(prev => prev.map(i => i.id === id ? { ...i, enabled: !i.enabled } : i))
-  }
-
   return (
     <div>
-      {/* Notion, Asana, Trello and Apple Notes: the accounts named on these
-          cards are illustrative and the switches reach nothing — no task has
-          ever crossed between this app and any of them. Google, below, is the
-          one that is real, so only this half is marked. */}
-      <NotYet text="Integrations coming soon">
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Connected tools</p>
-            <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Tasks and notes flow both ways — nothing is deleted on either side</p>
-          </div>
-          <Button variant="accent" style={{ flexShrink: 0 }}>
-            <Plus size={ICON.sm} /> <span style={{ whiteSpace: 'nowrap' }}>Add integration</span>
-          </Button>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-          {integrations.map(tool => (
-            <div key={tool.id} style={{
-              padding: '11px 13px', borderRadius: 'var(--sb-r-nav)',
-              background: tool.status === 'disconnected' ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
-              border: `var(--sb-border-width) solid ${tool.status === 'disconnected' ? 'var(--sb-border)' : tool.enabled ? 'var(--sb-positive-tint)' : 'var(--sb-border)'}`,
-              borderStyle: tool.status === 'disconnected' ? 'dashed' : 'solid',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ width: 'var(--sb-h-nav)', height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-h2)', flexShrink: 0 }}>
-                  {tool.emoji}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                    <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{tool.name}</span>
-                    <span style={{
-                      fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)',
-                      background: tool.status === 'connected' ? 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)' : 'color-mix(in srgb, var(--sb-ink-4) 12.0%, transparent)',
-                      color: tool.status === 'connected' ? 'var(--sb-positive)' : 'var(--sb-ink-3)',
-                      textTransform: 'uppercase',
-                    }}>{tool.status === 'connected' ? 'Connected' : 'Not connected'}</span>
-                  </div>
-                  <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{tool.account}</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {tool.tags.map(tag => (
-                      <span key={tag} style={{ fontSize: 'var(--sb-t-meta)', padding: '2px 8px', borderRadius: 'var(--sb-r-card)', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)' }}>{tag}</span>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                  {tool.status === 'connected' && (
-                    <select value={tool.syncMode} onChange={e => setIntegrations(prev => prev.map(i => i.id === tool.id ? { ...i, syncMode: e.target.value as Integration['syncMode'] } : i))}
-                      style={{ fontSize: 'var(--sb-t-meta)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 8px', background: 'var(--sb-field)', color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
-                      <option value="two-way">Two-way</option>
-                      <option value="import">Import only</option>
-                      <option value="off">Off</option>
-                    </select>
-                  )}
-                  {tool.status === 'connected'
-                    ? <Toggle checked={tool.enabled} onChange={() => toggleEnabled(tool.id)} />
-                    : <button style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: 'var(--sb-ink-3)', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '5px 11px', cursor: 'pointer' }}>Connect</button>
-                  }
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <p style={{ margin: '8px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
-          Last sync 07:12 — 14 tasks in, 3 completions pushed out. Tokens live on the server.{' '}
-          <button style={{ background: 'none', border: 'none', color: 'var(--sb-positive)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Sync now</button>
-        </p>
-      </div>
-      </NotYet>
-
       {/* ── CONNECTIONS — personal access tokens ─────────────────────────── */}
       <div style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>

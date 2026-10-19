@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui'
+import { EmptyState } from '@/components/ui'
 import { TODOIST_CONFIGURED, openTodoistAuth, fetchTodoistTasks } from '@/lib/todoistOAuth'
 import type { TodoistTask } from '@/lib/todoistOAuth'
 
@@ -16,7 +16,8 @@ export function Step5Tasks({ data, onChange }: Props) {
   const [connecting, setConnecting] = useState(false)
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState<string | null>(null)
-  const [manualToken, setManualToken] = useState('')
+  // A tile for a service this build cannot reach would only tell people to edit an .env file.
+  const todoistAvailable = TODOIST_CONFIGURED || !!data.todoistToken
 
   async function handleConnect() {
     setConnecting(true); setError(null)
@@ -61,7 +62,7 @@ export function Step5Tasks({ data, onChange }: Props) {
       </p>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: hasTasks ? 24 : 0 }}>
-        {/* Todoist tile */}
+        {todoistAvailable && (
         <div style={{ flex: 1, padding: 20, borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <div style={{ width: 'var(--sb-h-nav)', height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-negative)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-on-fill)', fontWeight: 800, fontSize: 'var(--sb-t-h2)' }}>✓</div>
@@ -70,25 +71,6 @@ export function Step5Tasks({ data, onChange }: Props) {
               <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Task manager</div>
             </div>
           </div>
-
-          {!TODOIST_CONFIGURED && !data.todoistToken && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-accent) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent) 20.0%, transparent)', marginBottom: 10 }}>
-                <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent)' }}>
-                  Set <code style={{ fontFamily: 'monospace' }}>VITE_TODOIST_CLIENT_ID</code> in .env to enable OAuth.
-                </p>
-              </div>
-              <input
-                value={manualToken}
-                onChange={e => setManualToken(e.target.value)}
-                placeholder="Paste API token to test..."
-                style={{ background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '8px 12px', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', outline: 'none', width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
-              />
-              <Button variant="primary" onClick={() => manualToken.trim() && loadTasks(manualToken.trim())} disabled={!manualToken.trim() || loading} style={{ width: '100%' }}>
-                {loading ? 'Loading…' : 'Load tasks →'}
-              </Button>
-            </div>
-          )}
 
           {TODOIST_CONFIGURED && !data.todoistToken && !loading && (
             <button onClick={handleConnect} disabled={connecting} style={{ width: '100%', padding: '10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-negative)', color: 'var(--sb-ink-on-fill)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer', opacity: connecting ? 0.7 : 1 }}>
@@ -112,23 +94,10 @@ export function Step5Tasks({ data, onChange }: Props) {
 
           {error && <p style={{ margin: '8px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)' }}>{error}</p>}
         </div>
-
-        {/* Trello tile */}
-        <div style={{ flex: 1, padding: 20, borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', opacity: 0.6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <div style={{ width: 'var(--sb-h-nav)', height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-info)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-on-fill)', fontWeight: 800, fontSize: 'var(--sb-t-h3)' }}>T</div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Trello</span>
-                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-accent) 12.0%, transparent)', color: 'var(--sb-accent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent) 25.0%, transparent)' }}>Coming Soon</span>
-              </div>
-              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Project boards</div>
-            </div>
-          </div>
-          <div style={{ padding: '10px 12px', borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-accent) 6.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent) 15.0%, transparent)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
-            Trello integration is coming soon. Stay tuned!
-          </div>
-        </div>
+        )}
+        {!todoistAvailable && (
+          <EmptyState compact>Nothing to import yet. Add your tasks from the Tasks screen once you are in.</EmptyState>
+        )}
       </div>
 
       {/* Task preview */}

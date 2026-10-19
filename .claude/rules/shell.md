@@ -402,21 +402,16 @@ Every visit records what it looked at; a screen that threw or came up empty is
 named under the count, with the reason. `INK_THEME=<name>` runs one theme, so a
 check costs a minute rather than fifteen.
 
-## What is drawn but not wired
-`components/ComingSoon.tsx`. A control that looks live and does nothing is
-worse than no control. `NotYet` wraps a block — half opacity, `pointer-events:
-none`, `aria-hidden`, a label top-right — and `Soon` is the label on its own.
-Four places carry it, found by sweeping every module for elements with no React
-click handler (that found the eight Billing buttons) and by reading for screens
-built on sample data:
-- **Settings → Billing** — no plan is read, no card stored; all eight buttons
-  were handler-less.
-- **Settings → Integrations** — Notion/Asana/Trello/Apple Notes accounts are
-  illustrative and the switches reach nothing. Google, in the same section, is
-  real and is *not* marked.
-Everything else in all seven modules has a live handler. Settings → Automation
-and Finance → Plan used to be on this list: Automation has an engine now
-(below), and Plan is folded into Goals.
+## What is drawn but not wired — nothing, by rule
+`components/ComingSoon.tsx` (`Soon`, `NotYet`) used to dim a block that was on
+screen for its shape. UI-unification P1.1 removed the last use: a control that
+reaches nothing is **not drawn**, rather than drawn at half opacity with a
+label. Settings → Integrations lost its illustrative Notion/Asana/Trello/Apple
+Notes half; the setup wizard shows Todoist only when the build has its client
+id (and no Trello tile); the dashboard has no Inbox card until it can show a real
+unread count; the plans list has no "coming soon" line. `ui-guard`'s
+`unfinished` rule (a "coming soon" string, or a `VITE_*` name shown to a
+person) keeps it that way.
 
 ## Common Patterns
 ```tsx

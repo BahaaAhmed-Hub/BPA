@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  TrendingUp, CheckSquare, Calendar, Inbox,
+  TrendingUp, CheckSquare, Calendar,
   Target, Zap, Award, ArrowRight, ListChecks, Sun, CalendarDays, Repeat, type LucideIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
@@ -224,7 +224,7 @@ export function ExecutiveDashboard() {
         </div>
 
         {/* Top metric cards — real data */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
           <MetricCard
             label="Active Tasks"
             value={activeTasks.length}
@@ -283,15 +283,6 @@ export function ExecutiveDashboard() {
             icon={Award}
             accentColor="var(--sb-positive)"
             onClick={() => setModule('habits')}
-          />
-          <MetricCard
-            label="Inbox"
-            value="—"
-            delta="Connect Gmail"
-            deltaPositive={false}
-            icon={Inbox}
-            accentColor="var(--sb-info)"
-            onClick={() => setModule('inbox')}
           />
         </div>
 
