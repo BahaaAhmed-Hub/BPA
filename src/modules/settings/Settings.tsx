@@ -4,7 +4,7 @@
 import { isBusinessAccount, setBusinessAccount } from '@/lib/businessAccounts'
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { C_COLORS, STATUS_COLORS_PRESETS } from '@/lib/palettes'
-import { Button, Segmented, Pill } from '@/components/ui'
+import { Button, Segmented, Pill, EmptyState } from '@/components/ui'
 import { NAV_H } from '@/App'
 import {
   Plus, Trash2, LogIn, LogOut,
@@ -106,6 +106,7 @@ interface AppSettings {
 interface CompanyUser { id: string; name: string; email?: string }
 
 import { CompanyMark } from '@/components/CompanyMark'
+import { inputStyle, selectStyle } from '@/lib/fields'
 import { logoFromFile, imageFrom, LOGO_ACCEPT } from '@/lib/companyLogo'
 
 interface CompanyRow {
@@ -315,16 +316,6 @@ async function checkSupabase(): Promise<boolean> {
 
 // ─── CHUNK 2: Shared UI atoms ─────────────────────────────────────────────────
 
-const inputStyle: React.CSSProperties = {
-  background: 'var(--sb-field)',
-  border: 'var(--sb-border-width) solid var(--sb-border)',
-  borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-1)',
-  fontSize: 'var(--sb-t-body)', padding: '7px 11px', outline: 'none',
-  fontFamily: 'var(--sb-font-ui)', width: '100%', boxSizing: 'border-box' as const,
-}
-const selectStyle: React.CSSProperties = {
-  ...inputStyle, cursor: 'pointer', width: 'auto',
-}
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   const accent = 'var(--sb-accent)'
@@ -974,7 +965,7 @@ function CompanyCard({
       {usersOpen && (
         <div style={{ borderTop: 'var(--sb-border-width) solid var(--sb-border)', padding: '8px 14px 10px 46px' }}>
           {users.length === 0 && (
-            <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-border)', fontStyle: 'italic' }}>No members yet</p>
+            <EmptyState compact>No members yet</EmptyState>
           )}
 
           {users.map(u => {
@@ -4598,7 +4589,7 @@ function IntegrationsSection() {
 
         {/* Token list */}
         {tokens.length === 0 && !creatingToken && (
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', padding: '10px 0' }}>No tokens yet.</p>
+          <EmptyState compact>No tokens yet.</EmptyState>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
           {tokens.map((tok, i) => (

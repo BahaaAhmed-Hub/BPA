@@ -21,6 +21,7 @@ import { ITEM_CATEGORIES } from './types'
 import { storesToCheck } from './shoppingStore'
 import { storeIdsSupported } from './shoppingDb'
 import { baseCurrency, loadRates } from '../fx'
+import { inputDenseStyle as inputStyle } from '@/lib/fields'
 
 const C = {
   card:   'var(--sb-card)',
@@ -78,11 +79,6 @@ function useHeldText(value: string, push: (v: string) => void) {
 
 // ─── Primitives ──────────────────────────────────────────────────────────────
 
-const inputStyle: React.CSSProperties = {
-  fontSize: 'var(--sb-t-body-s)', padding: '5px 7px', borderRadius: 6, width: '100%',
-  border: `1px solid ${C.border}`, background: C.field, color: C.ink1,
-  fontFamily: 'inherit', minWidth: 0,
-}
 
 function Field({ label, children, grow = 1 }: { label: string; children: ReactNode; grow?: number }) {
   return (

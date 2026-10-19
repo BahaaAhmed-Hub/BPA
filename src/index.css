@@ -344,6 +344,14 @@ textarea:focus,
 .sb-btn[data-icon-only] { width: max(var(--sb-h-min), var(--sb-h-pill)); padding: 0; }
 .sb-btn[data-icon-only][data-size="sm"] { width: max(var(--sb-h-min), calc(var(--sb-h-pill) - 6px)); }
 
+/* EmptyState ----------------------------------------------------------------- */
+.sb-empty { padding: 40px 16px; text-align: center; color: var(--sb-ink-3); }
+.sb-empty-title { font-size: var(--sb-t-label); font-weight: 600; color: var(--sb-ink-1); margin-bottom: 4px; }
+.sb-empty-body { font-size: var(--sb-t-body); line-height: 1.5; max-width: 52ch; margin: 0 auto; }
+.sb-empty-action { margin-top: 14px; display: flex; justify-content: center; }
+.sb-empty[data-compact] { padding: 10px 0; text-align: left; }
+.sb-empty[data-compact] .sb-empty-body { font-size: var(--sb-t-body-s); margin: 0; max-width: none; }
+
 /* A small control keeps its small look and gets a bigger target. WCAG 2.2 (2.5.8)
    asks 24px; Apple and Material ask 44-48px on touch. The extra area is a
    transparent ::after, so nothing moves and nothing is redrawn — a 14px bin

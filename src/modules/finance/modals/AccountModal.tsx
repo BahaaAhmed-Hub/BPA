@@ -7,6 +7,7 @@ import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
 import { MoneyInput } from '../components/MoneyInput'
 import { schemeFor, setScheme, dormantWhy, returnRate, type RewardScheme } from '../cardRewards'
 import { lookUpRewards } from '../rewardLookup'
+import { inputStyle } from '@/lib/fields'
 
 const RED   = NEGATIVE
 const GREEN = POSITIVE
@@ -78,18 +79,6 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
     onSave(saved)
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    borderRadius: 'var(--sb-r-chip)',
-    border: `var(--sb-border-width) solid ${'var(--sb-border)'}`,
-    background: 'var(--sb-page)',
-    color: 'var(--sb-ink-1)',
-    fontSize: 'var(--sb-t-body)',
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-    fontFamily: 'inherit',
-  }
 
   const labelStyle: React.CSSProperties = {
     display: 'block',

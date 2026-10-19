@@ -15,6 +15,7 @@ import type { ShoppingStore } from './types'
 import { ITEM_CATEGORIES } from './types'
 import { suggestStoresForCountry } from './storeSuggestions'
 import { notify } from '@/lib/undo'
+import { inputDenseStyle as inputStyle } from '@/lib/fields'
 
 const C = {
   card:   'var(--sb-card)',
@@ -38,11 +39,6 @@ export const COUNTRY_OPTIONS = [
   { code: 'DE', label: 'Germany' },
 ]
 
-const inputStyle: React.CSSProperties = {
-  fontSize: 'var(--sb-t-body-s)', padding: '5px 7px', borderRadius: 6, width: '100%',
-  border: `1px solid ${C.border}`, background: C.field, color: C.ink1,
-  fontFamily: 'inherit', minWidth: 0,
-}
 
 function IconPlus({ size = 13 }: { size?: number }) {
   return (
