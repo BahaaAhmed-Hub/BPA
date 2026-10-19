@@ -73,6 +73,7 @@ import {
 } from '@/lib/blockingRules'
 import IdealWeekModal from './IdealWeekModal'
 import { LOZENGE } from '../../components/SideRail'
+import { askConfirm } from '@/lib/confirm'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const HOUR_PX  = 64     // pixels per hour (Calendar 1.6: 64px/hr)
@@ -2277,7 +2278,7 @@ export function CalendarIntelligence() {
       ev.attendees?.length ? `Its ${ev.attendees.length} guest${ev.attendees.length === 1 ? '' : 's'} come across, but their replies do not.` : '',
       isSeriesPart ? 'This is one occurrence of a repeating event — the copy will be a one-off.' : '',
     ].filter(Boolean).join('\n')
-    if (!window.confirm(warning)) return null
+    if (!await askConfirm({ title: 'Move this event to another account?', body: warning, confirmLabel: 'Move it' })) return null
 
     const payload: GCalEventCreate = {
       summary:     ev.summary ?? '(no title)',

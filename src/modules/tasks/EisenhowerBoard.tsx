@@ -216,7 +216,6 @@ export function EisenhowerBoard({
     }
     const open = qTasks.filter(isOpenTask)
     if (open.length === 0) return
-    if (!window.confirm(`Archive ${open.length} task${open.length === 1 ? '' : 's'}?`)) return
     // One entry for the lot — forty ⌘Zs to undo an archive is not an undo.
     useTaskStore.getState()._remember(`Archived ${open.length} ${open.length === 1 ? 'task' : 'tasks'}`)
     suppressUndo(() => { for (const t of open) updateTask(t.id, { status: 'cancelled' }) })

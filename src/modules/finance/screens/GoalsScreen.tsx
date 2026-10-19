@@ -953,7 +953,6 @@ export function GoalsScreen(_props?: any) {
             sooner={sooner}
             onChange={g => void upsertGoal(g)}
             onDelete={g => {
-              if (!window.confirm(`Delete the goal "${g.name}"?`)) return
               void removeGoal(g.id)
               setSelectedId(null)
             }} /> : (

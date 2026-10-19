@@ -48,6 +48,7 @@ import { runBudgetEntries } from './modules/finance/budgetEntries'
 import { loadRules } from './modules/finance/modals/BudgetRuleModal'
 import { SyncGapBanner } from './modules/shell/SyncGapBanner'
 import { UndoBar } from './components/UndoBar'
+import { ConfirmHost } from './components/ui/ConfirmDialog'
 import { BeLogo } from './components/BeLogo'
 import { useTaskCalendarPush } from './lib/taskAutoSchedule'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
@@ -1420,6 +1421,7 @@ function App() {
         </div>
       </div>
       <UndoBar />
+      <ConfirmHost />
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
       <NameListener />
       <AssistantPanel

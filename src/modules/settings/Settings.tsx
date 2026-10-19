@@ -86,6 +86,7 @@ import { useLibraryStore } from '@/modules/library/libraryStore'
 import { SearchSelect } from '@/components/SearchSelect'
 import { listUserTokens, createUserToken, revokeUserToken, type UserToken } from '@/lib/userTokens'
 import { getTelegramLinks, revokeTelegramLink, type TelegramLink } from '@/lib/telegramLink'
+import { askConfirm } from '@/lib/confirm'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -3772,7 +3773,7 @@ function FinanceSection() {
               variant="primary"
               disabled={filling === 'working'}
               onClick={async () => {
-                if (!window.confirm('Mark every entry with no payment date as paid on its due date, in every year?')) return
+                if (!await askConfirm({ title: 'Mark every entry paid?', body: 'Mark every entry with no payment date as paid on its due date, in every year? This rewrites the ledger and cannot be undone.', confirmLabel: 'Mark them paid', danger: false })) return
                 setFilling('working')
                 setFilling(await markAllPaid())
               }}
@@ -3805,7 +3806,7 @@ function FinanceSection() {
               variant="secondary"
               disabled={undoing === 'working'}
               onClick={async () => {
-                if (!window.confirm('Take the payment date off every entry marked paid on a future date, in every year?')) return
+                if (!await askConfirm({ title: 'Un-mark future payments?', body: 'Take the payment date off every entry marked paid on a future date, in every year? This cannot be undone.', confirmLabel: 'Un-mark them' })) return
                 setUndoing('working')
                 setUndoing(await unmarkFuture())
               }}

@@ -29,6 +29,7 @@ import { isUnpaid, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
 import { GLYPH, DEFAULT_CATEGORY_ICON } from '@/lib/glyphs'
+import { askConfirm } from '@/lib/confirm'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -1405,12 +1406,12 @@ export function BudgetScreen(_props?: any) {
     [rules, monthKey, categories],
   )
 
-  function applyFromTheStart() {
-    if (!window.confirm(
+  async function applyFromTheStart() {
+    if (!await askConfirm({ title: 'Apply budgets to every month?', confirmLabel: 'Apply to every month', danger: false, body:
       `${startLater.length} budget${startLater.length === 1 ? '' : 's'} begin${startLater.length === 1 ? 's' : ''} after `
       + `${new Date(monthKey + '-01T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}. `
       + 'Apply them to every month instead?\n\nA budget that should genuinely begin on a date keeps it — set that on the budget itself.',
-    )) return
+    })) return
     const next = { ...rules }
     for (const id of startLater) next[id] = { ...next[id], starts: undefined }
     putRules(next)

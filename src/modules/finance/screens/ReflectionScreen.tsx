@@ -1244,7 +1244,6 @@ export function ReflectionScreen(_props?: any) {
                         }}><Check size={ICON.sm} strokeWidth={STROKE.active} /></button>
                       <button
                         onClick={() => {
-                          if (!window.confirm(`Delete ${t.payee?.trim() || 'this entry'} of ${acct(Math.abs(t.amount), { currency: t.currency })} on ${t.date}?`)) return
                           void removeTransaction(t.id)
                         }}
                         title="Delete this entry"
@@ -1656,7 +1655,6 @@ export function ReflectionScreen(_props?: any) {
                       <button
                         onClick={e => {
                           e.stopPropagation()
-                          if (!window.confirm(`Delete ${tx.payee?.trim() || 'this entry'} of ${acct(Math.abs(tx.amount), { currency: tx.currency })}?`)) return
                           void removeTransaction(tx.id)
                         }}
                         title="Delete this entry"

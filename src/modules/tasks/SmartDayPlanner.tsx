@@ -24,6 +24,7 @@ import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { notify } from '@/lib/undo'
 import { QUADRANTS, QUADRANT_ORDER } from '@/lib/quadrants'
+import { askConfirm } from '@/lib/confirm'
 
 const MINE_KEY = 'planner-only-my-calendars'
 
@@ -890,7 +891,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
    */
   async function removeLeftoverEvent(evt: GCalEvent) {
     const name = evt.summary ?? 'this event'
-    if (!window.confirm(`Remove "${name}" from your calendar?\n\nIt was made by the planner and no task uses it any more. This cannot be undone.`)) return
+    if (!await askConfirm({ title: `Remove "${name}" from your calendar?`, body: 'It was made by the planner and no task uses it any more. This cannot be undone.', confirmLabel: 'Remove it' })) return
     const calendarId = (evt as GCalEvent & { calendarId?: string }).calendarId ?? 'primary'
     const res = await deleteCalendarEvent(calendarId, evt.id)
     if (res.success) {

@@ -5,6 +5,7 @@ import {
 import { sendMail, escapeHtml, type MailAccount, type MailAttachment } from '@/lib/gmail'
 import { ICON } from '@/lib/type'
 import { C } from '@/lib/palette'
+import { askText } from '@/lib/confirm'
 
 // ─── Writing one ─────────────────────────────────────────────────────────────
 //
@@ -268,7 +269,15 @@ export function Composer({ seed, accounts, onClose, onSent }: {
         <button onClick={() => cmd('underline')} title="Underline" style={TOOL}><Underline size={ICON.sm} /></button>
         <button onClick={() => cmd('insertUnorderedList')} title="Bullets" style={TOOL}><List size={ICON.sm} /></button>
         <button title="Add a link" style={TOOL}
-          onClick={() => { const url = window.prompt('Link to'); if (url) cmd('createLink', url) }}>
+          onClick={async () => {
+            // The dialog takes focus and with it the selection, so keep the range and put it back.
+            const sel = window.getSelection()
+            const range = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null
+            const url = await askText({ title: 'Add a link', label: 'Link to', placeholder: 'https://', confirmLabel: 'Add link', type: 'url' })
+            if (!url) return
+            if (range) { const s2 = window.getSelection(); s2?.removeAllRanges(); s2?.addRange(range) }
+            cmd('createLink', url)
+          }}>
           <Link2 size={ICON.sm} />
         </button>
         <button onClick={() => fileRef.current?.click()} title="Attach a file" style={TOOL}>

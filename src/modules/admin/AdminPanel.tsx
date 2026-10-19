@@ -6,6 +6,7 @@ import {
   type AdminUser, type ModuleRow, type Override, type PlanRow,
 } from '@/lib/admin'
 import { notify } from '@/lib/undo'
+import { askText } from '@/lib/confirm'
 
 // ─── The admin panel ─────────────────────────────────────────────────────────
 // It lives in the same bundle as everything else, and that is safe for one
@@ -108,7 +109,7 @@ export default function AdminPanel() {
   async function flip(user: AdminUser, m: ModuleRow, v: 'inherit' | 'on' | 'off') {
     const enabled = v === 'inherit' ? null : v === 'on'
     const note = enabled === null ? undefined
-      : window.prompt(`Why is ${m.label} being turned ${v} for ${user.email}?\n\nIn four months this sentence is the only thing that will explain it.`) ?? undefined
+      : (await askText({ title: `Why is ${m.label} being turned ${v}?`, body: `For ${user.email}. In four months this sentence is the only thing that will explain it.`, label: 'Reason', required: false, confirmLabel: 'Turn it ' + v })) ?? undefined
     const err = await setOverride(user.id, m.id, enabled, note)
     if (err) return notify(`Could not change it — ${err}`)
     notify(v === 'inherit'

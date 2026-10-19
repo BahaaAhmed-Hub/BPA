@@ -20,6 +20,7 @@ import { resolveTaskCalendar, verifyTaskEvent } from '@/lib/taskCalendar'
 import { SchedulePopover } from './SchedulePopover'
 import { ICON, STROKE } from '@/lib/type'
 import LinkPreviews from '../../components/LinkPreviews'
+import { askText } from '@/lib/confirm'
 
 const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
 
@@ -469,8 +470,8 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
 
           {/* Links */}
           <button
-            onClick={() => {
-              const url = window.prompt('Paste a link (thread, doc, page)')?.trim()
+            onClick={async () => {
+              const url = (await askText({ title: 'Add a link', label: 'Link (thread, doc, page)', placeholder: 'https://', confirmLabel: 'Add link', type: 'url' }))?.trim()
               if (url) patch({ links: [...(task.links ?? []), url] })
             }}
             style={CELL}>

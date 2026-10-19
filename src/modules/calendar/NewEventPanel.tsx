@@ -31,6 +31,7 @@ import { toRecurrence, presetRecur, type Recur } from './recurrence'
 import { useInkOn } from '@/lib/ink'
 import LinkPreviews from '../../components/LinkPreviews'
 import { C } from '@/lib/palette'
+import { askConfirm } from '@/lib/confirm'
 
 // ─── The palette, once ───────────────────────────────────────────────────────
 
@@ -746,8 +747,9 @@ export function NewEventPanel({
         })}
         <button
           title={editing ? 'Delete this event' : 'Discard this event'}
-          onClick={() => {
-            if (!window.confirm(editing ? 'Delete this event?' : 'Discard this event?')) return
+          onClick={async () => {
+            // A draft that was never saved has nothing to lose; a saved event is deleted from Google.
+            if (editing && !await askConfirm({ title: 'Delete this event?', body: 'It is removed from your Google Calendar and cannot be undone.', confirmLabel: 'Delete event' })) return
             if (editing) onDelete?.(); else onCancel()
           }}
           style={{ ...ROUND, color: C.negDeep }}><Trash2 size={ICON.sm} strokeWidth={STROKE.rest} /></button>
