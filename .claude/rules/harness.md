@@ -88,3 +88,26 @@ tag reads better and this session's git proxy refuses to push one, so from a
 fresh clone the check would fail for a reason that has nothing to do with the
 memory. Run it after moving anything between the root and a rule file, and
 pass another ref to compare against a different point in history.
+
+## The UI guards — `ui-guard.mjs` and `ui-render.mjs`
+Built for the UI-unification phases in `docs/ui-unification.md` (read its §T
+for what each phase must move).
+- `node scripts/ui-guard.mjs [--only=type,dialog] [--json]` — a code scan, no
+  browser. A rule fails the run only when it is in `ENFORCED` (each phase adds
+  its rule in the PR that takes the count to zero) or named with `--only`; the
+  rest are counted and shown with `·`. `--self-test` runs every rule over
+  `scripts/fixtures/ui-guard-bad.tsx` (outside `src/`, so it is not in the
+  build): each rule must catch its marked violation and let its `allow:` line
+  through. `type` reads the whole `fontSize:` expression, so a ternary
+  (`tight ? 11.5 : 12.5`) is caught, not only a bare number. The brief's plain
+  regex found 0 where there were 9.
+- `node scripts/ui-render.mjs 5199 [--narrow] [--phase=<id>] [--inject-bad]` —
+  every rail module, Settings and `?book=bahaa` in each theme (`INK_THEME` for
+  one), measured from `getComputedStyle`: type floor, emoji in visible text,
+  native dialogs, and with `--narrow` sideways scroll and 36px tap targets. A
+  screen counts as opened only if the rail marks it `aria-current` **and** it
+  has 10+ visible text elements. `--inject-bad` is the control: a 9px flame and
+  a `confirm` are injected and all three checks must fail, or it exits 1.
+  Screenshots go to `screenshots/ui/<phase>/<theme>/` (git-ignored). The stub
+  answers every read with `[]`, so screens are in their empty state — the same
+  on every run, which is what makes a before/after pair comparable.

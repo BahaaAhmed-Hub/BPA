@@ -8,6 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+# ui-render.mjs screenshots — attached to the PR, not committed
+screenshots/
 dist
 dist-ssr
 *.local
