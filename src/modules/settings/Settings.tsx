@@ -1,18 +1,9 @@
-// ─── CHUNK 1: Types, constants, localStorage helpers ─────────────────────────
-// (remaining chunks appended below)
-
 import { isBusinessAccount, setBusinessAccount } from '@/lib/businessAccounts'
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { C_COLORS, STATUS_COLORS_PRESETS } from '@/lib/palettes'
 import { Button, Segmented, Pill, EmptyState } from '@/components/ui'
 import { NAV_H } from '@/App'
-import {
-  Plus, Trash2, LogIn, LogOut,
-  ChevronDown, ChevronUp, User, Clock, Building2, Flame,
-  Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
-  Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard, Sparkles,
-  ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed, Check,
-  Library as LibraryIcon, AlertTriangle, BellOff, MessageSquare } from 'lucide-react'
+import { Plus, Trash2, LogIn, LogOut, ChevronDown, ChevronUp, Building2, X, RefreshCw, Eye, EyeOff, Pencil, Mail, HardDrive, CalendarDays, Swords, Wand2, Sparkles, ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed, Check, AlertTriangle, BellOff, MessageSquare } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { pushSharedPrefs, lastPushError, type PushResult } from '@/lib/prefSync'
 import { useHeldText } from '@/lib/useHeldText'
@@ -25,21 +16,10 @@ import { todayISO } from '../finance/dates'
 import { stepFor, setHabitStep, loadHabitSteps } from '@/lib/habitSteps'
 import { loadWeekStart, saveWeekStart, WEEKDAY_NAMES, type Weekday } from '@/lib/weekStart'
 import { ACCENTS, loadAccent, saveAccent, loadCompact, saveCompact, COMPACT_SCALE } from '@/lib/accent'
-import {
-  loadNotifSettings, saveNotifSettings, loadQuietHours, saveQuietHours, dormantWhy,
-  type NotifSetting, type NotifChannel,
-} from '@/lib/notifications'
-import {
-  loadHealthLinks, createHealthLink, deleteHealthLink, ingestUrl, checkHealthLink,
-  isMovementHabit, suggestMetric, METRIC_LABEL, METRIC_SAMPLE,
-  type HealthLink, type HealthMetric, type LinkCheck,
-} from '@/lib/healthLink'
+import { loadNotifSettings, saveNotifSettings, loadQuietHours, saveQuietHours, dormantWhy, type NotifSetting, type NotifChannel } from '@/lib/notifications'
+import { loadHealthLinks, createHealthLink, deleteHealthLink, ingestUrl, checkHealthLink, isMovementHabit, suggestMetric, METRIC_LABEL, METRIC_SAMPLE, type HealthLink, type HealthMetric, type LinkCheck } from '@/lib/healthLink'
 import type { EnvelopeStyle as BudgetEnvelopeStyle } from '@/modules/finance/screens/BudgetScreen'
-import {
-  biometricsAvailable, biometricName, deviceLabel, forgetPasskey, hashPassword,
-  isLocked, loadLock, loadPasskey, markActive, registerPasskey, saveLock,
-  RELOCK_CHOICES, type DevicePasskey, type LockConfig, type Relock,
-} from '@/modules/finance/lock'
+import { biometricsAvailable, biometricName, deviceLabel, forgetPasskey, hashPassword, isLocked, loadLock, loadPasskey, markActive, registerPasskey, saveLock, RELOCK_CHOICES, type DevicePasskey, type LockConfig, type Relock } from '@/modules/finance/lock'
 import { LockGate } from '@/modules/finance/FinanceLockScreen'
 import { loadAutomationRules, saveAutomationRules, loadRunLog, runAutomation, AUTOMATION_EVENT, type AutomationRule, type RunEntry } from '@/lib/automation'
 import { connectAdditionalGoogleAccount, signInWithGoogle, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
@@ -52,33 +32,18 @@ import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
 import { HABIT_VIEWS, loadHabitView, saveHabitView, EmojiBtn, type HabitView } from '@/modules/habits/HabitsModule'
 import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore'
 import { loadAccounts, removeAccount, getProviderTokenForAccount, setAccountScopes, loadHiddenAccounts, saveHiddenAccounts, loadAccountsFromServer, type ConnectedAccount, type ServerAccount } from '@/lib/multiAccount'
-import {
-  saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB, mergeCompanies,
-  saveHabitsToDB, saveHabitLogsToDB, loadSettingsFromDB,
-  saveAccountsToDB, loadAccountsFromDB,
-  type CompanyRow as DbSyncCompanyRow,
-} from '@/lib/dbSync'
+import { saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB, mergeCompanies, saveHabitsToDB, saveHabitLogsToDB, loadSettingsFromDB, saveAccountsToDB, loadAccountsFromDB, type CompanyRow as DbSyncCompanyRow } from '@/lib/dbSync'
 import { loadLogs, loadQuantityLogs } from '@/store/habitsStore'
-import {
-  loadBlockingRules, saveBlockingRules,
-  type BlockingRule, type DetailLevel,
-  loadCachedCalendars, type CachedCalEntry,
-} from '@/lib/blockingRules'
+import { loadBlockingRules, saveBlockingRules, type BlockingRule, type DetailLevel, loadCachedCalendars, type CachedCalEntry } from '@/lib/blockingRules'
 import { loadCustomStatuses, saveCustomStatuses, moveStatus, DEFAULT_STATUSES, type CustomStatus } from '@/lib/customStatuses'
 import { loadRates, setRate, baseCurrency } from '@/modules/finance/fx'
 import { useFinanceStore } from '@/modules/finance/financeStore'
-import {
-  loadRewardSettings, saveRewardSettings, isDormant, schemeFor, totalPoints,
-  type RewardSettings,
-} from '@/modules/finance/cardRewards'
+import { loadRewardSettings, saveRewardSettings, isDormant, schemeFor, totalPoints, type RewardSettings } from '@/modules/finance/cardRewards'
 import { acct, group } from '@/modules/finance/format'
 import { loadRules } from '@/modules/finance/modals/BudgetRuleModal'
 import { ICON, STROKE } from '@/lib/type'
 import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
-import {
-  loadReminders, saveReminders, defaultReminder, dueDatesFor, reminderTitle,
-  type MoneyReminder,
-} from '@/modules/finance/reminders'
+import { loadReminders, saveReminders, defaultReminder, dueDatesFor, reminderTitle, type MoneyReminder } from '@/modules/finance/reminders'
 import { alpha } from '@/lib/alpha'
 import { loadLibrarySettings, saveLibrarySettings } from '@/modules/library/libraryPrefs'
 import { useLibraryStore } from '@/modules/library/libraryStore'
@@ -86,66 +51,15 @@ import { SearchSelect } from '@/components/SearchSelect'
 import { listUserTokens, createUserToken, revokeUserToken, type UserToken } from '@/lib/userTokens'
 import { getTelegramLinks, revokeTelegramLink, type TelegramLink } from '@/lib/telegramLink'
 import { askConfirm } from '@/lib/confirm'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface AppSettings {
-  fullName: string; timezone: string; workWeek: string[]; framework: string
-  focusStart: string; focusEnd: string; earliestMeeting: string
-  bufferMins: number; physicalBufferMins: number
-  endOfDay: string; familyStart: string
-  protectFocus: boolean; autoDeclineEarly: boolean
-  commStyle: 'brief' | 'balanced' | 'detailed'; proactive: boolean
-  briefTime: string; reviewDay: string; customInstructions: string
-  morningReminderOn: boolean; morningReminderTime: string
-  windDownOn: boolean; windDownTime: string; followUpNudges: boolean
-  weeklyReviewOn: boolean; weeklyReviewDay: string; weeklyReviewTime: string
-  theme: string; sidebarDefault: boolean; compact: boolean
-}
-
-interface CompanyUser { id: string; name: string; email?: string }
-
 import { CompanyMark } from '@/components/CompanyMark'
 import { inputStyle, selectStyle } from '@/lib/fields'
 import { logoFromFile, imageFrom, LOGO_ACCEPT } from '@/lib/companyLogo'
+import { type AIConfig, type AppSettings, type CompanyRow, type CompanyUser, DEFAULTS, checkSupabase, cleanKey, fetchGCals, loadAIConfig, loadCompanies, loadSettings, ls, misplacedAnthropicKey, saveAIConfig, saveCompanies, saveSettings, setAIPushListener } from './model'
+import { DRow, FieldRow, GhostPill, PillValue, Toggle } from './ui'
+import { PILL_BASE, pillSelectStyle } from './pillStyles'
+import { NAV_GROUPS, SECTION_META, type SectionId, loadSectionOrder } from './nav'
+export { type AIConfig, misplacedAnthropicKey, cleanKey, maskKey, loadAIConfig } from './model'
 
-interface CompanyRow {
-  id: string; name: string; color: string
-  calendarId: string; emailDomain: string; accountId: string; isActive: boolean
-  hidden?: boolean
-  users: CompanyUser[]
-  logoUrl?: string
-}
-
-const SECTION_IDS = ['profile','billing','schedule','companies','habits','tasks','accounts','professor','automation','notifications','appearance','blocking','behavioral','finance','library'] as const
-type SectionId = typeof SECTION_IDS[number]
-
-interface SectionMeta { id: SectionId; title: string; icon: React.ElementType; description: string }
-const SECTION_META: SectionMeta[] = [
-  { id: 'profile',       title: 'Profile',              icon: User,        description: 'Name, timezone, work week & framework' },
-  { id: 'billing',       title: 'Billing',              icon: CreditCard,  description: 'Plan, payment method and invoices' },
-  { id: 'accounts',      title: 'Accounts & companies', icon: Building2,   description: 'Connected Google accounts, and the companies that use them' },
-  { id: 'professor',     title: 'AI',                   icon: AssistantNavIcon, description: 'Its name, model, autonomy and what the assistant may write for you' },
-  { id: 'schedule',      title: 'Schedule rules',       icon: Clock,       description: 'Focus hours, buffers, meeting protections' },
-  { id: 'blocking',      title: 'Integrations',         icon: Link,        description: 'Notion, Asana, Trello, Apple Notes and calendar sync' },
-  { id: 'tasks',         title: 'Tasks',                icon: CheckSquare, description: 'Board statuses and task types' },
-  { id: 'habits',        title: 'Habits',               icon: Flame,       description: 'Configure daily habits — synced with Habits page' },
-  { id: 'automation',    title: 'Automation',           icon: Swords,      description: 'Rules that run without asking you first' },
-  { id: 'notifications', title: 'Notifications',        icon: Bell,        description: 'What reaches you, where, and when it stays quiet' },
-  { id: 'appearance',    title: 'Appearance',           icon: Palette,     description: 'The accent colour, and how much fits on screen' },
-  { id: 'behavioral',    title: 'Behavioral OS',        icon: Brain,       description: 'Rank scoring, operating mode and tone' },
-  { id: 'companies',     title: 'Data & privacy',       icon: Shield,      description: 'Where your data sits and how long it stays' },
-  { id: 'finance',       title: 'Finance',              icon: Hash,        description: 'Envelope style, figures, dates & alerts' },
-  { id: 'library',       title: 'Library',              icon: LibraryIcon, description: 'Turn the book shelf on or off, and what it holds' },
-]
-
-// Grouped nav — matches 11A Sunlit Bento design
-const NAV_GROUPS: { label: string; ids: SectionId[] }[] = [
-  { label: 'YOU',       ids: ['profile', 'billing'] },
-  { label: 'WORKSPACE', ids: ['accounts', 'professor', 'schedule', 'blocking'] },
-  { label: 'WORK',      ids: ['tasks', 'habits', 'library'] },
-  { label: 'SYSTEM',    ids: ['automation', 'notifications', 'appearance', 'behavioral', 'companies', 'finance'] },
-]
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -181,261 +95,6 @@ const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 const BUFFER_STEPS = [0,15,30,45,60]
 const PHYS_STEPS   = [0,30,60,90]
 const FREQ_OPTS    = ['daily','weekdays','weekly'] as const
-
-const DEFAULTS: AppSettings = {
-  fullName:'', timezone:'America/New_York', workWeek:['Mon','Tue','Wed','Thu','Fri'], framework:'time_blocking',
-  focusStart:'09:00', focusEnd:'11:00', earliestMeeting:'10:00',
-  bufferMins:30, physicalBufferMins:60, endOfDay:'17:00', familyStart:'18:00',
-  protectFocus:true, autoDeclineEarly:true,
-  commStyle:'balanced', proactive:true, briefTime:'07:00', reviewDay:'Sunday', customInstructions:'',
-  morningReminderOn:true, morningReminderTime:'07:00',
-  windDownOn:true, windDownTime:'21:00', followUpNudges:true,
-  weeklyReviewOn:true, weeklyReviewDay:'Sunday', weeklyReviewTime:'18:00',
-  theme:'navy-night', sidebarDefault:false, compact:false,
-}
-
-// ─── Storage helpers ──────────────────────────────────────────────────────────
-
-function ls<T>(key: string, fb: T): T {
-  try { const r = localStorage.getItem(key); return r ? JSON.parse(r) as T : fb } catch { return fb }
-}
-function lsSet<T>(key: string, v: T) { try { localStorage.setItem(key, JSON.stringify(v)) } catch { /**/ } }
-
-function loadSettings():   AppSettings   { return { ...DEFAULTS, ...ls<Partial<AppSettings>>('professor-settings', {}) } }
-
-// ─── AI Provider config (kept local — never synced to DB) ────────────────────
-
-export interface AIConfig {
-  provider: 'anthropic' | 'groq'
-  anthropicKey: string
-  groqKey: string
-  groqModel: string
-}
-const AI_CONFIG_DEFAULTS: AIConfig = {
-  provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile',
-}
-/** An `sk-ant-…` key sitting in the Groq field is not ambiguous: Groq's own
- *  keys begin `gsk_`, so this is an Anthropic key that was typed while the
- *  provider picker said Groq — which the old labels made easy, since the Groq
- *  option was labelled "Opus 4.1". Nothing reads it there: the bots and
- *  `professor.ts` read `anthropicKey`. It is **named and offered**, never
- *  moved silently — it is the person's credential, and a key that moves on its
- *  own is one nobody can account for. */
-export function misplacedAnthropicKey(c: AIConfig): string {
-  const stray = (c.groqKey ?? '').trim()
-  return stray.startsWith('sk-ant-') ? stray : ''
-}
-
-/** An API key never contains whitespace, and a paste very often carries some —
- *  a trailing newline from a terminal, a space from a chat. It saved fine and
- *  then went out as an invalid header, so the key "saved" and was "rejected". */
-export const cleanKey = (k: string | undefined): string => (k ?? '').replace(/\s+/g, '')
-
-/** What was actually presented, without printing it: first 11, last 4, length. */
-export function maskKey(k: string): string {
-  return k.length > 18 ? `${k.slice(0, 11)}…${k.slice(-4)} (${k.length} characters)` : `${k ? '…' : 'empty'} (${k.length} characters)`
-}
-
-export function loadAIConfig(): AIConfig {
-  const c = { ...AI_CONFIG_DEFAULTS, ...ls<Partial<AIConfig>>('professor-ai-config', {}) }
-  return { ...c, anthropicKey: cleanKey(c.anthropicKey), groqKey: cleanKey(c.groqKey) }
-}
-let aiPushTimer: ReturnType<typeof setTimeout> | null = null
-function saveAIConfig(c: AIConfig) {
-  lsSet('professor-ai-config', c)
-  // The bots read this key out of Postgres, not out of this browser, and the
-  // ordinary push is a five-minute timer. Typing a new key and messaging the
-  // bot straight away therefore asked it with the old one — which is
-  // indistinguishable from the new key being wrong.
-  //
-  // **Held, because this is a text field.** There is no Save button here: the
-  // key saves as you type, and a push per keystroke is 93 of them for one
-  // key. `pushSharedPrefs` refuses to run two at once now, so the server can
-  // no longer end up with a stump — but 93 queued pushes to say one thing is
-  // still 92 requests nobody needs. The same 700ms the calendar composer
-  // holds words for, and a decision (the provider pills) still goes at once
-  // because `setAI` writes localStorage before this timer is armed.
-  if (aiPushTimer) clearTimeout(aiPushTimer)
-  aiPushTimer = setTimeout(() => {
-    aiPushTimer = null
-    void pushSharedPrefs().then(r => onAIPush?.(r))
-  }, 700)
-}
-/** Who to tell when the key finally reaches Postgres. There is **no Save
- *  button** on this field — it writes as you type — so without this the only
- *  evidence it worked was opening the app somewhere else, which is exactly
- *  how "I changed the key and it did not save" gets reported about a key that
- *  was, or was not, saved. The section below says which. */
-let onAIPush: ((r: PushResult) => void) | null = null
-function saveSettings(s:   AppSettings)  { lsSet('professor-settings', s) }
-function loadCompanies():  CompanyRow[]  { return ls('professor-companies', []) }
-function saveCompanies(c:  CompanyRow[]) {
-  lsSet('professor-companies', c)
-  // Backup users separately so DB recovery can restore them
-  const usersMap: Record<string, CompanyUser[]> = {}
-  c.forEach(co => { if (co.users?.length) usersMap[co.id] = co.users })
-  lsSet('professor-company-users', usersMap)
-  // **The one writer announces the write.** `professor-companies` is read by
-  // the rail's tiles, the calendar's company resolution and `mailCompany`'s
-  // cache, each of which listens for this event — and Settings, the one screen
-  // that edits companies, never fired it. `storage` does not fire in the tab
-  // that wrote, so a rename, a colour, a link or a logo set here reached
-  // nothing until a reload. The same shape as `saveRules` →
-  // `finance:budgetRulesChanged` one module along.
-  window.dispatchEvent(new Event('professor:companiesUpdated'))
-}
-function loadSectionOrder(): SectionId[] {
-  const saved = ls<SectionId[]>('professor-section-order', [])
-  const valid = saved.filter(id => (SECTION_IDS as readonly string[]).includes(id))
-  const miss  = SECTION_IDS.filter(id => !valid.includes(id))
-  // Pinned new feature sections get prepended so they're immediately visible
-  const pinnedNew = miss.filter(id => id === 'behavioral')
-  const otherNew  = miss.filter(id => id !== 'behavioral')
-  return [...pinnedNew, ...valid, ...otherNew]
-}
-// saveSectionOrder: section order no longer draggable in Settings v2 (kept for compat reference)
-
-// ─── Google Calendars fetch ───────────────────────────────────────────────────
-
-interface GCalCal { id: string; summary: string; primary?: boolean }
-async function fetchGCals(token: string): Promise<GCalCal[]> {
-  try {
-    const r = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',
-      { headers: { Authorization: `Bearer ${token}` } })
-    if (!r.ok) return []
-    return ((await r.json()) as { items?: GCalCal[] }).items ?? []
-  } catch { return [] }
-}
-
-// ─── Supabase check ───────────────────────────────────────────────────────────
-
-async function checkSupabase(): Promise<boolean> {
-  try { const { error } = await supabase.from('users').select('id').limit(1); return !error }
-  catch { return false }
-}
-
-// ─── CHUNK 2: Shared UI atoms ─────────────────────────────────────────────────
-
-
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  const accent = 'var(--sb-accent)'
-  return (
-    <button role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
-      style={{
-        width: 42, height: 24, borderRadius: 'var(--sb-r-nav)', flexShrink: 0,
-        background: checked ? accent : 'var(--sb-border)',
-        border: 'none', cursor: 'pointer', position: 'relative', padding: 0, transition: 'background 0.2s',
-      }}>
-      <span style={{
-        position: 'absolute', top: 4, left: checked ? 22 : 4,
-        width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', display: 'block',
-        background: checked ? 'var(--sb-card)' : 'var(--sb-ink-3)',
-        transition: 'left 0.2s',
-      }} />
-    </button>
-  )
-}
-
-/** The assistant's face where a lucide icon is expected (the rail and the card header). */
-function AssistantNavIcon({ size = 15 }: { size?: number; strokeWidth?: number; color?: string; style?: React.CSSProperties }) {
-  return <span style={{ display: 'inline-flex', flexShrink: 0 }}><AssistantAvatar size={size + 5} radius="50%" ring={false} /></span>
-}
-
-function FieldRow({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
-  return (
-    // Wraps rather than spills: when the control cannot fit beside the label
-    // it drops to its own line, instead of overflowing onto the next card.
-    <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap',
-      padding: '5px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
-    }}>
-      <div style={{ flex: '1 1 150px', minWidth: 0, maxWidth: 172, paddingTop: 2 }}>
-        <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{label}</span>
-        {sub && <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>{sub}</p>}
-      </div>
-      <div style={{
-        flex: '1 1 auto', minWidth: 0, display: 'flex',
-        justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 6,
-      }}>{children}</div>
-    </div>
-  )
-}
-
-
-// ─── Design primitives (11A artboard) ────────────────────────────────────────
-
-/** Cream pill used for both read-outs and small actions. */
-const PILL_BASE: React.CSSProperties = {
-  background: 'var(--sb-field)',
-  border: 'var(--sb-border-width) solid var(--sb-border)',
-  borderRadius: 'var(--sb-r-sm)',
-  color: 'var(--sb-ink-1)',
-  fontSize: 'var(--sb-t-body)',
-  fontWeight: 500,
-  padding: '8px 14px',
-  fontFamily: 'inherit',
-  lineHeight: 1.2,
-  whiteSpace: 'nowrap' as const,
-  outline: 'none',
-}
-
-/** Ghost pill button — optional leading icon, optional rust tone. */
-function GhostPill({ icon: Icon, children, onClick, tone, title }: {
-  icon?: React.ElementType
-  children: ReactNode
-  onClick?: () => void
-  tone?: 'default' | 'rust'
-  title?: string
-}) {
-  return (
-    <button onClick={onClick} title={title} style={{
-      ...PILL_BASE,
-      display: 'inline-flex', alignItems: 'center', gap: 6,
-      cursor: 'pointer',
-      color: tone === 'rust' ? 'var(--sb-negative)' : 'var(--sb-ink-1)',
-      borderColor: tone === 'rust' ? 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)' : 'var(--sb-border)',
-      background: tone === 'rust' ? 'var(--sb-card)' : 'var(--sb-field)',
-    }}>
-      {Icon && <Icon size={13} strokeWidth={2} />}
-      {children}
-    </button>
-  )
-}
-
-/** Static cream pill for values that are displayed, not edited here. */
-function PillValue({ children }: { children: ReactNode }) {
-  return <span style={{ ...PILL_BASE, display: 'inline-block', color: 'var(--sb-ink-1)' }}>{children}</span>
-}
-
-/** Label (+sub) on the left, control hard-right — the artboard row rhythm. */
-function DRow({ label, sub, children, last }: {
-  label: string; sub?: string; children: ReactNode; last?: boolean
-}) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-      padding: '12px 0',
-      borderBottom: last ? 'none' : 'var(--sb-border-width) solid var(--sb-hairline)',
-    }}>
-      <div style={{ minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{label}</p>
-        {sub && <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.35 }}>{sub}</p>}
-      </div>
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>{children}</div>
-    </div>
-  )
-}
-
-/** Native select dressed as a cream pill (keeps keyboard + full option list). */
-const pillSelectStyle: React.CSSProperties = {
-  ...PILL_BASE,
-  cursor: 'pointer',
-  appearance: 'none' as const,
-  WebkitAppearance: 'none' as const,
-  paddingRight: 14,
-  maxWidth: 260,
-  textOverflow: 'ellipsis',
-}
 
 function VisaBadge() {
   return (
@@ -2380,8 +2039,8 @@ function ProfessorSection() {
   // nothing was saved.
   const [keySync, setKeySync] = useState<'idle' | 'held' | PushResult>('idle')
   useEffect(() => {
-    onAIPush = r => setKeySync(r)
-    return () => { onAIPush = null }
+    setAIPushListener(r => setKeySync(r))
+    return () => { setAIPushListener(null) }
   }, [])
   const [autonomy, setAutonomy] = useState<'suggest' | 'draft' | 'act'>('suggest')
   const [mailDrafts, setMailDrafts] = useState(true)
