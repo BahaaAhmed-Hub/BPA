@@ -195,3 +195,5 @@ for (const [f, c] of files) {
 }
 writeFileSync(srcPath, out)
 console.log(`wrote ${files.size} file(s); ${srcBase}: ${text.split('\n').length} → ${out.split('\n').length} lines`)
+
+// Unused imports the name-matching leaves behind are removed by scripts/prune-imports.mjs (run after this).
