@@ -5,6 +5,12 @@
         "source": "github",
         "repo": "Owl-Listener/designer-skills"
       }
+    },
+    "ecc": {
+      "source": {
+        "source": "github",
+        "repo": "affaan-m/ECC"
+      }
     }
   },
   "enabledPlugins": {
@@ -40,6 +46,7 @@
     "accessible-content@designer-skills": true,
     "inclusive-personas@designer-skills": true,
     "adaptive-interfaces@designer-skills": true,
-    "accessibility-decisions@designer-skills": true
+    "accessibility-decisions@designer-skills": true,
+    "ecc@ecc": true
   }
 }

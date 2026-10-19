@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useInkOn } from '@/lib/ink'
+import { useFlip } from '@/lib/useFlip'
 import { Bay, Bookcase, MIN_BAYS, useCaseWidth } from './Bookcase'
 import { useCoverTone } from './coverTone'
 import { authorLine, boxOf, hash, spineColorOf, spineStyleOf, type Box } from './spine'
@@ -57,10 +58,18 @@ export function Shelf({ books, pickedId, onPick }: {
     return out.map((row, i) => ({ row, lean: row.length > 0 && free[i] > LEAN_ROOM }))
   }, [books, width])
 
+  // Books glide when a filter, a status change or an add re-packs the rows. Not during the settle-in
+  // (it owns the first two seconds), and not while the case is being resized (it re-packs every frame).
+  const layout = rows.map(r => r.row.map(x => x.book.id).join(',')).join('|')
+  const lastWidth = useRef(width)
+  const resized = lastWidth.current !== width
+  useEffect(() => { lastWidth.current = width })
+  const flipRef = useFlip<HTMLDivElement>(layout, entering || resized)
+
   let index = 0
   return (
     <Bookcase label="Your books" caseRef={ref}>
-      <div ref={stage} className="lib-stage" data-entering={entering ? '' : undefined} onPointerMove={glow}>
+      <div ref={el => { stage.current = el; flipRef.current = el }} className="lib-stage" data-entering={entering ? '' : undefined} onPointerMove={glow}>
         <div className="lib-glow" aria-hidden />
         {rows.map(({ row, lean }, i) => (
           <Bay key={i} gap={GAP} minHeight={row.length ? Math.max(...row.map(x => x.box.h)) + LIFT : 120}>
@@ -97,7 +106,7 @@ function Spine({ book, box, index, picked, leaning, onPick }: {
   } as CSSProperties
 
   return (
-    <button className="lib-spine" data-picked={picked ? '' : undefined} data-look={look} data-lean={leaning ? '' : undefined}
+    <button className="lib-spine" data-flip-id={book.id} data-picked={picked ? '' : undefined} data-look={look} data-lean={leaning ? '' : undefined}
       data-status={book.status}
       aria-label={`${book.title}${book.authors.length ? ` by ${authorLine(book)}` : ''}`}
       title={book.title}
