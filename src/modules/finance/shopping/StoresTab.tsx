@@ -103,7 +103,7 @@ function useHeldText(value: string, push: (v: string) => void) {
 function Field({ label, children, grow = 1 }: { label: string; children: React.ReactNode; grow?: number }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: `${grow} 1 0`, minWidth: 0 }}>
-      <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', color: C.ink4, textTransform: 'uppercase' }}>{label}</span>
+      <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: C.ink4, textTransform: 'uppercase' }}>{label}</span>
       {children}
     </label>
   )
@@ -177,11 +177,11 @@ function StoreRow({ store, itemCount, last, onUpdate, onDelete }: {
           {store.categories.length > 0 && (
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
               {store.categories.map(c => (
-                <span key={c} style={{ fontSize: 10, padding: '1px 6px', borderRadius: 8, background: C.field, color: C.ink3, border: `1px solid ${C.border}` }}>{c}</span>
+                <span key={c} style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 8, background: C.field, color: C.ink3, border: `1px solid ${C.border}` }}>{c}</span>
               ))}
             </div>
           )}
-          <div style={{ fontSize: 10, color: C.ink4, marginTop: 3 }}>
+          <div style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, marginTop: 3 }}>
             {itemCount > 0
               ? `Checked for ${itemCount} item${itemCount === 1 ? '' : 's'}`
               : store.categories.length

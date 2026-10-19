@@ -89,7 +89,7 @@ function AffordabilityChip({ item, envelopes }: { item: ShoppingItem; envelopes:
   const color  = ratio >= 1 ? C.pos : ratio >= 0.5 ? 'var(--sb-accent-deep)' : C.neg
   const label  = ratio >= 1 ? 'Affordable' : ratio >= 0.5 ? 'Tight' : 'Over budget'
   return (
-    <span style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: '0.06em', padding: '2px 6px', borderRadius: 4, background: `color-mix(in srgb, ${color} 15%, var(--sb-card))` }}>
+    <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color, letterSpacing: '0.06em', padding: '2px 6px', borderRadius: 4, background: `color-mix(in srgb, ${color} 15%, var(--sb-card))` }}>
       {label}
     </span>
   )
@@ -197,7 +197,7 @@ function ItemRow({ item, groups, stores, envelopes, onUpdate, onDelete, onPurcha
               {item.quantity}{item.unit ? ` ${item.unit}` : ''}
             </span>
             {item.priority > 0 && (
-              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: item.priority >= 2 ? C.neg : 'var(--sb-accent-deep)' }}>
+              <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: item.priority >= 2 ? C.neg : 'var(--sb-accent-deep)' }}>
                 {item.priority >= 2 ? 'Urgent' : 'High'}
               </span>
             )}
@@ -395,7 +395,7 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
             </span>
           )}
           {group.recurrence !== 'none' && (
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-accent-deep)', padding: '1px 6px', background: `color-mix(in srgb, var(--sb-accent) 20%, var(--sb-card))`, borderRadius: 4 }}>
+            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-accent-deep)', padding: '1px 6px', background: `color-mix(in srgb, var(--sb-accent) 20%, var(--sb-card))`, borderRadius: 4 }}>
               {RECURRENCE_LABELS[group.recurrence]}
             </span>
           )}
@@ -438,7 +438,7 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
           {/* Repeat purchase suggestions */}
           {repeatSuggestions.length > 0 && (
             <div style={{ marginBottom: 4 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: C.ink4, textTransform: 'uppercase', marginBottom: 5 }}>
+              <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: C.ink4, textTransform: 'uppercase', marginBottom: 5 }}>
                 Often bought
               </div>
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -772,7 +772,7 @@ function UnscheduledSection({ items, groups, stores, envelopes, onUpdate, onDele
   if (!items.length) return null
   return (
     <div>
-      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: C.ink4, textTransform: 'uppercase', marginBottom: 8 }}>
+      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: C.ink4, textTransform: 'uppercase', marginBottom: 8 }}>
         Unscheduled
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -1135,7 +1135,7 @@ export function ShoppingScreen() {
           )}
           {historyByPeriod.map(([key, period]) => (
             <div key={key}>
-              <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: C.ink4, textTransform: 'uppercase', marginBottom: 10 }}>
+              <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: C.ink4, textTransform: 'uppercase', marginBottom: 10 }}>
                 {period.label}
               </div>
               <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
@@ -1237,7 +1237,7 @@ export function ShoppingScreen() {
         {/* Period-grouped scheduled groups */}
         {groupsByPeriod.map(([_key, period]) => (
           <div key={_key}>
-            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: C.ink4, textTransform: 'uppercase', marginBottom: 10 }}>
+            <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: C.ink4, textTransform: 'uppercase', marginBottom: 10 }}>
               {period.label}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -87,7 +87,7 @@ const inputStyle: React.CSSProperties = {
 function Field({ label, children, grow = 1 }: { label: string; children: ReactNode; grow?: number }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: `${grow} 1 0`, minWidth: 0 }}>
-      <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', color: C.ink4, textTransform: 'uppercase' }}>
+      <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: C.ink4, textTransform: 'uppercase' }}>
         {label}
       </span>
       {children}
@@ -331,7 +331,7 @@ export function ItemFields({ item, groups, stores, envelopes, onUpdate, onDelete
               )
             })}
           </div>
-          <span style={{ fontSize: 10.5, color: C.ink4, marginTop: 3 }}>
+          <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, marginTop: 3 }}>
             {byCategory
               ? effective.length
                 ? `Nothing picked — checking the ${effective.length} store${effective.length === 1 ? '' : 's'} that carry ${item.category}.`

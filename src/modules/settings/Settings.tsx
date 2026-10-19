@@ -4122,7 +4122,7 @@ function BillingSection() {
   return (
     <div>
       {/* ── Eyebrow ── */}
-      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 14 }}>PLAN</div>
+      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 14 }}>PLAN</div>
 
       {/* ── Billing cycle toggle ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
@@ -4162,7 +4162,7 @@ function BillingSection() {
                 <span style={{ fontFamily: 'var(--sb-font-display)', fontSize: 13, fontWeight: 700, color: 'var(--sb-ink-1)' }}>{plan.name}</span>
                 {isCurrent && (
                   <span style={{
-                    fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
+                    fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
                     background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
                     padding: '2px 6px', borderRadius: 'var(--sb-r-chip)',
                   }}>CURRENT</span>
@@ -4182,7 +4182,7 @@ function BillingSection() {
               </div>
 
               {/* billing note */}
-              <p style={{ margin: '0 0 10px', fontSize: 10, color: 'var(--sb-ink-4)', minHeight: 14, lineHeight: 1.4 }}>
+              <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', minHeight: 14, lineHeight: 1.4 }}>
                 {plan.monthlyPrice === 0
                   ? 'No card required'
                   : cycle === 'annual'
@@ -4224,14 +4224,14 @@ function BillingSection() {
       </div>
 
       {/* ── Current plan summary ── */}
-      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 8 }}>SUBSCRIPTION</div>
+      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 8 }}>SUBSCRIPTION</div>
 
       <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>Professor Pro</span>
-              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
+              <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
             </div>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>Renews 14 March 2027</p>
           </div>
@@ -4264,7 +4264,7 @@ function BillingSection() {
       {/* ── Invoices ── */}
       <div style={{ marginTop: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>INVOICES</div>
+          <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>INVOICES</div>
           <button style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>Download all</button>
         </div>
         {INVOICES.map((inv, i) => (
@@ -4539,7 +4539,7 @@ function IntegrationsSection() {
       <div style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
-            <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Connections</p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Connections</p>
             <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
               Tokens let the MCP server, Siri Shortcuts, and Telegram act as you. Each is shown once — copy it before closing.
             </p>
@@ -4629,7 +4629,7 @@ function IntegrationsSection() {
       {/* ── TELEGRAM ─────────────────────────────────────────────────────────── */}
       <div style={{ marginTop: 24 }}>
         <div style={{ marginBottom: 12 }}>
-          <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Telegram</p>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Telegram</p>
           <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
             Talk to Professor from Telegram — ask about tasks, habits and finances, or add things on the go.
           </p>
@@ -4699,7 +4699,7 @@ function IntegrationsSection() {
       {/* ── SIRI SHORTCUTS ───────────────────────────────────────────────────── */}
       <div style={{ marginTop: 24, paddingTop: 20, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
         <div style={{ marginBottom: 12 }}>
-          <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Siri Shortcuts</p>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>Siri Shortcuts</p>
           <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
             Say "Hey Siri, {siriName}" and talk to your AI naturally — add tasks, log habits, check your calendar, and more. This is the hands-free way, and the only one that works with the app closed or the screen locked.
           </p>
@@ -4771,7 +4771,7 @@ function IntegrationsSection() {
                   {[
                     <>On iPhone or iPad, open <b>Shortcuts</b> → <b>+</b> → name it <em>{siriName}</em> — Siri answers to the shortcut’s name</>,
                     <>Add action: <b>Ask for Input</b> — prompt "What do you want to ask {siriName}?"</>,
-                    <>Add action: <b>Get Contents of URL</b> → paste the URL above (replace <code style={{ fontFamily: 'monospace', fontSize: 10 }}>{'{ShortcutInput}'}</code> with the "Provided Input" variable)</>,
+                    <>Add action: <b>Get Contents of URL</b> → paste the URL above (replace <code style={{ fontFamily: 'monospace', fontSize: 'var(--sb-t-micro)' }}>{'{ShortcutInput}'}</code> with the "Provided Input" variable)</>,
                     <>Add action: <b>Speak Text</b> — set input to the result from the previous step</>,
                     <>Then say <b>"Hey Siri, {siriName}"</b>. Its name is the phrase; no extra setting is needed</>,
                   ].map((step, i) => (

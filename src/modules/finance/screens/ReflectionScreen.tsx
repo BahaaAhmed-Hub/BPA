@@ -181,14 +181,14 @@ function LinesChart({ series, hidden, onToggle, fmt, through }: {
             <line x1={PAD_L} x2={PAD_L + iw} y1={y(t)} y2={y(t)}
               stroke="var(--sb-hairline)" strokeWidth={1} />
             <text x={PAD_L - 8} y={y(t) + 3.5} textAnchor="end"
-              style={{ fontSize: 10, fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)', fontVariantNumeric: 'tabular-nums' }}>
+              style={{ fontSize: 'var(--sb-t-micro)', fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)', fontVariantNumeric: 'tabular-nums' }}>
               {t === 0 ? '0' : group(Math.round(t))}
             </text>
           </g>
         ))}
         {MONTHS_SHORT.map((m, i) => (
           <text key={m} x={x(i)} y={H - 8} textAnchor="middle"
-            style={{ fontSize: 10, fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)', opacity: i > last ? 0.35 : 1 }}>{m}</text>
+            style={{ fontSize: 'var(--sb-t-micro)', fill: 'var(--sb-ink-4)', fontFamily: 'var(--sb-font-num)', opacity: i > last ? 0.35 : 1 }}>{m}</text>
         ))}
 
         {shown.map(s => {

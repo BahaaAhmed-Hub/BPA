@@ -180,7 +180,7 @@
      its weight, tracking and case are the level's own and are set with it —
      see lib/type.ts, where the same nine are style objects to spread.
 
-       micro    10    700  .12em  uppercase   gutters, capsed captions
+       micro    11    700  .12em  uppercase   gutters, capsed captions
        meta     11.5  500                     times, notes, the second line
        body-s   12.5  400                     dense body — rows, feeds
        body     13.5  400                     the default
@@ -193,7 +193,7 @@
      The first six are the readability floor and stay here. The last three —
      h2, h1 and display — are the theme's voice rather than its legibility,
      and are declared with the surfaces above. */
-  --sb-t-micro:   10px;
+  --sb-t-micro:   11px;
   --sb-t-meta:    11.5px;
   --sb-t-body-s:  12.5px;
   --sb-t-body:    13.5px;
@@ -1048,7 +1048,7 @@ img { max-width: 100%; }
   font-family: var(--sb-font-num); letter-spacing: .01em;
 }
 .lib-spine-title { min-height: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 650; font-size: 12.5px; }
-.lib-spine-author { flex: 0 1 38%; min-height: 0; overflow: hidden; text-overflow: ellipsis; font-size: 10px; opacity: .85; font-weight: 500; letter-spacing: .04em; }
+.lib-spine-author { flex: 0 1 38%; min-height: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--sb-t-micro); opacity: .85; font-weight: 500; letter-spacing: .04em; }
 .lib-mark {
   position: absolute; left: 50%; bottom: 9px; width: 15px; height: 15px; margin-left: -7.5px; border-radius: 50%;
   display: grid; place-items: center; font-size: 8.5px; font-weight: 700; line-height: 1;

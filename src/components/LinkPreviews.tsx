@@ -69,7 +69,7 @@ function Mark({ p }: { p: LinkPreview }) {
     <span aria-hidden style={{
       width: 18, height: 18, borderRadius: 5, display: 'grid', placeItems: 'center',
       background: 'var(--sb-accent-tint)', color: 'var(--sb-accent-deep)',
-      fontSize: 10, fontWeight: 700, lineHeight: 1,
+      fontSize: 'var(--sb-t-micro)', fontWeight: 700, lineHeight: 1,
     }}>{letter}</span>
   )
 }

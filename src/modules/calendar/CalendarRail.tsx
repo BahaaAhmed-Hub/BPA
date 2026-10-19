@@ -29,7 +29,7 @@ export function Label({ children, current, style }: {
 }) {
   return (
     <span style={{
-      fontFamily: MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: '.14em',
+      fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500, letterSpacing: '.14em',
       textTransform: 'uppercase', color: current ? 'var(--sb-accent-deep)' : 'var(--sb-ink-4)',
       ...style,
     }}>{children}</span>
@@ -213,7 +213,7 @@ function Clash({ pair, mins, now, onOpen, onReschedule }: {
       <span style={{
         alignSelf: 'flex-start', height: 19, display: 'inline-flex', alignItems: 'center',
         padding: '0 7px', borderRadius: 6, background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
-        fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase',
+        fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase',
       }}>Clash</span>
       {pair.map((r, i) => (
         <EventRow key={r.event.id} row={r} first={i === 0} now={now} onOpen={() => onOpen(r)} />
@@ -321,7 +321,7 @@ export function ProfessorCard({ rows, dayLabel }: { rows: RailEvent[]; dayLabel:
         <span style={{
           height: 19, display: 'inline-flex', alignItems: 'center', padding: '0 7px', borderRadius: 6,
           background: 'var(--sb-accent-tint2)', color: 'var(--sb-accent-deep)',
-          fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase',
+          fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase',
         }}>Beta</span>
       </span>
 
