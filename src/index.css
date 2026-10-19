@@ -257,6 +257,18 @@ html, body {
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--sb-accent-tint);
 }
+/* An inline `outline: none` outranks every stylesheet rule above, so a control
+   that carries one has no focus ring at all — 72 do, and a keyboard user cannot
+   see where they are in them. !important is the only thing that outranks an
+   inline style, and the selector reaches exactly those elements, so a control
+   that draws its own indicator in CSS (.sb-ev-field, .cal-ctl) is left alone.
+   scripts/focus-ring-audit.mjs is the measure. */
+[style*="outline: none"]:focus-visible,
+[style*="outline:none"]:focus-visible,
+[style*="outline-style: none"]:focus-visible {
+  outline: 2px solid var(--sb-ink-1) !important;
+  outline-offset: 2px;
+}
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
