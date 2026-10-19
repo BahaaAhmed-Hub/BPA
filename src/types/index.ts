@@ -1,3 +1,4 @@
+import { QUADRANTS } from '@/lib/quadrants'
 // ─── Company Tags ───────────────────────────────────────────────────────────
 export type CompanyTag = 'teradix' | 'dxtech' | 'consulting' | 'personal'
 
@@ -127,10 +128,10 @@ export type Quadrant = 'do' | 'schedule' | 'delegate' | 'eliminate'
 // drop it — so it comes from the semantic tokens rather than a hue somebody
 // liked, and it moves with the theme.
 export const QUADRANT_META: Record<Quadrant, { label: string; sub: string; color: string }> = {
-  do:       { label: 'Do',        sub: 'Urgent + Important',         color: 'var(--sb-negative)' },
-  schedule: { label: 'Schedule',  sub: 'Not Urgent + Important',     color: 'var(--sb-info)' },
-  delegate: { label: 'Delegate',  sub: 'Urgent + Not Important',     color: 'var(--sb-positive)' },
-  eliminate:{ label: 'Eliminate', sub: 'Not Urgent + Not Important', color: 'var(--sb-ink-3)' },
+  do:       { label: 'Do',        sub: 'Urgent + Important',         color: QUADRANTS.do.color },
+  schedule: { label: 'Schedule',  sub: 'Not Urgent + Important',     color: QUADRANTS.schedule.color },
+  delegate: { label: 'Delegate',  sub: 'Urgent + Not Important',     color: QUADRANTS.delegate.color },
+  eliminate:{ label: 'Eliminate', sub: 'Not Urgent + Not Important', color: QUADRANTS.eliminate.color },
 }
 
 // ─── Task Type ───────────────────────────────────────────────────────────────

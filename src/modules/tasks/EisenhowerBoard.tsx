@@ -13,6 +13,7 @@ import { TaskRow } from './TaskRow'
 import { buildTaskGroups, sortUrgentFirst, type TaskGroupBy } from './taskVisuals'
 import { CountBadge } from './controls'
 import { ICON, STROKE } from '@/lib/type'
+import { QUADRANTS } from '@/lib/quadrants'
 
 interface QuadrantSpec {
   id: Quadrant
@@ -93,6 +94,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
     }}>
       {/* Quadrant header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0 }}>
+        {(() => { const Q = QUADRANTS[spec.id]; return <Q.Icon size={ICON.sm} strokeWidth={STROKE.rest} data-quadrant={spec.id} style={{ flexShrink: 0, color: Q.color }} aria-label={Q.label} /> })()}
         <span style={{
           height: 22, padding: '0 8px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
           background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',

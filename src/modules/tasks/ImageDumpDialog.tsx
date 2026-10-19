@@ -7,13 +7,9 @@ import { extractTasksFromFile, type ExtractedDraftTask } from '@/lib/imageTaskEx
 import { useTaskStore } from '@/store/taskStore'
 import { loadVisibleCompanies } from '@/types'
 import type { Quadrant, TaskType, CompanyTag } from '@/types'
+import { QUADRANTS, QUADRANT_ORDER } from '@/lib/quadrants'
 
-const QUADRANT_OPTS: { v: Quadrant; label: string; color: string }[] = [
-  { v: 'do',        label: 'Do',       color: 'var(--sb-negative)' },
-  { v: 'schedule',  label: 'Schedule', color: 'var(--sb-info)' },
-  { v: 'delegate',  label: 'Delegate', color: 'var(--sb-positive)' },
-  { v: 'eliminate', label: 'Eliminate',color: 'var(--sb-ink-3)' },
-]
+const QUADRANT_OPTS = QUADRANT_ORDER.map(v => ({ v, label: QUADRANTS[v].label, color: QUADRANTS[v].color }))
 
 const TYPE_OPTS: { v: TaskType; emoji: string; label: string }[] = [
   { v: 'do',       emoji: '✅', label: 'Do' },

@@ -229,7 +229,7 @@ If an existing harness breaks because it matched old text (e.g. "On fire! 🔥" 
 | P0.1 Type floor | done | branch `claude/next-incomplete-phase-niej9p` |
 | P0.2 Ink levels | done | branch `claude/next-incomplete-phase-niej9p` |
 | P0.3 One palette | done | branch `claude/next-incomplete-phase-niej9p` |
-| P0.4 Priority colours | todo | |
+| P0.4 Priority colours | done | branch `claude/next-incomplete-phase-niej9p` |
 | P0.5 Emoji | todo | |
 | P0.6 Dialogs → undo / ConfirmDialog | todo | |
 | P1.1 Hide unfinished | todo | |

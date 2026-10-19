@@ -109,7 +109,15 @@ const MEASURE = ({ narrow, tap }) => {
     const cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/)[0] : ''
     return el.tagName.toLowerCase() + (cls ? '.' + cls : '')
   }
-  const out = { texts: 0, small: [], emoji: [], taps: [], scrollW: document.documentElement.scrollWidth, innerW: window.innerWidth }
+  // P0.4 — the colour each place draws "Do now" in, read from the page.
+  const probe = document.createElement('i'); probe.style.color = 'var(--sb-negative)'; document.body.appendChild(probe)
+  const want = getComputedStyle(probe).color; probe.remove()
+  const doNow = []
+  for (const el of document.querySelectorAll('[data-quadrant="do"]')) if (visible(el)) doNow.push(getComputedStyle(el).color)
+  // The other three, so a swapped pair cannot hide behind "do" being right.
+  const others = {}
+  for (const q of ['schedule', 'delegate', 'eliminate']) others[q] = [...document.querySelectorAll(`[data-quadrant="${q}"]`)].filter(visible).map(el => getComputedStyle(el).color)
+  const out = { doNow, others, want, texts: 0, small: [], emoji: [], taps: [], scrollW: document.documentElement.scrollWidth, innerW: window.innerWidth }
   const seenSmall = new Set(), seenEmoji = new Set()
 
   for (const el of document.body.querySelectorAll('*')) {
@@ -238,6 +246,10 @@ for (const theme of THEMES) {
         await btn.click({ timeout: 4000 })
         await page.locator(`[data-side-rail] button[aria-label="${mod}"][aria-current="page"]`).waitFor({ timeout: 4000 })
       } catch { opened = false }
+      if (mod === 'Tasks' && opened) {
+        // The matrix is one view of several; ask for it by name if it is offered.
+        await page.getByText('Matrix', { exact: true }).first().click({ timeout: 2000 }).catch(() => {})
+      }
       await measure(page, mod, { opened })
     }
 
@@ -288,6 +300,17 @@ for (const theme of THEMES) {
     }
   }
   for (const d of dialogs.filter(x => x.theme === theme)) fail(`native dialog on ${d.screen}: “${d.message}”`)
+}
+
+// P0.4 — "Do now" must be the same colour wherever it is drawn: on Tasks and
+// on the Dashboard, and it must be the negative token. Asserted to EXIST first.
+for (const theme of THEMES) {
+  const seen = results.filter(x => x.theme === theme && x.m.doNow.length).map(x => ({ screen: x.screen, colours: [...new Set(x.m.doNow)], want: x.m.want }))
+  const screens = seen.map(x => x.screen)
+  const all = new Set(seen.flatMap(x => x.colours))
+  const ok = screens.includes('Dashboard') && all.size === 1 && [...all][0] === seen[0].want
+  if (!ok) { failed++; console.log(`  ✗ ${theme}: "Do now" colour — seen on [${screens.join(', ') || 'nowhere'}] as ${[...all].join(' | ') || '—'}, expected ${seen[0]?.want ?? 'var(--sb-negative)'}`) }
+  else console.log(`  ✓ ${theme}: "Do now" is ${[...all][0]} on ${screens.join(' and ')}`)
 }
 
 console.log(`\n${THEMES.length} theme(s) × ${results.length / THEMES.length} screens · type ${totals.type} · emoji ${totals.emoji} · dialogs ${dialogs.length}` +

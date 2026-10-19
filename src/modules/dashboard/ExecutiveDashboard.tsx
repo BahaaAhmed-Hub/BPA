@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   TrendingUp, CheckSquare, Calendar, Inbox,
-  Target, Zap, Award, ArrowRight, Ban,
+  Target, Zap, Award, ArrowRight,
 } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
@@ -11,6 +11,7 @@ import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { dayTotals } from '@/lib/habitProgress'
+import { QUADRANTS, QUADRANT_ORDER } from '@/lib/quadrants'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -334,12 +335,8 @@ export function ExecutiveDashboard() {
                     hue: two of these were the same violet anyway, so the colour
                     was never telling them apart. The figures are darkened to
                     clear 3:1 at their size. */}
-                {([
-                  { key: 'do',       label: 'Do Now',    color: 'var(--sb-info)',         Icon: Zap },
-                  { key: 'schedule', label: 'Schedule',  color: 'var(--sb-ink-2)', Icon: Calendar },
-                  { key: 'delegate', label: 'Delegate',  color: 'var(--sb-positive)',         Icon: ArrowRight },
-                  { key: 'eliminate',label: 'Eliminate', color: 'var(--sb-ink-3)', Icon: Ban },
-                ] as const).map(({ key, label, color, Icon }) => {
+                {(QUADRANT_ORDER.map(key => ({ key, ...QUADRANTS[key] }))
+                ).map(({ key, label, color, Icon }) => {
                   const count = activeTasks.filter(t => t.quadrant === key).length
                   return (
                     <div key={key} onClick={() => setModule('tasks')}
@@ -350,8 +347,8 @@ export function ExecutiveDashboard() {
                         display: 'flex', flexDirection: 'column', gap: 4,
                         cursor: 'pointer',
                       }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--sb-t-h2)', fontWeight: 700, color, fontFamily: 'var(--sb-font-num)' }}>
-                        <Icon size={ICON.sm} strokeWidth={STROKE.active} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)' }}>
+                        <Icon size={ICON.sm} strokeWidth={STROKE.active} data-quadrant={key} style={{ color }} />
                         {count}
                       </div>
                       <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{label}</div>

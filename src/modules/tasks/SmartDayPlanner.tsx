@@ -23,6 +23,7 @@ import { getGoogleToken } from '@/lib/tokenManager'
 import { ICON } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { notify } from '@/lib/undo'
+import { QUADRANTS, QUADRANT_ORDER } from '@/lib/quadrants'
 
 const MINE_KEY = 'planner-only-my-calendars'
 
@@ -31,7 +32,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
 const PRIORITY_ORDER = { do: 0, schedule: 1, delegate: 2, eliminate: 3 }
 const PRIORITY_LABEL: Record<string, string> = { do: 'P0', schedule: 'P1', delegate: 'P2', eliminate: 'P3' }
-const PRIORITY_COLOR: Record<string, string> = { do: 'var(--sb-negative)', schedule: 'var(--sb-warning)', delegate: 'var(--sb-info)', eliminate: 'var(--sb-ink-4)' }
+const PRIORITY_COLOR: Record<string, string> = Object.fromEntries(QUADRANT_ORDER.map(q => [q, QUADRANTS[q].color]))
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
