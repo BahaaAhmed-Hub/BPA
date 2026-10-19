@@ -6,7 +6,7 @@
 // Also: live stats, goals, rules, and variance analysis.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { X, MessageSquare, BarChart2, Target, Settings2, GitCompare, Plus, Trash2, Check, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import { X, MessageSquare, BarChart2, Target, Settings2, GitCompare, Plus, Trash2, Check, ChevronDown, ChevronUp, Sparkles, Lock } from 'lucide-react'
 import {
   type IdealBlock, type IdealGoal, type IdealRule, type IdealChatMsg, type IdealVariance,
   type IdealWeekAction,
@@ -17,6 +17,7 @@ import {
 } from '../../lib/idealWeekStore'
 import { chatIdealWeek } from '../../lib/idealWeekAI'
 import type { GCalEvent } from '../../lib/googleCalendar'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── Layout constants ──────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
     if (h.length) return h
     return [{
       id: nanoid(), role: 'assistant',
-      content: 'Tell me about your ideal week 😊  I can help you design your perfect weekly schedule — just describe what matters most to you, or start drawing blocks on the canvas.',
+      content: 'Tell me about your ideal week. I can help you design your perfect weekly schedule — just describe what matters most to you, or start drawing blocks on the canvas.',
       applied: true, ts: new Date().toISOString(),
     }]
   })
@@ -529,7 +530,7 @@ function BlockChip({ block, hoursStart, hourHeight, isSelected, onClick, onDelet
       </div>
       {height >= 40 && (
         <div style={{ fontSize: 'var(--sb-t-meta)', color: 'color-mix(in srgb, var(--sb-ink-on-fill) 80%, transparent)', fontWeight: 500 }}>
-          {block.blockType === 'hard' ? '🔒' : '·'} {block.category}
+          {block.blockType === 'hard' ? <Lock size={ICON.sm} strokeWidth={STROKE.rest} aria-label="Fixed" style={{ verticalAlign: '-2px' }} /> : '·'} {block.category}
         </div>
       )}
       {isSelected && (

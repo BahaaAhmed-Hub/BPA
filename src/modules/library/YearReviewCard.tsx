@@ -9,6 +9,7 @@ import { fmtMinutes, todayISO } from './readingStats'
 import { fmtMoney, unplaced } from './spendStats'
 import { MONTH, ratingsOf, yearMarkdown, yearReview, type YearReview } from './yearStats'
 import type { Book } from './types'
+import { GLYPH } from '@/lib/glyphs'
 
 const LETTER = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
 
@@ -85,7 +86,7 @@ export function YearReviewCard({ onOpenBook }: { onOpenBook: (id: string) => voi
               <Stat label="Time" value={fmtMinutes(r.readMinutes + r.listenMinutes)} sub={[r.readMinutes ? `${fmtMinutes(r.readMinutes)} reading` : '', r.listenMinutes ? `${fmtMinutes(r.listenMinutes)} listening` : ''].filter(Boolean).join(' · ')} />
             )}
             {r.daysRead > 0 && <Stat label="Days" value={String(r.daysRead)} sub={r.longestStreak > 1 ? `longest streak ${r.longestStreak}` : 'with a session'} />}
-            {r.ratings.avg !== null && <Stat label="Rating" value={`${r.ratings.avg} ★`} sub={`${r.ratings.rated} rated`} />}
+            {r.ratings.avg !== null && <Stat label="Rating" value={`${r.ratings.avg} ${GLYPH.star}`} sub={`${r.ratings.rated} rated`} />}
           </div>
 
           <div role="list" aria-label="Books finished each month" style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 96 }}>
@@ -104,7 +105,7 @@ export function YearReviewCard({ onOpenBook }: { onOpenBook: (id: string) => voi
                 const n = r.ratings.dist[star - 1]
                 return (
                   <div key={star} role="listitem" aria-label={`${star} star${star === 1 ? '' : 's'}: ${n}`} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
-                    <span style={{ width: 28 }}>{star} ★</span>
+                    <span style={{ width: 28 }}>{star} {GLYPH.star}</span>
                     <div aria-hidden style={{ flex: 1, height: 8, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', overflow: 'hidden' }}>
                       <div style={{ width: `${(n / maxDist) * 100}%`, height: '100%', background: 'var(--sb-accent)' }} />
                     </div>
@@ -139,7 +140,7 @@ export function YearReviewCard({ onOpenBook }: { onOpenBook: (id: string) => voi
           {r.undated} finished book{r.undated === 1 ? ' has' : 's have'} no finish date, so {r.undated === 1 ? 'it is' : 'they are'} in no year. Set the date on the book&rsquo;s page to count {r.undated === 1 ? 'it' : 'them'}.
         </div>
       )}
-      {all.rated > 0 && <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>All time: {all.avg} ★ across {all.rated} rated book{all.rated === 1 ? '' : 's'}.</div>}
+      {all.rated > 0 && <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>All time: {all.avg} {GLYPH.star} across {all.rated} rated book{all.rated === 1 ? '' : 's'}.</div>}
     </Card>
   )
 }

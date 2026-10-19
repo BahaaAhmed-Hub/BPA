@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { loadAccounts } from '@/lib/multiAccount'
+import { Link2, Building2, Flame, CheckSquare } from 'lucide-react'
+import { ICON, STROKE } from '@/lib/type'
 
 interface WizardData {
   companies: unknown[]
@@ -34,10 +36,10 @@ export function Step6Done({ data }: Props) {
   const totalTasks    = data.selectedTaskIds.size
 
   const stats = [
-    { label: 'Accounts',  value: totalAccounts,          color: 'var(--sb-info)', emoji: '🔗' },
-    { label: 'Companies', value: data.companies.length,   color: 'var(--sb-info)', emoji: '🏢' },
-    { label: 'Habits',    value: totalHabits,             color: 'var(--sb-positive)', emoji: '🔥' },
-    { label: 'Tasks',     value: totalTasks,              color: 'var(--sb-warning)', emoji: '✅' },
+    { label: 'Accounts',  value: totalAccounts,          color: 'var(--sb-info)', Icon: Link2 },
+    { label: 'Companies', value: data.companies.length,   color: 'var(--sb-info)', Icon: Building2 },
+    { label: 'Habits',    value: totalHabits,             color: 'var(--sb-positive)', Icon: Flame },
+    { label: 'Tasks',     value: totalTasks,              color: 'var(--sb-warning)', Icon: CheckSquare },
   ]
 
   return (
@@ -59,7 +61,7 @@ export function Step6Done({ data }: Props) {
       </div>
 
       <h2 style={{ margin: '0 0 8px', fontSize: 'var(--sb-t-h1)', fontWeight: 800, color: 'var(--sb-ink-1)' }}>
-        You're all set! 🎉
+        You're all set
       </h2>
       <p style={{ margin: '0 0 32px', fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
         Here's what we've set up for you:
@@ -69,7 +71,7 @@ export function Step6Done({ data }: Props) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 32 }}>
         {stats.map(s => (
           <div key={s.label} style={{ padding: '16px 8px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
-            <div style={{ fontSize: 'var(--sb-t-h2)', marginBottom: 6 }}>{s.emoji}</div>
+            <div style={{ marginBottom: 6, color: s.color }}><s.Icon size={ICON.lg} strokeWidth={STROKE.rest} aria-hidden /></div>
             <div style={{ fontSize: 'var(--sb-t-h1)', fontWeight: 800, color: s.color, lineHeight: 1 }}>
               <CountUp target={s.value} />
             </div>

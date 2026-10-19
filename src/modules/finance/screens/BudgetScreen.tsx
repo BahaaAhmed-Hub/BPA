@@ -28,6 +28,7 @@ import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
+import { GLYPH, DEFAULT_CATEGORY_ICON } from '@/lib/glyphs'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -1921,7 +1922,7 @@ export function BudgetScreen(_props?: any) {
 
         const FLAG_STYLES: Record<TxFlag, { bg: string; color: string; border: string; label: string }> = {
           approved: { bg: 'var(--sb-positive-tint)', color: 'var(--sb-positive-deep)', border: 'var(--sb-positive-tint)', label: '✓ OK' },
-          review:   { bg: 'var(--sb-accent-tint)', color: 'var(--sb-warning)', border: 'var(--sb-accent)', label: '⚑ Review' },
+          review:   { bg: 'var(--sb-accent-tint)', color: 'var(--sb-warning)', border: 'var(--sb-accent)', label: `${GLYPH.flag} Review` },
           excluded: { bg: 'var(--sb-negative-tint)', color: 'var(--sb-negative)', border: 'var(--sb-negative-tint)', label: '✗ Exclude' },
         }
 
@@ -1991,7 +1992,7 @@ export function BudgetScreen(_props?: any) {
                     return (
                       <div key={key} style={{ flexShrink: 0, background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px 12px', minWidth: 100 }}>
                         <div style={{ marginBottom: 3, color: cat?.color ?? 'var(--sb-ink-3)' }}>
-                          <CategoryGlyph icon={cat?.icon ?? '📂'} size={15} />
+                          <CategoryGlyph icon={cat?.icon ?? DEFAULT_CATEGORY_ICON} size={15} />
                         </div>
                         <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginBottom: 3, whiteSpace: 'nowrap' }}>{cat?.name ?? selectedCat.name}</div>
                         <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: RUST, fontFamily: 'var(--sb-font-num)' }}>

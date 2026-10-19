@@ -43,6 +43,7 @@ export interface WizardData {
 // ─── Habit templates (mirrored in Step4 for apply logic) ─────────────────────
 
 const HABIT_TEMPLATES = [
+// ui-guard: emoji-start — habit presets a person can pick
   { id: 'water',       name: 'Drink Water',  emoji: '💧', color: 'var(--sb-info)', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
   { id: 'exercise',    name: 'Exercise',      emoji: '💪', color: 'var(--sb-negative)', type: 'boolean'  as const,                               frequency: 'daily' as const },
   { id: 'reading',     name: 'Reading',       emoji: '📚', color: 'var(--sb-info)', type: 'quantity' as const, goal: 30,   unit: 'min',     frequency: 'daily' as const },
@@ -55,6 +56,7 @@ const HABIT_TEMPLATES = [
   { id: 'vitamins',    name: 'Vitamins',      emoji: '💊', color: 'var(--sb-negative)', type: 'boolean'  as const,                               frequency: 'daily' as const },
   { id: 'prayer',      name: 'Prayer',        emoji: '🤲', color: 'var(--sb-accent)', type: 'boolean'  as const,                               frequency: 'daily' as const },
   { id: 'no-sugar',    name: 'No Sugar',      emoji: '🚫', color: 'var(--sb-accent)', type: 'boolean'  as const,                               frequency: 'daily' as const },
+// ui-guard: emoji-end
 ]
 
 const STEP_LABELS = ['Welcome', 'Accounts', 'Companies', 'Habits', 'Import', 'Done']

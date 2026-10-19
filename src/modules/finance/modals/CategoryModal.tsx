@@ -5,6 +5,7 @@ import type { Category } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { ICON, STROKE } from '@/lib/type'
+import { DEFAULT_CATEGORY_ICON } from '@/lib/glyphs'
 
 // ─── Naming a category ───────────────────────────────────────────────────────
 // The last window still in the old dialect: a bordered form with stacked
@@ -44,7 +45,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
   const txTypeLocked = !isEdit && !!category?.txType
 
   const [name,     setName]     = useState(category?.name     ?? '')
-  const [icon,     setIcon]     = useState(category?.icon     ?? '📁')
+  const [icon,     setIcon]     = useState(category?.icon     ?? DEFAULT_CATEGORY_ICON)
   const [color,    setColor]    = useState(category?.color    ?? SWATCHES[8])
   const [txType,   setTxType]   = useState<Category['txType']>(category?.txType ?? 'expense')
   const [parentId, setParentId] = useState<string>(category?.parentId ?? '')
@@ -58,7 +59,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
     onSave({
       id:        category?.id || crypto.randomUUID(),
       name:      name.trim(),
-      icon:      icon || '📁',
+      icon:      icon || DEFAULT_CATEGORY_ICON,
       color,
       parentId:  parentId || undefined,
       isSystem:  category?.isSystem ?? false,

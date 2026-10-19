@@ -15,6 +15,9 @@ import { Segmented } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import { notify } from '@/lib/undo'
 import { C } from '@/lib/palette'
+import { ClipboardList, ShoppingCart } from 'lucide-react'
+import { DEFAULT_SHOP_ICON } from '@/lib/glyphs'
+import { EmptyGlyph } from '@/components/ui/EmptyGlyph'
 
 // ─── Sunlit Bento tokens used ─────────────────────────────────────────────────
 
@@ -514,7 +517,7 @@ function GroupCard({ group, items, allGroups, stores, envelopes, onUpdateGroup, 
               />
             ) : (
               <GroupActionButton
-                label={group.scheduledDate ? `📅 ${new Date(group.scheduledDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'Schedule'}
+                label={group.scheduledDate ? `${new Date(group.scheduledDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'Schedule'}
                 onClick={() => setShowSchedulePicker(true)}
               />
             )}
@@ -670,7 +673,7 @@ const GROUP_ICONS = ['🛒', '🥦', '💊', '🏠', '👕', '🎮', '📚', '�
 
 function AddGroupModal({ onAdd, onClose }: AddGroupModalProps) {
   const [name, setName]             = useState('')
-  const [icon, setIcon]             = useState('🛒')
+  const [icon, setIcon]             = useState(DEFAULT_SHOP_ICON)
   const [_color, _setColor]         = useState('#F5D14E') // ui-guard: user-colour
   const [scheduledDate, setDate]    = useState('')
   const [recurrence, setRecurrence] = useState<ShoppingGroup['recurrence']>('none')
@@ -1117,7 +1120,7 @@ export function ShoppingScreen() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
           {historyByPeriod.length === 0 && (
             <div style={{ textAlign: 'center', paddingTop: 60, color: C.ink4 }}>
-              <div style={{ fontSize: 36, marginBottom: 10 }}>📋</div>
+              <EmptyGlyph icon={ClipboardList} />
               <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: C.ink3 }}>No purchase history yet</div>
               <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink4, marginTop: 4 }}>Items you mark as purchased will appear here.</div>
             </div>
@@ -1288,7 +1291,7 @@ export function ShoppingScreen() {
         {/* Empty state */}
         {!loading && !activeGroups.length && !unscheduled.length && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 12, paddingTop: 60, color: C.ink4 }}>
-            <span style={{ fontSize: 40 }}>🛒</span>
+            <EmptyGlyph icon={ShoppingCart} />
             <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: C.ink3 }}>No shopping lists yet</div>
             <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink4, textAlign: 'center', maxWidth: 280 }}>
               Create a list for your weekly groceries, monthly household items, or any shopping trip.

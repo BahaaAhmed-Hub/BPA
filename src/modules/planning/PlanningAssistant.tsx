@@ -3,14 +3,13 @@ import { CALENDAR_COLORS } from '@/lib/palettes'
 import {
   ChevronLeft, ChevronRight, RefreshCw,
   AlertTriangle, TrendingUp, Lightbulb, Trophy,
-  Mic, Send, ExternalLink, Copy, X as XIcon,
-} from 'lucide-react'
+  Mic, Send, ExternalLink, Copy, X as XIcon, MapPin, CalendarDays } from 'lucide-react'
 import { getGoogleToken } from '@/lib/tokenManager'
 import { fetchCalendarEventsWithToken } from '@/lib/googleCalendar'
 import type { GCalEvent } from '@/lib/googleCalendar'
 import { useAuthStore } from '@/store/authStore'
 import { call } from '@/lib/professor'
-import { ICON } from '@/lib/type'
+import { ICON, STROKE } from '@/lib/type'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -121,7 +120,7 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
           )}
           {menu.event.location && (
             <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2, paddingLeft: 18, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              📍 {menu.event.location}
+              <MapPin size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden style={{ verticalAlign: '-2px', marginRight: 4 }} />{menu.event.location}
             </div>
           )}
         </div>
@@ -413,7 +412,7 @@ export function PlanningAssistant() {
             {/* Plan Your Week */}
             <div style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: 'var(--sb-t-label)' }}>📅</span>
+                <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />
                 <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Plan Your Week</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

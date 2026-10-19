@@ -13,6 +13,7 @@ import { ICON } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { dayProgress, dayTotals, spanTotals } from '@/lib/habitProgress'
 import { LOZENGE } from '../../components/SideRail'
+import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
 
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -157,7 +158,7 @@ function HabitImagePicker({ image, emoji, onChange, onEmojiChange, size = 54 }: 
             </button>
           )
           : onEmojiChange
-            ? <EmojiBtn value={emoji || '🎯'} onSelect={onEmojiChange} size={size} />
+            ? <EmojiBtn value={emoji || DEFAULT_HABIT_EMOJI} onSelect={onEmojiChange} size={size} />
             : (
               <button
                 type="button"
@@ -169,7 +170,7 @@ function HabitImagePicker({ image, emoji, onChange, onEmojiChange, size = 54 }: 
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: Math.round(size * 0.5), lineHeight: 1,
                 }}>
-                {emoji || '🎯'}
+                {emoji || DEFAULT_HABIT_EMOJI}
               </button>
             )
         }
@@ -1036,7 +1037,7 @@ export function HabitsModule() {
   function createHabit() {
     const id = storeAdd({
       name: 'New habit',
-      emoji: '🎯',
+      emoji: DEFAULT_HABIT_EMOJI,
       color: HABIT_COLORS[habits.length % HABIT_COLORS.length],
       frequency: 'daily',
       isActive: true,
@@ -1082,7 +1083,7 @@ export function HabitsModule() {
         <span data-day-pct={dayTotal.pct} style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0, minWidth: 0 }}>
           <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap' }}>
             {totalActive === 0 ? 'No habits yet'
-              : dayTotal.pct >= 100 ? 'All habits complete! 🎉'
+              : dayTotal.pct >= 100 ? 'All habits done today'
               : dayTotal.progress === 0 ? (isToday ? 'Nothing logged yet today' : 'Nothing logged that day')
               : `${dayTotal.pct}% of the day done`}
           </span>

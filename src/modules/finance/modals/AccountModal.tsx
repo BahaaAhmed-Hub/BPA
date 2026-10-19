@@ -8,6 +8,7 @@ import { MoneyInput } from '../components/MoneyInput'
 import { schemeFor, setScheme, dormantWhy, returnRate, type RewardScheme } from '../cardRewards'
 import { lookUpRewards } from '../rewardLookup'
 import { inputStyle } from '@/lib/fields'
+import { DEFAULT_ACCOUNT_EMOJI } from '@/lib/glyphs'
 
 const RED   = NEGATIVE
 const GREEN = POSITIVE
@@ -30,7 +31,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
   const [balance,     setBalance]     = useState(account?.balance     ?? 0)
   const [creditLimit, setCreditLimit] = useState(account?.creditLimit ?? 0)
   const [last4,       setLast4]       = useState(account?.last4       ?? '')
-  const [emoji,       setEmoji]       = useState(account?.emoji       ?? '🏦')
+  const [emoji,       setEmoji]       = useState(account?.emoji       ?? DEFAULT_ACCOUNT_EMOJI)
   const [color,       setColor]       = useState(account?.color       ?? 'var(--sb-ink-4)')
 
   // ── What the card earns ──────────────────────────────────────────────────
@@ -68,7 +69,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
       currency,
       balance:     Number(balance),
       last4:       last4 || undefined,
-      emoji:       emoji || '🏦',
+      emoji:       emoji || DEFAULT_ACCOUNT_EMOJI,
       color,
       sortOrder:   account?.sortOrder ?? 0,
     }

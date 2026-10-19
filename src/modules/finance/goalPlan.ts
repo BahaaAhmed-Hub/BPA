@@ -4,6 +4,7 @@ import { toBase, baseCurrency } from './fx'
 import { settled, whenPaid } from './unpaid'
 import { isBudgetEntry } from './budgetEntries'
 import { todayISO } from './dates'
+import { FALLBACK_EXPENSE_ICON } from '@/lib/glyphs'
 
 // ─── Can this goal actually happen? ──────────────────────────────────────────
 //
@@ -820,7 +821,7 @@ export function debtGoals(
     out.push({
       id,
       name: `Clear ${a.name}`,
-      icon: a.emoji || '💳',
+      icon: a.emoji || FALLBACK_EXPENSE_ICON,
       targetAmount: Math.round(-bal * 100) / 100,
       currentAmount: 0,
       color: a.color,

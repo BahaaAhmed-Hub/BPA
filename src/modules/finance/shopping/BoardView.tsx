@@ -24,6 +24,7 @@ import type { ShoppingGroup, ShoppingItem, ShoppingStore } from './types'
 import { ItemFields, type EnvelopeRow } from './ItemFields'
 import { useFillsTheWindow } from '@/lib/fillsTheWindow'
 import { C } from '@/lib/palette'
+import { FALLBACK_BOARD_ICON } from '@/lib/glyphs'
 
 
 /** The column an item with no list lives in. Not a group id — a group can
@@ -195,7 +196,7 @@ function Column({
         }}>
           {/* Header */}
           <div style={{ padding: '10px 12px 8px', display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-            <span style={{ fontSize: 16 }} aria-hidden>{group?.icon ?? '📥'}</span>
+            <span style={{ fontSize: 16 }} aria-hidden>{group?.icon ?? FALLBACK_BOARD_ICON}</span>
             {editName && group && onUpdateGroup ? (
               <input
                 autoFocus value={nameVal}

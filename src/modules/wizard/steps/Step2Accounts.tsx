@@ -4,6 +4,8 @@ import { connectAdditionalGoogleAccount } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import type { WizardData } from '../SetupWizard'
 import type { ConnectedAccount } from '@/lib/multiAccount'
+import { Apple, Mail, CalendarDays } from 'lucide-react'
+import { ICON, STROKE } from '@/lib/type'
 
 interface Props {
   data: WizardData
@@ -36,7 +38,7 @@ function MicrosoftIcon() {
 
 function AppleIcon() {
   return (
-    <span style={{ fontSize: 'var(--sb-t-h2)', lineHeight: 1 }}>🍎</span>
+    <Apple size={ICON.lg} strokeWidth={STROKE.rest} aria-hidden />
   )
 }
 
@@ -157,8 +159,8 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
             Primary · Connected
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)' }}>✉ Mail</span>
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)' }}>📅 Calendar</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />Mail</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />Calendar</span>
           </div>
         </div>
       </div>
@@ -206,8 +208,8 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)' }}>✉</span>
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)' }}>📅</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)' }}><Mail size={ICON.sm} strokeWidth={STROKE.rest} aria-label="Mail" /></span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)' }}><CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} aria-label="Calendar" /></span>
               </div>
             </div>
           ))}

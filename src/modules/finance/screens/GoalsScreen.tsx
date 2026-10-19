@@ -25,6 +25,7 @@ import {
 import { loadRules } from '../modals/BudgetRuleModal'
 import { adviseGoal, ifFound, type Advice, type Move } from '../goalAdvice'
 import { C } from '@/lib/palette'
+import { DEFAULT_GOAL_ICON } from '@/lib/glyphs'
 
 
 // ─── 21 · Goals ───────────────────────────────────────────────────────────────
@@ -378,7 +379,7 @@ export function GoalsScreen(_props?: any) {
   const [newName, setNewName]     = useState('')
   const [newTarget, setNewTarget] = useState(0)
   const [newBy, setNewBy]         = useState('')
-  const [newIcon, setNewIcon]     = useState('🎯')
+  const [newIcon, setNewIcon]     = useState(DEFAULT_GOAL_ICON)
   // MoneyInput holds the text you typed, so that a half-typed "1,2" survives.
   // Setting the value back to 0 does not clear that — the field has to be a
   // new one, or the amount you just used stays in the form.
@@ -477,7 +478,7 @@ export function GoalsScreen(_props?: any) {
     const g: Goal = {
       id: crypto.randomUUID(),
       name: newName.trim(),
-      icon: newIcon || '🎯',
+      icon: newIcon || DEFAULT_GOAL_ICON,
       targetAmount: newTarget,
       currentAmount: 0,
       color: C.accent,
@@ -490,7 +491,7 @@ export function GoalsScreen(_props?: any) {
     }
     void upsertGoal(g)
     setSelectedId(g.id)
-    setNewName(''); setNewTarget(0); setNewBy(''); setNewIcon('🎯')
+    setNewName(''); setNewTarget(0); setNewBy(''); setNewIcon(DEFAULT_GOAL_ICON)
     setFormTick(n => n + 1)
     setFormOpen(false)
   }

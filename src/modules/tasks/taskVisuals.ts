@@ -223,7 +223,7 @@ export function buildTaskGroups(tasks: Task[], groupBy: Exclude<TaskGroupBy, 'no
       return {
         key: k,
         label: u?.name ?? 'Unassigned',
-        emoji: '👤',
+        emoji: '', // groups are labelled in words; no mark
         color: u?.companyColor ?? 'var(--sb-ink-3)',
         tasks: sortUrgentFirst(ts),
       }
@@ -254,6 +254,6 @@ export function buildTaskGroups(tasks: Task[], groupBy: Exclude<TaskGroupBy, 'no
     .filter(([k]) => k !== '__none')
     .map(([k, ts]) => {
       const co = companies.find(c => c.id === k)
-      return { key: k, label: co?.name ?? k, emoji: '🏢', color: co?.color ?? 'var(--sb-ink-3)', tasks: sortUrgentFirst(ts) }
+      return { key: k, label: co?.name ?? k, emoji: '', color: co?.color ?? 'var(--sb-ink-3)', tasks: sortUrgentFirst(ts) }
     })
 }

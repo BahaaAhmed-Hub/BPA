@@ -3,8 +3,7 @@ import { linksForRecord } from '@/lib/meetingOutcomes'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   X, ChevronDown, Plus, Paperclip, Check, Trash2,
-  Image as ImageIcon, Hash, User, Repeat,
-} from 'lucide-react'
+  Image as ImageIcon, Hash, User, Repeat, AlertTriangle } from 'lucide-react'
 import type { Transaction, Account, Category, Currency, TxType } from '../types'
 import {
   schemeFor, isDormant, channelOf, setChannel, CHANNEL_LABEL, type SpendChannel,
@@ -404,7 +403,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 background: 'var(--sb-negative-tint)',
                 fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.5,
               }}>
-                <span aria-hidden style={{ flexShrink: 0 }}>⚠</span>
+                <AlertTriangle size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden style={{ flexShrink: 0 }} />
                 <span>
                   Money <b style={{ fontWeight: 600 }}>out of</b> {spendAccount?.name} is a cash
                   advance: borrowed at the card's own rate from today, with no grace period, and

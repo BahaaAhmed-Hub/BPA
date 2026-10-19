@@ -13,6 +13,7 @@ import { isUnpaid, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { isoDate } from '../dates'
 import { TxRow, txDate } from '../components/TxRow'
 import { C } from '@/lib/palette'
+import { FALLBACK_EXPENSE_ICON, FALLBACK_INCOME_ICON } from '@/lib/glyphs'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -272,7 +273,7 @@ export function TodayScreen() {
     return (
       <TxRow
         key={tx.id}
-        icon={cat?.icon ?? acct?.emoji ?? (isExp ? '💳' : '💼')}
+        icon={cat?.icon ?? acct?.emoji ?? (isExp ? FALLBACK_EXPENSE_ICON : FALLBACK_INCOME_ICON)}
         tone={acct ? acct.color : isExp ? RED : GREEN}
         title={tx.payee?.trim() || cat?.name || 'Transaction'}
         marks={<>

@@ -4,7 +4,7 @@ import {
   useDroppable, useDraggable, type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { X, RefreshCw, Check, CalendarPlus } from 'lucide-react'
+import { X, RefreshCw, Check, CalendarPlus, Video, MapPin, Users, Ban, CalendarDays, Clock, Flame } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
 import type { Task } from '@/types'
@@ -20,7 +20,7 @@ import { taskEventTitle, taskEventDescription, isTaskEvent } from '@/lib/taskEve
 import { resolveTaskCalendar } from '@/lib/taskCalendar'
 import { loadAccounts, getPrimaryToken, type ConnectedAccount } from '@/lib/multiAccount'
 import { getGoogleToken } from '@/lib/tokenManager'
-import { ICON } from '@/lib/type'
+import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { notify } from '@/lib/undo'
 import { QUADRANTS, QUADRANT_ORDER } from '@/lib/quadrants'
@@ -194,14 +194,14 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px',
             background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)',
             borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-info)', textDecoration: 'none',
-          }}>🎥 Join meeting</a>
+          }}><Video size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />Join meeting</a>
         )}
         {event.location && (
-          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>📍 {event.location}</div>
+          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{event.location}</div>
         )}
         {attendees.length > 0 && (
-          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
-            👥 {attendees.slice(0, 4).map(a => a.displayName ?? a.email).join(', ')}
+          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Users size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{attendees.slice(0, 4).map(a => a.displayName ?? a.email).join(', ')}
             {attendees.length > 4 && <span style={{ color: 'var(--sb-ink-3)' }}> +{attendees.length - 4} more</span>}
           </div>
         )}
@@ -255,7 +255,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
         )}
         {blocked && !block && !hasBusyStart && !isPast && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 'var(--sb-t-h3)', opacity: 0.25 }}>🚫</span>
+            <Ban size={ICON.md} strokeWidth={STROKE.rest} style={{ opacity: 0.25 }} aria-hidden />
           </div>
         )}
         {/* Continued busy hours: just a thin left border tint, no label */}
@@ -307,7 +307,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
               )}
             </div>
             {evt.location && (
-              <span style={{ fontSize: 'var(--sb-t-meta)', color, opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {evt.location}</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color, opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{evt.location}</span>
             )}
           </div>
         ))}
@@ -983,8 +983,8 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
 
           {/* Sub-header */}
           <div style={{ padding: '10px 24px', background: 'var(--sb-card)', borderBottom: 'var(--sb-border-width) solid var(--sb-info-tint)', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)' }}>📅 {dateLabel}</span>
-            <span style={{ fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)' }}>🕐 {timeLabel}</span>
+            <span style={{ fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{dateLabel}</span>
+            <span style={{ fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{timeLabel}</span>
             <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, background: 'var(--sb-info-tint)', color: 'var(--sb-ink-2)', borderRadius: 'var(--sb-r-card)', padding: '3px 10px' }}>
               {unscheduledCount} unscheduled
             </span>
@@ -1067,7 +1067,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                       display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none',
                       cursor: 'pointer', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', fontWeight: 500,
                     }}>
-                      {sortBy === 'priority' ? '🔥 Priority' : '🕐 Newest'} ∨
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{sortBy === 'priority' ? <><Flame size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />Priority</> : <><Clock size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />Newest</>} ∨</span>
                     </button>
                   </div>
                   <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Drag to schedule · Creates GCal event automatically</p>

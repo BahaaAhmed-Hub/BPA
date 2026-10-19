@@ -27,7 +27,7 @@ const SRC = join(ROOT, 'src')
 const FIXTURE = join(ROOT, 'scripts', 'fixtures', 'ui-guard-bad.tsx')
 
 /** Rules that fail a bare `node scripts/ui-guard.mjs`. Add one per phase. */
-const ENFORCED = new Set(['type', 'ink', 'hex', 'palette', 'quadrant'])
+const ENFORCED = new Set(['type', 'ink', 'hex', 'palette', 'quadrant', 'emoji'])
 
 const args = process.argv.slice(2)
 const flag = n => args.includes(`--${n}`)
@@ -154,8 +154,18 @@ const RULES = {
       if (['src/modules/finance/components/IconPicker.tsx', 'src/modules/finance/shopping/shoppingDb.ts',
            'src/modules/finance/categoryIcons.ts'].includes(ctx.rel)) return []
       const ok = allowedBlocks(ctx.code, ['EMOJIS', 'GROUP_ICONS'])
+      // `// ui-guard: emoji-ok` allows its own line; a run of lines between
+      // `// ui-guard: emoji-start` and `// ui-guard: emoji-end` is user-pickable
+      // data (a preset list, a default) and is allowed as a block.
+      let inside = false
+      const region = ctx.raw.map(r => {
+        if (/ui-guard:\s*emoji-start/.test(r)) inside = true
+        const here = inside
+        if (/ui-guard:\s*emoji-end/.test(r)) inside = false
+        return here
+      })
       return perLine(ctx, (l, raw, i) =>
-        !ok.has(i) && EMOJI.test(l.replace(TEXT_SYMBOLS, '')) && !/ui-guard:\s*emoji-ok/.test(raw))
+        !ok.has(i) && !region[i] && EMOJI.test(l.replace(TEXT_SYMBOLS, '')) && !/ui-guard:\s*emoji-ok/.test(raw))
     },
   },
   dialog: {

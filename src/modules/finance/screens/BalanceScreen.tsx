@@ -30,6 +30,7 @@ import { OPEN_ACCOUNT, takePendingAccount, accountIdOf } from '../openAccount'
 import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
 import { ICON } from '@/lib/type'
 import { TxRow, txDate as fmtTxDate } from '../components/TxRow'
+import { GLYPH, FALLBACK_INCOME_ICON, FALLBACK_EXPENSE_ICON } from '@/lib/glyphs'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -232,7 +233,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
               'Never counted as cash, in any balance, goal or plan.',
             ].filter(Boolean).join(' · ')}
             style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' }}>
-            ★ {Math.round(points.total).toLocaleString('en-US')} pts
+            {GLYPH.star} {Math.round(points.total).toLocaleString('en-US')} pts
             {showPointsMoney && points.worth !== null && <> · ≈{acct(points.worth, { currency: account.currency, decimals: 0 })}</>}
           </span>
         )}
@@ -714,7 +715,7 @@ export function BalanceScreen() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {sorted.map(tx => {
               const cat    = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
-              const glyph  = cat?.icon ?? (tx.type === 'income' ? '💼' : '💳')
+              const glyph  = cat?.icon ?? (tx.type === 'income' ? FALLBACK_INCOME_ICON : FALLBACK_EXPENSE_ICON)
               // A transfer has two ends. Left nameless it read as a stray
               // "Transaction", which beside the entry that put the money on the
               // card looked like the same thing recorded twice.

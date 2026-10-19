@@ -37,3 +37,12 @@ const EMOJIS = ['🏃', '💪']
 const t = { fontSize: tight ? 11.5 : 12.5 }
 // allow: type
 const r = { fontSize: size * 0.5 }
+
+// allow: emoji
+const D1 = '🎯' // ui-guard: emoji-ok
+// ui-guard: emoji-start
+const PRESETS = [
+// allow: emoji
+  { emoji: '💧' },
+]
+// ui-guard: emoji-end

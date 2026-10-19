@@ -19,7 +19,7 @@ import { SchedulePopover } from './SchedulePopover'
 import { ICON, STROKE } from '@/lib/type'
 
 const MEETING_KEYWORDS = ['meeting', 'call', 'sync', 'standup', 'stand-up', '1:1', 'interview', 'check-in', 'debrief', 'catchup', 'catch-up']
-const MEETING_EMOJIS   = ['📞', '💬', '🤝', '📅']
+const MEETING_EMOJIS   = ['📞', '💬', '🤝', '📅'] // ui-guard: emoji-ok — matched against what a person typed
 
 function isMeetingTask(title: string): boolean {
   const lower = title.toLowerCase()

@@ -5,8 +5,10 @@ import { Check, X } from 'lucide-react'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { inkOn } from '@/lib/ink'
+import { DEFAULT_PICK_EMOJI } from '@/lib/glyphs'
 
 const HABIT_TEMPLATES = [
+// ui-guard: emoji-start — habit presets a person can pick
   { id: 'water',       name: 'Drink Water',   emoji: '💧', color: 'var(--sb-info)', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
   { id: 'exercise',    name: 'Exercise',       emoji: '💪', color: 'var(--sb-negative)', type: 'boolean'  as const, frequency: 'daily' as const },
   { id: 'reading',     name: 'Reading',        emoji: '📚', color: 'var(--sb-info)', type: 'quantity' as const, goal: 30,   unit: 'min',     frequency: 'daily' as const },
@@ -19,6 +21,7 @@ const HABIT_TEMPLATES = [
   { id: 'vitamins',    name: 'Vitamins',       emoji: '💊', color: 'var(--sb-negative)', type: 'boolean'  as const, frequency: 'daily' as const },
   { id: 'prayer',      name: 'Prayer',         emoji: '🤲', color: 'var(--sb-accent)', type: 'boolean'  as const, frequency: 'daily' as const },
   { id: 'no-sugar',    name: 'No Sugar',       emoji: '🚫', color: 'var(--sb-accent)', type: 'boolean'  as const, frequency: 'daily' as const },
+// ui-guard: emoji-end
 ] as const
 
 
@@ -42,7 +45,7 @@ const inp: React.CSSProperties = {
 export function Step4Habits({ data, onChange }: Props) {
   const [addingCustom, setAddingCustom] = useState(false)
   const [cName,  setCName]  = useState('')
-  const [cEmoji, setCEmoji] = useState('💡')
+  const [cEmoji, setCEmoji] = useState(DEFAULT_PICK_EMOJI)
   const [cColor, setCColor] = useState(HABIT_COLORS[0])
   const [cType,  setCType]  = useState<'boolean' | 'quantity'>('boolean')
   const [cGoal,  setCGoal]  = useState('')
@@ -61,7 +64,7 @@ export function Step4Habits({ data, onChange }: Props) {
       ...(cType === 'quantity' && { goal: parseInt(cGoal) || 1, unit: cUnit.trim() || 'times' }),
     }
     onChange({ customHabits: [...data.customHabits, h] })
-    setCName(''); setCEmoji('💡'); setCColor(HABIT_COLORS[0]); setCType('boolean'); setCGoal(''); setCUnit(''); setAddingCustom(false)
+    setCName(''); setCEmoji(DEFAULT_PICK_EMOJI); setCColor(HABIT_COLORS[0]); setCType('boolean'); setCGoal(''); setCUnit(''); setAddingCustom(false)
   }
 
   function removeCustom(idx: number) {
@@ -136,7 +139,7 @@ export function Step4Habits({ data, onChange }: Props) {
       {addingCustom ? (
         <div style={{ padding: 16, borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <input value={cEmoji} onChange={e => setCEmoji(e.target.value)} placeholder="💡" style={{ ...inp, width: 56, textAlign: 'center', fontSize: 'var(--sb-t-h2)' }} />
+            <input value={cEmoji} onChange={e => setCEmoji(e.target.value)} placeholder={DEFAULT_PICK_EMOJI} style={{ ...inp, width: 56, textAlign: 'center', fontSize: 'var(--sb-t-h2)' }} />
             <input value={cName} onChange={e => setCName(e.target.value)} placeholder="Habit name" style={{ ...inp, flex: 1 }} autoFocus />
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>

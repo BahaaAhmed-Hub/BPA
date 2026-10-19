@@ -11,14 +11,14 @@ import { QUADRANTS, QUADRANT_ORDER } from '@/lib/quadrants'
 
 const QUADRANT_OPTS = QUADRANT_ORDER.map(v => ({ v, label: QUADRANTS[v].label, color: QUADRANTS[v].color }))
 
-const TYPE_OPTS: { v: TaskType; emoji: string; label: string }[] = [
-  { v: 'do',       emoji: '✅', label: 'Do' },
-  { v: 'call',     emoji: '📞', label: 'Call' },
-  { v: 'followup', emoji: '↩️', label: 'Follow-up' },
-  { v: 'email',    emoji: '✉️', label: 'Email' },
-  { v: 'research', emoji: '🔍', label: 'Research' },
-  { v: 'study',    emoji: '📚', label: 'Study' },
-  { v: 'meeting',  emoji: '📅', label: 'Meeting' },
+const TYPE_OPTS: { v: TaskType; label: string }[] = [
+  { v: 'do', label: 'Do' },
+  { v: 'call', label: 'Call' },
+  { v: 'followup', label: 'Follow-up' },
+  { v: 'email', label: 'Email' },
+  { v: 'research', label: 'Research' },
+  { v: 'study', label: 'Study' },
+  { v: 'meeting', label: 'Meeting' },
 ]
 
 const inp: React.CSSProperties = {
@@ -320,7 +320,7 @@ function ReviewRow({ task, companies, notesOpen, onToggleNotes, onChange, onRemo
         {/* Type */}
         <select value={task.taskType} onChange={e => onChange({ taskType: e.target.value as TaskType })}
           style={{ ...inp, padding: '2px 4px', fontSize: 'var(--sb-t-body)', width: 'auto', background: 'transparent', border: 'none', cursor: 'pointer' }}>
-          {TYPE_OPTS.map(o => <option key={o.v} value={o.v}>{o.emoji} {o.label}</option>)}
+          {TYPE_OPTS.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}
         </select>
 
         {/* Quadrant */}

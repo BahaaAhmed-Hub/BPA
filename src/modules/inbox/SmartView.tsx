@@ -1,6 +1,6 @@
 import { groupOf } from '@/lib/mailNeeds'
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, EyeOff, X as XIcon, HelpCircle, Send, Trash2, LogIn, Undo2 } from 'lucide-react'
+import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, EyeOff, X as XIcon, HelpCircle, Send, Trash2, LogIn, Undo2, Clock, CircleAlert, CalendarDays, ShieldCheck, Ban, Info } from 'lucide-react'
 import { Button, Card, Pill } from '@/components/ui'
 import { ICON, STROKE } from '@/lib/type'
 import type { MailAccount } from '@/lib/gmail'
@@ -93,10 +93,10 @@ function when(ms: number): string {
 
 /** The reply state as a word and a mark. Colour is never the only signal. */
 function ReplyChip({ t }: { t: SmartThread }) {
-  const [mark, word, ink] =
-    t.replyState === 'replied' ? ['✅', 'Replied', 'var(--sb-positive)'] :
-    t.replyState === 'pending' ? ['⏳', 'Pending', 'var(--sb-warning)'] :
-    ['🔴', 'No reply', 'var(--sb-negative)']
+  const [Mark, word, ink] =
+    t.replyState === 'replied' ? [Check, 'Replied', 'var(--sb-positive)'] as const :
+    t.replyState === 'pending' ? [Clock, 'Pending', 'var(--sb-warning)'] as const :
+    [CircleAlert, 'No reply', 'var(--sb-negative)'] as const
   return (
     <span title={
       t.replyState === 'replied' ? 'You wrote the most recent message in this thread.'
@@ -106,7 +106,7 @@ function ReplyChip({ t }: { t: SmartThread }) {
         display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
         fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: ink,
       }}>
-      <span aria-hidden>{mark}</span>{word}
+      <Mark size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{word}
     </span>
   )
 }
@@ -118,7 +118,7 @@ function InviteChip() {
       display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
       fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-accent-deep)',
     }}>
-      <span aria-hidden>📅</span>Invitation
+      <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />Invitation
     </span>
   )
 }
@@ -135,16 +135,16 @@ function isAuthReason(reason: string): boolean {
  *  The row still says something on that line — an empty slot where every other
  *  row carries a word reads as a row that failed to load. */
 function KindChip({ kind }: { kind: MailKind }) {
-  const [mark, word] =
-    kind === 'security'  ? ['🔐', 'Sign-in notice'] :
-    kind === 'cancelled' ? ['🚫', 'Called off'] :
-    ['📣', 'Information']
+  const [Mark, word] =
+    kind === 'security'  ? [ShieldCheck, 'Sign-in notice'] as const :
+    kind === 'cancelled' ? [Ban, 'Called off'] as const :
+    [Info, 'Information'] as const
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
       fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
     }}>
-      <span aria-hidden>{mark}</span>{word}
+      <Mark size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{word}
     </span>
   )
 }

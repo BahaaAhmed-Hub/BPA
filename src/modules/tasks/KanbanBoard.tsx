@@ -514,7 +514,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     if (boardType === 'type') {
       return (Object.keys(TASK_TYPE_META) as TaskType[]).map(type => ({
         id:    type,
-        label: `${TASK_TYPE_META[type].emoji} ${TASK_TYPE_META[type].label}`,
+        label: TASK_TYPE_META[type].label,
         color: TASK_TYPE_META[type].color,
         tasks: sortUrgentFirst(tasks.filter(t => (t.taskType ?? inferTaskType(t.title)) === type)),
       }))

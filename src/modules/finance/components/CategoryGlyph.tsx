@@ -1,4 +1,5 @@
 import { lucideComponent } from '../categoryIcons'
+import { DEFAULT_CATEGORY_ICON } from '@/lib/glyphs'
 
 /** One place that knows how to draw a category's icon, whichever of the three
  *  kinds it is: a lucide name, an uploaded picture, or an emoji. A line icon
@@ -14,7 +15,7 @@ export function CategoryGlyph({ icon, size = 18, color }: {
   if (icon && (icon.startsWith('data:') || icon.startsWith('http'))) {
     return <img src={icon} alt="" style={{ width: size, height: size, objectFit: 'cover', borderRadius: 'var(--sb-r-chip)' }} />
   }
-  return <span style={{ fontSize: size, lineHeight: 1 }}>{icon || '📁'}</span>
+  return <span style={{ fontSize: size, lineHeight: 1 }}>{icon || DEFAULT_CATEGORY_ICON}</span>
 }
 
 /** The icon as text, for the one place that cannot take a component: an

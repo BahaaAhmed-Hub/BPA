@@ -17,6 +17,9 @@ import { suggestStoresForCountry } from './storeSuggestions'
 import { notify } from '@/lib/undo'
 import { inputDenseStyle as inputStyle } from '@/lib/fields'
 import { C } from '@/lib/palette'
+import { Store } from 'lucide-react'
+import { EmptyGlyph } from '@/components/ui/EmptyGlyph'
+import { GLYPH } from '@/lib/glyphs'
 
 
 const HOLD_MS = 700
@@ -218,7 +221,7 @@ function StoreRow({ store, itemCount, last, onUpdate, onDelete }: {
           {store.url && (
             <a href={store.url} target="_blank" rel="noreferrer"
               style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, alignSelf: 'flex-start' }}>
-              Open {store.name} ↗
+              Open {store.name} {GLYPH.external}
             </a>
           )}
         </div>
@@ -327,7 +330,7 @@ export function StoresTab({ stores, userId, itemCounts, onAddStore, onUpdateStor
 
       {stores.length === 0 && !showForm && (
         <div style={{ textAlign: 'center', paddingTop: 40, color: C.ink4 }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }} aria-hidden>🏪</div>
+          <EmptyGlyph icon={Store} />
           <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: C.ink3 }}>No stores yet</div>
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink4, marginTop: 4 }}>Add stores to enable price tracking and trip optimization.</div>
         </div>

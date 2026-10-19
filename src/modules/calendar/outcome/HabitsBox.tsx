@@ -41,6 +41,7 @@ import {
   addOutcomeLink, removeOutcomeLink, loadOutcomeLinks, linksForEvent, subscribeOutcomeLinks,
 } from '@/lib/meetingOutcomes'
 import { OutcomeBox, EYEBROW, FIELD, chip, ymd, fromYmd, type OutcomeEvent } from './shared'
+import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
 
 const TINT = 'var(--sb-warning)'
 /** The Habits page reads its logs once on mount and listens for this. */
@@ -270,7 +271,7 @@ function HabitsInner({ event, open, onToggle }: { event: OutcomeEvent; open: boo
     if (!n || (measured && !(g > 0))) return
     const colors = getHabitColors()
     const id = addHabit({
-      name: n, emoji: '🎯', color: colors[habits.length % colors.length]!, frequency: freq, isActive: true,
+      name: n, emoji: DEFAULT_HABIT_EMOJI, color: colors[habits.length % colors.length]!, frequency: freq, isActive: true,
       type: measured ? 'quantity' : 'boolean',
       ...(measured ? { goal: g, ...(unit.trim() ? { unit: unit.trim() } : {}) } : {}),
     })

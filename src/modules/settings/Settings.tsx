@@ -12,8 +12,7 @@ import {
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
   Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard, Sparkles,
   ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed, Check,
-  Library as LibraryIcon,
-} from 'lucide-react'
+  Library as LibraryIcon, AlertTriangle, BellOff, MessageSquare } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { pushSharedPrefs, lastPushError, type PushResult } from '@/lib/prefSync'
 import { useHeldText } from '@/lib/useHeldText'
@@ -76,6 +75,7 @@ import {
 import { acct, group } from '@/modules/finance/format'
 import { loadRules } from '@/modules/finance/modals/BudgetRuleModal'
 import { ICON, STROKE } from '@/lib/type'
+import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
 import {
   loadReminders, saveReminders, defaultReminder, dueDatesFor, reminderTitle,
   type MoneyReminder,
@@ -1272,7 +1272,7 @@ function SettingsHabitForm({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-          <EmojiBtn value={s.emoji || '🎯'} onSelect={v => update({ emoji: v })} size={46} />
+          <EmojiBtn value={s.emoji || DEFAULT_HABIT_EMOJI} onSelect={v => update({ emoji: v })} size={46} />
           <span style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)' }}>Icon</span>
         </div>
 
@@ -1678,7 +1678,7 @@ function HabitsSection() {
 
       {adding ? (
         <SettingsHabitForm
-          initial={{ name: '', emoji: '🎯', color: COLORS[habits.length % COLORS.length], freq: 'daily', type: 'boolean', goal: '', unit: '', step: '' }}
+          initial={{ name: '', emoji: DEFAULT_HABIT_EMOJI, color: COLORS[habits.length % COLORS.length], freq: 'daily', type: 'boolean', goal: '', unit: '', step: '' }}
           onSave={s => {
             const made = storeAdd({
               name: s.name.trim(), emoji: s.emoji, color: s.color, image: s.image,
@@ -2200,7 +2200,7 @@ function AccountsSection({
                 )
               })()}
               {isStale ? (
-                <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-warning)' }}>⚠ Access lost — reconnect to restore</p>
+                <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-warning)', display: 'flex', alignItems: 'center', gap: 4 }}><AlertTriangle size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />Access lost — reconnect to restore</p>
               ) : (
                 <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
                   <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active={can(acc.email, 'calendar')} fresh={fresh(acc.email)}
@@ -4380,7 +4380,7 @@ function NotificationsMatrixSection() {
 
       {/* Mute button */}
       <button style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
-        🔕 Mute for 1h
+        <BellOff size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden /> Mute for 1h
       </button>
     </div>
   )
@@ -4394,10 +4394,12 @@ interface Integration {
 }
 
 const DEFAULT_INTEGRATIONS: Integration[] = [
+// ui-guard: emoji-start — each integration is drawn with its own mark
   { id: 'notion',      name: 'Notion',      emoji: '📝', status: 'connected',    account: 'Bahaa · 4 databases',            tags: ['Tasks database', 'Meeting notes', 'Weekly review'], syncMode: 'two-way', enabled: true  },
   { id: 'asana',       name: 'Asana',       emoji: '🎯', status: 'connected',    account: 'DX Technologies workspace',       tags: ['3 projects', 'My tasks', 'Due dates'],              syncMode: 'import',  enabled: true  },
   { id: 'trello',      name: 'Trello',      emoji: '📋', status: 'connected',    account: 'Personal board',                  tags: ['Ideas board', 'Cards → dump'],                     syncMode: 'import',  enabled: false },
   { id: 'apple-notes', name: 'Apple Notes', emoji: '🍎', status: 'disconnected', account: 'iCloud · eng.bahaa.a',            tags: ['Notes → dump', 'Needs iCloud sign-in'],            syncMode: 'off',     enabled: false },
+// ui-guard: emoji-end
 ]
 
 function IntegrationsSection() {
@@ -4635,7 +4637,7 @@ function IntegrationsSection() {
                 padding: '9px 13px', borderRadius: 'var(--sb-r-nav)',
                 background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
               }}>
-                <span style={{ fontSize: 'var(--sb-t-h2)', lineHeight: 1 }}>💬</span>
+                <MessageSquare size={ICON.lg} strokeWidth={STROKE.rest} aria-hidden />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                     Chat #{link.chat_id}

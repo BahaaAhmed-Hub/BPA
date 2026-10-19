@@ -42,7 +42,7 @@ export function buildBlock(
   const start = new Date(`${first}T${at}:00`)
   const stop = new Date(start.getTime() + plan.minutes * 60_000)
   const event: GCalEventCreate = {
-    summary: `📖 Read: ${book.title}`,
+    summary: `📖 Read: ${book.title}`, // ui-guard: emoji-ok — written into the person's own Google Calendar
     description: [
       `Reading time for “${book.title}”${book.authors.length ? ` by ${book.authors.join(', ')}` : ''}.`,
       plan.finishBy ? `Plan: finish by ${plan.finishBy}.` : '',
