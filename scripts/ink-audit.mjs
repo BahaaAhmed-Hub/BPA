@@ -808,7 +808,6 @@ for (const theme of THEMES) {
   await page.evaluate(() => localStorage.removeItem('professor-ai-config'))
   await page.waitForTimeout(300)
 
-  await visit('Dashboard', async () => { await page.locator('[data-side-rail] button[aria-label="Dashboard"]').click() })
   // Settings is behind the avatar menu, and carries every colour picker there
   // is — the company swatches, the habit colours, the category palette.
   await visit('Settings', async () => {

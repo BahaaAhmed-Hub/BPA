@@ -31,7 +31,7 @@ export const useUIStore = create<UIState>()(
   persist(
     set => ({
       sidebarCollapsed: false,
-      activeModule: 'dashboard',
+      activeModule: 'morning',
       themeId: DEFAULT_THEME_ID,
       focus: null,
       toggleSidebar: () => set(s => ({ sidebarCollapsed: !s.sidebarCollapsed })),

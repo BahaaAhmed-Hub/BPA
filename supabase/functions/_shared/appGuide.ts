@@ -24,7 +24,7 @@ export const APP_GUIDE: Record<string, GuideEntry> = {
   overview: {
     title: 'The app at a glance',
     where: 'The round buttons down the left edge; the avatar at the top right; the assistant button at the bottom right',
-    summary: 'Modules in the left rail: Today, Calendar, Mail, Tasks, Habits, Finance, Library and Dashboard (Library can be switched off, by plan or in Settings). Settings is in the menu under the avatar. The search box at the top opens the command palette. The circles under the modules are your companies: press one and everything that is not that company\'s goes quiet on every screen, press it again to clear.',
+    summary: 'Modules in the left rail: Today, Calendar, Mail, Tasks, Habits, Finance and Library (Library can be switched off, by plan or in Settings). Settings is in the menu under the avatar. The search box at the top opens the command palette. The circles under the modules are your companies: press one and everything that is not that company\'s goes quiet on every screen, press it again to clear.',
     can: ['Move between modules with the left rail', 'Search from the box at the top', 'Open Settings from the avatar menu', 'Filter by company with the company circles'],
     assistant: ['Answer questions about any module', 'Read and change your own tasks, calendar, mail, habits, finances, shopping and books', 'Ask for your OK before anything that other people see, cannot be undone, or moves money'],
   },

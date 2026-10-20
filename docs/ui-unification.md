@@ -239,4 +239,4 @@ If an existing harness breaks because it matched old text (e.g. "On fire! 🔥" 
 | P2.3 Finance navigation | done | branch `claude/next-incomplete-phase-niej9p` — Money / Plan / Review groups; Shopping in the rail |
 | P2.4 Tasks views | done | branch `claude/next-incomplete-phase-niej9p` — one switcher: Board · Matrix · List · Plan; "Plan my day" button and overlay gone |
 | P2.5 Setup wizard | done | branch `claude/next-incomplete-phase-niej9p` — 3 steps (You & accounts · Companies · Done); habits and tasks move to first-run prompts |
-| P2.1 | blocked — needs a product decision | |
+| P2.1 One day-planning screen | done | branch `claude/next-incomplete-phase-niej9p` — Dashboard folded into Today as a one-line summary; dead planners kept but unreachable |

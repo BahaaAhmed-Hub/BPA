@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { AssistantPanel, AssistantToggle } from './modules/assistant/AssistantPanel'
 import { SideRail } from './components/SideRail'
-import { ExecutiveDashboard } from './modules/dashboard/ExecutiveDashboard'
 import { TaskCommand } from './modules/tasks/TaskCommand'
 import { CalendarModule } from './modules/calendar/CalendarModule'
 import { InboxModule } from './modules/inbox/InboxModule'
@@ -377,6 +376,10 @@ export const NAV_H = 'var(--sb-h-header)'
  *  module answers to the server alone. */
 const offHere = (id: string) => (id === 'library' ? libraryIsOff() : id === 'shopping' ? shoppingIsOff() : moduleIsOff(id))
 
+// The Dashboard left the rail (UI-unification P2.1): Today carries its figures as a
+// one-line summary. `modules/dashboard/` is kept, unmounted, until the new experience is signed off.
+const RETIRED_MODULES = ['dashboard']
+
 const NAV_ITEMS = [
   { id: 'morning',   label: 'Today'    },
   { id: 'calendar',  label: 'Calendar' },
@@ -391,11 +394,6 @@ const NAV_ITEMS = [
   // Off for two reasons — the plan (`my_modules()`) or the person (Settings →
   // Library) — and either one hides it, so it is asked through `offHere`.
   { id: 'library',   label: 'Library'  },
-  // The dashboard was the module the app opened on and the one place with no
-  // way back to it — Today's pill lit up for it instead, which named the wrong
-  // screen. Settings left the row for the avatar menu, where the things about
-  // *you* rather than about your work belong.
-  { id: 'dashboard', label: 'Dashboard' },
 ] as const
 
 
@@ -724,6 +722,7 @@ function TopNav() {
   // reopens on a tab that is no longer there. Land on the first one that is
   // rather than on a blank page.
   useEffect(() => {
+    if (RETIRED_MODULES.includes(activeModule)) { useUIStore.setState({ activeModule: 'morning' }); return }
     if (offHere(activeModule) && navItems.length) setActiveModule(navItems[0].id)
   }, [activeModule, navItems, setActiveModule])
 
@@ -760,7 +759,6 @@ function ActiveModule() {
 
   return (
     <>
-      {everMounted.current.has('dashboard') && !moduleIsOff('dashboard')  && <div style={show('dashboard')}><ExecutiveDashboard /></div>}
       {everMounted.current.has('tasks') && !moduleIsOff('tasks')      && <div style={show('tasks')}><TaskCommand /></div>}
       {everMounted.current.has('calendar') && !moduleIsOff('calendar')   && <div style={show('calendar')}><CalendarModule /></div>}
       {everMounted.current.has('inbox') && !moduleIsOff('inbox')      && <div style={show('inbox')}><InboxModule /></div>}

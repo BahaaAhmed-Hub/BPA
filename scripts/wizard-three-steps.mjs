@@ -68,7 +68,7 @@ async function open({ p = port, seed = {}, module, wizardDone }) {
     localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
     if (done) localStorage.setItem('bpa-wizard-done', '1'); else localStorage.removeItem('bpa-wizard-done')
     if (!localStorage.getItem('professor-ui')) localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: mod, themeId: 'sunlit-bento' }, version: 0 }))
-  }, [session, module ?? 'dashboard', !!wizardDone])
+  }, [session, module ?? 'morning', !!wizardDone])
   const traffic = watchTraffic(page)
   await page.goto(`http://localhost:${p}/BPA/`, { waitUntil: 'domcontentloaded' })
   await settled(page, traffic, 9000)

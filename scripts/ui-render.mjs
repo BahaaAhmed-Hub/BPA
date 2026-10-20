@@ -186,7 +186,7 @@ async function stable(page, cap = 5000) {
 }
 
 // ─── Running ─────────────────────────────────────────────────────────────────
-const RAIL = ['Today', 'Dashboard', 'Calendar', 'Mail', 'Tasks', 'Habits', 'Finance', 'Library']
+const RAIL = ['Today', 'Calendar', 'Mail', 'Tasks', 'Habits', 'Finance', 'Library']
 const results = []   // { theme, screen, opened, texts, fails: {type, emoji, narrow, tap}, ... }
 const dialogs = []   // { theme, screen, message }
 const topBar = []    // { theme, exists, opens }
@@ -358,12 +358,12 @@ for (const c of calView) {
 }
 
 // P0.4 — "Do now" must be the same colour wherever it is drawn: on Tasks and
-// on the Dashboard, and it must be the negative token. Asserted to EXIST first.
+// on Today's summary strip, and it must be the negative token. Asserted to EXIST first.
 for (const theme of THEMES) {
   const seen = results.filter(x => x.theme === theme && x.m.doNow.length).map(x => ({ screen: x.screen, colours: [...new Set(x.m.doNow)], want: x.m.want }))
   const screens = seen.map(x => x.screen)
   const all = new Set(seen.flatMap(x => x.colours))
-  const ok = screens.includes('Dashboard') && all.size === 1 && [...all][0] === seen[0].want
+  const ok = screens.includes('Today') && all.size === 1 && [...all][0] === seen[0].want
   if (!ok) { failed++; console.log(`  ✗ ${theme}: "Do now" colour — seen on [${screens.join(', ') || 'nowhere'}] as ${[...all].join(' | ') || '—'}, expected ${seen[0]?.want ?? 'var(--sb-negative)'}`) }
   else console.log(`  ✓ ${theme}: "Do now" is ${[...all][0]} on ${screens.join(' and ')}`)
 }

@@ -45,6 +45,7 @@ import type { Task } from '@/types'
 import type { DbUser, DbCompany } from '@/types/database'
 import { ICON, STROKE } from '@/lib/type'
 import { dayTotals, spanTotals } from '@/lib/habitProgress'
+import { TodayGlance } from './TodayGlance'
 import { DailyQuoteCard } from '@/modules/library/DailyQuoteCard'
 import { LOZENGE } from '../../components/SideRail'
 import { EmptyState } from '@/components/ui'
@@ -1595,6 +1596,13 @@ export function TodayPage() {
 
   const [logs, setLogs] = useState(loadLogs)
   const [qtyLogs, setQtyLogs] = useState(loadQuantityLogs)
+  // Logs are read once on mount, and on a first load the server's arrive after
+  // it: the store announces them, as it does for the Habits page.
+  useEffect(() => {
+    const reload = () => { setLogs(loadLogs()); setQtyLogs(loadQuantityLogs()) }
+    window.addEventListener('professor:habitLogsUpdated', reload)
+    return () => window.removeEventListener('professor:habitLogsUpdated', reload)
+  }, [])
   const [events, setEvents] = useState<GCalEvent[]>([])
   const [clock, setClock] = useState(() => new Date())
   const [planAccepted, setPlanAccepted] = useState(false)
@@ -2122,6 +2130,15 @@ export function TodayPage() {
           <ArrowRight size={ICON.sm} strokeWidth={STROKE.active} /> Start the day
         </button>
       </div>
+
+      <TodayGlance
+        doNow={tasks.filter(t => t.quadrant === 'do' && isOpenTask(t)).length}
+        open={tasks.filter(isOpenTask).length}
+        meetings={events.filter(e => !!e.start.dateTime).length}
+        habitsPct={dayTotals(habits, today, logs, qtyLogs).pct}
+        habitsTotal={habits.length}
+        onGo={setActiveModule}
+      />
 
       {/* ── Two columns ───────────────────────────────────────────────────── */}
       <div style={{
