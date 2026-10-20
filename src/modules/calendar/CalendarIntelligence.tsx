@@ -2810,7 +2810,7 @@ export function CalendarIntelligence() {
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span className="cal-display" style={{
               fontFamily: DISPLAY, fontWeight: 600, letterSpacing: '-0.035em', lineHeight: 1,
-              color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums', fontSize: 44,
+              color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums',
             }}>
               {calView === 'month' ? anchorDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
                 : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
