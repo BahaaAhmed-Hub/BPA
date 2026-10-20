@@ -157,10 +157,10 @@ export function SearchSelect({
           fontFamily: 'inherit', textAlign: 'left', minWidth: 0,
           ...style,
         }}>
-        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: chosen ? 'inherit' : 'var(--sb-ink-4)' }}>
+        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: chosen ? 'inherit' : 'var(--sb-ink-3)' }}>
           {chosen?.label ?? placeholder}
         </span>
-        <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+        <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }} />
       </button>
 
       {open && place && createPortal(
@@ -184,7 +184,7 @@ export function SearchSelect({
             // away is one you have to scroll back up to correct.
             <div style={{ position: 'sticky', top: -5, zIndex: 1, background: 'var(--sb-overlay)', padding: '1px 0 6px', margin: '-1px 0 0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 32, padding: '0 9px', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)' }}>
-                <Search size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+                <Search size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }} />
                 <input
                   autoFocus
                   value={query}
@@ -200,10 +200,10 @@ export function SearchSelect({
           )}
 
           {options.length === 0 && (
-            <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>Nothing to choose from yet</div>
+            <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Nothing to choose from yet</div>
           )}
           {options.length > 0 && shown.length === 0 && (
-            <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
+            <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
               Nothing matches “{query.trim()}”
             </div>
           )}
@@ -231,7 +231,7 @@ export function SearchSelect({
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
                   {o.hint && (
-                    <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {o.hint}
                     </span>
                   )}

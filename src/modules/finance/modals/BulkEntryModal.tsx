@@ -348,7 +348,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
         <div style={{ minWidth: GRID_MIN }}>
         <div style={{
           display: 'grid', gridTemplateColumns: COLS, gap: 8,
-          fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)',
+          fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)',
           textTransform: 'uppercase', padding: '0 2px 7px',
           position: 'sticky', top: 0, background: 'var(--sb-header)', zIndex: 1,
         }}>
@@ -379,18 +379,18 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                   title={r.toTouched ? undefined : 'Following the start date until you change it'}
                   style={{
                     ...CELL, fontFamily: DISPLAY, padding: '0 8px',
-                    color: r.toTouched ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
+                    color: r.toTouched ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                     borderStyle: r.toTouched ? 'solid' : 'dashed',
                   }} />
               </span>
               <span style={{ position: 'relative', display: 'flex', minWidth: 0 }}>
                 <span style={{
                   ...CELL, display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between',
-                  color: r.every ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
+                  color: r.every ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                 }}>
                   {INTERVALS.find(x => x.id === r.every)?.label ?? 'once'}
                   {repeats > 1 && (
-                    <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-3)' }}>×{repeats}</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)' }}>×{repeats}</span>
                   )}
                 </span>
                 <select value={r.every} onChange={e => patch(r.key, { every: e.target.value as Interval })}
@@ -431,7 +431,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                 style={{
                   ...CELL, textAlign: 'right', fontFamily: DISPLAY, fontWeight: 600,
                   fontVariantNumeric: 'tabular-nums',
-                  color: r.amount > 0 ? tone : 'var(--sb-ink-4)',
+                  color: r.amount > 0 ? tone : 'var(--sb-ink-3)',
                 }} />
               </span>
               <span style={{ ...CELL_BOX, alignItems: 'center' }}>
@@ -459,7 +459,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                       style={{
                         flex: 1, minWidth: 0, height: 30, padding: 0, border: 'none', background: 'transparent',
                         fontFamily: DISPLAY, fontSize: 'var(--sb-t-body-s)', outline: 'none',
-                        color: r.paidOnTouched ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
+                        color: r.paidOnTouched ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                       }} />
                   ) : (
                     <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)', fontWeight: 600 }}>Not paid</span>
@@ -467,7 +467,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                 </span>
               </span>
               <button onClick={() => dropRow(r.key)} title="Remove this line"
-                style={{ ...ROUND, width: 28, height: 28, color: 'var(--sb-ink-4)' }}>
+                style={{ ...ROUND, width: 28, height: 28, color: 'var(--sb-ink-3)' }}>
                 <Trash2 size={ICON.sm} />
               </button>
             </div>
@@ -527,7 +527,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
               ...PILL, height: 38, paddingInline: 20, fontWeight: 600,
               background: canSave ? 'var(--sb-ink-1)' : 'var(--sb-field)',
               border: `var(--sb-border-width) solid ${canSave ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-              color: canSave ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+              color: canSave ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
               cursor: canSave ? 'pointer' : 'default',
             }}>
             Add {count || ''} {count === 1 ? 'entry' : 'entries'}

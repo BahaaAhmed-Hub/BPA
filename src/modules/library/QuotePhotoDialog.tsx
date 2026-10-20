@@ -146,7 +146,7 @@ export function QuotePhotoDialog({ bookId, file, onClose }: { bookId: string; fi
               <RefreshCw size={ICON.sm} /> Read again
             </Button>
           )}
-          {!att && !fatal && <span style={{ ...CAPS, color: 'var(--sb-ink-4)', marginRight: 'auto' }}>One moment</span>}
+          {!att && !fatal && <span style={{ ...CAPS, color: 'var(--sb-ink-3)', marginRight: 'auto' }}>One moment</span>}
           <Button variant="secondary" disabled={saving} onClick={onClose}>Cancel</Button>
           {/* A photo with no words is still a quote worth keeping — the page you
               want to come back to — so Save does not wait for text. */}

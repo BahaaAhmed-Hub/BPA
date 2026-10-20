@@ -10,7 +10,7 @@ export const DEFAULT_STATUSES: CustomStatus[] = [
   { id: 'decide',    label: 'Decide',           color: 'var(--sb-negative)' },
   { id: 'today',     label: 'Today',            color: 'var(--sb-accent)' },
   { id: 'this-week', label: 'This week',        color: 'var(--sb-ink-3)' },
-  { id: 'later',     label: 'Later',            color: 'var(--sb-ink-4)' },
+  { id: 'later',     label: 'Later',            color: 'var(--sb-ink-3)' },
   { id: 'done',      label: 'Done · this week', color: 'var(--sb-positive)' },
 ]
 

@@ -102,7 +102,7 @@ if (WHICH === 'panel') {
 }
 
 if (WHICH === 'planner' || WHICH === 'planner-ok') {
-  const plan = p.getByRole('button', { name: /Plan my day/i }).first()
+  const plan = p.getByRole('tab', { name: /^Plan$/ }).first()
   ok('the planner opens', await plan.count() > 0)
   await plan.click(); await p.waitForTimeout(2500)
 

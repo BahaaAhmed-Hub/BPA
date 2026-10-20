@@ -16,17 +16,11 @@ import { ITEM_CATEGORIES } from './types'
 import { suggestStoresForCountry } from './storeSuggestions'
 import { notify } from '@/lib/undo'
 import { inputDenseStyle as inputStyle } from '@/lib/fields'
+import { C } from '@/lib/palette'
+import { Store } from 'lucide-react'
+import { EmptyGlyph } from '@/components/ui/EmptyGlyph'
+import { GLYPH } from '@/lib/glyphs'
 
-const C = {
-  card:   'var(--sb-card)',
-  field:  'var(--sb-field)',
-  border: 'var(--sb-border)',
-  ink1:   'var(--sb-ink-1)',
-  ink3:   'var(--sb-ink-3)',
-  ink4:   'var(--sb-ink-4)',
-  accent: 'var(--sb-accent)',
-  neg:    'var(--sb-negative)',
-} as const
 
 const HOLD_MS = 700
 
@@ -173,11 +167,11 @@ function StoreRow({ store, itemCount, last, onUpdate, onDelete }: {
           {store.categories.length > 0 && (
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
               {store.categories.map(c => (
-                <span key={c} style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 8, background: C.field, color: C.ink3, border: `1px solid ${C.border}` }}>{c}</span>
+                <span key={c} style={{ fontSize: 'var(--sb-t-meta)', padding: '1px 6px', borderRadius: 8, background: C.field, color: C.ink3, border: `1px solid ${C.border}` }}>{c}</span>
               ))}
             </div>
           )}
-          <div style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, marginTop: 3 }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, marginTop: 3 }}>
             {itemCount > 0
               ? `Checked for ${itemCount} item${itemCount === 1 ? '' : 's'}`
               : store.categories.length
@@ -227,7 +221,7 @@ function StoreRow({ store, itemCount, last, onUpdate, onDelete }: {
           {store.url && (
             <a href={store.url} target="_blank" rel="noreferrer"
               style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, alignSelf: 'flex-start' }}>
-              Open {store.name} ↗
+              Open {store.name} {GLYPH.external}
             </a>
           )}
         </div>
@@ -336,7 +330,7 @@ export function StoresTab({ stores, userId, itemCounts, onAddStore, onUpdateStor
 
       {stores.length === 0 && !showForm && (
         <div style={{ textAlign: 'center', paddingTop: 40, color: C.ink4 }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }} aria-hidden>🏪</div>
+          <EmptyGlyph icon={Store} />
           <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: C.ink3 }}>No stores yet</div>
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink4, marginTop: 4 }}>Add stores to enable price tracking and trip optimization.</div>
         </div>

@@ -190,7 +190,7 @@ export function SwipeRow({
               width: BTN_W, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
               background: 'var(--sb-ink-3)', color: 'var(--sb-ink-on-dark)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: 3, fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+              gap: 3, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
             }}>
             <Archive size={17} /> Archive
           </button>
@@ -199,7 +199,7 @@ export function SwipeRow({
               width: BTN_W, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
               background: 'var(--sb-negative)', color: 'var(--sb-ink-on-fill)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: 3, fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+              gap: 3, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
             }}>
             <Trash2 size={17} /> Delete
           </button>

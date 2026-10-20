@@ -30,33 +30,14 @@ import { isMyCalendar, myCalendarAddresses } from '@/lib/calendarEvents'
 import { toRecurrence, presetRecur, type Recur } from './recurrence'
 import { useInkOn } from '@/lib/ink'
 import LinkPreviews from '../../components/LinkPreviews'
+import { C } from '@/lib/palette'
+import { askConfirm } from '@/lib/confirm'
 
 // ─── The palette, once ───────────────────────────────────────────────────────
 
-export const C = {
-  ink:      'var(--sb-ink-1)',
-  onInk:    'var(--sb-ink-on-dark)',
-  page:     'var(--sb-page)',
-  card:     'var(--sb-card)',
-  /** The inset field and the muted chip — #FAF8F2. */
-  inset:    'color-mix(in srgb, var(--sb-field) 88%, var(--sb-card))',
-  border:   'var(--sb-border)',
-  dashed:   'color-mix(in srgb, var(--sb-border) 78%, var(--sb-ink-4))',
-  hair:     'var(--sb-hairline)',
-  text:     'var(--sb-ink-1)',
-  second:   'var(--sb-ink-2)',
-  third:    'var(--sb-ink-3)',
-  faint:    'var(--sb-ink-4)',
-  gold:     'var(--sb-accent)',
-  goldInk:  'var(--sb-accent-deep)',
-  goldSurf: 'var(--sb-accent-tint)',
-  goodInk:  'var(--sb-positive-deep)',
-  goodSurf: 'var(--sb-positive-tint)',
-  bad:      'var(--sb-negative-deep)',
-} as const
 
 export const MONO: React.CSSProperties = {
-  fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.third, textTransform: 'none',
+  fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink3, textTransform: 'none',
 }
 /**
  * One section of a panel: a white card on the shell's cream ground. The
@@ -73,7 +54,7 @@ export const sectionTop: React.CSSProperties = CARD
 
 /** A section's name: the task panel's SECTION_LABEL, to the letter. */
 export const LABEL: React.CSSProperties = {
-  margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.third,
+  margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink3,
 }
 export const NUM: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' }
 
@@ -83,9 +64,9 @@ export function GLYPH(on: boolean): React.CSSProperties {
     width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-sm)',
     flexShrink: 0, cursor: 'pointer', padding: 0,
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    background: on ? C.ink : C.inset,
+    background: on ? C.ink1 : C.inset,
     border: on ? 'var(--sb-border-width) solid transparent' : `var(--sb-border-width) solid ${C.border}`,
-    color: on ? C.onInk : C.third,
+    color: on ? C.onInk : C.ink3,
   }
 }
 
@@ -96,27 +77,27 @@ export function pill(on: boolean, h?: number): React.CSSProperties {
     height: h ?? ('var(--sb-h-pill)' as unknown as number),
     borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
     fontSize: 'var(--sb-t-body-s)', fontWeight: 600, whiteSpace: 'nowrap',
-    background: on ? C.ink : C.inset,
+    background: on ? C.ink1 : C.inset,
     border: on ? 'var(--sb-border-width) solid transparent' : `var(--sb-border-width) solid ${C.border}`,
-    color: on ? C.onInk : C.third,
+    color: on ? C.onInk : C.ink3,
   }
 }
 /** The task panel's ICON_BTN: 28px, no chrome until you reach for it. */
 export const ROUND: React.CSSProperties = {
   width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  background: 'transparent', border: 'none', cursor: 'pointer', color: C.third,
+  background: 'transparent', border: 'none', cursor: 'pointer', color: C.ink3,
 }
 /** The task panel's CELL, to the letter. */
 export const FIELD: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 8, height: 'var(--sb-h-pill)', boxSizing: 'border-box',
   padding: '0 11px', borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-field)',
   border: `var(--sb-border-width) solid ${C.border}`,
-  color: C.text, fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', minWidth: 0,
+  color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', minWidth: 0,
 }
 export const BARE: React.CSSProperties = {
   flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
-  color: C.text, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)',
+  color: C.ink1, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)',
 }
 
 /**
@@ -214,10 +195,10 @@ export interface ComposerInvitee {
 /** What a reply is called, and the colour it is said in. */
 export function rsvpOf(status: string | undefined): { label: string; bg: string; ink: string } {
   switch (status) {
-    case 'accepted':  return { label: 'Yes',      bg: C.goodSurf, ink: C.goodInk }
-    case 'declined':  return { label: 'No',       bg: 'var(--sb-negative-tint)', ink: C.bad }
-    case 'tentative': return { label: 'Maybe',    bg: C.inset,    ink: C.third }
-    default:          return { label: 'Awaiting', bg: C.goldSurf, ink: C.goldInk }
+    case 'accepted':  return { label: 'Yes',      bg: C.posTint, ink: C.posDeep }
+    case 'declined':  return { label: 'No',       bg: 'var(--sb-negative-tint)', ink: C.negDeep }
+    case 'tentative': return { label: 'Maybe',    bg: C.inset,    ink: C.ink3 }
+    default:          return { label: 'Awaiting', bg: C.accentTint, ink: C.accentDeep }
   }
 }
 
@@ -513,7 +494,7 @@ export function NewEventPanel({
   // answer stops being true the moment the theme moves.
   const ink = useInkOn()
   const peopleBg = (i: number) =>
-    i % 2 === 0 ? C.gold : `color-mix(in srgb, ${C.gold} 28%, var(--sb-field))`
+    i % 2 === 0 ? C.accent : `color-mix(in srgb, ${C.accent} 28%, var(--sb-field))`
   const [invitee, setInvitee] = useState('')
   const [inviteeError, setInviteeError] = useState<string | null>(null)
   const inviteeRef = useRef<HTMLInputElement>(null)
@@ -703,13 +684,13 @@ export function NewEventPanel({
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0, maxWidth: '100%',
               fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-              letterSpacing: '-.02em', color: C.text,
+              letterSpacing: '-.02em', color: C.ink1,
               cursor: 'pointer',
             }}>
             <span style={{
               minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{company}</span>
-            <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
+            <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.ink4} style={{ flexShrink: 0 }} />
           </span>
           {(
             <select
@@ -757,7 +738,7 @@ export function NewEventPanel({
               style={{
                 ...ROUND,
                 background: set ? fill : 'transparent',
-                color: set ? 'var(--sb-ink-on-fill)' : C.third,
+                color: set ? 'var(--sb-ink-on-fill)' : C.ink3,
                 boxShadow: set ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 22%, transparent)' : undefined,
               }}>
               <Icon size={ICON.sm} strokeWidth={set ? STROKE.active : STROKE.rest} />
@@ -766,11 +747,12 @@ export function NewEventPanel({
         })}
         <button
           title={editing ? 'Delete this event' : 'Discard this event'}
-          onClick={() => {
-            if (!window.confirm(editing ? 'Delete this event?' : 'Discard this event?')) return
+          onClick={async () => {
+            // A draft that was never saved has nothing to lose; a saved event is deleted from Google.
+            if (editing && !await askConfirm({ title: 'Delete this event?', body: 'It is removed from your Google Calendar and cannot be undone.', confirmLabel: 'Delete event' })) return
             if (editing) onDelete?.(); else onCancel()
           }}
-          style={{ ...ROUND, color: C.bad }}><Trash2 size={ICON.sm} strokeWidth={STROKE.rest} /></button>
+          style={{ ...ROUND, color: C.negDeep }}><Trash2 size={ICON.sm} strokeWidth={STROKE.rest} /></button>
         <button title="Close" onClick={onCancel} style={ROUND}>
           <X size={ICON.sm} strokeWidth={STROKE.rest} />
         </button>
@@ -787,7 +769,7 @@ export function NewEventPanel({
           style={{
             width: '100%', background: 'transparent', border: 'none', outline: 'none', padding: 0,
             fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600,
-            letterSpacing: '-.03em', lineHeight: 1, color: C.text,
+            letterSpacing: '-.03em', lineHeight: 1, color: C.ink1,
           }} />
 
         {/* Where it is: both glyphs and one field, on one line. Two fields
@@ -819,7 +801,7 @@ export function NewEventPanel({
                 <button onClick={() => { setLocation(memory.venue!); push({ location: memory.venue! }) }}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
-                    fontSize: 'var(--sb-t-meta)', color: C.faint,
+                    fontSize: 'var(--sb-t-meta)', color: C.ink4,
                   }}>{memory.venue}</button>
               )}
             </label>
@@ -829,7 +811,7 @@ export function NewEventPanel({
                 <input value={meetLink} onChange={e => setMeetLink(e.target.value)}
                   placeholder="Meeting link" style={BARE} />
                 <a href={meetLink} target="_blank" rel="noopener noreferrer" title="Open the call"
-                  style={{ display: 'inline-flex', flexShrink: 0, color: C.third }}>
+                  style={{ display: 'inline-flex', flexShrink: 0, color: C.ink3 }}>
                   <ExternalLink size={ICON.sm} strokeWidth={1.8} />
                 </a>
                 <button
@@ -842,7 +824,7 @@ export function NewEventPanel({
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-                    padding: 0, background: 'none', border: 'none', cursor: 'pointer', color: C.faint,
+                    padding: 0, background: 'none', border: 'none', cursor: 'pointer', color: C.ink4,
                   }}>
                   <X size={ICON.sm} strokeWidth={1.8} />
                 </button>
@@ -856,9 +838,9 @@ export function NewEventPanel({
                 title={PROVIDER[provider].hint}
                 style={{
                   ...FIELD, flex: 1, minWidth: 0, cursor: 'pointer', justifyContent: 'flex-start', fontWeight: 600,
-                  background: addMeet && !editing ? C.ink : 'var(--sb-field)',
+                  background: addMeet && !editing ? C.ink1 : 'var(--sb-field)',
                   border: `var(--sb-border-width) solid ${addMeet && !editing ? 'transparent' : C.border}`,
-                  color: addMeet && !editing ? C.onInk : C.text,
+                  color: addMeet && !editing ? C.onInk : C.ink1,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                 {addMeet && !editing ? `${PROVIDER[provider].name} on create` : `Create a ${PROVIDER[provider].name} link`}
@@ -866,7 +848,7 @@ export function NewEventPanel({
             )
           ) : (
             <span style={{
-              flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: location || meetLink ? C.third : C.faint,
+              flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: location || meetLink ? C.ink3 : C.ink4,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {location || (meetLink ? PROVIDER[provider].name : 'Add a place or a call')}
@@ -886,7 +868,7 @@ export function NewEventPanel({
           <label onClick={openPicker} style={{
             position: 'relative',
             display: 'inline-flex', alignItems: 'center', gap: 5, height: 'var(--sb-h-pill)', padding: '0 9px',
-            borderRadius: 'var(--sb-r-sm)', background: C.ink, color: C.onInk, cursor: 'pointer',
+            borderRadius: 'var(--sb-r-sm)', background: C.ink1, color: C.onInk, cursor: 'pointer',
             fontSize: 'var(--sb-t-meta)', fontWeight: 600, ...NUM, flexShrink: 0,
           }}>
             {startDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
@@ -908,7 +890,7 @@ export function NewEventPanel({
                 }}
                 style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
             </label>
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>–</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, flexShrink: 0 }}>–</span>
             <label style={{ ...FIELD, flex: '1 1 84px', minWidth: 84, padding: '0 4px' }}>
               <input type="time" value={endTime} disabled={allDay}
                 onChange={e => { setEndTime(e.target.value); pushTimes(startDate, startTime, e.target.value) }}
@@ -927,7 +909,7 @@ export function NewEventPanel({
               400px column for a choice that is made once, if ever. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
             <label style={{ ...FIELD, flex: 1, minWidth: 0, position: 'relative' }}>
-              <RefreshCw size={ICON.sm} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
+              <RefreshCw size={ICON.sm} strokeWidth={1.8} color={C.ink3} style={{ flexShrink: 0 }} />
               <span style={{
                 flex: 1, minWidth: 0, fontWeight: 600,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -937,7 +919,7 @@ export function NewEventPanel({
                   : preset === 'biweekly' ? 'Repeats every 2 weeks'
                   : preset === 'monthly' ? 'Repeats monthly' : 'Repeats — custom'}
               </span>
-              <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
+              <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.ink4} style={{ flexShrink: 0 }} />
               <select
                 value={preset}
                 onChange={e => setPreset(e.target.value as Parameters<typeof setPreset>[0])}
@@ -950,7 +932,7 @@ export function NewEventPanel({
               </select>
             </label>
             {repeat && endsMode === 'count' && (
-              <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: C.goldInk, ...NUM, flexShrink: 0 }}>×{count}</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: C.accentDeep, ...NUM, flexShrink: 0 }}>×{count}</span>
             )}
           </div>
 
@@ -959,7 +941,7 @@ export function NewEventPanel({
               pills wrapped onto three rows for a value that is set once. */}
           {repeat && preset === 'custom' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>Ends</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, flexShrink: 0 }}>Ends</span>
               <label style={{ ...FIELD, flex: '1 1 120px', minWidth: 0 }}>
                 <input type="date" value={until}
                   onChange={e => {
@@ -968,10 +950,10 @@ export function NewEventPanel({
                     pushRepeat(repeat, mode, count, e.target.value)
                   }}
                   style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
-                <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
+                <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.ink4} style={{ flexShrink: 0 }} />
               </label>
               {endsMode === 'count' ? (
-                <span style={{ ...pill(true), background: C.ink, gap: 5 }}>
+                <span style={{ ...pill(true), background: C.ink1, gap: 5 }}>
                   After
                   <input type="number" min={1} max={99} value={count}
                     onChange={e => {
@@ -989,7 +971,7 @@ export function NewEventPanel({
                 </button>
               )}
               <button onClick={() => { setEndsMode('never'); setUntil(''); pushRepeat(repeat, 'never', count, '') }}
-                style={{ ...pill(endsMode === 'never'), background: endsMode === 'never' ? C.ink : C.card }}>
+                style={{ ...pill(endsMode === 'never'), background: endsMode === 'never' ? C.ink1 : C.card }}>
                 Never
               </button>
             </div>
@@ -998,7 +980,7 @@ export function NewEventPanel({
           {editing && onAlert && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
               <label style={{ ...FIELD, flex: 1, minWidth: 0, position: 'relative' }}>
-                <Bell size={ICON.sm} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
+                <Bell size={ICON.sm} strokeWidth={1.8} color={C.ink3} style={{ flexShrink: 0 }} />
                 <span style={{
                   flex: 1, minWidth: 0, fontWeight: 600,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -1008,7 +990,7 @@ export function NewEventPanel({
                     : alertMinutes === 0 ? 'Alert at the time'
                     : `Alert ${describeAlertMinutes(alertMinutes)}`}
                 </span>
-                <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
+                <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.ink4} style={{ flexShrink: 0 }} />
                 <select
                   value={alertMinutes === undefined ? 'default' : alertMinutes < 0 ? 'none' : String(alertMinutes)}
                   onChange={e => onAlert(e.target.value === 'default' ? 'default'
@@ -1029,19 +1011,19 @@ export function NewEventPanel({
       {/* ── What it runs into ──────────────────────────────────────────────── */}
       {editing && clashes && clashes.length > 0 && (
         <div style={{ ...CARD, gap: 6 }}>
-          <span style={{ ...LABEL, color: C.bad }}>
+          <span style={{ ...LABEL, color: C.negDeep }}>
             Runs into {clashes.length === 1 ? 'something else' : `${clashes.length} other things`}
           </span>
           {clashes.map(c => (
             <span key={c.id} style={{
               display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0,
-              fontSize: 'var(--sb-t-meta)', color: C.third,
+              fontSize: 'var(--sb-t-meta)', color: C.ink3,
             }}>
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {c.summary || 'Untitled'}
               </span>
               <span style={{ flex: 1 }} />
-              <span style={{ ...NUM, color: C.faint, flexShrink: 0 }}>{c.when}</span>
+              <span style={{ ...NUM, color: C.ink4, flexShrink: 0 }}>{c.when}</span>
             </span>
           ))}
         </div>
@@ -1052,7 +1034,7 @@ export function NewEventPanel({
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
           <span style={MONO}>Attendees</span>
           <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Tap ? to make someone optional</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>Tap ? to make someone optional</span>
         </div>
 
         {/* The organiser is you, and is not a guest you can remove. Written the
@@ -1062,11 +1044,11 @@ export function NewEventPanel({
             written properly one row below. */}
         <PersonRow
           initials={initialsOf(host ?? 'me')}
-          avatarBg={C.ink}
-          avatarInk={ink(C.ink)}
+          avatarBg={C.ink1}
+          avatarInk={ink(C.ink1)}
           name={host ? (existing?.organizer?.displayName || nameFromEmail(host)) : 'You'}
           sub={host ? normaliseEmail(host) : 'Organiser'}
-          rsvp={{ label: 'Organiser', bg: C.inset, ink: C.third }}
+          rsvp={{ label: 'Organiser', bg: C.inset, ink: C.ink3 }}
         />
 
         {attendeeRows.map((p, i) => (
@@ -1074,7 +1056,7 @@ export function NewEventPanel({
             key={p.email}
             initials={initialsOf(p.email)}
             avatarBg={peopleBg(i)}
-            // Not `C.text`. The swatch under it is the accent, which is a
+            // Not `C.ink1`. The swatch under it is the accent, which is a
             // terracotta in Warm Minimal and a deep green in Evergreen, and a
             // near-black on either is 3.66 and 2.30 against a needed 4.5.
             avatarInk={ink(peopleBg(i))}
@@ -1100,7 +1082,7 @@ export function NewEventPanel({
             style={{
               width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0, cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              background: 'transparent', border: `1px dashed ${C.dashed}`, color: C.faint,
+              background: 'transparent', border: `1px dashed ${C.dashed}`, color: C.ink4,
             }}><Plus size={ICON.sm} strokeWidth={1.8} /></button>
           <input
             ref={inviteeRef}
@@ -1112,7 +1094,7 @@ export function NewEventPanel({
             style={{ ...BARE, fontSize: 'var(--sb-t-body-s)' }} />
         </div>
         {inviteeError && (
-          <span style={{ fontSize: 'var(--sb-t-meta)', color: C.bad, paddingLeft: 39 }}>{inviteeError}</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: C.negDeep, paddingLeft: 39 }}>{inviteeError}</span>
         )}
       </div>
 
@@ -1130,18 +1112,18 @@ export function NewEventPanel({
             display: 'flex', alignItems: 'center', gap: 10, width: '100%',
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit',
           }}>
-          <List size={ICON.md} strokeWidth={1.8} color={C.third} />
+          <List size={ICON.md} strokeWidth={1.8} color={C.ink3} />
           <span style={{
-            fontSize: 'var(--sb-t-body-s)', color: C.third, minWidth: 0,
+            fontSize: 'var(--sb-t-body-s)', color: C.ink3, minWidth: 0,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>Notes and more</span>
           <span style={{ flex: 1 }} />
           <span style={{
-            fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0,
+            fontSize: 'var(--sb-t-meta)', color: C.ink4, flexShrink: 0,
           }}>defaults are fine</span>
           {extrasOpen
-            ? <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} />
-            : <ChevronRight size={ICON.sm} strokeWidth={1.8} color={C.faint} />}
+            ? <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.ink4} />
+            : <ChevronRight size={ICON.sm} strokeWidth={1.8} color={C.ink4} />}
         </button>
 
         {extrasOpen && (
@@ -1155,7 +1137,7 @@ export function NewEventPanel({
               style={{
                 width: '100%', boxSizing: 'border-box', resize: 'vertical', padding: '10px 12px',
                 borderRadius: 'var(--sb-r-nav)', background: C.inset, border: `1px solid ${C.border}`,
-                fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: C.text, outline: 'none', lineHeight: 1.55,
+                fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: C.ink1, outline: 'none', lineHeight: 1.55,
               }} />
 
             <LinkPreviews text={notes} />
@@ -1180,23 +1162,23 @@ export function NewEventPanel({
               <span style={{
                 width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: C.card,
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: C.bad,
+                fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: C.negDeep,
               }}>{f.kind}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 {f.fileUrl ? (
                   <a href={f.fileUrl} target="_blank" rel="noreferrer"
-                    style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>{f.name}</a>
+                    style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>{f.name}</a>
                 ) : (
-                  <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                  <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
                 )}
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: f.error ? C.bad : C.faint, ...NUM, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: f.error ? C.negDeep : C.ink4, ...NUM, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                   title={f.error}>
                   {f.size ? `${(f.size / 1048576).toFixed(1)} MB · ` : ''}
                   {f.error ? f.error : f.pending ? 'uploading to Drive…' : 'in Drive, on the event'}
                 </span>
               </span>
               <button onClick={() => commitFiles(filesRef.current.filter(x => x.name !== f.name))}
-                style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', border: 'none', background: 'none', color: C.faint, cursor: 'pointer', flexShrink: 0 }}>
+                style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', border: 'none', background: 'none', color: C.ink4, cursor: 'pointer', flexShrink: 0 }}>
                 <X size={ICON.sm} strokeWidth={1.8} />
               </button>
             </div>
@@ -1214,25 +1196,25 @@ export function NewEventPanel({
               padding: 13, borderRadius: 'var(--sb-r-nav)',
               border: `1px dashed ${C.dashed}`,
               background: dropping ? C.inset : 'transparent',
-              fontSize: 'var(--sb-t-meta)', color: C.third,
+              fontSize: 'var(--sb-t-meta)', color: C.ink3,
             }}>
-            <Paperclip size={ICON.sm} strokeWidth={1.8} color={C.faint} />
+            <Paperclip size={ICON.sm} strokeWidth={1.8} color={C.ink4} />
             Drop files here — they go to your Drive, then onto the event
           </div>
 
             <label style={FIELD}>
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>Calendar</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, flexShrink: 0 }}>Calendar</span>
               <select value={calId} onChange={e => setCalId(e.target.value)}
                 style={{ ...BARE, cursor: 'pointer', appearance: 'none' }}>
                 {writable.map(c => (
                   <option key={c.id} value={c.id}>{c.summaryOverride ?? c.summary}</option>
                 ))}
               </select>
-              <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
+              <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.ink4} style={{ flexShrink: 0 }} />
             </label>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Visible as</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>Visible as</span>
               {([['default', 'Calendar default'], ['private', 'Private'], ['public', 'Public']] as const).map(([id, label]) => (
                 <button key={id} onClick={() => { setVisibility(id); push({ visibility: id }) }} style={pill(visibility === id)}>{label}</button>
               ))}
@@ -1244,7 +1226,7 @@ export function NewEventPanel({
       {extra && <div style={{ ...CARD, gap: 8 }}>{extra}</div>}
 
       {moveError && (
-        <div style={{ ...CARD, gap: 0, fontSize: 'var(--sb-t-meta)', color: C.bad }}>{moveError}</div>
+        <div style={{ ...CARD, gap: 0, fontSize: 'var(--sb-t-meta)', color: C.negDeep }}>{moveError}</div>
       )}
 
       {/* ── 7 · Footer ─────────────────────────────────────────────────────── */}
@@ -1260,7 +1242,7 @@ export function NewEventPanel({
         background: C.page,
       }}>
         {editing ? (
-          <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: C.faint }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>
             Every change saves itself.
           </span>
         ) : (
@@ -1271,7 +1253,7 @@ export function NewEventPanel({
           style={{
             flex: '1 1 0', minWidth: 0, height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-pill)', border: 'none',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            background: C.ink, color: C.onInk, cursor: title.trim() ? 'pointer' : 'default',
+            background: C.ink1, color: C.onInk, cursor: title.trim() ? 'pointer' : 'default',
             fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
             opacity: title.trim() ? 1 : 0.45,
           }}>
@@ -1281,7 +1263,7 @@ export function NewEventPanel({
         <button onClick={onCancel}
           style={{
             height: 'var(--sb-h-nav)', padding: '0 14px', flexShrink: 0, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-            background: C.inset, border: `var(--sb-border-width) solid ${C.border}`, color: C.third,
+            background: C.inset, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink3,
             fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
           }}>{editing ? 'Close' : 'Cancel'}</button>
       </div>
@@ -1317,20 +1299,20 @@ function PersonRow({
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
           <span style={{
-            fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text, textTransform: 'capitalize',
+            fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink1, textTransform: 'capitalize',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{name}</span>
           {optional && (
             <span style={{
               height: 19, padding: '0 7px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
               display: 'inline-flex', alignItems: 'center',
-              background: C.inset, border: `1px solid ${C.border}`, color: C.faint,
-              fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+              background: C.inset, border: `1px solid ${C.border}`, color: C.ink4,
+              fontSize: 'var(--sb-t-meta)', fontWeight: 600,
             }}>Optional</span>
           )}
         </span>
         <span style={{
-          display: 'block', fontSize: 'var(--sb-t-meta)', color: C.faint, marginTop: 1,
+          display: 'block', fontSize: 'var(--sb-t-meta)', color: C.ink4, marginTop: 1,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{sub}</span>
       </span>
@@ -1348,9 +1330,9 @@ function PersonRow({
           style={{
             width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, cursor: 'pointer',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            background: optional ? C.ink : C.card,
+            background: optional ? C.ink1 : C.card,
             border: optional ? '1px solid transparent' : `1px solid ${C.border}`,
-            color: optional ? C.onInk : C.faint,
+            color: optional ? C.onInk : C.ink4,
             fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
           }}>?</button>
       )}
@@ -1358,7 +1340,7 @@ function PersonRow({
         <button onClick={onRemove} title="Take them off the invite"
           style={{
             width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, cursor: 'pointer',
-            background: 'none', border: 'none', color: C.faint,
+            background: 'none', border: 'none', color: C.ink4,
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           }}><X size={ICON.sm} strokeWidth={1.8} /></button>
       )}

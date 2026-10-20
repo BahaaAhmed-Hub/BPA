@@ -43,7 +43,7 @@ const IN: React.CSSProperties = {
   fontFamily: 'inherit', outline: 'none',
 }
 const LBL: React.CSSProperties = {
-  display: 'block', marginBottom: 3, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+  display: 'block', marginBottom: 3, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
 }
 const GHOST: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 5, height: 'var(--sb-h-pill)',
@@ -232,7 +232,7 @@ function PlanCard({ plan, handle, calendars, onSave, onDelete }: {
               })}
             </span>
           </Row>
-          <p style={{ margin: '-4px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
+          <p style={{ margin: '-4px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
             {(d.busy_calendar_ids ?? []).length
               ? 'Only these are read when working out what is free.'
               : 'Nothing picked, so your main calendar on each account is read — which is the right answer for most people.'}
@@ -416,7 +416,7 @@ export function BookingPanel({ userId, userName, calendars, windows, openHours, 
           </span>
         )}
         {!live && (
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
             Nothing is reachable until the page has an address and is switched on.
           </p>
         )}

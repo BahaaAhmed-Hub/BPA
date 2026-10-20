@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { acct } from '../format'
 import { CategoryGlyph } from './CategoryGlyph'
 import { useInkOnKeeping } from '@/lib/ink'
+import { GLYPH } from '@/lib/glyphs'
 
 // ─── One entry, in every feed that lists entries ─────────────────────────────
 // There were four of these — Today, Balances, and the Budget and Financials
@@ -70,7 +71,7 @@ export function AmountPill({ type, amount, currency, direction, muted }: {
       fontVariantNumeric: 'tabular-nums',
       background: bg, color, whiteSpace: 'nowrap',
     }}>
-      {type === 'transfer' && !direction ? '↔ ' : ''}
+      {type === 'transfer' && !direction ? `${GLYPH.transfer} ` : ''}
       {acct(out ? -Math.abs(amount) : Math.abs(amount), { currency })}
     </span>
   )
@@ -139,7 +140,7 @@ export function TxRow({
         </span>
         <span style={{
           display: 'flex', gap: 6, marginTop: 1, minWidth: 0,
-          fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)',
+          fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {meta}

@@ -23,19 +23,9 @@ import {
 import type { ShoppingGroup, ShoppingItem, ShoppingStore } from './types'
 import { ItemFields, type EnvelopeRow } from './ItemFields'
 import { useFillsTheWindow } from '@/lib/fillsTheWindow'
+import { C } from '@/lib/palette'
+import { FALLBACK_BOARD_ICON } from '@/lib/glyphs'
 
-const C = {
-  page:   'var(--sb-page)',
-  card:   'var(--sb-card)',
-  field:  'var(--sb-field)',
-  border: 'var(--sb-border)',
-  ink1:   'var(--sb-ink-1)',
-  ink3:   'var(--sb-ink-3)',
-  ink4:   'var(--sb-ink-4)',
-  accent: 'var(--sb-accent)',
-  pos:    'var(--sb-positive)',
-  neg:    'var(--sb-negative)',
-} as const
 
 /** The column an item with no list lives in. Not a group id — a group can
  *  never have this id, because every group id is a uuid. */
@@ -140,7 +130,7 @@ function ItemCard({ item, groups, stores, envelopes, open, onOpen, onUpdate, onD
             )}
           </div>
           {(item.bestPrice || item.targetPriceMax || item.finalPrice) && (
-            <div style={{ fontSize: 'var(--sb-t-micro)', color: C.ink3, marginTop: 2 }}>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, marginTop: 2 }}>
               {purchased && item.finalPrice != null
                 ? `Paid ${item.currency} ${item.finalPrice.toLocaleString()}`
                 : item.bestPrice
@@ -206,7 +196,7 @@ function Column({
         }}>
           {/* Header */}
           <div style={{ padding: '10px 12px 8px', display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-            <span style={{ fontSize: 16 }} aria-hidden>{group?.icon ?? '📥'}</span>
+            <span style={{ fontSize: 16 }} aria-hidden>{group?.icon ?? FALLBACK_BOARD_ICON}</span>
             {editName && group && onUpdateGroup ? (
               <input
                 autoFocus value={nameVal}
@@ -228,7 +218,7 @@ function Column({
           </div>
 
           {(group?.scheduledDate || estimated > 0) && (
-            <div style={{ padding: '0 12px 8px', fontSize: 'var(--sb-t-micro)', color: C.ink4, display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+            <div style={{ padding: '0 12px 8px', fontSize: 'var(--sb-t-meta)', color: C.ink4, display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
               {group?.scheduledDate && (
                 <span>{new Date(group.scheduledDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
               )}
@@ -262,7 +252,7 @@ function Column({
 
             {purchased.length > 0 && (
               <details>
-                <summary style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, cursor: 'pointer', listStyle: 'none', padding: '4px 2px' }}>
+                <summary style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, cursor: 'pointer', listStyle: 'none', padding: '4px 2px' }}>
                   {purchased.length} purchased
                 </summary>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 5 }}>

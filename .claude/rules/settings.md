@@ -593,3 +593,62 @@ themselves, so each reads a **note left by whoever does know**:
 been read here", "needs Behavioral OS switched on". Shown in the bell panel and
 as a chip on the Settings row. An empty bell for a reason is not a quiet day,
 and "not wired yet" was the wrong thing to say about either.
+
+## Settings — where things live now
+`Settings.tsx` (the old 5,626-line file) is the **shell** only: `Settings()`, the
+page routing (`PageKey`, `SECTION_TO_PAGE`, `PAGE_META`) and the `Card` /
+`SectionCard` wrappers. Everything else moved, with no change in what renders —
+`scripts/settings-snapshot.mjs` fingerprints all 15 sections before and after and
+they are byte-identical.
+- `model.ts` — `AppSettings`, `CompanyRow`, `DEFAULTS`, `ls`/`lsSet`, the load/save
+  pairs, and the AI config (`AIConfig`, `loadAIConfig`, `saveAIConfig`,
+  `cleanKey`, `maskKey`, `misplacedAnthropicKey`). `Settings.tsx` re-exports the
+  AI names because `professor.ts` and the assistant panel import them from there.
+  **`onAIPush` is assigned through `setAIPushListener`** — an import cannot be
+  assigned, and the Professor section re-subscribes to hear when a key reaches
+  Postgres.
+- `nav.ts` — `SECTION_IDS`, `SECTION_META`, `NAV_GROUPS`, `loadSectionOrder`.
+- `ui.tsx` — `Toggle`, `FieldRow`, `GhostPill`, `PillValue`, `DRow` and the AI nav
+  icon; `pillStyles.ts` holds the pill constants. They are separate files because
+  a file that exports both components and constants breaks Fast Refresh (lint).
+- `sections/` — one file per section (`Profile`, `Billing`, `Schedule`,
+  `Companies`, `Accounts`, `Habits`, `TaskStatuses`, `Ai`, `Appearance`,
+  `BlockingRules`, `Library`, `Behavioral`, `Finance` with `FinanceSecurity`,
+  `CardPoints`, `ShoppingSettings`, `Notifications`, `Integrations`, `SyncRules`,
+  `Automation`, `DataPrivacy`). A section imports `model`/`nav`/`ui`, never the
+  shell and never another section's internals except where one embeds another
+  (`Accounts` embeds `Companies`; `Finance` embeds its three parts).
+- **A harness that asserts on Settings *source* uses `settingsSource()`**
+  (`scripts/settings-source.mjs`) — the whole feature as one string — so it keeps
+  meaning "the feature says this" wherever the code sits. Three did before the
+  split; `ai-key-field-is-the-right-one` had to be re-anchored to the `AIConfig`
+  interface because the concatenation has more than one `provider:`.
+
+## The setup wizard is three steps (P2.5)
+`modules/wizard/` — `SetupWizard.tsx` plus `steps/Step1You`, `Step1Accounts`,
+`Step2Companies`, `Step3Done`. It was six (Welcome, Accounts, Companies, Habits,
+Import, Done).
+- **Step 1 is name + theme + accounts**: `Step1You compact` (no hero, no feature
+  cards) over `Step1Accounts`. Step 2 is companies, step 3 is Done.
+- **`WizardData` is `{ displayName, themeId, companies }`** now. Habits and
+  tasks are not collected here, so `handleFinish` no longer writes either.
+  The OAuth-resume payload in `sessionStorage['bpa-wizard-resume']` keeps the
+  same key but reads only those three fields.
+- **Habits and tasks moved to where they live, as first-run prompts**:
+  - `habits/HabitStarter.tsx` replaces the three "No habits yet" lines in
+    `HabitsModule`; the 12 presets are one list in `lib/habitTemplates.ts`
+    (the wizard used to carry two copies). Gone as soon as one habit exists.
+  - `tasks/TodoistImport.tsx` sits above the Tasks content: drawn only when the
+    build has `TODOIST_CONFIGURED`, only while the board is empty, until
+    "Not now" (`localStorage['tasks-todoist-prompt-dismissed']`) or an import.
+- **Done offers "Pick your habits" / "Add your tasks"**: `onGo` finishes the
+  wizard, then `setActiveModule('habits' | 'tasks')`.
+- **In dev the first-login wizard never opens.** The 2.5s timer in `App.tsx` is
+  cleared by StrictMode's first unmount and a ref stops it re-arming; production
+  is unaffected. Harnesses open it with `professor:openWizard` (Settings' own door).
+- `scripts/wizard-three-steps.mjs 5199 [5198]` — 27 assertions; the second port
+  runs `VITE_TODOIST_CLIENT_ID=x npx vite --port 5198 --strictPort` for the
+  Todoist half. Stub server records writes: the habits claim is "the server
+  received two rows". Controls: a habit on the server keeps the starter away, a
+  task keeps the Todoist prompt away, and the pre-change code fails the wizard
+  assertions. **Not measured:** the Todoist connect/import itself (a real OAuth popup).

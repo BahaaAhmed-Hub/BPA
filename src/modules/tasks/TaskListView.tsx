@@ -22,7 +22,7 @@ export function TaskListView({ tasks, onOpen, hideCompleted, groupBy, filteredTa
 
   const groups = groupBy && groupBy !== 'none'
     ? buildTaskGroups(visible, groupBy)
-    : [{ key: 'all', label: '', emoji: '', color: 'var(--sb-ink-4)', tasks: sortUrgentFirst(visible) }]
+    : [{ key: 'all', label: '', emoji: '', color: 'var(--sb-ink-3)', tasks: sortUrgentFirst(visible) }]
 
   const signature = groups.map(g => g.key + ':' + g.tasks.map(t => t.id).join(',')).join('|')
   const listRef = useFlip<HTMLDivElement>(signature)

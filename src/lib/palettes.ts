@@ -12,11 +12,11 @@ export const CALENDAR_COLORS = [
 ]
 
 
-/** Step4Habits.tsx */
+/** Habit colours — the Habits screen. */
 export const HABIT_COLORS = ['#7F77DD','#60A5FA','#1D9E75','#E05252','#F97316','#A855F7','#EC4899','#FBBF24']
 
 
-/** Step3Companies.tsx */
+/** Step2Companies.tsx */
 /** Twelve hues at two weights, so a person with a dozen companies still gets a
  *  colour they can tell from the others. Every one of them is legible as a dot
  *  or a chip on both a cream ground and a dark one, which is why the deep row

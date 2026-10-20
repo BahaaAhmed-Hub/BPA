@@ -185,7 +185,7 @@ function BookRow({ book, event, linkedHere, madeHere, changes, onChanges, onUndo
         </div>
         {linkedHere && (
           <span title="Linked to this meeting" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
             color: 'var(--sb-ink-1)', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-pill)', padding: '3px 9px', whiteSpace: 'nowrap',
           }}><LinkIcon size={12} />this meeting</span>
         )}

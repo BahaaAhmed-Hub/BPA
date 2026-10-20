@@ -179,7 +179,7 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
           {passkey && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 12px' }}>
               <div style={{ flex: 1, height: 1, background: 'var(--sb-hairline)' }} />
-              <span style={{ fontSize: 'var(--sb-t-micro)', letterSpacing: '0.1em', color: 'var(--sb-ink-4)', fontWeight: 600 }}>OR</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', letterSpacing: '0.1em', color: 'var(--sb-ink-3)', fontWeight: 600 }}>OR</span>
               <div style={{ flex: 1, height: 1, background: 'var(--sb-hairline)' }} />
             </div>
           )}
@@ -204,7 +204,7 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
               width: '100%', height: 42, borderRadius: 'var(--sb-r-nav)', marginTop: 10,
               background: password ? 'var(--sb-accent)' : 'var(--sb-field)',
               border: `var(--sb-border-width) solid ${password ? 'color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent)' : 'var(--sb-border)'}`,
-              color: password ? 'var(--sb-accent-ink)' : 'var(--sb-ink-4)',
+              color: password ? 'var(--sb-accent-ink)' : 'var(--sb-ink-3)',
               cursor: password && !busy ? 'pointer' : 'default',
               fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
             }}>

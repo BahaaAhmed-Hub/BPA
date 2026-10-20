@@ -24,6 +24,8 @@ import {
 } from '../forecast'
 import { loadRules } from '../modals/BudgetRuleModal'
 import { adviseGoal, ifFound, type Advice, type Move } from '../goalAdvice'
+import { C } from '@/lib/palette'
+import { DEFAULT_GOAL_ICON } from '@/lib/glyphs'
 
 
 // ─── 21 · Goals ───────────────────────────────────────────────────────────────
@@ -38,22 +40,6 @@ import { adviseGoal, ifFound, type Advice, type Move } from '../goalAdvice'
 // edited or deleted here — the balance is the ledger's, and it is paid down or
 // settled from Balances.
 
-const C = {
-  bg:      'var(--sb-page)',
-  surface: 'var(--sb-card)',
-  field:   'var(--sb-field)',
-  border:  'var(--sb-border)',
-  hair:    'var(--sb-hairline)',
-  ink1:    'var(--sb-ink-1)',
-  ink2:    'var(--sb-ink-2)',
-  ink3:    'var(--sb-ink-3)',
-  ink4:    'var(--sb-ink-4)',
-  accent:  'var(--sb-accent)',
-  accentBg:'var(--sb-accent-tint2)',
-  accentBr:'var(--sb-accent-border)',
-  green:   'var(--sb-positive)',
-  red:     'var(--sb-negative)',
-}
 
 const DISPLAY = 'var(--sb-font-num)'
 const BUFFER_KEY = 'finance-goal-buffer-months'
@@ -139,7 +125,7 @@ function Stat({ label, value, tone, sub, help, terms }: {
           textUnderlineOffset: 5,
           width: 'fit-content', outline: 'none',
         }}>{value}</span>
-      {sub && <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4 }}>{sub}</span>}
+      {sub && <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>{sub}</span>}
       {open && terms && <Breakdown title={label} note={help} terms={terms} onClose={() => setOpen(false)} />}
     </span>
   )
@@ -172,11 +158,11 @@ function Breakdown({ title, note, terms, onClose }: {
           style={{
             width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', padding: 0, cursor: 'pointer',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
+            background: C.card, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
           }}><X size={ICON.sm} /></button>
       </span>
       {note && (
-        <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink3, lineHeight: 1.5, marginBottom: 9 }}>{note}</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, lineHeight: 1.5, marginBottom: 9 }}>{note}</span>
       )}
       {terms.map((t, i) => (
         <span key={i} style={{
@@ -196,7 +182,7 @@ function Breakdown({ title, note, terms, onClose }: {
           {t.amount && (
             <span style={{
               fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', flexShrink: 0, whiteSpace: 'nowrap',
-              color: t.kind === 'less' ? C.red : t.kind === 'note' || t.muted ? C.ink4 : 'inherit',
+              color: t.kind === 'less' ? C.neg : t.kind === 'note' || t.muted ? C.ink4 : 'inherit',
             }}>{t.kind === 'less' ? `\u2212${t.amount}` : t.amount}</span>
           )}
         </span>
@@ -246,8 +232,8 @@ function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onG
   // A goal queued behind another is not stalled: it starts the month the one
   // above it lands, and saying which month is the whole job of this screen.
   const queued = verdict === 'ok' && plan.monthly <= 0 && plan.startsIn !== null && plan.startsIn > 0
-  const tone = verdict === 'done' || verdict === 'now' ? C.green
-    : verdict === 'late' || verdict === 'stalled' ? C.red : C.ink3
+  const tone = verdict === 'done' || verdict === 'now' ? C.pos
+    : verdict === 'late' || verdict === 'stalled' ? C.neg : C.ink3
 
   return (
     <div
@@ -256,8 +242,8 @@ function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onG
       style={{
         display: 'flex', alignItems: 'stretch', gap: 8, cursor: 'pointer', position: 'relative',
         padding: '11px 12px 11px 4px', borderRadius: 'var(--sb-r-nav)', boxSizing: 'border-box',
-        background: selected ? C.accentBg : C.surface,
-        border: `var(--sb-border-width) solid ${selected ? C.accentBr : C.hair}`,
+        background: selected ? C.accentTint2 : C.card,
+        border: `var(--sb-border-width) solid ${selected ? C.accentBorder : C.hair}`,
         opacity: lifted ? 0.4 : 1,
       }}>
       {/* Where the row lands, drawn while you are still holding it. A row that
@@ -292,7 +278,7 @@ function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onG
         <span style={{
           width: 20, height: 20, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+          background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
         }}>{place}</span>
         {/* An account's picture arrives here as its icon — a data URL, which
             printed as text is a line of base64 where the name should be. */}
@@ -314,7 +300,7 @@ function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onG
         <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
           <div style={{
             width: `${pct}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
-            background: verdict === 'done' ? C.green : C.accent,
+            background: verdict === 'done' ? C.pos : C.accent,
           }} />
         </div>
       )}
@@ -323,7 +309,7 @@ function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onG
         {/* A debt is written the way every other screen writes one — bracketed,
             in the negative ink — not as "0 of 11", which reads as a savings
             target nobody has started. */}
-        <span style={{ fontVariantNumeric: 'tabular-nums', color: debt ? C.red : undefined }}>
+        <span style={{ fontVariantNumeric: 'tabular-nums', color: debt ? C.neg : undefined }}>
           {debt
             ? `${acct(-g.targetAmount, { currency: g.currency ?? currency })} owed`
             : `${group(g.currentAmount)} of ${group(g.targetAmount)} ${g.currency ?? currency}`}
@@ -393,7 +379,7 @@ export function GoalsScreen(_props?: any) {
   const [newName, setNewName]     = useState('')
   const [newTarget, setNewTarget] = useState(0)
   const [newBy, setNewBy]         = useState('')
-  const [newIcon, setNewIcon]     = useState('🎯')
+  const [newIcon, setNewIcon]     = useState(DEFAULT_GOAL_ICON)
   // MoneyInput holds the text you typed, so that a half-typed "1,2" survives.
   // Setting the value back to 0 does not clear that — the field has to be a
   // new one, or the amount you just used stays in the form.
@@ -492,7 +478,7 @@ export function GoalsScreen(_props?: any) {
     const g: Goal = {
       id: crypto.randomUUID(),
       name: newName.trim(),
-      icon: newIcon || '🎯',
+      icon: newIcon || DEFAULT_GOAL_ICON,
       targetAmount: newTarget,
       currentAmount: 0,
       color: C.accent,
@@ -505,7 +491,7 @@ export function GoalsScreen(_props?: any) {
     }
     void upsertGoal(g)
     setSelectedId(g.id)
-    setNewName(''); setNewTarget(0); setNewBy(''); setNewIcon('🎯')
+    setNewName(''); setNewTarget(0); setNewBy(''); setNewIcon(DEFAULT_GOAL_ICON)
     setFormTick(n => n + 1)
     setFormOpen(false)
   }
@@ -704,7 +690,7 @@ export function GoalsScreen(_props?: any) {
     // The tab is one scrolling column now: the timeline sits above the two
     // columns, and squeezing everything into the viewport left the open goal's
     // detail cut off at the fold rather than reachable.
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflowY: 'auto', background: C.bg }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflowY: 'auto', background: C.page }}>
 
       {/* ── What there is to work with ── */}
       <div style={{ padding: '18px 26px 0' }}>
@@ -712,7 +698,7 @@ export function GoalsScreen(_props?: any) {
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 22, flexWrap: 'wrap',
           marginTop: 8, padding: '15px 18px', borderRadius: 'var(--sb-r-card)',
-          background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
+          background: C.card, border: `var(--sb-border-width) solid ${C.border}`,
         }}>
           {/* Two numbers fund everything below: what you could move today, and
               what a month leaves over. Both used to be named by their
@@ -725,14 +711,14 @@ export function GoalsScreen(_props?: any) {
             // They are a column in the box now; this says only how to open it.
             sub="click for the breakdown" />
           <Stat label="A month leaves over" value={money(capacity.surplus)}
-            tone={capacity.surplus >= 0 ? C.green : C.red}
+            tone={capacity.surplus >= 0 ? C.pos : C.neg}
             terms={monthTerms}
             help={`What is left after a usual month's spending, and therefore what can go into goals each month from now on. Every category is read on its own across the last ${WINDOW_MONTHS} months and the middle of each is added, so one bonus or one boiler does not reset the plan — and a cost that only happens some months is charged on its own dates rather than smeared across all of them.`}
             sub={capacity.months > 0
               ? 'click for the breakdown'
               : `nothing paid in the last ${WINDOW_MONTHS} months, so there is nothing to read`} />
           {capacity.committed > 0 && (
-            <Stat label="Owed but not yet paid" value={money(-capacity.committed)} tone={C.red}
+            <Stat label="Owed but not yet paid" value={money(-capacity.committed)} tone={C.neg}
               help="Entries dated in the future with no payment date. The money has an owner already, so it is taken off what you could put in today."
               sub="already taken off the figure on the left" />
           )}
@@ -766,13 +752,13 @@ export function GoalsScreen(_props?: any) {
                 label that needs its own tooltip not to mislead is the bug, so
                 the ratio is said on the page. */}
             {policy === 'share' && (
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, lineHeight: 1.45, maxWidth: 230 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, lineHeight: 1.45, maxWidth: 230 }}>
                 Weighted by rank, not equal — number 1 gets twice what number 2
                 does, and three times number 3.
               </span>
             )}
             {policy === 'commit' && (
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: committed > capacity.surplus ? C.red : C.ink4, lineHeight: 1.45, maxWidth: 230 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: committed > capacity.surplus ? C.neg : C.ink4, lineHeight: 1.45, maxWidth: 230 }}>
                 {committed <= 0
                   ? 'Nothing is committed yet — open a goal and set what goes into it each month.'
                   : committed > capacity.surplus
@@ -818,8 +804,8 @@ export function GoalsScreen(_props?: any) {
             }}
               style={{
                 border: 'none', cursor: 'pointer', padding: '3px 9px', borderRadius: 'var(--sb-r-pill)',
-                background: C.accentBg, color: C.ink2, fontFamily: 'inherit',
-                fontSize: 'var(--sb-t-micro)', fontWeight: 700, whiteSpace: 'nowrap',
+                background: C.accentTint2, color: C.ink2, fontFamily: 'inherit',
+                fontSize: 'var(--sb-t-meta)', fontWeight: 700, whiteSpace: 'nowrap',
               }}>See the rules ↓</button>
           </div>
         </div>
@@ -829,7 +815,7 @@ export function GoalsScreen(_props?: any) {
       {plans.length > 0 && (
         <div style={{ padding: '14px 26px 0' }}>
           <div style={{
-            background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
+            background: C.card, border: `var(--sb-border-width) solid ${C.border}`,
             borderRadius: 'var(--sb-r-card)', padding: '16px 18px',
           }}>
             <GoalTimeline schedule={schedule} goals={allGoals} currency={cur} surplus={capacity.surplus} />
@@ -841,7 +827,7 @@ export function GoalsScreen(_props?: any) {
       <div style={{ display: 'flex', gap: 14, padding: '14px 26px 22px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
         <div style={{
-          width: 400, flexShrink: 0, background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
+          width: 400, flexShrink: 0, background: C.card, border: `var(--sb-border-width) solid ${C.border}`,
           borderRadius: 'var(--sb-r-card)', padding: '15px 16px', display: 'flex', flexDirection: 'column',
           gap: 10, boxSizing: 'border-box',
         }}>
@@ -906,7 +892,7 @@ export function GoalsScreen(_props?: any) {
                 style={{
                   width: 24, height: 24, borderRadius: 'var(--sb-r-pill)', padding: 0, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
+                  background: C.card, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
                 }}><X size={ICON.sm} /></button>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -924,13 +910,13 @@ export function GoalsScreen(_props?: any) {
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Target</span>
+                <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>Target</span>
                 <MoneyInput key={formTick} value={newTarget} min={0} onChange={setNewTarget}
                   placeholder="60,000"
                   style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
               </span>
               <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>By (optional)</span>
+                <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>By (optional)</span>
                 <input type="date" value={newBy} min={todayISO()}
                   onChange={e => setNewBy(e.target.value)}
                   style={{ ...FIELD, fontFamily: DISPLAY }} />
@@ -967,12 +953,11 @@ export function GoalsScreen(_props?: any) {
             sooner={sooner}
             onChange={g => void upsertGoal(g)}
             onDelete={g => {
-              if (!window.confirm(`Delete the goal "${g.name}"?`)) return
               void removeGoal(g.id)
               setSelectedId(null)
             }} /> : (
             <div style={{
-              background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
+              background: C.card, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
               padding: '22px 24px', color: C.ink3, fontSize: 'var(--sb-t-label)', lineHeight: 1.6,
             }}>
               Pick a goal on the left and what it would take is worked out here — what goes
@@ -1014,7 +999,7 @@ function WhatWouldChangeIt({ advice, sooner, money }: {
   // The same box as every other section of the panel — this one is a section
   // of it, not a card floating beside it.
   const card: React.CSSProperties = {
-    background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
+    background: C.card, border: `var(--sb-border-width) solid ${C.border}`,
     borderRadius: 'var(--sb-r-card)', padding: '18px 20px',
   }
   const lead =
@@ -1029,14 +1014,14 @@ function WhatWouldChangeIt({ advice, sooner, money }: {
   const cuts = advice.cuts.slice(0, 6)
 
   return (
-    <div style={{ ...card, background: 'var(--sb-accent-tint)', border: `var(--sb-border-width) solid ${C.accentBr}` }}>
+    <div style={{ ...card, background: 'var(--sb-accent-tint)', border: `var(--sb-border-width) solid ${C.accentBorder}` }}>
       <span style={EYEBROW}>What would change it</span>
       <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink1, lineHeight: 1.6, marginTop: 8 }}>{lead}</div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
         {advice.moves.map((m: Move, i: number) => (
           <div key={m.kind + i} style={{
-            background: C.surface, border: `var(--sb-border-width) solid ${C.hair}`,
+            background: C.card, border: `var(--sb-border-width) solid ${C.hair}`,
             borderRadius: 'var(--sb-r-nav)', padding: '10px 12px',
           }}>
             <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink1, fontWeight: 600 }}>{m.title}</div>
@@ -1067,13 +1052,13 @@ function WhatWouldChangeIt({ advice, sooner, money }: {
                         </span>
                         <span style={{
                           fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', minWidth: 64, textAlign: 'right',
-                          color: c.take > 0 ? C.red : C.ink4, fontWeight: c.take > 0 ? 600 : 400,
+                          color: c.take > 0 ? C.neg : C.ink4, fontWeight: c.take > 0 ? 600 : 400,
                         }}>
                           {c.take <= 0 ? 'untouched' : c.take >= c.monthly ? 'all of it' : `−${group(Math.round(c.take))}`}
                         </span>
                       </div>
                     ))}
-                    <div style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, marginTop: 4, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, marginTop: 4, lineHeight: 1.5 }}>
                       What each costs a month, and what this combination takes from it. Filled
                       in the order a cut is least painful — what a budget says is guilt-free
                       first, rent last — so the ones at the bottom stay untouched.
@@ -1138,7 +1123,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
     .filter(r => r.share)
 
   const card: React.CSSProperties = {
-    background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
+    background: C.card, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
     // No marginBottom: the shell's own gap spaces these now, so a card cannot
     // be double-spaced by being both inside the shell and pushing its sibling.
     padding: '18px 20px',
@@ -1157,7 +1142,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
     // parts of different pages stacked up.
     <div style={{
       maxWidth: 720,
-      background: C.bg, border: `var(--sb-border-width) solid ${C.border}`,
+      background: C.page, border: `var(--sb-border-width) solid ${C.border}`,
       borderRadius: 'var(--sb-r-frame, var(--sb-r-card))', boxShadow: 'var(--sb-shadow-control)',
       display: 'flex', flexDirection: 'column', gap: 12, padding: '12px 14px 14px',
     }}>
@@ -1183,7 +1168,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
               style={{
                 width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', padding: 0, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
+                background: C.card, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
               }}><Trash2 size={ICON.sm} /></button>
           )}
         </div>
@@ -1193,14 +1178,14 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
             help={debt
               ? 'What the card owes right now. It is the ledger\u2019s figure — pay the card down and this comes with it.'
               : 'The target less what the goal already holds.'}
-            tone={done ? C.green : C.ink1}
+            tone={done ? C.pos : C.ink1}
             sub={done ? (debt ? 'cleared' : 'reached') : debt ? 'the live balance, from the ledger' : `${group(g.currentAmount)} of ${group(g.targetAmount)} saved`} />
           <Stat label="Goes in today" value={money(plan.lump)}
             help="Taken from what you could put in today. It is spent on this goal the moment the plan runs, before any month's surplus is divided."
             sub={plan.lump > 0 ? 'out of what you hold now' : 'nothing goes in today'} />
           <Stat label="Then each month"
             value={plan.monthly > 0 ? money(plan.monthly) : queued ? '—' : money(0)}
-            tone={plan.monthly > 0 ? C.green : queued ? C.ink1 : C.red}
+            tone={plan.monthly > 0 ? C.pos : queued ? C.ink1 : C.neg}
             help="What next month puts in. Zero for a goal still waiting behind another — the line under it says which month that changes."
             sub={plan.monthly > 0
               ? (policy === 'ladder' ? 'it is top of the queue'
@@ -1208,7 +1193,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
                 : 'its share of what a month leaves over')
               : queued ? `waiting until ${monthLabel(startMonth)}` : 'no money reaches it'} />
           <Stat label="Fully funded" value={done ? 'Reached' : coveredNow ? 'Today' : monthLabel(plan.eta)}
-            tone={plan.onTime === false ? C.red : plan.onTime ? C.green : C.ink1}
+            tone={plan.onTime === false ? C.neg : plan.onTime ? C.pos : C.ink1}
             help="The month the last of the money goes in, worked out by running the plan forward from today — not a division."
             sub={g.deadline
               ? `you wanted it by ${monthLabel(g.deadline.slice(0, 7))}`
@@ -1217,8 +1202,8 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
       </div>
 
       {/* The verdict, in a sentence */}
-      <div style={{ ...card, background: done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentBg,
-        border: `var(--sb-border-width) solid ${done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentBr}` }}>
+      <div style={{ ...card, background: done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentTint2,
+        border: `var(--sb-border-width) solid ${done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentBorder}` }}>
         <span style={EYEBROW}>Where it stands</span>
         <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink1, lineHeight: 1.6, marginTop: 8 }}>
           {done
@@ -1249,11 +1234,11 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
                 ? <span>nothing until <b style={{ fontFamily: DISPLAY }}>{monthLabel(startMonth)}</b>, when the ones above it finish</span>
                 : plan.monthly > 0
                   ? <span><b style={{ fontFamily: DISPLAY }}>{money(plan.monthly)}</b> a month</span>
-                  : <span style={{ color: C.red }}>nothing, at this rate</span>
+                  : <span style={{ color: C.neg }}>nothing, at this rate</span>
             )}
             {plan.eta && <span style={{ color: C.ink4 }}>→</span>}
             {plan.eta && (
-              <span style={{ color: plan.onTime === false ? C.red : C.green, fontWeight: 600 }}>
+              <span style={{ color: plan.onTime === false ? C.neg : C.pos, fontWeight: 600 }}>
                 there in {monthLabel(plan.eta)}
               </span>
             )}
@@ -1263,17 +1248,17 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
               {mine.slice(0, 14).map(r => (
                 <span key={r.month} title={`${monthLabel(r.month)} · ${money(Math.round(r.share!.amount))}`}
                   style={{
-                    fontSize: 'var(--sb-t-micro)', padding: '3px 8px', borderRadius: 'var(--sb-r-pill)',
+                    fontSize: 'var(--sb-t-meta)', padding: '3px 8px', borderRadius: 'var(--sb-r-pill)',
                     fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
                     background: r.share!.lands ? 'var(--sb-positive-tint)' : C.field,
-                    color: r.share!.lands ? C.green : C.ink3,
+                    color: r.share!.lands ? C.pos : C.ink3,
                     border: `var(--sb-border-width) solid ${r.share!.lands ? 'var(--sb-positive-tint)' : C.hair}`,
                     fontWeight: r.share!.lands ? 600 : 400,
                   }}>
                   {monthLabel(r.month).replace(/ \d{4}$/, '')} {group(Math.round(r.share!.amount))}{r.share!.lands ? ' ✓' : ''}
                 </span>
               ))}
-              {mine.length > 14 && <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, alignSelf: 'center' }}>+{mine.length - 14} more months</span>}
+              {mine.length > 14 && <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4, alignSelf: 'center' }}>+{mine.length - 14} more months</span>}
             </div>
           )}
         </div>
@@ -1305,7 +1290,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
             style={{
               marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6,
               height: 'var(--sb-h-pill)', padding: '0 13px', borderRadius: 'var(--sb-r-pill)',
-              border: `var(--sb-border-width) solid ${C.border}`, background: C.surface,
+              border: `var(--sb-border-width) solid ${C.border}`, background: C.card,
               color: C.ink2, cursor: 'pointer', fontFamily: 'inherit',
               fontSize: 'var(--sb-t-meta)', fontWeight: 600,
             }}>
@@ -1332,12 +1317,12 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
           alignItems: 'end',
         }}>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Target</span>
+            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>Target</span>
             <MoneyInput value={target} min={0} onChange={setTarget}
               style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
           </span>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Saved so far</span>
+            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>Saved so far</span>
             {/* A money field renders zero as an empty box on purpose, so a
                 fresh one is not a "0" you have to delete first. Without a
                 placeholder that reads as a field that failed to load. */}
@@ -1345,7 +1330,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
               style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
           </span>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>By</span>
+            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>By</span>
             <input type="date" value={g.deadline ?? ''} min={todayISO()}
               onChange={e => onChange({ ...g, deadline: e.target.value || undefined, sub: e.target.value ? `by ${e.target.value}` : 'no deadline' })}
               style={{ ...FIELD, fontFamily: DISPLAY }} />
@@ -1354,7 +1339,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
               about the plan on screen is a field you have to be told to ignore. */}
           {policy === 'commit' && (
             <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-              <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Each month</span>
+              <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-meta)' }}>Each month</span>
               <MoneyInput value={commit} min={0} onChange={setCommit} placeholder="nothing yet"
                 style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
             </span>

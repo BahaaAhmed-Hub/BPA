@@ -195,15 +195,15 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
   return (
     <span ref={box} style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
       <button type="button" onClick={() => setOpen(o => !o)}
-        style={{ ...PILL, height: h, padding: compact ? '0 10px' : '0 14px', fontSize: compact ? 12.5 : 13.5, flex: 1, justifyContent: 'space-between' }}>
+        style={{ ...PILL, height: h, padding: compact ? '0 10px' : '0 14px', fontSize: compact ? 'var(--sb-t-body-s)' : 'var(--sb-t-body)', flex: 1, justifyContent: 'space-between' }}>
         <span title={chosen?.parent ? `${chosen.label} — inside ${chosen.parent}` : undefined}
           style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {chosen ? <Glyph glyph={chosen.glyph} tint={chosen.tint} size={compact ? 18 : 22} /> : null}
-          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: chosen ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: chosen ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)' }}>
             {chosen?.label ?? placeholder}
           </span>
         </span>
-        <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+        <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }} />
       </button>
 
       {open && place && createPortal(
@@ -218,7 +218,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
             // scrolls away is one you have to scroll back up to correct.
             <div style={{ position: 'sticky', top: -5, zIndex: 1, background: 'var(--sb-overlay)', padding: '1px 0 6px', margin: '-1px 0 0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 32, padding: '0 9px', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)' }}>
-                <Search size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+                <Search size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }} />
                 <input
                   ref={field}
                   autoFocus
@@ -235,10 +235,10 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
           )}
 
           {options.length === 0 && (
-            <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>Nothing to choose from yet</div>
+            <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Nothing to choose from yet</div>
           )}
           {options.length > 0 && shown.length === 0 && (
-            <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
+            <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
               Nothing matches “{query.trim()}”
             </div>
           )}
@@ -265,7 +265,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
                   {(o.hint || (query.trim() && o.parent)) && (
-                    <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {o.hint ?? `inside ${o.parent}`}
                     </span>
                   )}

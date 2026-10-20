@@ -1,6 +1,6 @@
 import { groupOf } from '@/lib/mailNeeds'
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, EyeOff, X as XIcon, HelpCircle, Send, Trash2, LogIn, Undo2 } from 'lucide-react'
+import { RefreshCw, ListPlus, Check, PenSquare, ExternalLink, AlertTriangle, Archive, BellOff, Eye, EyeOff, X as XIcon, HelpCircle, Send, Trash2, LogIn, Undo2, Clock, CircleAlert, CalendarDays, ShieldCheck, Ban, Info } from 'lucide-react'
 import { Button, Card, Pill } from '@/components/ui'
 import { ICON, STROKE } from '@/lib/type'
 import type { MailAccount } from '@/lib/gmail'
@@ -64,7 +64,7 @@ function Count({ n, on }: { n: number; on: boolean }) {
   return (
     <span style={{
       fontVariantNumeric: 'tabular-nums',
-      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
       opacity: on ? 0.7 : 1,
     }}>{n}</span>
   )
@@ -93,10 +93,10 @@ function when(ms: number): string {
 
 /** The reply state as a word and a mark. Colour is never the only signal. */
 function ReplyChip({ t }: { t: SmartThread }) {
-  const [mark, word, ink] =
-    t.replyState === 'replied' ? ['✅', 'Replied', 'var(--sb-positive)'] :
-    t.replyState === 'pending' ? ['⏳', 'Pending', 'var(--sb-warning)'] :
-    ['🔴', 'No reply', 'var(--sb-negative)']
+  const [Mark, word, ink] =
+    t.replyState === 'replied' ? [Check, 'Replied', 'var(--sb-positive)'] as const :
+    t.replyState === 'pending' ? [Clock, 'Pending', 'var(--sb-warning)'] as const :
+    [CircleAlert, 'No reply', 'var(--sb-negative)'] as const
   return (
     <span title={
       t.replyState === 'replied' ? 'You wrote the most recent message in this thread.'
@@ -104,9 +104,9 @@ function ReplyChip({ t }: { t: SmartThread }) {
       : 'You have not written in this thread.'}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-        fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: ink,
+        fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: ink,
       }}>
-      <span aria-hidden>{mark}</span>{word}
+      <Mark size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{word}
     </span>
   )
 }
@@ -116,9 +116,9 @@ function InviteChip() {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-      fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-accent-deep)',
+      fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-accent-deep)',
     }}>
-      <span aria-hidden>📅</span>Invitation
+      <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />Invitation
     </span>
   )
 }
@@ -135,16 +135,16 @@ function isAuthReason(reason: string): boolean {
  *  The row still says something on that line — an empty slot where every other
  *  row carries a word reads as a row that failed to load. */
 function KindChip({ kind }: { kind: MailKind }) {
-  const [mark, word] =
-    kind === 'security'  ? ['🔐', 'Sign-in notice'] :
-    kind === 'cancelled' ? ['🚫', 'Called off'] :
-    ['📣', 'Information']
+  const [Mark, word] =
+    kind === 'security'  ? [ShieldCheck, 'Sign-in notice'] as const :
+    kind === 'cancelled' ? [Ban, 'Called off'] as const :
+    [Info, 'Information'] as const
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-      fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)',
+      fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
     }}>
-      <span aria-hidden>{mark}</span>{word}
+      <Mark size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{word}
     </span>
   )
 }
@@ -419,7 +419,7 @@ export function SmartView({
         )}
 
         {shown.length === 0 ? (
-          <div style={{ padding: '22px 16px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+          <div style={{ padding: '22px 16px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
             {loading ? 'Reading…' : view === 'all' ? 'No mail in the last thirty days.' : here.empty}
           </div>
         ) : (
@@ -460,10 +460,10 @@ export function SmartView({
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '42%',
                     }}>{t.subject}</span>
                     <span style={{
-                      flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+                      flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     }}>{t.awaitingCustomer ? 'Awaiting customer — no follow-up needed' : (t.need || t.fromName)}</span>
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flexShrink: 0 }}>
                       {when(t.lastAt)}
                     </span>
                   </button>
@@ -598,7 +598,7 @@ function Row({
           {company && (
             <span title={`${company.label}${boxLabel ? ` · ${boxLabel}` : ''}`} style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-              fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 8px',
+              fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 8px',
               borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-2)',
               background: company.isCompany
                 ? `color-mix(in srgb, ${company.color} 16%, transparent)`
@@ -620,7 +620,7 @@ function Row({
             mistake. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{t.fromName}</span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>{when(t.lastAt)}</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{when(t.lastAt)}</span>
           {/* ── Whether you have answered ─────────────────────────────────
               This used to sit at the left of the *actions* row, where it had a
               whole line to itself whenever the buttons wrapped away from it —
@@ -629,7 +629,7 @@ function Row({
           {t.kind === 'invitation' ? <InviteChip />
             : answerable ? <ReplyChip t={t} /> : <KindChip kind={t.kind} />}
           {boxLabel && (
-            <span title={t.accountEmail} style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+            <span title={t.accountEmail} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
               {boxLabel}
             </span>
           )}
@@ -703,7 +703,7 @@ function Row({
             <span title="You have marked this one seen."
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
-                fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-positive)',
+                fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-positive)',
               }}>
               <Eye size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden /> Seen
             </span>

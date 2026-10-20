@@ -41,7 +41,7 @@ export function ModelBadge({ provider, model }: { provider: 'anthropic' | 'groq'
   const m = describeModel(provider, model)
   return (
     <span data-model-badge data-model-id={m.id} title={`${m.id} · ${m.vendor}`} aria-label={`Model: ${m.vendor} ${m.label}`}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
       <Mark kind={m.mark} size={14} />
       <span>{m.label}</span>
     </span>

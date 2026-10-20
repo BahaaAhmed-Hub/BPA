@@ -588,6 +588,8 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       removeGoal: async (id) => {
+        const gone = get().goals.find(x => x.id === id)
+        if (gone) pushUndo(`Deleted the goal "${gone.name}"`, () => { void useFinanceStore.getState().upsertGoal(gone) })
         forgetGoalPlanning(id)
         set(s => ({ goals: s.goals.filter(x => x.id !== id) }))
         dbDeleteGoal(id).catch(console.warn)

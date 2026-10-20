@@ -88,3 +88,68 @@ tag reads better and this session's git proxy refuses to push one, so from a
 fresh clone the check would fail for a reason that has nothing to do with the
 memory. Run it after moving anything between the root and a rule file, and
 pass another ref to compare against a different point in history.
+
+## The UI guards — `ui-guard.mjs` and `ui-render.mjs`
+Built for the UI-unification phases in `docs/ui-unification.md` (read its §T
+for what each phase must move).
+- `node scripts/ui-guard.mjs [--only=type,dialog] [--json]` — a code scan, no
+  browser. A rule fails the run only when it is in `ENFORCED` (each phase adds
+  its rule in the PR that takes the count to zero) or named with `--only`; the
+  rest are counted and shown with `·`. `--self-test` runs every rule over
+  `scripts/fixtures/ui-guard-bad.tsx` (outside `src/`, so it is not in the
+  build): each rule must catch its marked violation and let its `allow:` line
+  through. `type` reads the whole `fontSize:` expression, so a ternary
+  (`tight ? 11.5 : 12.5`) is caught, not only a bare number. The brief's plain
+  regex found 0 where there were 9.
+- `node scripts/ui-render.mjs 5199 [--narrow] [--phase=<id>] [--inject-bad]` —
+  every rail module, Settings and `?book=bahaa` in each theme (`INK_THEME` for
+  one), measured from `getComputedStyle`: type floor, emoji in visible text,
+  native dialogs, and with `--narrow` sideways scroll and 36px tap targets. A
+  screen counts as opened only if the rail marks it `aria-current` **and** it
+  has 10+ visible text elements. `--inject-bad` is the control: a 9px flame and
+  a `confirm` are injected and all three checks must fail, or it exits 1.
+  Screenshots go to `screenshots/ui/<phase>/<theme>/` (git-ignored). The stub
+  answers every read with `[]`, so screens are in their empty state — the same
+  on every run, which is what makes a before/after pair comparable.
+
+### What the UI-unification phases added to those two
+- `ui-guard`: all nine rules are in `ENFORCED` now, so a bare `node scripts/ui-guard.mjs`
+  fails on any regression. Markers: `// ui-guard: ink-ok` (a disabled-state
+  `--sb-ink-4` text colour), `user-colour` (a default for a colour a person
+  picks), `type-ok` (SVG user units), `emoji-ok` and `emoji-start`/`emoji-end`
+  (emoji a person picks, a preset list, text written into Google). A marker
+  after a JSX element renders as text, so put one only on a line that ends in `,`.
+  Emoji defaults and fallbacks live in `src/lib/glyphs.ts`, outside `src/modules/`.
+- `ui-render` also asserts: "Do now" is the same computed colour on Tasks and
+  the Dashboard (`data-quadrant`), the top bar's Search opens the command
+  palette, and — with `--narrow` — the calendar opens on Day, the public
+  booking page's **day grid** (one tap in) fits, and no page scrolls sideways.
+  `--narrow` emulates a phone (`hasTouch` + `isMobile`), so `(pointer: coarse)`
+  holds and a `.sb-hit` control counts its hit pad toward the 36px floor.
+  `UI_VERBOSE=1` lists every failing target instead of the first four.
+- `undo-replaces-confirm.mjs` — a goal and an entry delete with no native
+  dialog, the server receives the DELETE, Undo sends the upsert; the
+  ConfirmDialog opens as an alertdialog, focus starts on Cancel, Escape answers
+  false. Control: on the code before P0.6 it sees the native dialog fire.
+- `skeleton-shows-while-loading.mjs` — Google's events held 1.5s: a
+  `[data-skeleton]` shows, then the event; `prefers-reduced-motion` stops the
+  pulse. `HOLD=never` is the control (the skeleton must not leave by itself).
+
+### Splitting a big file without changing it (the Settings split)
+- `node scripts/split-module.mjs <file.tsx> <plan.json> [--dry]` moves named
+  top-level declarations into new files **from the AST**: each moves with the
+  comment above it, in order; a moved name anything else uses gets `export`; each
+  new file gets exactly the imports it uses (type names as `import type`);
+  the source re-exports what outside modules import. It **refuses** — naming both
+  sides — when a moved declaration uses something that stayed behind (circular) or
+  two new files would import each other. It matches by identifier name, so it
+  over-counts imports: run `node scripts/prune-imports.mjs` after, which removes
+  exactly what `tsc` reports unused. Neither is a refactoring tool — a `let` that
+  another file assigns (`onAIPush`) needs a setter first; `tsc` finds it.
+- `node scripts/settings-snapshot.mjs 5199 --save=<f>` / `--compare=<f>` hashes
+  the markup of all 15 Settings sections (clock times and React ids normalised).
+  Controls: two runs on the same code agree; changing one visible string flips
+  exactly the page that holds it (a *theme* change flips nothing — it is CSS
+  variables, so it is not a control). A section counts as opened only with
+  300+ chars of markup. Match nav entries by visible text — "Integrations" carries
+  a count badge and "AI" an icon with its own accessible name.

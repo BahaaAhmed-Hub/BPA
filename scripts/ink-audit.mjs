@@ -624,14 +624,19 @@ for (const theme of THEMES) {
   })
   await visit('Mail', async () => { await page.locator('[data-side-rail] button[aria-label="Mail"]').click() })
   await visit('Tasks', async () => { await page.locator('[data-side-rail] button[aria-label="Tasks"]').click() })
+  // The day planner is a view of Tasks now (it was a modal): measured on the page ground it sits on.
+  await visit('Tasks · Plan view', async () => {
+    await page.getByRole('tablist', { name: 'View' }).getByRole('tab', { name: 'Plan', exact: true }).click()
+    await page.locator('[data-planner-view]').waitFor({ timeout: 6000 })
+  })
+  await page.getByRole('tablist', { name: 'View' }).getByRole('tab', { name: 'Board', exact: true }).click().catch(() => {})
   await visit('Habits', async () => { await page.locator('[data-side-rail] button[aria-label="Habits"]').click() })
   await visit('Finance', async () => { await page.locator('[data-side-rail] button[aria-label="Finance"]').click() })
   // Shopping: the list with an item open (every field of the editor), the board
   // (cards on a column ground), and the stores page with one opened.
+  // Shopping has its own place in the main rail (it was a tab inside Finance).
   const shoppingTab = async () => {
-    await page.locator('[data-side-rail] button[aria-label="Finance"]').click()
-    await page.waitForTimeout(1200)
-    await page.locator('button', { hasText: /^Shopping$/ }).first().click()
+    await page.locator('[data-side-rail] button[aria-label="Shopping"]').click()
     await page.waitForTimeout(1400)
   }
   await visit('Shopping · list + item editor', async () => {
@@ -803,7 +808,6 @@ for (const theme of THEMES) {
   await page.evaluate(() => localStorage.removeItem('professor-ai-config'))
   await page.waitForTimeout(300)
 
-  await visit('Dashboard', async () => { await page.locator('[data-side-rail] button[aria-label="Dashboard"]').click() })
   // Settings is behind the avatar menu, and carries every colour picker there
   // is — the company swatches, the habit colours, the category palette.
   await visit('Settings', async () => {

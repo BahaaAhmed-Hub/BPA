@@ -132,7 +132,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
                   {url}
                 </span>
                 <button onClick={() => setLinks(l => l.filter(x => x !== url))} title="Remove"
-                  style={{ ...ROUND, width: 22, height: 22, border: 'none', background: 'none', color: 'var(--sb-ink-4)' }}>
+                  style={{ ...ROUND, width: 22, height: 22, border: 'none', background: 'none', color: 'var(--sb-ink-3)' }}>
                   <X size={ICON.sm} />
                 </button>
               </div>
@@ -171,9 +171,9 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
                 <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {f.name}
                 </span>
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>{formatBytes(f.size)}</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flexShrink: 0 }}>{formatBytes(f.size)}</span>
                 <button onClick={() => setFiles(x => x.filter(y => y.id !== f.id))} title="Remove"
-                  style={{ ...ROUND, width: 22, height: 22, border: 'none', background: 'none', color: 'var(--sb-ink-4)' }}>
+                  style={{ ...ROUND, width: 22, height: 22, border: 'none', background: 'none', color: 'var(--sb-ink-3)' }}>
                   <X size={ICON.sm} />
                 </button>
               </div>
@@ -183,7 +183,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
 
         {/* ── Close it, or don't ───────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 20 }}>
-          <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+          <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
             {count === 0 ? 'Nothing attached yet' : `${count} attached`}
           </span>
           <button onClick={onCancel} style={{

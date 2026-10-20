@@ -206,7 +206,7 @@ export function Sidebar() {
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            color: 'var(--sb-ink-4)',
+            color: 'var(--sb-ink-3)',
             borderRadius: 'var(--sb-r-chip)',
           }}
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}

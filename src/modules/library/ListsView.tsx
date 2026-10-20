@@ -76,7 +76,7 @@ export function ListPanel({ initial, kind, narrow, onClose, onSaved }: {
         <Field label="About"><textarea value={description} rows={2} onChange={e => setDescription(e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} /></Field>
         <Field label="Picture address"><input value={thumbUrl} placeholder="https://… — or leave empty to use its covers" onChange={e => setThumbUrl(e.target.value)} style={inputStyle} /></Field>
         <div>
-          <div style={{ ...CAPS, color: 'var(--sb-ink-4)', marginBottom: 6 }}>Colour</div>
+          <div style={{ ...CAPS, color: 'var(--sb-ink-3)', marginBottom: 6 }}>Colour</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {SPINE_COLORS.map(c => (
               <button key={c} type="button" aria-label={`Colour ${SPINE_COLORS.indexOf(c) + 1}`} aria-pressed={color === c} onClick={() => setColor(c)}

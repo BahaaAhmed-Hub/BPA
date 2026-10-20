@@ -8,15 +8,16 @@ import { chromium } from 'playwright-core'
 import { readFileSync } from 'node:fs'
 import { session, user } from './session.mjs'
 import { APP_GUIDE, findGuide } from '../src/lib/appGuide.ts'
+import { settingsSource } from './settings-source.mjs'
 
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) fails++ }
 const src = f => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8')
 
 // ── the guide is true ────────────────────────────────────────────────────────
-const app = src('src/App.tsx'), settings = src('src/modules/settings/Settings.tsx'), library = src('src/modules/library/LibraryModule.tsx'), finance = src('src/modules/finance/FinanceModule.tsx')
+const app = src('src/App.tsx'), settings = settingsSource(), library = src('src/modules/library/LibraryModule.tsx'), finance = src('src/modules/finance/FinanceModule.tsx')
 const rail = [...app.matchAll(/\{ id: '[a-z]+',\s+label: '([A-Za-z ]+)'\s*\}/g)].map(m => m[1])
-ok('the guide names every module in the left rail (read from App.tsx)', ['Today', 'Calendar', 'Mail', 'Tasks', 'Habits', 'Finance', 'Library', 'Dashboard'].every(l => rail.includes(l) && APP_GUIDE.overview.summary.includes(l)), rail.join(','))
+ok('the guide names every module in the left rail (read from App.tsx)', ['Today', 'Calendar', 'Mail', 'Tasks', 'Habits', 'Finance', 'Library'].every(l => rail.includes(l) && APP_GUIDE.overview.summary.includes(l)), rail.join(','))
 const sections = [...settings.matchAll(/\{ id: '[a-z]+',\s+title: '([^']+)'/g)].map(m => m[1])
 ok('every Settings section the guide lists exists in Settings — and none is missing from it', sections.length >= 10 && sections.every(t => APP_GUIDE.settings.summary.includes(t)), `${sections.length} sections: ${sections.filter(t => !APP_GUIDE.settings.summary.includes(t)).join(', ') || 'none missing'}`)
 const views = [...library.matchAll(/\{ value: '([a-z]+)', label: '([A-Za-z]+)' \}/g)].map(m => m[2])

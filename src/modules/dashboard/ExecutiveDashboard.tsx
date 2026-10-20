@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
-  TrendingUp, CheckSquare, Calendar, Inbox,
-  Target, Zap, Award, ArrowRight, Ban,
-} from 'lucide-react'
+  TrendingUp, CheckSquare, Calendar,
+  Target, Zap, Award, ArrowRight, ListChecks, Sun, CalendarDays, Repeat, type LucideIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
 import { loadDynamicCompanies, isTaskHidden } from '@/types'
@@ -11,6 +10,7 @@ import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { dayTotals } from '@/lib/habitProgress'
+import { QUADRANTS, QUADRANT_ORDER } from '@/lib/quadrants'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ function CompanyBadge({ name, color, count }: { name: string; color: string; cou
 
 // ─── Quick Action Button ──────────────────────────────────────────────────────
 
-function QuickAction({ label, onClick }: { label: string; onClick: () => void }) {
+function QuickAction({ label, icon: Icon, onClick }: { label: string; icon: LucideIcon; onClick: () => void }) {
   return (
     <button onClick={onClick}
       style={{
@@ -121,7 +121,9 @@ function QuickAction({ label, onClick }: { label: string; onClick: () => void })
         textAlign: 'left',
       }}
     >
-      {label}
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+        <Icon size={ICON.sm} strokeWidth={STROKE.rest} color="var(--sb-ink-3)" />{label}
+      </span>
       <ArrowRight size={ICON.sm} color="var(--sb-ink-3)" />
     </button>
   )
@@ -222,7 +224,7 @@ export function ExecutiveDashboard() {
         </div>
 
         {/* Top metric cards — real data */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 24 }}>
           <MetricCard
             label="Active Tasks"
             value={activeTasks.length}
@@ -261,7 +263,7 @@ export function ExecutiveDashboard() {
         </div>
 
         {/* Second Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 24 }}>
           <MetricCard
             label="Today's Habits"
             value={`${habitProgress.pct}%`}
@@ -276,25 +278,16 @@ export function ExecutiveDashboard() {
           <MetricCard
             label="Habit Streak"
             value={habitStreak > 0 ? `${habitStreak}d` : '—'}
-            delta={habitStreak >= 7 ? 'On fire! 🔥' : habitStreak > 0 ? 'Keep going' : 'Start today'}
+            delta={habitStreak >= 7 ? '7-day streak' : habitStreak > 0 ? 'Keep going' : 'Start today'}
             deltaPositive={habitStreak > 0}
             icon={Award}
             accentColor="var(--sb-positive)"
             onClick={() => setModule('habits')}
           />
-          <MetricCard
-            label="Inbox"
-            value="—"
-            delta="Connect Gmail"
-            deltaPositive={false}
-            icon={Inbox}
-            accentColor="var(--sb-info)"
-            onClick={() => setModule('inbox')}
-          />
         </div>
 
         {/* Bottom Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
           {/* Company Breakdown */}
           <div style={{
             background: 'var(--sb-card)',
@@ -334,12 +327,8 @@ export function ExecutiveDashboard() {
                     hue: two of these were the same violet anyway, so the colour
                     was never telling them apart. The figures are darkened to
                     clear 3:1 at their size. */}
-                {([
-                  { key: 'do',       label: 'Do Now',    color: 'var(--sb-info)',         Icon: Zap },
-                  { key: 'schedule', label: 'Schedule',  color: 'var(--sb-ink-2)', Icon: Calendar },
-                  { key: 'delegate', label: 'Delegate',  color: 'var(--sb-positive)',         Icon: ArrowRight },
-                  { key: 'eliminate',label: 'Eliminate', color: 'var(--sb-ink-3)', Icon: Ban },
-                ] as const).map(({ key, label, color, Icon }) => {
+                {(QUADRANT_ORDER.map(key => ({ key, ...QUADRANTS[key] }))
+                ).map(({ key, label, color, Icon }) => {
                   const count = activeTasks.filter(t => t.quadrant === key).length
                   return (
                     <div key={key} onClick={() => setModule('tasks')}
@@ -350,8 +339,8 @@ export function ExecutiveDashboard() {
                         display: 'flex', flexDirection: 'column', gap: 4,
                         cursor: 'pointer',
                       }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--sb-t-h2)', fontWeight: 700, color, fontFamily: 'var(--sb-font-num)' }}>
-                        <Icon size={ICON.sm} strokeWidth={STROKE.active} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)' }}>
+                        <Icon size={ICON.sm} strokeWidth={STROKE.active} data-quadrant={key} style={{ color }} />
                         {count}
                       </div>
                       <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{label}</div>
@@ -371,10 +360,10 @@ export function ExecutiveDashboard() {
                 Quick Access
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <QuickAction label="📋 Manage Tasks" onClick={() => setModule('tasks')} />
-                <QuickAction label="☀️ Morning Brief" onClick={() => setModule('morning')} />
-                <QuickAction label="📅 Calendar" onClick={() => setModule('calendar')} />
-                <QuickAction label="🔁 Weekly Review" onClick={() => setModule('review')} />
+                <QuickAction icon={ListChecks} label="Manage Tasks" onClick={() => setModule('tasks')} />
+                <QuickAction icon={Sun} label="Morning Brief" onClick={() => setModule('morning')} />
+                <QuickAction icon={CalendarDays} label="Calendar" onClick={() => setModule('calendar')} />
+                <QuickAction icon={Repeat} label="Weekly Review" onClick={() => setModule('review')} />
               </div>
             </div>
           </div>

@@ -36,7 +36,7 @@ import type { DbUser } from '@/types/database'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
-import { Segmented, Pill, Card } from '@/components/ui'
+import { Segmented, Pill, Card, Skeleton } from '@/components/ui'
 import { tagOfMail, type MailTag } from '@/lib/mailCompany'
 import { isBusinessAccount } from '@/lib/businessAccounts'
 import { KIND_NEED, canNeedAction } from '@/lib/mailKinds'
@@ -87,7 +87,7 @@ function Count({ n, on }: { n: number; on: boolean }) {
   return (
     <span style={{
       fontVariantNumeric: 'tabular-nums',
-      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
       opacity: on ? 0.7 : 1,
     }}>{n}</span>
   )
@@ -152,7 +152,7 @@ function SenderAvatar({ name, email, size = 34 }: { name: string; email: string;
   // rather than from the theme: `--sb-ink-on-fill` is white in three of the
   // four themes, and white reads at 3.68 on this palette's cyan.
   return (
-    <div style={{ width: size, height: size, borderRadius: 'var(--sb-r-pill)', background: bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size < 30 ? 10 : 12, fontWeight: 700, color: inkOn(bg), letterSpacing: '0.02em' }}>
+    <div style={{ width: size, height: size, borderRadius: 'var(--sb-r-pill)', background: bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size < 30 ? 'var(--sb-t-micro)' : 'var(--sb-t-meta)', fontWeight: 700, color: inkOn(bg), letterSpacing: '0.02em' }}>
       {initials}
     </div>
   )
@@ -350,6 +350,7 @@ export function InboxModule() {
   const [searchQuery,    setSearchQuery]    = useState('')
   const [nextPageToken,  setNextPageToken]  = useState<string | undefined>(undefined)
   const [loadingMore,    setLoadingMore]    = useState(false)
+  const moreSentinel = useRef<HTMLDivElement>(null)
   const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set())
   /** Which row is swiped open. One at a time, or a tap belongs to nobody. */
   const [swipedId,   setSwipedId]   = useState<string | null>(null)
@@ -1266,6 +1267,16 @@ export function InboxModule() {
     finally { setLoadingMore(false) }
   }, [nextPageToken, loadingMore, viewed, emails, folder])
 
+  // The next page loads as the end of the list comes into view; the button
+  // below stays, as the way to ask when scrolling is not what is happening.
+  useEffect(() => {
+    const el = moreSentinel.current
+    if (!el || !nextPageToken || loadingMore || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(hits => { if (hits.some(h => h.isIntersecting)) void handleLoadMore() }, { rootMargin: '240px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [nextPageToken, loadingMore, handleLoadMore, emails.length])
+
   // ─── Acting on mail, one row or a selection ────────────────────────────────
   //
   // Every one of these is undoable, because the two ways in are a swipe and a
@@ -1437,7 +1448,7 @@ export function InboxModule() {
           style={{
             display: 'flex', alignItems: 'center', gap: 8, height: 30, padding: '0 8px',
             borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--sb-ink-4)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+            color: 'var(--sb-ink-3)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
             letterSpacing: '0.12em', textTransform: 'uppercase',
           }}>
           {railOpen ? <ChevronDown size={ICON.sm} /> : <ChevronRight size={ICON.sm} />}
@@ -1564,7 +1575,7 @@ export function InboxModule() {
                         <span title={`${companyOf(email)!.label} — group by company to see them together`}
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0,
-                            fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 7px',
+                            fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 7px',
                             borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-2)',
                             background: companyOf(email)!.isCompany
                               ? `color-mix(in srgb, ${companyOf(email)!.color} 16%, transparent)`
@@ -1579,7 +1590,7 @@ export function InboxModule() {
                         </span>
                       )}
                       {classMeta && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: classMeta.bg, color: classMeta.color, fontWeight: 600 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-meta)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: classMeta.bg, color: classMeta.color, fontWeight: 600 }}>
                           <classMeta.Icon size={10} strokeWidth={STROKE.active} />
                           {classMeta.label}
                         </span>
@@ -1587,7 +1598,7 @@ export function InboxModule() {
                       {/* A bulk draft writes into eight messages at once; without
                           this the only way to know which got one is to open each. */}
                       {replyText[email.id]?.trim() && !sentIds.has(email.id) && (
-                        <span title="A reply is drafted and waiting — nothing has been sent" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.16)', color: 'var(--sb-ink-2)', fontWeight: 600 }}>
+                        <span title="A reply is drafted and waiting — nothing has been sent" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-meta)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.16)', color: 'var(--sb-ink-2)', fontWeight: 600 }}>
                           <FileEdit size={10} strokeWidth={STROKE.active} />
                           Draft
                         </span>
@@ -1598,7 +1609,7 @@ export function InboxModule() {
                     </div>
                     <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: isRead ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
                       {email.subject}
-                      <span style={{ fontWeight: 400, color: 'var(--sb-ink-4)' }}> — {email.preview}</span>
+                      <span style={{ fontWeight: 400, color: 'var(--sb-ink-3)' }}> — {email.preview}</span>
                     </p>
                   </div>
                   <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, flexShrink: 0 }}>
@@ -1607,11 +1618,11 @@ export function InboxModule() {
                         address say the same thing. */}
                     {multi && (
                       <span title={email.account.email} style={{
-                        fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: accountColor(email.account.email),
+                        fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: accountColor(email.account.email),
                         maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>{accountLabel(email.account.email, email.account.isPrimary)}</span>
                     )}
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                     {fmtRelTime(email.receivedAt)}
                     </span>
                   </span>
@@ -1705,7 +1716,7 @@ export function InboxModule() {
               control whose active option already carries an arrow. */}
           <span className="mail-sort-label" style={{
             fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
-            textTransform: 'uppercase', color: 'var(--sb-ink-4)', flexShrink: 0,
+            textTransform: 'uppercase', color: 'var(--sb-ink-3)', flexShrink: 0,
           }}>Sort</span>
           <Segmented
             size="sm"
@@ -1758,7 +1769,7 @@ export function InboxModule() {
 
             {/* Only where the sender offers a way off the list. */}
             {mailClass === 'newsletter' && inClass.some(e => unsubscribeLink(e.headers)) && (
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                 {inClass.filter(e => unsubscribeLink(e.headers)).length} offer an unsubscribe link
               </span>
             )}
@@ -1861,14 +1872,16 @@ export function InboxModule() {
           </div>
         )}
 
+        {nextPageToken && <div ref={moreSentinel} aria-hidden style={{ height: 1 }} />}
         {nextPageToken && (
           <button
             onClick={() => void handleLoadMore()}
             disabled={loadingMore}
             style={{ width: '100%', padding: '9px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loadingMore ? 0.5 : 1 }}
           >
-            <RefreshCw size={ICON.sm} style={{ animation: loadingMore ? 'spin 1s linear infinite' : 'none' }} />
-            {loadingMore ? 'Loading…' : 'Load more emails'}
+            {loadingMore
+              ? <span style={{ width: 140 }}><Skeleton h={12} label="Loading more emails" /></span>
+              : <><RefreshCw size={ICON.sm} /> Load more emails</>}
           </button>
         )}
       </div>
@@ -1999,20 +2012,20 @@ export function InboxModule() {
                   style={{
                     display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px',
                     borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                    fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', flexShrink: 0,
+                    fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flexShrink: 0,
                   }}>{accountLabel(selectedEmail.account.email, selectedEmail.account.isPrimary)}</span>
               )}
 
             </div>
             {selectedEmail.to && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline', lineHeight: 1.35 }}>
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)', minWidth: 18 }}>To</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', minWidth: 18 }}>To</span>
                 <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', wordBreak: 'break-word' }}>{selectedEmail.to}</span>
               </div>
             )}
             {selectedEmail.cc && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)', minWidth: 18 }}>CC</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', minWidth: 18 }}>CC</span>
                 <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', wordBreak: 'break-word' }}>{selectedEmail.cc}</span>
               </div>
             )}
@@ -2120,7 +2133,7 @@ export function InboxModule() {
               }} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flex: 1, minWidth: 0 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flex: 1, minWidth: 0 }}>
                 Leaves from {selectedEmail.account.email}
               </span>
               <button
@@ -2196,14 +2209,14 @@ export function InboxModule() {
 
             <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
               <div style={{ flex: 1, padding: '12px 14px', background: CLASS_META[selectedTriage.result.classification].bg, border: `var(--sb-border-width) solid ${alpha(CLASS_META[selectedTriage.result.classification].color, 18.8)}`, borderRadius: 'var(--sb-r-chip)' }}>
-                <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
+                <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: CLASS_META[selectedTriage.result.classification].color }}>
                   {(() => { const C = CLASS_META[selectedTriage.result.classification].Icon; return <C size={ICON.sm} strokeWidth={STROKE.active} /> })()}
                   {CLASS_META[selectedTriage.result.classification].label}
                 </div>
               </div>
               <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: `var(--sb-border-width) solid ${alpha(URGENCY_META[selectedTriage.result.urgency].color, 18.8)}`, borderRadius: 'var(--sb-r-chip)' }}>
-                <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
+                <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: URGENCY_META[selectedTriage.result.urgency].color }}>
                   {(() => { const U = URGENCY_META[selectedTriage.result.urgency].Icon; return <U size={ICON.sm} strokeWidth={STROKE.active} /> })()}
                   {URGENCY_META[selectedTriage.result.urgency].label}
@@ -2211,7 +2224,7 @@ export function InboxModule() {
               </div>
               {selectedTriage.result.followUpDate && (
                 <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)' }}>
-                  <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
+                  <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
                   <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{selectedTriage.result.followUpDate}</div>
                 </div>
               )}

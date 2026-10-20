@@ -189,7 +189,7 @@ Guidelines:
 - If you need clarification before acting, ask one focused question.
 - Refer to the user by first name only. Keep tone warm but professional.
 ${FORMAT_RULES}
-- One emoji per section label at most, and only where it helps scanning (📅 schedule, ✅ tasks, ✉️ mail); none inside table cells except a status mark.
+- Do not use emoji. Label sections with plain words.
 ${APP_RULES}${called}`
 }
 
@@ -925,13 +925,13 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
                     ? <ImageIcon size={ICON.sm} color="var(--sb-ink-3)" />
                     : <FileText size={ICON.sm} color="var(--sb-ink-3)" />}
                   <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>{a.name}</span>
-                  <span style={{ color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums' }}>{prettySize(a.size)}</span>
+                  <span style={{ color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>{prettySize(a.size)}</span>
                   <button
                     onClick={() => setAttachments(prev => prev.filter(x => x.id !== a.id))}
                     title={`Take ${a.name} back out`}
                     style={{
                       width: 18, height: 18, padding: 0, borderRadius: 'var(--sb-r-pill)', border: 'none',
-                      background: 'none', color: 'var(--sb-ink-4)', cursor: 'pointer',
+                      background: 'none', color: 'var(--sb-ink-3)', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     }}><CloseIcon size={12} /></button>
                 </span>

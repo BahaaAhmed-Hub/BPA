@@ -20,11 +20,11 @@ const CARD: React.CSSProperties = {
 }
 const EB: React.CSSProperties = {
   fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em',
-  textTransform: 'uppercase', color: 'var(--sb-ink-4)',
+  textTransform: 'uppercase', color: 'var(--sb-ink-3)',
 }
 const TAG: React.CSSProperties = {
   fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-micro)',
-  color: 'var(--sb-ink-4)', background: 'var(--sb-field)',
+  color: 'var(--sb-ink-3)', background: 'var(--sb-field)',
   border: 'var(--sb-border-width) solid var(--sb-hairline)',
   borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', whiteSpace: 'nowrap',
 }
@@ -121,7 +121,7 @@ export function MonthsAheadCard({ ahead, currency, onOpenEntry }: {
             {ahead.months.map((m, i) => (
               (ahead.months.length <= 8 || i % 2 === 0) && (
                 <text key={m.month} x={geo.x(i)} y={geo.H - 4} textAnchor="middle"
-                  fontFamily="var(--sb-font-mono)" fontSize="7.5"
+                  fontFamily="var(--sb-font-mono)" fontSize="9" /* ui-guard: type-ok — SVG units, scaled by the viewBox */
                   fill={m.state === 'ok' ? 'var(--sb-ink-4)' : TONE[m.state].ink}>
                   {shortMonth(m.month).toUpperCase()}
                 </text>
@@ -147,7 +147,7 @@ export function MonthsAheadCard({ ahead, currency, onOpenEntry }: {
       {!thin && !open && (
         <div style={{
           padding: '10px 16px 14px', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
-          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
         }}>
           Tap a month to see what lands in it.
           {ahead.unconvertible > 0 && ` ${ahead.unconvertible} entr${ahead.unconvertible === 1 ? 'y is' : 'ies are'} in a currency with no rate, so they are in no month here.`}
@@ -205,11 +205,11 @@ function MonthPanel({ month, ahead, money, onOpenEntry }: {
   const tone = TONE[month.state]
   const Row = ({ k, tag, v, dim }: { k: string; tag?: string; v: string; dim?: boolean }) => (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 'var(--sb-t-meta)' }}>
-      <span style={{ flex: 1, minWidth: 0, color: dim ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)' }}>{k}</span>
+      <span style={{ flex: 1, minWidth: 0, color: dim ? 'var(--sb-ink-3)' : 'var(--sb-ink-2)' }}>{k}</span>
       {tag && <span style={TAG}>{tag}</span>}
       <span style={{
         fontFamily: 'var(--sb-font-mono)', fontVariantNumeric: 'tabular-nums',
-        color: dim ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
+        color: dim ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)',
       }}>{v}</span>
     </div>
   )

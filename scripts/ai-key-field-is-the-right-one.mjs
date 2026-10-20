@@ -8,10 +8,11 @@
 // and professor.ts read `anthropicKey`. The field showed it back, because it
 // was showing groqKey.
 import { readFileSync } from 'node:fs'
+import { settingsSource } from './settings-source.mjs'
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) fails++ }
 
-const S = readFileSync('src/modules/settings/Settings.tsx', 'utf8')
+const S = settingsSource()   // the feature, not one file: the type and helper moved to model.ts
 const opts = S.slice(S.indexOf('onChange={v => setAI({ provider'), S.indexOf('</FieldRow>', S.indexOf('onChange={v => setAI({ provider')))
 
 // 1. A label must not name a model the value cannot deliver.
@@ -23,7 +24,9 @@ ok('the Anthropic option is not labelled with one model version either',
    (opts.match(/value: 'anthropic',\s*label: '[^']*'/) ?? ['—'])[0])
 
 // 2. Every value offered must exist in AIConfig['provider'].
-const union = (S.match(/provider: ('[a-z]+'(?:\s*\|\s*'[a-z]+')*)/) ?? [])[1] ?? ''
+// Anchored to the AIConfig interface itself: any other `provider:` in the feature is not the type.
+const aiCfg = S.slice(S.indexOf('export interface AIConfig'))
+const union = (aiCfg.match(/provider: ('[a-z]+'(?:\s*\|\s*'[a-z]+')*)/) ?? [])[1] ?? ''
 const allowed = new Set([...union.matchAll(/'([a-z]+)'/g)].map(m => m[1]))
 const offered = [...opts.matchAll(/value: '([a-z]+)'/g)].map(m => m[1])
 ok('every option is a provider the type allows',
@@ -31,7 +34,7 @@ ok('every option is a provider the type allows',
    `offered ${offered.join('/')} · allowed ${[...allowed].join('/')}`)
 
 // 3. The misfiled key is detected, and only when it really is one.
-const src = readFileSync('src/modules/settings/Settings.tsx', 'utf8')
+const src = S
 const fn = src.slice(src.indexOf('export function misplacedAnthropicKey'),
                      src.indexOf('export function loadAIConfig'))
 ok('misplacedAnthropicKey exists', fn.length > 0)

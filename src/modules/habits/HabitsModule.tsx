@@ -13,6 +13,8 @@ import { ICON } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { dayProgress, dayTotals, spanTotals } from '@/lib/habitProgress'
 import { LOZENGE } from '../../components/SideRail'
+import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
+import { HabitStarter } from './HabitStarter'
 
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -157,7 +159,7 @@ function HabitImagePicker({ image, emoji, onChange, onEmojiChange, size = 54 }: 
             </button>
           )
           : onEmojiChange
-            ? <EmojiBtn value={emoji || '🎯'} onSelect={onEmojiChange} size={size} />
+            ? <EmojiBtn value={emoji || DEFAULT_HABIT_EMOJI} onSelect={onEmojiChange} size={size} />
             : (
               <button
                 type="button"
@@ -169,7 +171,7 @@ function HabitImagePicker({ image, emoji, onChange, onEmojiChange, size = 54 }: 
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: Math.round(size * 0.5), lineHeight: 1,
                 }}>
-                {emoji || '🎯'}
+                {emoji || DEFAULT_HABIT_EMOJI}
               </button>
             )
         }
@@ -195,18 +197,18 @@ function HabitImagePicker({ image, emoji, onChange, onEmojiChange, size = 54 }: 
           same place and the header carries exactly one ✕. */}
       {image && (
         <button type="button" onClick={() => onChange(undefined)} title="Remove this picture"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-micro)', padding: 0 }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', padding: 0 }}>
           Remove
         </button>
       )}
       {/* Photo upload link — shown when the emoji picker is the primary button */}
       {!image && onEmojiChange && (
         <button type="button" onClick={() => ref.current?.click()} title="Upload a photo"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-micro)', padding: 0 }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', padding: 0 }}>
           Photo
         </button>
       )}
-      {!image && !onEmojiChange && <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-micro)' }}>Picture</span>}
+      {!image && !onEmojiChange && <span style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)' }}>Picture</span>}
     </div>
   )
 }
@@ -366,7 +368,7 @@ function ProgressRing({ fraction }: { fraction: number }) {
     }}>
       <span style={{ position: 'absolute', inset: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)' }} />
       <span style={{ position: 'relative', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
-        {Math.round(pct * 100)}<span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>%</span>
+        {Math.round(pct * 100)}<span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>%</span>
       </span>
     </span>
   )
@@ -498,7 +500,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         {/* Content overlay */}
         <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', flexDirection: 'column', padding: '12px 13px' }}>
           {/* Streak badge */}
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-ink-1) 42.0%, transparent)', border: 'var(--sb-border-width) solid rgba(255,255,255,.36)', color: 'rgba(255,255,255,.96)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-ink-1) 42.0%, transparent)', border: 'var(--sb-border-width) solid rgba(255,255,255,.36)', color: 'rgba(255,255,255,.96)', fontSize: 'var(--sb-t-meta)', fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
             {streak}d
           </span>
@@ -650,12 +652,12 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
       <span style={{ position: 'absolute', inset: 0, zIndex: 3, display: 'flex', flexDirection: 'column', padding: '12px 11px' }}>
         {/* Top */}
         <span style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, height: 19, padding: '0 7px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-accent-tint) 16.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent-tint) 32.0%, transparent)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, alignSelf: 'flex-start', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, height: 19, padding: '0 7px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-accent-tint) 16.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent-tint) 32.0%, transparent)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-meta)', fontWeight: 700, alignSelf: 'flex-start', fontVariantNumeric: 'tabular-nums' }}>
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
             {streak}d
           </span>
           <span style={{
-            fontFamily: 'var(--sb-font-num)', fontSize: isSelected ? 15 : 12.5, fontWeight: 700,
+            fontFamily: 'var(--sb-font-num)', fontSize: isSelected ? 15 : 'var(--sb-t-body-s)', fontWeight: 700,
             letterSpacing: '-0.02em', lineHeight: 1.18, color: 'var(--sb-ink-on-dark)',
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>{habit.name}</span>
@@ -671,7 +673,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
             }}>
               {isQty ? `${qtyValue}${habit.unit ? ' ' + habit.unit : ''}` : (todayDone ? 'Done' : 'Not done')}
             </span>
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'color-mix(in srgb, var(--sb-accent-tint) 78.0%, transparent)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'color-mix(in srgb, var(--sb-accent-tint) 78.0%, transparent)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {hasGoal
                 ? `of ${habit.goal} ${habit.unit ?? ''}`.trim()
                 : isQty ? 'no target — count as you go'
@@ -684,7 +686,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
               <span style={{ flex: 1, height: 5, borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-accent-tint) 24.0%, transparent)', overflow: 'hidden', display: 'block' }}>
                 <span style={{ display: 'block', width: `${displayPct}%`, height: '100%', background: 'var(--sb-accent)', borderRadius: 'var(--sb-r-pill)' }} />
               </span>
-              <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-on-dark)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{displayPct}%</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-on-dark)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{displayPct}%</span>
             </span>
           )}
 
@@ -790,13 +792,13 @@ function HabitDetailPanel({
             }}
             onFocus={e => { e.currentTarget.style.borderBottomColor = 'var(--sb-border)' }}
             onBlur={e => { e.currentTarget.style.borderBottomColor = 'transparent' }} />
-          <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 2 }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2 }}>
             {habit.frequency ?? 'daily'}
             {isQty && ` · ${hasGoal ? `${habit.goal} ${habit.unit ?? 'times'} a day` : `counts ${habit.unit ?? 'times'}, no target`}`}
           </div>
         </div>
         <button onClick={onClose} title="Close" aria-label="Close this habit's record"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
           <X size={ICON.sm} />
         </button>
       </div>
@@ -818,9 +820,9 @@ function HabitDetailPanel({
                 style={{ width: 30, height: 30, borderRadius: 'var(--sb-r-sm)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-h2)', lineHeight: 1, cursor: qtyToday === 0 ? 'default' : 'pointer', opacity: qtyToday === 0 ? 0.4 : 1, flexShrink: 0 }}>−</button>
               <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
                 <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>
-                  {qtyToday}{hasGoal && <span style={{ fontSize: 'var(--sb-t-h3)', color: 'var(--sb-ink-4)' }}> / {habit.goal}</span>}
+                  {qtyToday}{hasGoal && <span style={{ fontSize: 'var(--sb-t-h3)', color: 'var(--sb-ink-3)' }}> / {habit.goal}</span>}
                 </span>
-                <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 2 }}>{habit.unit ?? 'times'}</div>
+                <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2 }}>{habit.unit ?? 'times'}</div>
               </div>
               <button onClick={() => onSetQuantity(qtyToday + 1)}
                 style={{ width: 30, height: 30, borderRadius: 'var(--sb-r-sm)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-h2)', lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}>+</button>
@@ -854,14 +856,14 @@ function HabitDetailPanel({
         ].map(st => (
           <div key={st.label} style={{ background: 'var(--sb-field)', borderRadius: 'var(--sb-r-sm)', padding: '7px 8px', minWidth: 0 }}>
             <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.03em', color: st.color, lineHeight: 1 }}>{st.value}</div>
-            <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 3, fontWeight: 600 }}>{st.label}</div>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 3, fontWeight: 600 }}>{st.label}</div>
           </div>
         ))}
       </div>
 
       {/* 6-month heatmap */}
       <div>
-        <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)', marginBottom: 6 }}>LAST 13 WEEKS</div>
+        <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)', marginBottom: 6 }}>LAST 13 WEEKS</div>
         {/* Every one of these 91 days is editable, and the square is how you
             reach it. It used to be a `div` with a tooltip: the record drew a
             quarter of a year of history and the only day you could correct was
@@ -900,8 +902,8 @@ function HabitDetailPanel({
           })}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>13 weeks ago</span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>Today</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>13 weeks ago</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Today</span>
         </div>
       </div>
 
@@ -1036,7 +1038,7 @@ export function HabitsModule() {
   function createHabit() {
     const id = storeAdd({
       name: 'New habit',
-      emoji: '🎯',
+      emoji: DEFAULT_HABIT_EMOJI,
       color: HABIT_COLORS[habits.length % HABIT_COLORS.length],
       frequency: 'daily',
       isActive: true,
@@ -1082,11 +1084,11 @@ export function HabitsModule() {
         <span data-day-pct={dayTotal.pct} style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0, minWidth: 0 }}>
           <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap' }}>
             {totalActive === 0 ? 'No habits yet'
-              : dayTotal.pct >= 100 ? 'All habits complete! 🎉'
+              : dayTotal.pct >= 100 ? 'All habits done today'
               : dayTotal.progress === 0 ? (isToday ? 'Nothing logged yet today' : 'Nothing logged that day')
               : `${dayTotal.pct}% of the day done`}
           </span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' }}>
             {totalActive === 0 ? 'Add your first habit below'
               : `${dayDone} of ${totalActive} finished${isToday ? ' · resets at midnight' : ` · ${selectedLabel}`}`}
           </span>
@@ -1098,7 +1100,7 @@ export function HabitsModule() {
         {/* Week bars — click a day to read it, arrows to walk the weeks */}
         <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
           <button className="sb-hit" onClick={() => stepWeek(-1)} title="Previous week"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
             <ChevronLeft size={ICON.sm} />
           </button>
 
@@ -1112,13 +1114,13 @@ export function HabitsModule() {
               return (
                 <button
                   key={d}
+                  className="hb-daycol"
                   onClick={() => setSelectedDay(d)}
                   title={new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                     // 24px is WCAG's floor for a target; the bar inside stays 12px wide, so the
                     // row's look is the same and each day gets the room to be pressed.
-                    minWidth: 24,
                     background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                     opacity: future ? 0.45 : 1, fontFamily: 'inherit',
                   }}>
@@ -1129,14 +1131,14 @@ export function HabitsModule() {
                   }}>
                     <span style={{ width: '100%', height: `${Math.round(pct * 100)}%`, background: isT ? 'var(--sb-accent)' : 'var(--sb-ink-1)', borderRadius: 'var(--sb-r-chip)', display: 'block' }} />
                   </span>
-                  <span style={{ fontSize: 'var(--sb-t-micro)', color: on || isT ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontWeight: on || isT ? 700 : 500 }}>{dayLabel}</span>
+                  <span style={{ fontSize: 'var(--sb-t-meta)', color: on || isT ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontWeight: on || isT ? 700 : 500 }}>{dayLabel}</span>
                 </button>
               )
             })}
           </span>
 
           <button className="sb-hit" onClick={() => stepWeek(1)} disabled={isCurrentWeek} title="Next week"
-            style={{ background: 'none', border: 'none', cursor: isCurrentWeek ? 'default' : 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex', opacity: isCurrentWeek ? 0.3 : 1 }}>
+            style={{ background: 'none', border: 'none', cursor: isCurrentWeek ? 'default' : 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex', opacity: isCurrentWeek ? 0.3 : 1 }}>
             <ChevronRight size={ICON.sm} />
           </button>
         </span>
@@ -1147,8 +1149,8 @@ export function HabitsModule() {
         {/* Week % */}
         <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>{weekPct}%</span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-2)' }}>This week</span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>{weekCheckIns} of {weekTotal} habit-days finished</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-2)' }}>This week</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{weekCheckIns} of {weekTotal} habit-days finished</span>
         </span>
 
         {/* Divider */}
@@ -1161,8 +1163,8 @@ export function HabitsModule() {
           </span>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
             <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>{bestStreak}d</span>
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-2)' }}>Current streak</span>
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: coldDays > 0 ? 'var(--sb-negative)' : 'var(--sb-ink-3)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-2)' }}>Current streak</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: coldDays > 0 ? 'var(--sb-negative)' : 'var(--sb-ink-3)' }}>
               {coldDays > 0 ? `${coldDays} days cold` : `best ${bestStreak}d`}
             </span>
           </span>
@@ -1174,8 +1176,8 @@ export function HabitsModule() {
         {/* Active habits count */}
         <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>{totalActive}</span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-2)' }}>Active habits</span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>{activeHabits.filter(h => h.frequency === 'weekdays').length} weekday-only</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-2)' }}>Active habits</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{activeHabits.filter(h => h.frequency === 'weekdays').length} weekday-only</span>
         </span>
       </div>
 
@@ -1252,9 +1254,7 @@ export function HabitsModule() {
               )
             })}
             {activeHabits.length === 0 && (
-              <div style={{ gridColumn: '1/-1', padding: 32, textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>
-                No habits yet. Click "New habit" to get started.
-              </div>
+<HabitStarter />
             )}
           </div>
 
@@ -1297,9 +1297,7 @@ export function HabitsModule() {
             )
           })}
           {activeHabits.length === 0 && (
-            <div style={{ padding: 32, textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>
-              No habits yet. Click "New habit" to get started.
-            </div>
+<HabitStarter />
           )}
         </div>
       )}
@@ -1316,7 +1314,7 @@ export function HabitsModule() {
           <span style={{ width: 22, flexShrink: 0 }} />
           {/* emoji placeholder */}
           <span style={{ width: 24, flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)' }}>HABIT</span>
+          <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)' }}>HABIT</span>
 
           {/* Week nav */}
           <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -1339,22 +1337,20 @@ export function HabitsModule() {
               const dayLabel = ['S','M','T','W','T','F','S'][new Date(d + 'T12:00:00').getDay()]
               const isT = d === today
               return (
-                <span key={d} style={{ width: 22, textAlign: 'center', fontSize: 'var(--sb-t-micro)', fontWeight: isT ? 700 : 600, color: isT ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)' }}>
+                <span key={d} style={{ width: 22, textAlign: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: isT ? 700 : 600, color: isT ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)' }}>
                   {dayLabel}
                 </span>
               )
             })}
           </span>
 
-          <span style={{ width: 48, textAlign: 'right', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-3)', flexShrink: 0 }}>STREAK</span>
+          <span style={{ width: 48, textAlign: 'right', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-3)', flexShrink: 0 }}>STREAK</span>
           <span style={{ width: 38, flexShrink: 0 }} />
         </div>
 
         {/* Empty state */}
         {activeHabits.length === 0 && (
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>
-            No habits yet. Click "New habit" to get started.
-          </div>
+<HabitStarter />
         )}
 
         {/* Habit rows */}
@@ -1424,7 +1420,7 @@ export function HabitsModule() {
               {/* Frequency badge */}
               <button onClick={() => { const idx = FREQ_OPTS.indexOf(habit.frequency); updateHabit(habit.id, { frequency: FREQ_OPTS[(idx + 1) % FREQ_OPTS.length] }) }}
                 title="Click to change frequency"
-                style={{ height: 20, boxSizing: 'border-box', padding: '0 8px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-micro)', fontWeight: 600, display: 'flex', alignItems: 'center', flexShrink: 0, cursor: 'pointer' }}>
+                style={{ height: 20, boxSizing: 'border-box', padding: '0 8px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, display: 'flex', alignItems: 'center', flexShrink: 0, cursor: 'pointer' }}>
                 {habit.frequency}
               </button>
 
@@ -1478,7 +1474,7 @@ export function HabitsModule() {
         {/* Archived habits section (collapsed) */}
         {habits.filter(h => !h.isActive).length > 0 && (
           <details style={{ marginTop: 8, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
-            <summary style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', cursor: 'pointer', padding: '8px 4px', fontWeight: 600, letterSpacing: '0.08em' }}>
+            <summary style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', cursor: 'pointer', padding: '8px 4px', fontWeight: 600, letterSpacing: '0.08em' }}>
               ARCHIVED ({habits.filter(h => !h.isActive).length})
             </summary>
             {habits.filter(h => !h.isActive).map(habit => (
@@ -1486,7 +1482,7 @@ export function HabitsModule() {
                 <span style={{ width: 14, flexShrink: 0 }} />
                 <span style={{ width: 22, flexShrink: 0 }} />
                 <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-body)' }}>{habit.emoji}</span>
-                <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-4)', textDecoration: 'line-through', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
+                <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-3)', textDecoration: 'line-through', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
                 <button onClick={() => updateHabit(habit.id, { isActive: true })} title="Restore"
                   style={{ fontSize: 'var(--sb-t-meta)', padding: '3px 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
                   Restore

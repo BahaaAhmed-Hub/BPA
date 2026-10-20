@@ -73,7 +73,7 @@ export function TaskRow({ task, onOpen, dense }: {
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
           margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, lineHeight: 1.35,
-          color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
+          color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
           fontStyle: task.title.trim() ? 'normal' : 'italic',
           overflowWrap: 'anywhere',
           textDecoration: task.completed ? 'line-through' : 'none',
@@ -81,7 +81,7 @@ export function TaskRow({ task, onOpen, dense }: {
         <span data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', marginTop: 2 }}>
           <p style={{
             margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, lineHeight: 1.3, cursor: 'pointer',
-            color: v.companyName ? v.companyColor : 'var(--sb-ink-4)',
+            color: v.companyName ? v.companyColor : 'var(--sb-ink-3)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{v.companyName || 'No company'}</p>
           <OverlaySelect
@@ -98,7 +98,7 @@ export function TaskRow({ task, onOpen, dense }: {
             options={[{ value: '', label: 'No company' }, ...companies.map(c => ({ value: c.id, label: c.name }))]}
           />
         </span>
-        <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           {meta}
           {attachmentCount > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -109,7 +109,7 @@ export function TaskRow({ task, onOpen, dense }: {
 
           {/* Attributes — each one is its own control, so clicking an icon edits
               it rather than opening the task */}
-          <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, color: 'var(--sb-ink-4)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, color: 'var(--sb-ink-3)' }}>
         <button className="sb-hit"
           data-nm
           onClick={e => { e.stopPropagation(); toggleUrgent(task.id) }}
@@ -168,9 +168,9 @@ export function TaskRow({ task, onOpen, dense }: {
               width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', boxSizing: 'border-box',
               background: v.ownerInitials ? 'var(--sb-ink-1)' : 'var(--sb-field)',
               border: v.ownerInitials ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
-              color: v.ownerInitials ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+              color: v.ownerInitials ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.02em',
+              fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.02em',
             }}
           >{v.ownerInitials ?? <User size={ICON.sm} strokeWidth={STROKE.rest} />}</span>
           <OverlaySelect

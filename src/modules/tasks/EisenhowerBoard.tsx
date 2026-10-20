@@ -13,6 +13,7 @@ import { TaskRow } from './TaskRow'
 import { buildTaskGroups, sortUrgentFirst, type TaskGroupBy } from './taskVisuals'
 import { CountBadge } from './controls'
 import { ICON, STROKE } from '@/lib/type'
+import { QUADRANTS } from '@/lib/quadrants'
 
 interface QuadrantSpec {
   id: Quadrant
@@ -77,7 +78,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
 
   const groups = groupBy !== 'none'
     ? buildTaskGroups(tasks, groupBy)
-    : [{ key: 'all', label: '', color: 'var(--sb-ink-4)', emoji: '', tasks: sortUrgentFirst(tasks) }]
+    : [{ key: 'all', label: '', color: 'var(--sb-ink-3)', emoji: '', tasks: sortUrgentFirst(tasks) }]
 
   return (
     <div ref={setNodeRef} style={{
@@ -93,16 +94,17 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
     }}>
       {/* Quadrant header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0 }}>
+        {(() => { const Q = QUADRANTS[spec.id]; return <Q.Icon size={ICON.sm} strokeWidth={STROKE.rest} data-quadrant={spec.id} style={{ flexShrink: 0, color: Q.color }} aria-label={Q.label} /> })()}
         <span style={{
           height: 22, padding: '0 8px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
           background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em',
+          fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.06em',
           whiteSpace: 'nowrap',
         }}>{spec.badge}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{spec.title}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{spec.sub}</p>
+          <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.35 }}>{spec.sub}</p>
         </div>
         <span style={{ paddingTop: 2 }}><CountBadge value={tasks.length} /></span>
         {/* Adding to a quadrant is a small, frequent thing, so it is a small
@@ -214,7 +216,6 @@ export function EisenhowerBoard({
     }
     const open = qTasks.filter(isOpenTask)
     if (open.length === 0) return
-    if (!window.confirm(`Archive ${open.length} task${open.length === 1 ? '' : 's'}?`)) return
     // One entry for the lot — forty ⌘Zs to undo an archive is not an undo.
     useTaskStore.getState()._remember(`Archived ${open.length} ${open.length === 1 ? 'task' : 'tasks'}`)
     suppressUndo(() => { for (const t of open) updateTask(t.id, { status: 'cancelled' }) })

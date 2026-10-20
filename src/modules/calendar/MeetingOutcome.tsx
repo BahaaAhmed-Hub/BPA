@@ -201,12 +201,12 @@ function TaskRow({ task, users, linkedHere, editing, madeHere, onTick, onEdit, o
         {!done && meta && <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{meta}</span>}
         {linkedHere ? (
           <span title="Linked to this meeting" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
             color: 'var(--sb-ink-1)', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-pill)', padding: '3px 9px',
           }}><LinkIcon size={12} />this meeting</span>
         ) : elsewhere ? (
           <span style={{
-            fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)',
+            fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)',
             borderRadius: 'var(--sb-r-pill)', padding: '3px 9px', maxWidth: 150, overflow: 'hidden',
             textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>from {elsewhere.eventTitle}</span>
@@ -621,7 +621,7 @@ export function MeetingOutcome({ event, onClose, onFollowUp, calendar }: {
           </span>
           <span data-outcome-count style={{
             background: 'var(--sb-ink-1)', color: ink('var(--sb-ink-1)'), borderRadius: 'var(--sb-r-pill)',
-            padding: '3px 10px', fontWeight: 700, fontSize: 'var(--sb-t-micro)',
+            padding: '3px 10px', fontWeight: 700, fontSize: 'var(--sb-t-meta)',
           }}>{linkedCount} linked</span>
         </div>
 

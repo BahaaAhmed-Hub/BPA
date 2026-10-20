@@ -7,13 +7,13 @@ import { BudgetScreen } from './screens/BudgetScreen'
 import { ReportsScreen } from './screens/ReportsScreen'
 import { ReflectionScreen } from './screens/ReflectionScreen'
 import { GoalsScreen } from './screens/GoalsScreen'
-import { ShoppingScreen } from './screens/ShoppingScreen'
 import { TransactionModal } from './modals/TransactionModal'
 import { BulkEntryModal } from './modals/BulkEntryModal'
 import { LockGate } from './FinanceLockScreen'
 import { useFinanceLock } from './useFinanceLock'
 import { NavRow, Button } from '@/components/ui'
 import { lockNow } from './lock'
+import { T } from '@/lib/type'
 import { useFillsTheWindow } from '@/lib/fillsTheWindow'
 import { LOZENGE } from '../../components/SideRail'
 
@@ -89,15 +89,6 @@ function IconLock({ color = 'currentColor' }: RailIconProps) {
   )
 }
 
-function IconShopping({ color = 'currentColor' }: RailIconProps) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-      <line x1="3" y1="6" x2="21" y2="6"/>
-      <path d="M16 10a4 4 0 0 1-8 0"/>
-    </svg>
-  )
-}
 
 function IconPlus({ color = 'currentColor' }: RailIconProps) {
   return (
@@ -116,32 +107,30 @@ function IconPlus({ color = 'currentColor' }: RailIconProps) {
 // Plan was a debt payoff drawn on sample data beside a Goals screen that planned
 // from the ledger. A card with a balance is a goal with a target of zero, so
 // the cards are in Goals now and there is one screen for what money has to do.
-type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect' | 'goals' | 'shopping'
+type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect' | 'goals'
 
-// Shopping is only shown when the user has enabled it in Settings.
-function shoppingEnabled(): boolean {
-  try {
-    const raw = localStorage.getItem('shopping-settings')
-    if (!raw) return false
-    const s = JSON.parse(raw) as { enabled?: boolean }
-    return s.enabled === true
-  } catch { return false }
-}
+type NavItem = { id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }
 
-function buildNavItems(): { id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }[] {
-  const base: { id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }[] = [
-    { id: 'today',    label: 'Today',      Icon: IconToday },
-    { id: 'balance',  label: 'Balance',    Icon: IconBalance },
-    { id: 'budget',   label: 'Budget',     Icon: IconBudget },
-    { id: 'reports',  label: 'Reports',    Icon: IconReports },
-    { id: 'reflect',  label: 'Financials', Icon: IconFinancials },
-    { id: 'goals',    label: 'Goals',      Icon: IconGoals },
-  ]
-  if (shoppingEnabled()) base.push({ id: 'shopping', label: 'Shopping', Icon: IconShopping })
-  return base
-}
-
-const NAV_ITEMS = buildNavItems()
+// Seven screens in one row read as a list to hunt through. They are three
+// questions: where is the money (Money), where is it going (Plan), and what
+// did it do (Review). The order inside a group is fixed, so a screen is always
+// in the same place — which is why dragging tabs to reorder them is gone: it
+// could only ever scramble the groups.
+// Forecast is not a screen of its own: it is the rules disclosure inside Goals.
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
+  { label: 'Money',  items: [
+    { id: 'today',   label: 'Today',      Icon: IconToday },
+    { id: 'balance', label: 'Balance',    Icon: IconBalance },
+    { id: 'budget',  label: 'Budget',     Icon: IconBudget },
+  ] },
+  { label: 'Plan',   items: [
+    { id: 'goals',   label: 'Goals',      Icon: IconGoals },
+  ] },
+  { label: 'Review', items: [
+    { id: 'reflect', label: 'Financials', Icon: IconFinancials },
+    { id: 'reports', label: 'Reports',    Icon: IconReports },
+  ] },
+]
 
 // ─── Finance Module ───────────────────────────────────────────────────────────
 
@@ -155,7 +144,9 @@ export function FinanceModule() {
 
   const [screen, setScreen] = useState<FinanceScreen>(() => {
     const saved = localStorage.getItem('finance-active-screen')
-    return (NAV_ITEMS.some(n => n.id === saved) ? saved : 'today') as FinanceScreen
+    // (a saved 'shopping' is from before it moved to the main menu — it falls through to Today)
+    const known = NAV_GROUPS.some(g => g.items.some(n => n.id === saved))
+    return (known ? saved : 'today') as FinanceScreen
   })
 
   function handleSetScreen(s: FinanceScreen) {
@@ -165,38 +156,6 @@ export function FinanceModule() {
   const [addOpen, setAddOpen] = useState(false)
   const [bulkOpen, setBulkOpen] = useState(false)
 
-  const [navItems, setNavItems] = useState<{ id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }[]>(() => {
-    const base = buildNavItems()
-    const saved = localStorage.getItem('finance-tab-order')
-    if (saved) {
-      try {
-        const order: string[] = JSON.parse(saved)
-        return [...base].sort((a, b) => {
-          const ai = order.indexOf(a.id); const bi = order.indexOf(b.id)
-          return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
-        })
-      } catch {}
-    }
-    return base
-  })
-
-  // Re-build nav when Shopping toggle changes in Settings
-  useEffect(() => {
-    function onStorage(e: StorageEvent) {
-      if (e.key === 'shopping-settings') {
-        setNavItems(prev => {
-          const fresh = buildNavItems()
-          const order = prev.map(i => i.id)
-          return [...fresh].sort((a, b) => {
-            const ai = order.indexOf(a.id); const bi = order.indexOf(b.id)
-            return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
-          })
-        })
-      }
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
   // A debt goal on Goals can send you to the account it is derived from.
   // Balances is not mounted at that moment, so the switch happens here and the
   // id is claimed by the screen once it is up (`takePendingAccount`).
@@ -205,20 +164,6 @@ export function FinanceModule() {
     window.addEventListener(OPEN_ACCOUNT, go)
     return () => window.removeEventListener(OPEN_ACCOUNT, go)
   }, [])
-
-  const [draggedTab, setDraggedTab] = useState<FinanceScreen | null>(null)
-  const [dropTab, setDropTab] = useState<FinanceScreen | null>(null)
-
-  function reorderTabs(fromId: FinanceScreen, toId: FinanceScreen) {
-    if (fromId === toId) return
-    const items = [...navItems]
-    const fromIdx = items.findIndex(i => i.id === fromId)
-    const toIdx = items.findIndex(i => i.id === toId)
-    const [removed] = items.splice(fromIdx, 1)
-    items.splice(toIdx, 0, removed)
-    setNavItems(items)
-    localStorage.setItem('finance-tab-order', JSON.stringify(items.map(i => i.id)))
-  }
 
   function renderScreen() {
     const props = { onOpenAdd: () => setAddOpen(true) }
@@ -229,7 +174,6 @@ export function FinanceModule() {
       case 'reports': return <ReportsScreen {...props} />
       case 'reflect': return <ReflectionScreen {...props} />
       case 'goals':    return <GoalsScreen />
-      case 'shopping': return <ShoppingScreen />
     }
   }
 
@@ -268,33 +212,27 @@ export function FinanceModule() {
         display: 'flex', alignItems: 'center',
         padding: '0 10px', gap: 2,
       }}>
-        {/* Nav tabs — draggable to reorder */}
-        <div style={{ flex: 1, display: 'flex', gap: 1, overflowX: 'auto' }}>
-          {navItems.map(({ id, label, Icon }) => {
-            const active = screen === id
-            const isDragging = draggedTab === id
-            const isDropTarget = dropTab === id && dropTab !== draggedTab
-            return (
-              <NavRow
-                key={id}
-                draggable
-                onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDraggedTab(id) }}
-                onDragOver={e => { e.preventDefault(); setDropTab(id) }}
-                onDrop={e => { e.preventDefault(); if (draggedTab) reorderTabs(draggedTab, id); setDropTab(null) }}
-                onDragEnd={() => { setDraggedTab(null); setDropTab(null) }}
-                onClick={() => handleSetScreen(id)}
-                active={active}
-                Icon={Icon}
-                label={label}
-                style={{
-                  width: 'auto', height: 30, cursor: 'grab',
-                  opacity: isDragging ? 0.35 : 1,
-                  outline: isDropTarget ? 'var(--sb-border-width) solid var(--sb-accent)' : 'none',
-                }}
-              />
-            )
-          })}
-        </div>
+        {/* Nav tabs — three groups, fixed order. The caption names the question the group answers;
+            below a phone's width it goes and the divider alone says where one group ends. */}
+        <nav aria-label="Finance sections" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1, overflowX: 'auto' }}>
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={group.label} data-finance-group={group.label} role="group" aria-label={group.label}
+              style={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+              {gi > 0 && <span aria-hidden style={{ width: 1, height: 18, background: 'var(--sb-border)', margin: '0 8px', flexShrink: 0 }} />}
+              <span className="fin-group-cap" style={{ ...T.micro, color: 'var(--sb-ink-3)', marginRight: 4 }}>{group.label}</span>
+              {group.items.map(({ id, label, Icon }) => (
+                <NavRow
+                  key={id}
+                  onClick={() => handleSetScreen(id)}
+                  active={screen === id}
+                  Icon={Icon}
+                  label={label}
+                  style={{ width: 'auto', height: 30 }}
+                />
+              ))}
+            </div>
+          ))}
+        </nav>
 
         {/* Put it away now, rather than waiting for the idle clock */}
         {lockConfig.enabled && (

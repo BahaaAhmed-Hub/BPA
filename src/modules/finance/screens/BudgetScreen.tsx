@@ -28,6 +28,8 @@ import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
+import { GLYPH, DEFAULT_CATEGORY_ICON } from '@/lib/glyphs'
+import { askConfirm } from '@/lib/confirm'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -153,7 +155,7 @@ function money(v: number, cur: string) {
 
 function Legend({ swatch, label, line }: { swatch: string; label: string; line?: boolean }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
       <span style={{
         width: 10, height: line ? 1 : 8, borderRadius: line ? 0 : 'var(--sb-r-chip)',
         background: swatch, flexShrink: 0,
@@ -325,7 +327,7 @@ function CurBadge({ mixed, cur, currency, offset }: {
         ...(offset ? { position: 'absolute', bottom: -2, right: -4 } : {}),
         height: 14, padding: '0 4px', borderRadius: 'var(--sb-r-pill)',
         background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-        fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-4)',
+        fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)',
         display: 'flex', alignItems: 'center', flexShrink: 0,
       }}>{mixed[0]}</span>
   )
@@ -336,7 +338,7 @@ function DueChip({ day }: { day: number | undefined }) {
   if (day == null) return null
   return (
     <span title={`The money leaves on the ${ordinal(day)}.`}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-accent-deep)', whiteSpace: 'nowrap' }}>
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-deep)', whiteSpace: 'nowrap' }}>
       <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> the {ordinal(day)}
     </span>
   )
@@ -355,9 +357,9 @@ function SpanChip({ span, dates }: { span?: 'month' | 'year'; dates?: number }) 
     <span title={`A budget with dates on it is not a monthly allowance, so it is shown in full${
       dates ? ` — ${dates} ${dates === 1 ? 'date' : 'dates'}` : ''} and measured against the whole year.`}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+        display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-meta)', fontWeight: 700,
         letterSpacing: '0.06em', padding: '0 5px', borderRadius: 'var(--sb-r-chip)', whiteSpace: 'nowrap',
-        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-4)',
+        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
       }}>
       <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> THE YEAR
     </span>
@@ -401,7 +403,7 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                       <CategoryGlyph icon={cat.icon} size={15} color={color} />
                       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                          <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: cat.name ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: cat.name ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {cat.name || 'Untitled'}
                           </span>
                           <DueChip day={rules[cat.id]?.dueDay} />
@@ -424,11 +426,11 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                       <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-meta)', fontVariantNumeric: 'tabular-nums', textAlign: 'right', flexShrink: 0, lineHeight: 1.45 }}>
                         <span style={{ display: 'block', fontWeight: 600, color: over ? RUST : 'var(--sb-ink-1)' }}>{fig(actual)}</span>
                         {budgeted ? (
-                          <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', borderBottom: plannedFrom === 'parts' ? '1px dotted var(--sb-border)' : 'none' }}>
+                          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', borderBottom: plannedFrom === 'parts' ? '1px dotted var(--sb-border)' : 'none' }}>
                             {fig(planned)}
                           </span>
                         ) : (
-                          <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', fontFamily: 'inherit' }}>no budget</span>
+                          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontFamily: 'inherit' }}>no budget</span>
                         )}
                       </span>
                     </button>
@@ -457,7 +459,7 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                       </span>
                       <DueChip day={rules[child.cat.id]?.dueDay} />
                       <SpanChip span={child.span} dates={linesOf(rules[child.cat.id] ?? {}).length} />
-                      <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontVariantNumeric: 'tabular-nums', color: cOver ? RUST : 'var(--sb-ink-3)', flexShrink: 0 }}>
+                      <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-meta)', fontVariantNumeric: 'tabular-nums', color: cOver ? RUST : 'var(--sb-ink-3)', flexShrink: 0 }}>
                         {fig(child.actual)}{child.budgeted ? ` / ${fig(child.inEnvelope ?? child.planned)}` : ''}
                       </span>
                     </button>
@@ -630,7 +632,7 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
 
                       {middle && (
                         <span style={{
-                          position: 'relative', fontSize: roomy ? 11.5 : 10.5, fontWeight: 600, color: 'var(--sb-ink-1)',
+                          position: 'relative', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-1)',
                           lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>{cat.name || 'Untitled'}</span>
                       )}
@@ -640,17 +642,17 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
                       {middle && (
                         <span style={{
                           position: 'relative', fontFamily: 'var(--sb-font-num)',
-                          fontSize: roomy ? 16 : 12.5, fontWeight: 600,
+                          fontSize: roomy ? 16 : 'var(--sb-t-body-s)', fontWeight: 600,
                           color: over ? 'var(--sb-negative)' : 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1,
                         }}>{acct(actual)}</span>
                       )}
                       {roomy && (
                         budgeted ? (
-                          <span style={{ position: 'relative', fontSize: 'var(--sb-t-micro)', color: over ? 'var(--sb-negative)' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
+                          <span style={{ position: 'relative', fontSize: 'var(--sb-t-meta)', color: over ? 'var(--sb-negative)' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
                             of {acct(planned)}{over ? ' · burst' : ''}
                           </span>
                         ) : spent ? (
-                          <span style={{ position: 'relative', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>no budget</span>
+                          <span style={{ position: 'relative', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>no budget</span>
                         ) : null
                       )}
                       {roomy && <span style={{ position: 'relative' }}><DueChip day={rules[cat.id]?.dueDay} /></span>}
@@ -753,7 +755,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
         <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{title.toUpperCase()}</span>
         {all > 0 && (
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: withMoney === all ? 'var(--sb-positive)' : 'var(--sb-ink-4)' }}>
+          <span style={{ fontSize: 'var(--sb-t-micro)', color: withMoney === all ? 'var(--sb-positive)' : 'var(--sb-ink-3)' }}>
             {withMoney} of {all} budgeted
           </span>
         )}
@@ -763,7 +765,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
             {money(total, currency)}
           </span>
           {stranded.length > 0 && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-accent-deep)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-deep)' }}>
               {stranded.join(' and ')} not added in — no rate set
             </span>
           )}
@@ -786,7 +788,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
             {parts.map(p => (
               <span key={p.id} title={p.help} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
-                fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)',
+                fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
               }}>
                 <span aria-hidden style={{ width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', background: p.color }} />
                 {p.name}
@@ -800,7 +802,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
       )}
 
       {rows.length === 0 ? (
-        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>{empty}</div>
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>{empty}</div>
       ) : style === 'slip' ? (
         <SlipRows rows={rows} color={color} selectedId={selectedId} onPick={onPick}
           rules={rules} dragging={dragging} currency={currency} />
@@ -860,11 +862,11 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                       style={{
                         position: 'absolute', bottom: -2, right: -4, height: 14, padding: '0 4px',
                         borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                        fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center',
+                        fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center',
                       }}>{mixed[0]}</span>
                   )}
                 </span>
-                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: cat.name ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: cat.name ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {cat.name || 'Untitled'}
                 </span>
                 <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3 }}>
@@ -873,7 +875,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                   </span>
                   {budgeted ? (
                     <span style={{
-                      fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums',
+                      fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums',
                       // Dotted underline where the figure is the sum of its
                       // parts rather than something set on this category.
                       borderBottom: plannedFrom === 'parts' ? '1px dotted var(--sb-border)' : 'none',
@@ -884,8 +886,8 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                     // Not a fact about the category — something to go and do.
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', height: 16, padding: '0 7px',
-                      borderRadius: 'var(--sb-r-pill)', border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-4)',
-                      fontSize: 'var(--sb-t-micro)', whiteSpace: 'nowrap',
+                      borderRadius: 'var(--sb-r-pill)', border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-3)',
+                      fontSize: 'var(--sb-t-meta)', whiteSpace: 'nowrap',
                     }}>set a budget</span>
                   )}
                   {/* 132,000 beside 6,000 reads as a category out of control
@@ -900,7 +902,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                     const said = versusLast(actual, prev)
                     return said ? (
                       <span title={`${money(prev, cur)} last month`}
-                        style={{ marginTop: 2, fontSize: 'var(--sb-t-micro)', lineHeight: 1.3, textAlign: 'center', color: said.worse ? RUST : 'var(--sb-positive)' }}>
+                        style={{ marginTop: 2, fontSize: 'var(--sb-t-meta)', lineHeight: 1.3, textAlign: 'center', color: said.worse ? RUST : 'var(--sb-positive)' }}>
                         {said.text}
                       </span>
                     ) : null
@@ -910,7 +912,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                       title={`The money leaves on the ${ordinal(dueDay)}. A task is on the board for it.`}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 2,
-                        fontSize: 'var(--sb-t-micro)', color: 'var(--sb-accent-deep)', whiteSpace: 'nowrap',
+                        fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-deep)', whiteSpace: 'nowrap',
                       }}>
                       <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> the {ordinal(dueDay)}
                     </span>
@@ -962,7 +964,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                         // Same idea as the rings above: solid means a budget,
                         // broken means nothing has been set.
                         border: subBudgeted ? 'var(--sb-border-width) solid var(--sb-border)' : '1px dashed var(--sb-border)',
-                        color: subBudgeted || spent ? 'var(--sb-ink-2)' : 'var(--sb-ink-4)',
+                        color: subBudgeted || spent ? 'var(--sb-ink-2)' : 'var(--sb-ink-3)',
                         fontSize: 'var(--sb-t-meta)', boxSizing: 'border-box', fontFamily: 'inherit',
                       }}>
                       {/* Behind the label, never over it. */}
@@ -997,7 +999,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                   border: `1px dashed ${over ? 'var(--sb-positive)' : 'var(--sb-border)'}`,
                   background: over ? 'color-mix(in srgb, var(--sb-positive) 16.0%, transparent)' : 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: 8, fontSize: 'var(--sb-t-micro)', color: over ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
+                  padding: 8, fontSize: 'var(--sb-t-meta)', color: over ? 'var(--sb-positive)' : 'var(--sb-ink-3)',
                   textAlign: 'center', lineHeight: 1.4,
                 }}>
                   Drop here to stand on its own
@@ -1016,7 +1018,7 @@ function SummaryLine({ label, actual, planned, color, currency, strong }: {
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '11px 0', borderBottom: strong ? 'none' : 'var(--sb-border-width) solid var(--sb-hairline)' }}>
-      <span style={{ fontSize: strong ? 12.5 : 11.5, fontWeight: strong ? 600 : 500, color: strong ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', letterSpacing: strong ? 0 : '0.02em' }}>
+      <span style={{ fontSize: strong ? 'var(--sb-t-body-s)' : 'var(--sb-t-meta)', fontWeight: strong ? 600 : 500, color: strong ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', letterSpacing: strong ? 0 : '0.02em' }}>
         {label}
       </span>
       <span style={{ flex: 1 }} />
@@ -1024,7 +1026,7 @@ function SummaryLine({ label, actual, planned, color, currency, strong }: {
         <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: strong ? 20 : 17, fontWeight: 600, letterSpacing: '-0.02em', color, fontVariantNumeric: 'tabular-nums' }}>
           {acct(actual)}
         </span>
-        <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
           of {money(planned, currency)}
         </span>
       </span>
@@ -1404,12 +1406,12 @@ export function BudgetScreen(_props?: any) {
     [rules, monthKey, categories],
   )
 
-  function applyFromTheStart() {
-    if (!window.confirm(
+  async function applyFromTheStart() {
+    if (!await askConfirm({ title: 'Apply budgets to every month?', confirmLabel: 'Apply to every month', danger: false, body:
       `${startLater.length} budget${startLater.length === 1 ? '' : 's'} begin${startLater.length === 1 ? 's' : ''} after `
       + `${new Date(monthKey + '-01T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}. `
       + 'Apply them to every month instead?\n\nA budget that should genuinely begin on a date keeps it — set that on the budget itself.',
-    )) return
+    })) return
     const next = { ...rules }
     for (const id of startLater) next[id] = { ...next[id], starts: undefined }
     putRules(next)
@@ -1485,7 +1487,7 @@ export function BudgetScreen(_props?: any) {
   function addCategory() {
     const id = crypto.randomUUID()
     void upsertCategory({
-      id, name: '', icon: 'lucide:Folder', color: 'var(--sb-ink-4)', isSystem: false, txType: 'expense',
+      id, name: '', icon: 'lucide:Folder', color: 'var(--sb-ink-3)', isSystem: false, txType: 'expense',
     })
     setSelectedId(id)
   }
@@ -1541,7 +1543,7 @@ export function BudgetScreen(_props?: any) {
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 7, flexWrap: 'wrap' }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 10px',
-                borderRadius: 'var(--sb-r-pill)', fontSize: 'var(--sb-t-micro)', whiteSpace: 'nowrap',
+                borderRadius: 'var(--sb-r-pill)', fontSize: 'var(--sb-t-meta)', whiteSpace: 'nowrap',
                 background: 'color-mix(in srgb, var(--sb-accent) 14%, transparent)',
                 border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent) 40%, transparent)',
                 color: 'var(--sb-accent-deep)',
@@ -1554,7 +1556,7 @@ export function BudgetScreen(_props?: any) {
                 style={{
                   height: 24, padding: '0 10px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
                   background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                  color: 'var(--sb-ink-2)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                  color: 'var(--sb-ink-2)', fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                 }}>
                 Apply them to every month
               </button>
@@ -1600,7 +1602,7 @@ export function BudgetScreen(_props?: any) {
         {/* ── The year ─────────────────────────────────────────────────────── */}
         <div style={{ ...CARD, padding: '16px 18px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{year}</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{year}</span>
             <span style={{ flex: 1 }} />
             <Legend swatch={OLIVE} label="In" />
             <Legend swatch={RUST}  label="Out" />
@@ -1673,8 +1675,8 @@ export function BudgetScreen(_props?: any) {
                     } as React.CSSProperties} />
 
                   <span style={{
-                    position: 'relative', padding: '0 0 5px', fontSize: 'var(--sb-t-micro)',
-                    color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)', fontWeight: on ? 700 : 500,
+                    position: 'relative', padding: '0 0 5px', fontSize: 'var(--sb-t-meta)',
+                    color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontWeight: on ? 700 : 500,
                   }}>{MONTH_SHORT[x.m]}</span>
                 </button>
               )
@@ -1770,7 +1772,7 @@ export function BudgetScreen(_props?: any) {
                 </Button>
               </div>
             )}
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 14, lineHeight: 1.55 }}>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 14, lineHeight: 1.55 }}>
               The bold figure is what actually happened this month; the one under it
               is what the envelopes were set to. Pick a category to change its budget.
             </div>
@@ -1921,7 +1923,7 @@ export function BudgetScreen(_props?: any) {
 
         const FLAG_STYLES: Record<TxFlag, { bg: string; color: string; border: string; label: string }> = {
           approved: { bg: 'var(--sb-positive-tint)', color: 'var(--sb-positive-deep)', border: 'var(--sb-positive-tint)', label: '✓ OK' },
-          review:   { bg: 'var(--sb-accent-tint)', color: 'var(--sb-warning)', border: 'var(--sb-accent)', label: '⚑ Review' },
+          review:   { bg: 'var(--sb-accent-tint)', color: 'var(--sb-warning)', border: 'var(--sb-accent)', label: `${GLYPH.flag} Review` },
           excluded: { bg: 'var(--sb-negative-tint)', color: 'var(--sb-negative)', border: 'var(--sb-negative-tint)', label: '✗ Exclude' },
         }
 
@@ -1960,7 +1962,7 @@ export function BudgetScreen(_props?: any) {
                     <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>
                       {selectedCat.name}
                     </div>
-                    <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 1 }}>{drillTxs.length} transactions</div>
+                    <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 1 }}>{drillTxs.length} transactions</div>
                   </div>
                   <button onClick={() => setDrillOpen(false)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex' }}>
@@ -1991,13 +1993,13 @@ export function BudgetScreen(_props?: any) {
                     return (
                       <div key={key} style={{ flexShrink: 0, background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px 12px', minWidth: 100 }}>
                         <div style={{ marginBottom: 3, color: cat?.color ?? 'var(--sb-ink-3)' }}>
-                          <CategoryGlyph icon={cat?.icon ?? '📂'} size={15} />
+                          <CategoryGlyph icon={cat?.icon ?? DEFAULT_CATEGORY_ICON} size={15} />
                         </div>
                         <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginBottom: 3, whiteSpace: 'nowrap' }}>{cat?.name ?? selectedCat.name}</div>
                         <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: RUST, fontFamily: 'var(--sb-font-num)' }}>
                           {acct(total, { currency })}
                         </div>
-                        <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>{txs.length} txns</div>
+                        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{txs.length} txns</div>
                       </div>
                     )
                   })}
@@ -2007,7 +2009,7 @@ export function BudgetScreen(_props?: any) {
               {/* Transaction list */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '8px 24px 16px' }}>
                 {drillTxs.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: 'var(--sb-ink-4)', padding: '48px 0', fontSize: 'var(--sb-t-body)' }}>
+                  <div style={{ textAlign: 'center', color: 'var(--sb-ink-3)', padding: '48px 0', fontSize: 'var(--sb-t-body)' }}>
                     No transactions in this period
                   </div>
                 ) : (
@@ -2063,8 +2065,8 @@ export function BudgetScreen(_props?: any) {
                                   style={{
                                     padding: '3px 7px', borderRadius: 'var(--sb-r-chip)', border: `var(--sb-border-width) solid ${active ? st.border : 'var(--sb-border)'}`,
                                     background: active ? st.bg : 'transparent',
-                                    color: active ? st.color : 'var(--sb-ink-4)',
-                                    fontSize: 'var(--sb-t-micro)', fontWeight: active ? 700 : 400, cursor: 'pointer',
+                                    color: active ? st.color : 'var(--sb-ink-3)',
+                                    fontSize: 'var(--sb-t-meta)', fontWeight: active ? 700 : 400, cursor: 'pointer',
                                     transition: 'all 0.12s',
                                   }}>
                                   {st.label}
@@ -2082,7 +2084,7 @@ export function BudgetScreen(_props?: any) {
               {/* Footer summary */}
               <div style={{ flexShrink: 0, borderTop: 'var(--sb-border-width) solid var(--sb-border)', padding: '14px 24px', background: 'var(--sb-header)', display: 'flex', alignItems: 'center', gap: 20 }}>
                 <div>
-                  <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>
+                  <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-3)' }}>
                     TOTAL{drillUnrated.length > 0 && (
                       <span title={`No rate set for ${drillUnrated.join(', ')}, so it is not counted here`}
                         style={{ marginLeft: 5, color: 'var(--sb-warning)' }}>· {drillUnrated.join(' ')}</span>
@@ -2096,14 +2098,14 @@ export function BudgetScreen(_props?: any) {
                   <>
                     <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--sb-border)' }} />
                     <div>
-                      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>EXCLUDED</div>
-                      <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-4)', letterSpacing: '-0.02em' }}>
+                      <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-3)' }}>EXCLUDED</div>
+                      <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-3)', letterSpacing: '-0.02em' }}>
                         {acct(-excludedSpend, { currency })}
                       </div>
                     </div>
                     <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--sb-border)' }} />
                     <div>
-                      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>NET</div>
+                      <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-3)' }}>NET</div>
                       <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em' }}>
                         {acct(netSpend, { currency })}
                       </div>
@@ -2111,7 +2113,7 @@ export function BudgetScreen(_props?: any) {
                   </>
                 )}
                 <span style={{ flex: 1 }} />
-                <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', textAlign: 'right' }}>
+                <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textAlign: 'right' }}>
                   {drillTxs.filter((tx: Transaction) => txFlags[tx.id] === 'approved').length} approved ·{' '}
                   {drillTxs.filter((tx: Transaction) => txFlags[tx.id] === 'review').length} to review ·{' '}
                   {drillTxs.filter((tx: Transaction) => txFlags[tx.id] === 'excluded').length} excluded

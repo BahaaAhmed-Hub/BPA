@@ -6,7 +6,7 @@
 // Also: live stats, goals, rules, and variance analysis.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { X, MessageSquare, BarChart2, Target, Settings2, GitCompare, Plus, Trash2, Check, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import { X, MessageSquare, BarChart2, Target, Settings2, GitCompare, Plus, Trash2, Check, ChevronDown, ChevronUp, Sparkles, Lock } from 'lucide-react'
 import {
   type IdealBlock, type IdealGoal, type IdealRule, type IdealChatMsg, type IdealVariance,
   type IdealWeekAction,
@@ -17,6 +17,7 @@ import {
 } from '../../lib/idealWeekStore'
 import { chatIdealWeek } from '../../lib/idealWeekAI'
 import type { GCalEvent } from '../../lib/googleCalendar'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── Layout constants ──────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
     if (h.length) return h
     return [{
       id: nanoid(), role: 'assistant',
-      content: 'Tell me about your ideal week 😊  I can help you design your perfect weekly schedule — just describe what matters most to you, or start drawing blocks on the canvas.',
+      content: 'Tell me about your ideal week. I can help you design your perfect weekly schedule — just describe what matters most to you, or start drawing blocks on the canvas.',
       applied: true, ts: new Date().toISOString(),
     }]
   })
@@ -100,11 +101,11 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
   const applyActions = useCallback((actions: IdealWeekAction[]) => {
     for (const a of actions) {
       if (a.type === 'add_block') {
-        setBlocks(prev => [...prev, { id: nanoid(), day: a.day, startHour: a.startHour, endHour: a.endHour, title: a.title, category: a.category, color: a.color ?? CATEGORY_COLORS[a.category] ?? '#7F8C8D', blockType: a.blockType }])
+        setBlocks(prev => [...prev, { id: nanoid(), day: a.day, startHour: a.startHour, endHour: a.endHour, title: a.title, category: a.category, color: a.color ?? CATEGORY_COLORS[a.category] ?? 'var(--sb-ink-3)', blockType: a.blockType }])
       } else if (a.type === 'remove_block') {
         setBlocks(prev => prev.filter(b => b.id !== a.id))
       } else if (a.type === 'add_goal') {
-        setGoals(prev => [...prev, { id: nanoid(), title: a.title, category: a.category, color: a.color ?? CATEGORY_COLORS[a.category] ?? '#7F8C8D', targetHoursWeek: a.targetHoursWeek, horizon: a.horizon, deadline: a.deadline, enabled: true }])
+        setGoals(prev => [...prev, { id: nanoid(), title: a.title, category: a.category, color: a.color ?? CATEGORY_COLORS[a.category] ?? 'var(--sb-ink-3)', targetHoursWeek: a.targetHoursWeek, horizon: a.horizon, deadline: a.deadline, enabled: true }])
       } else if (a.type === 'add_rule') {
         setRules(prev => [...prev, { id: nanoid(), title: a.title, description: a.description, ruleType: a.ruleType, config: a.config, enabled: true, createdFrom: 'ai-chat', createdAt: new Date().toISOString(), triggerCount: 0 }])
       } else if (a.type === 'clear_canvas') {
@@ -248,7 +249,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
               <div style={{ width: 40, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                 {Array.from({ length: HOURS_END - HOURS_START }, (_, i) => (
                   <div key={i} style={{ height: HOUR_HEIGHT, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 2, flexShrink: 0 }}>
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', lineHeight: 1 }}>{hourLabel(i + HOURS_START)}</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1 }}>{hourLabel(i + HOURS_START)}</span>
                   </div>
                 ))}
               </div>
@@ -470,8 +471,8 @@ function DayColumn({ day: _day, blocks, drawing, selected, hoursStart, hoursEnd,
       {/* Current time indicator */}
       {isToday && nowTop >= 0 && nowTop <= totalH && (
         <>
-          <div style={{ position: 'absolute', left: 0, right: 0, top: nowTop, height: 2, background: '#E74C3C', pointerEvents: 'none', zIndex: 4 }} />
-          <div style={{ position: 'absolute', left: -4, top: nowTop - 4, width: 10, height: 10, borderRadius: 5, background: '#E74C3C', pointerEvents: 'none', zIndex: 4 }} />
+          <div style={{ position: 'absolute', left: 0, right: 0, top: nowTop, height: 2, background: 'var(--sb-negative)', pointerEvents: 'none', zIndex: 4 }} />
+          <div style={{ position: 'absolute', left: -4, top: nowTop - 4, width: 10, height: 10, borderRadius: 5, background: 'var(--sb-negative)', pointerEvents: 'none', zIndex: 4 }} />
         </>
       )}
 
@@ -524,12 +525,12 @@ function BlockChip({ block, hoursStart, hourHeight, isSelected, onClick, onDelet
         transition: 'box-shadow 0.15s',
       }}
     >
-      <div style={{ fontSize: Math.min(11, height / 2), fontWeight: 600, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: height < 28 ? 'nowrap' : 'normal' }}>
+      <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: height < 28 ? 'nowrap' : 'normal' }}>
         {block.title}
       </div>
       {height >= 40 && (
-        <div style={{ fontSize: 'var(--sb-t-micro)', color: '#ffffffCC', fontWeight: 500 }}>
-          {block.blockType === 'hard' ? '🔒' : '·'} {block.category}
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'color-mix(in srgb, var(--sb-ink-on-fill) 80%, transparent)', fontWeight: 500 }}>
+          {block.blockType === 'hard' ? <Lock size={ICON.sm} strokeWidth={STROKE.rest} aria-label="Fixed" style={{ verticalAlign: '-2px' }} /> : '·'} {block.category}
         </div>
       )}
       {isSelected && (
@@ -574,7 +575,7 @@ function BlockEditor({ block, onChange, onDelete, onClose }: {
         <option value="hard">Hard block (never yields)</option>
         <option value="soft">Soft block (can move)</option>
       </select>
-      <button onClick={onDelete} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #C62828', background: 'transparent', color: '#C62828', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer' }}>Delete</button>
+      <button onClick={onDelete} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--sb-negative)', background: 'transparent', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer' }}>Delete</button>
       <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 999, border: '1px solid var(--sb-border)', background: 'var(--sb-field)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-2)' }}>
         <X size={13} />
       </button>
@@ -742,7 +743,7 @@ function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onCh
                 <div style={{
                   marginTop: 8, paddingTop: 7, borderTop: '1px solid var(--sb-hairline)',
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  fontSize: 'var(--sb-t-micro)', color: 'var(--sb-positive)', fontWeight: 700, letterSpacing: '0.04em',
+                  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)', fontWeight: 700, letterSpacing: '0.04em',
                 }}>
                   <Check size={10} strokeWidth={3} />
                   {m.actions.length} action{m.actions.length !== 1 ? 's' : ''} applied to canvas
@@ -797,14 +798,14 @@ function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onCh
             style={{
               width: 32, height: 32, borderRadius: 9, border: 'none', flexShrink: 0,
               background: input.trim() && !loading ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-              color: input.trim() && !loading ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+              color: input.trim() && !loading ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
               cursor: input.trim() && !loading ? 'pointer' : 'default',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'background 0.15s, color 0.15s',
             }}
           ><Sparkles size={14} /></button>
         </div>
-        <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', textAlign: 'center', marginTop: 5, letterSpacing: '0.02em' }}>
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textAlign: 'center', marginTop: 5, letterSpacing: '0.02em' }}>
           Enter to send · Shift+Enter for new line
         </div>
       </div>
@@ -864,7 +865,7 @@ function GoalCard({ goal, blocks, onDelete, onToggle }: { goal: IdealGoal; block
       <div style={{ height: 5, borderRadius: 2.5, background: 'var(--sb-field)', overflow: 'hidden' }}>
         <div style={{ height: '100%', borderRadius: 2.5, background: pct >= 100 ? 'var(--sb-positive)' : goal.color, width: `${pct}%`, transition: 'width 0.3s' }} />
       </div>
-      <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 4, textTransform: 'capitalize' }}>{goal.horizon} · {goal.category}</div>
+      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 4, textTransform: 'capitalize' }}>{goal.horizon} · {goal.category}</div>
     </div>
   )
 }
@@ -888,7 +889,7 @@ function RuleCard({ rule, onDelete, onToggle }: { rule: IdealRule; onDelete: () 
         </button>
       </div>
       {open && <div style={{ marginTop: 8, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>{rule.description}</div>}
-      <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 6, textTransform: 'capitalize' }}>{rule.ruleType.replace('-', ' ')} · from {rule.createdFrom.replace('-', ' ')}</div>
+      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 6, textTransform: 'capitalize' }}>{rule.ruleType.replace('-', ' ')} · from {rule.createdFrom.replace('-', ' ')}</div>
     </div>
   )
 }
@@ -917,7 +918,7 @@ function VariancePanel({ variance, onApply }: { variance: IdealVariance[]; onApp
               <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2 }}>{DAY_LABELS[v.day]} · {hourLabel(v.startHour)}–{hourLabel(v.endHour)}</div>
               <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', marginTop: 3 }}>{v.action}</div>
             </div>
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 5, background: v.type === 'missing' ? 'color-mix(in srgb, var(--sb-negative) 12%, var(--sb-card))' : 'color-mix(in srgb, #E67E22 12%, var(--sb-card))', color: v.type === 'missing' ? 'var(--sb-negative)' : '#C56A00', flexShrink: 0 }}>{v.type}</span>
+            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 5, background: v.type === 'missing' ? 'color-mix(in srgb, var(--sb-negative) 12%, var(--sb-card))' : 'color-mix(in srgb, var(--sb-warning) 12%, var(--sb-card))', color: v.type === 'missing' ? 'var(--sb-negative)' : 'var(--sb-warning)', flexShrink: 0 }}>{v.type}</span>
           </div>
         ))}
       </div>

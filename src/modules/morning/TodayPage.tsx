@@ -45,6 +45,7 @@ import type { Task } from '@/types'
 import type { DbUser, DbCompany } from '@/types/database'
 import { ICON, STROKE } from '@/lib/type'
 import { dayTotals, spanTotals } from '@/lib/habitProgress'
+import { TodayGlance } from './TodayGlance'
 import { DailyQuoteCard } from '@/modules/library/DailyQuoteCard'
 import { LOZENGE } from '../../components/SideRail'
 import { EmptyState } from '@/components/ui'
@@ -312,7 +313,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
             <span style={{
               flexShrink: 0, height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-chip)',
               background: 'rgba(var(--sb-accent-rgb),0.28)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.7)',
-              color: 'var(--sb-accent-deep)', fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.06em',
+              color: 'var(--sb-accent-deep)', fontSize: 'var(--sb-t-meta)', fontWeight: 800, letterSpacing: '0.06em',
               display: 'inline-flex', alignItems: 'center',
             }}>NEEDS YOU</span>
           )}
@@ -963,7 +964,7 @@ function MailCard({
               style={{ padding: '11px 16px', borderBottom: `var(--sb-border-width) solid ${HAIR}`, cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                 <span style={{
-                  ...ICON_TILE, width: 28, height: 28, fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: MUTED,
+                  ...ICON_TILE, width: 28, height: 28, fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: MUTED,
                 }}>{initialsOf(r.fromName || r.fromEmail)}</span>
                 <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: INK, flexShrink: 0, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {r.fromName || r.fromEmail}
@@ -972,7 +973,7 @@ function MailCard({
                   <span style={{
                     flexShrink: 0, height: 18, padding: '0 7px', borderRadius: 'var(--sb-r-chip)',
                     background: 'rgba(var(--sb-accent-rgb),0.28)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.7)',
-                    color: 'var(--sb-accent-deep)', fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.06em',
+                    color: 'var(--sb-accent-deep)', fontSize: 'var(--sb-t-meta)', fontWeight: 800, letterSpacing: '0.06em',
                     display: 'inline-flex', alignItems: 'center',
                   }}>NEEDS YOU</span>
                 )}
@@ -1307,7 +1308,7 @@ function PlanCard({
               <div key={h} style={{ position: 'absolute', top: topOf(h * 60), left: 0, right: 0, height: hourPx }}>
                 <span style={{
                   position: 'absolute', top: -6, left: 0, width: 40,
-                  fontSize: 'var(--sb-t-micro)', color: GHOST, fontVariantNumeric: 'tabular-nums',
+                  fontSize: 'var(--sb-t-meta)', color: GHOST, fontVariantNumeric: 'tabular-nums',
                 }}>{String(h).padStart(2, '0')}:00</span>
                 <span style={{ position: 'absolute', top: 0, left: 44, right: 0, height: 1, background: HAIR }} />
               </div>
@@ -1316,7 +1317,7 @@ function PlanCard({
             {/* Now */}
             {nowMins >= fromHour * 60 && nowMins <= toHour * 60 && (
               <div style={{ position: 'absolute', top: topOf(nowMins), left: 0, right: 0, pointerEvents: 'none', zIndex: 3 }}>
-                <span style={{ position: 'absolute', top: -6, left: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-negative)', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ position: 'absolute', top: -6, left: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-negative)', fontVariantNumeric: 'tabular-nums' }}>
                   {hhmm(now)}
                 </span>
                 <span style={{ position: 'absolute', top: 0, left: 44, right: 0, height: 1, background: 'var(--sb-negative)' }} />
@@ -1370,7 +1371,7 @@ function PlanCard({
                     : <Clock size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: MUTED, marginTop: tall ? 2 : 0 }} />}
                   {/* Given the height, the title wraps instead of being cut off */}
                   <span style={{
-                    fontSize: tight ? 11.5 : 12.5, fontWeight: 600, color: INK, minWidth: 0, flex: '0 1 auto',
+                    fontSize: tight ? 'var(--sb-t-meta)' : 'var(--sb-t-body-s)', fontWeight: 600, color: INK, minWidth: 0, flex: '0 1 auto',
                     overflow: 'hidden', lineHeight: 1.3,
                     ...(tall
                       ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }
@@ -1500,12 +1501,12 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
             <span style={{ flex: 1, minWidth: 0 }} />
             <span style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
               {week.map(d => (
-                <span key={d} style={{ width: 15, textAlign: 'center', fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: GHOST }}>
+                <span key={d} style={{ width: 15, textAlign: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: GHOST }}>
                   {DAY_LETTERS[new Date(d + 'T12:00:00').getDay()]}
                 </span>
               ))}
             </span>
-            <span style={{ width: 168, textAlign: 'right', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.07em', color: GHOST, flexShrink: 0, whiteSpace: 'nowrap' }}>
+            <span style={{ width: 168, textAlign: 'right', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.07em', color: GHOST, flexShrink: 0, whiteSpace: 'nowrap' }}>
               TODAY · QUICK LOG · STREAK
             </span>
           </div>
@@ -1528,7 +1529,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
                   <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {h.name}
                   </span>
-                  <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: GHOST }}>
+                  <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: GHOST }}>
                     {h.frequency}{hasGoal ? ` · ${h.goal} ${h.unit ?? ''}`.trimEnd() : ''}
                   </span>
                 </span>
@@ -1595,6 +1596,13 @@ export function TodayPage() {
 
   const [logs, setLogs] = useState(loadLogs)
   const [qtyLogs, setQtyLogs] = useState(loadQuantityLogs)
+  // Logs are read once on mount, and on a first load the server's arrive after
+  // it: the store announces them, as it does for the Habits page.
+  useEffect(() => {
+    const reload = () => { setLogs(loadLogs()); setQtyLogs(loadQuantityLogs()) }
+    window.addEventListener('professor:habitLogsUpdated', reload)
+    return () => window.removeEventListener('professor:habitLogsUpdated', reload)
+  }, [])
   const [events, setEvents] = useState<GCalEvent[]>([])
   const [clock, setClock] = useState(() => new Date())
   const [planAccepted, setPlanAccepted] = useState(false)
@@ -2122,6 +2130,15 @@ export function TodayPage() {
           <ArrowRight size={ICON.sm} strokeWidth={STROKE.active} /> Start the day
         </button>
       </div>
+
+      <TodayGlance
+        doNow={tasks.filter(t => t.quadrant === 'do' && isOpenTask(t)).length}
+        open={tasks.filter(isOpenTask).length}
+        meetings={events.filter(e => !!e.start.dateTime).length}
+        habitsPct={dayTotals(habits, today, logs, qtyLogs).pct}
+        habitsTotal={habits.length}
+        onGo={setActiveModule}
+      />
 
       {/* ── Two columns ───────────────────────────────────────────────────── */}
       <div style={{

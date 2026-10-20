@@ -101,7 +101,7 @@ export async function loadGroups(): Promise<ShoppingGroup[] | null> {
 export async function upsertGroup(g: Partial<ShoppingGroup> & { id: string; userId: string }): Promise<void> {
   const { error } = await supabase.from('shopping_groups').upsert({
     id: g.id, user_id: g.userId, name: g.name ?? 'New List',
-    color: g.color ?? '#F5D14E', icon: g.icon ?? '🛒',
+    color: g.color ?? '#F5D14E', icon: g.icon ?? '🛒', // ui-guard: user-colour
     scheduled_date: g.scheduledDate ?? null,
     recurrence: g.recurrence ?? 'none',
     recurrence_rule: g.recurrenceRule ?? null,

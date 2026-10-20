@@ -4,11 +4,11 @@
 // go with a step live here, because a style object is what a call site can
 // actually spread.
 //
-//   micro    10    700  .12em  uppercase   gutters, capsed captions
-//   meta     11.5  500                     times, notes, the second line
-//   body-s   12.5  400                     dense body — rows, feeds
-//   body     13.5  400                     the default
-//   label    13.5  600                     a value's name, a button
+//   micro    11    700  .12em  uppercase   gutters, capsed captions
+//   meta     12    500                     times, notes, the second line
+//   body-s   13    400                     dense body — rows, feeds
+//   body     14    400                     the default
+//   label    14    600                     a value's name, a button
 //   h3       15    600                     a section inside a panel
 //   h2       18    600  -.02em             a form's heading, a day number
 //   h1       27    600  -.03em             a page's own name
@@ -16,7 +16,7 @@
 //
 // Two faces: Outfit sets anything that names a screen, a section or a figure;
 // Instrument Sans says everything else. The step from h3 to label is a change
-// of face as well as size, so 15 → 13.5 reads as a level rather than the
+// of face as well as size, so 15 → 14 reads as a level rather than the
 // pixel and a half it looks like on paper.
 //
 // A call site that spreads a level and then sets its own weight is overriding

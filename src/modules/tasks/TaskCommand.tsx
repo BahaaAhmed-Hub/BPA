@@ -17,6 +17,7 @@ import { Search, X, Plus, SlidersHorizontal, LayoutGrid, Target, List as ListIco
 import type { Quadrant, Task } from '@/types'
 import { isTaskHidden, loadVisibleCompanies, getVisibleUsers, TASK_TYPE_META, inferTaskType } from '@/types'
 import { SmartDayPlanner } from './SmartDayPlanner'
+import { TodoistImport } from './TodoistImport'
 import { TaskListView } from './TaskListView'
 import { TaskBanner } from './TaskBanner'
 import { TASK_TYPE_ICON, TASK_TYPE_ORDER } from './taskVisuals'
@@ -29,7 +30,11 @@ const TASKS_CONFIG_KEY = 'task-command-config'
 type GroupBy = 'none' | 'status' | 'type' | 'company' | 'owner'
 interface TaskConfig { hideCompleted: boolean; groupBy: GroupBy; allGroupsExpanded: boolean }
 interface TaskFilters { company: string; type: string; owner: string }
-type ViewMode = 'board' | 'eisenhower' | 'list'
+type ViewMode = 'board' | 'eisenhower' | 'list' | 'plan'
+/** The views a person *chooses to stay in*. The planner is a view too, but opening Tasks straight into it
+ *  (and into Google's calendar reads) because it was the last one used would be a surprise. */
+type StayView = Exclude<ViewMode, 'plan'>
+const STAY_VIEWS: StayView[] = ['board', 'eisenhower', 'list']
 
 const GROUP_BY_LABEL: Record<GroupBy, string> = {
   none: 'None', status: 'Status', type: 'Task type', company: 'Company', owner: 'Owner',
@@ -44,11 +49,16 @@ export function TaskCommand() {
   const { tasks: allTasks, moveTask, moveTaskBefore, reorderInbox, reorderQuadrant, updateTask, addTask } = useTaskStore()
   const tasks = allTasks.filter(t => !isTaskHidden(t))
 
-  const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    (localStorage.getItem('task-view-mode') as ViewMode) ?? 'board'
-  )
+  const [stayView, setStayView] = useState<StayView>(() => {
+    const saved = localStorage.getItem('task-view-mode') as StayView | null
+    return saved && STAY_VIEWS.includes(saved) ? saved : 'board'
+  })
+  const [planning, setPlanning] = useState(false)
+  const viewMode: ViewMode = planning ? 'plan' : stayView
   function switchView(mode: ViewMode) {
-    setViewMode(mode)
+    if (mode === 'plan') { setPlanning(true); return }
+    setPlanning(false)
+    setStayView(mode)
     localStorage.setItem('task-view-mode', mode)
   }
 
@@ -192,7 +202,6 @@ export function TaskCommand() {
     setModalTaskId(focus.id)
     clearFocus()
   }, [focus, clearFocus])
-  const [showPlanner,  setShowPlanner]  = useState(false)
 
   useEffect(() => {
     if (!openNewestRef.current || allTasks.length === 0) return
@@ -269,14 +278,14 @@ export function TaskCommand() {
         display: 'flex', alignItems: 'center', gap: 20,
       }}>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Filter button */}
-          <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
+          {/* Filter button — search, hide-completed and grouping act on the task views; the planner has its own controls */}
+          {viewMode !== 'plan' && <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
             <button onClick={() => setFilterOpen(o => !o)}
               style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer', boxShadow: 'var(--sb-shadow-control)' }}>
               <SlidersHorizontal size={ICON.sm} strokeWidth={STROKE.rest} />
               Filters
               {activeFilterCount > 0 && (
-                <span style={{ height: 18, minWidth: 18, boxSizing: 'border-box', padding: '0 5px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ height: 18, minWidth: 18, boxSizing: 'border-box', padding: '0 5px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-meta)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {activeFilterCount}
                 </span>
               )}
@@ -307,14 +316,14 @@ export function TaskCommand() {
                     }}
                   />
                   {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 9, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', display: 'flex', padding: 2 }}>
+                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 9, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 2 }}>
                       <X size={ICON.sm} />
                     </button>
                   )}
                 </div>
 
                 {/* Config section */}
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>TASK DISPLAY</span>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>TASK DISPLAY</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '2px 0 10px' }}>
                   <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>Hide completed tasks</span>
                   <span style={{ marginLeft: 'auto' }}>
@@ -326,7 +335,7 @@ export function TaskCommand() {
                 <div style={{ borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }} />
 
                 {/* Group by */}
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>GROUP TASKS BY</span>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>GROUP TASKS BY</span>
                 {(['none', 'status', 'type', 'company', 'owner'] as GroupBy[]).map(opt => (
                   <div key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 'var(--sb-h-pill)', padding: '0 9px', borderRadius: 'var(--sb-r-sm)', background: groupBy === opt ? 'var(--sb-accent-tint)' : 'transparent', cursor: 'pointer' }}>
                     <span style={{ width: 16, height: 16, boxSizing: 'border-box', borderRadius: 'var(--sb-r-pill)', border: `var(--sb-border-emphasis) solid ${groupBy === opt ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -348,7 +357,7 @@ export function TaskCommand() {
                 {/* Company filter */}
                 {companies.length > 0 && (
                   <>
-                    <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>COMPANY</span>
+                    <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>COMPANY</span>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {companies.map(co => (
                         <button key={co.id} onClick={() => setFilters(f => ({ ...f, company: f.company === co.id ? '' : co.id }))} style={{
@@ -366,7 +375,7 @@ export function TaskCommand() {
                 )}
 
                 {/* Type filter */}
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>TASK TYPE</span>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>TASK TYPE</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {TASK_TYPE_ORDER.map(type => {
                     const Icon = TASK_TYPE_ICON[type]
@@ -387,7 +396,7 @@ export function TaskCommand() {
                 {/* Owner filter */}
                 {ownerOptions.length > 0 && (
                   <>
-                    <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>OWNER</span>
+                    <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>OWNER</span>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {ownerOptions.map(u => (
                         <button key={u.id} onClick={() => setFilters(f => ({ ...f, owner: f.owner === u.id ? '' : u.id }))} style={{
@@ -411,9 +420,10 @@ export function TaskCommand() {
                 )}
               </div>
             )}
-          </div>
+          </div>}
 
-          {/* View switcher — Board | Matrix | List */}
+          {/* View switcher — Board | Matrix | List | Plan. One control for every way of looking at the same tasks;
+              Plan is the day laid against the calendar, not a different set of tasks. */}
           <Segmented<ViewMode>
             size="lg"
             aria-label="View"
@@ -423,18 +433,9 @@ export function TaskCommand() {
               { value: 'board',      label: <><LayoutGrid size={ICON.sm} strokeWidth={STROKE.active} /> Board</> },
               { value: 'eisenhower', label: <><Target size={ICON.sm} strokeWidth={STROKE.active} /> Matrix</> },
               { value: 'list',       label: <><ListIcon size={ICON.sm} strokeWidth={STROKE.active} /> List</> },
+              { value: 'plan',       label: <><CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> Plan</>, title: "Lay today's tasks out against the calendar" },
             ]}
           />
-
-          {/* The planner has existed all along with nothing to open it —
-              `showPlanner` was set false and never set true. It belongs beside
-              New task: one makes a thing to do, the other decides when. */}
-          <Button variant="secondary" onClick={() => setShowPlanner(true)}
-            title="Lay today's tasks out against the calendar"
-            style={{ boxSizing: 'border-box', flexShrink: 0 }}>
-            <CalendarClock size={ICON.md} strokeWidth={STROKE.active} />
-            Plan my day
-          </Button>
 
           {/* New task CTA */}
           <Button variant="accent" onClick={handleNewTask} style={{ boxSizing: 'border-box', flexShrink: 0 }}>
@@ -444,8 +445,13 @@ export function TaskCommand() {
         </span>
       </div>
 
+      <TodoistImport empty={allTasks.length === 0} />
+
       {/* Main content */}
-      {viewMode === 'list' ? (
+      {viewMode === 'plan' ? (
+        // Leaving the planner (Apply Plan, or opening a task from it) goes back to the view you came from.
+        <SmartDayPlanner inline onClose={() => setPlanning(false)} onOpenTask={id => { setPlanning(false); setModalTaskId(id) }} />
+      ) : viewMode === 'list' ? (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {/* The list carries the same brain dump rail the matrix does */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0, padding: '4px 0 0 28px' }}>
@@ -501,7 +507,7 @@ export function TaskCommand() {
           <div style={{ display: 'flex', gap: 16, padding: '4px 28px 28px', alignItems: 'flex-start' }}>
             <BrainDumpRail tasks={dumpedTasks} onOpen={setModalTaskId} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => setShowPlanner(true)} />
+              <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => switchView('plan')} />
             </div>
             {modalTask && (
               <div data-task-node style={{ paddingBottom: 28 }}>
@@ -520,7 +526,6 @@ export function TaskCommand() {
         </DndContext>
       )}
 
-      {showPlanner && <SmartDayPlanner onClose={() => setShowPlanner(false)} onOpenTask={id => { setShowPlanner(false); setModalTaskId(id) }} />}
     </div>
   )
 }

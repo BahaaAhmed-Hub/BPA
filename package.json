@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "ui:guard": "node scripts/ui-guard.mjs",
+    "ui:render": "node scripts/ui-render.mjs 5199",
     "preview": "vite preview",
     "deploy": "gh-pages -d dist"
   },

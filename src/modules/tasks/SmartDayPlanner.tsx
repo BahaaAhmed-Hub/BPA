@@ -4,7 +4,7 @@ import {
   useDroppable, useDraggable, type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { X, RefreshCw, Check, CalendarPlus } from 'lucide-react'
+import { X, RefreshCw, Check, CalendarPlus, Video, MapPin, Users, Ban, CalendarDays, Clock, Flame } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
 import type { Task } from '@/types'
@@ -20,9 +20,12 @@ import { taskEventTitle, taskEventDescription, isTaskEvent } from '@/lib/taskEve
 import { resolveTaskCalendar } from '@/lib/taskCalendar'
 import { loadAccounts, getPrimaryToken, type ConnectedAccount } from '@/lib/multiAccount'
 import { getGoogleToken } from '@/lib/tokenManager'
-import { ICON } from '@/lib/type'
+import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
+import { useInkOnKeeping } from '@/lib/ink'
 import { notify } from '@/lib/undo'
+import { QUADRANTS, QUADRANT_ORDER } from '@/lib/quadrants'
+import { askConfirm } from '@/lib/confirm'
 
 const MINE_KEY = 'planner-only-my-calendars'
 
@@ -31,7 +34,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
 const PRIORITY_ORDER = { do: 0, schedule: 1, delegate: 2, eliminate: 3 }
 const PRIORITY_LABEL: Record<string, string> = { do: 'P0', schedule: 'P1', delegate: 'P2', eliminate: 'P3' }
-const PRIORITY_COLOR: Record<string, string> = { do: 'var(--sb-negative)', schedule: 'var(--sb-warning)', delegate: 'var(--sb-info)', eliminate: 'var(--sb-ink-4)' }
+const PRIORITY_COLOR: Record<string, string> = Object.fromEntries(QUADRANT_ORDER.map(q => [q, QUADRANTS[q].color]))
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -87,6 +90,7 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
   gcalDone?: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
+  const keeping = useInkOnKeeping()
   const priority = task.quadrant ? PRIORITY_LABEL[task.quadrant] : null
   const color    = task.quadrant ? PRIORITY_COLOR[task.quadrant] : 'var(--sb-ink-4)'
   const dot      = task.urgent ? 'var(--sb-warning)' : (task.quadrant === 'do' ? 'var(--sb-negative)' : 'var(--sb-ink-4)')
@@ -106,7 +110,7 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
       }}
       {...attributes} {...listeners}
     >
-      <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', marginTop: 1, flexShrink: 0 }}>⠿</span>
+      <span style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', marginTop: 1, flexShrink: 0 }}>⠿</span>
       <div style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: dot, marginTop: 4, flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -114,27 +118,27 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
         </div>
         <div style={{ display: 'flex', gap: 5, marginTop: 4, flexWrap: 'wrap' }}>
           {priority && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: alpha(color, 8.2), color }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: alpha(color, 8.2), color: keeping(color, alpha(color, 8.2), 4.5) }}>
               {priority}
             </span>
           )}
           {task.duration && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-info-tint)', color: 'var(--sb-ink-3)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-info-tint)', color: 'var(--sb-ink-3)' }}>
               {task.duration}m
             </span>
           )}
           {scheduled && !creating && !gcalDone && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent-tint)', color: 'var(--sb-warning)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent-tint)', color: 'var(--sb-warning)' }}>
               Scheduled
             </span>
           )}
           {creating && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-info-tint)', color: 'var(--sb-info)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-info-tint)', color: 'var(--sb-info)' }}>
               Adding…
             </span>
           )}
           {gcalDone && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-positive-tint)', color: 'var(--sb-positive)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-positive-tint)', color: 'var(--sb-positive)' }}>
               ✓ In Calendar
             </span>
           )}
@@ -179,11 +183,11 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
         <div style={{ width: 4, minHeight: 24, borderRadius: 'var(--sb-r-chip)', background: color, flexShrink: 0, marginTop: 2 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{event.summary ?? '(No title)'}</div>
-          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', marginTop: 3 }}>
+          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 3 }}>
             {isAllDay ? fmtDate(startISO) : `${fmt(startISO)} – ${fmt(endISO)}`}
           </div>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2 }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2 }}>
           <X size={ICON.md} />
         </button>
       </div>
@@ -193,19 +197,19 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px',
             background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)',
             borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-info)', textDecoration: 'none',
-          }}>🎥 Join meeting</a>
+          }}><Video size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />Join meeting</a>
         )}
         {event.location && (
-          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>📍 {event.location}</div>
+          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{event.location}</div>
         )}
         {attendees.length > 0 && (
-          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
-            👥 {attendees.slice(0, 4).map(a => a.displayName ?? a.email).join(', ')}
-            {attendees.length > 4 && <span style={{ color: 'var(--sb-ink-4)' }}> +{attendees.length - 4} more</span>}
+          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Users size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{attendees.slice(0, 4).map(a => a.displayName ?? a.email).join(', ')}
+            {attendees.length > 4 && <span style={{ color: 'var(--sb-ink-3)' }}> +{attendees.length - 4} more</span>}
           </div>
         )}
         {notes && (
-          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.5, borderTop: 'var(--sb-border-width) solid var(--sb-border)', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5, borderTop: 'var(--sb-border-width) solid var(--sb-border)', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
             {notes.slice(0, 300)}{notes.length > 300 ? '…' : ''}
           </div>
         )}
@@ -227,6 +231,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
   /** Only for an event this planner made that no task claims any more. */
   onRemoveEvent?: (event: GCalEvent) => void
 }) {
+  const keeping = useInkOnKeeping()
   const { setNodeRef, isOver } = useDroppable({ id: `slot-${hour}`, disabled: isPast })
   const blocked = hour < 6 || hour >= 22
   const hasBusyStart = busyEventsAtStart && busyEventsAtStart.length > 0
@@ -246,7 +251,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
       opacity: isPast ? 0.5 : 1,
     }}>
       <div style={{ width: 56, flexShrink: 0, display: 'flex', alignItems: 'flex-start', paddingTop: 6, paddingRight: 10, justifyContent: 'flex-end' }}>
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: isPast ? 'var(--sb-ink-4)' : 'var(--sb-ink-4)', fontWeight: 500 }}>{hourLabel(hour)}</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: isPast ? 'var(--sb-ink-3)' : 'var(--sb-ink-3)', fontWeight: 500 }}>{hourLabel(hour)}</span>
       </div>
       <div style={{ flex: 1, position: 'relative', borderLeft: 'var(--sb-border-width) solid var(--sb-info-tint)' }}>
         {isPast && !block && (
@@ -254,7 +259,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
         )}
         {blocked && !block && !hasBusyStart && !isPast && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 'var(--sb-t-h3)', opacity: 0.25 }}>🚫</span>
+            <Ban size={ICON.md} strokeWidth={STROKE.rest} style={{ opacity: 0.25 }} aria-hidden />
           </div>
         )}
         {/* Continued busy hours: just a thin left border tint, no label */}
@@ -266,7 +271,9 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
           }} />
         )}
         {/* Calendar busy block — only render at the start hour, spans full duration */}
-        {hasBusyStart && !block && busyEventsAtStart!.map(({ event: evt, durationHours, color, leftOver }) => (
+        {hasBusyStart && !block && busyEventsAtStart!.map(({ event: evt, durationHours, color, leftOver }) => {
+          const ink = keeping(color, alpha(color, 9.4), 4.5)
+          return (
           <div key={evt.id ?? evt.summary}
             onClick={() => onEventClick?.(evt, color)}
             style={{
@@ -280,7 +287,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
               cursor: 'pointer', overflow: 'hidden',
             }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
-              <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: ink, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {evt.summary ?? 'Busy'}
               </span>
               {/* **Says what it is before offering to remove it.** A block
@@ -290,7 +297,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
                 <>
                   <span style={{
                     flexShrink: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em',
-                    textTransform: 'uppercase', color,
+                    textTransform: 'uppercase', color: ink,
                   }}>left over</span>
                   <button
                     onClick={e => { e.stopPropagation(); onRemoveEvent(evt) }}
@@ -298,7 +305,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
                     aria-label={`Remove "${evt.summary ?? 'this event'}" from your calendar`}
                     style={{
                       flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
-                      color, padding: 0, display: 'flex', opacity: 0.8,
+                      color: ink, padding: 0, display: 'flex',
                     }}>
                     <X size={ICON.sm} />
                   </button>
@@ -306,10 +313,11 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
               )}
             </div>
             {evt.location && (
-              <span style={{ fontSize: 'var(--sb-t-micro)', color, opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {evt.location}</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{evt.location}</span>
             )}
           </div>
-        ))}
+          )
+        })}
         {/* Scheduled task block */}
         {block && (
           <div
@@ -333,7 +341,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
                 {taskTitle}
               </div>
               {block.gcalEventId && (
-                <div style={{ fontSize: 'var(--sb-t-micro)', color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>✓ Calendar</div>
+                <div style={{ fontSize: 'var(--sb-t-meta)', color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>✓ Calendar</div>
               )}
             </div>
             {onRemove && (
@@ -341,7 +349,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
                 onClick={e => { e.stopPropagation(); onRemove() }}
                 title={`Take "${taskTitle ?? 'this task'}" off the plan and off your calendar`}
                 aria-label={`Take "${taskTitle ?? 'this task'}" off the plan`}
-                style={{ background: 'color-mix(in srgb, var(--sb-ink-on-fill) 20%, transparent)', border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-on-fill)', padding: '1px 4px', fontSize: 'var(--sb-t-micro)', flexShrink: 0 }}
+                style={{ background: 'color-mix(in srgb, var(--sb-ink-on-fill) 20%, transparent)', border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-on-fill)', padding: '1px 4px', fontSize: 'var(--sb-t-meta)', flexShrink: 0 }}
               >
                 ×
               </button>
@@ -424,7 +432,7 @@ function AccountPickerOverlay({
                 <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acct.email}</div>
               </div>
               {acct.isPrimary && (
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, background: 'var(--sb-positive-tint)', color: 'var(--sb-positive)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>Primary</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, background: 'var(--sb-positive-tint)', color: 'var(--sb-positive)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>Primary</span>
               )}
             </button>
           ))}
@@ -452,7 +460,7 @@ function AccountPickerOverlay({
             disabled={!selectedAcct} style={{
               flex: 2, padding: '9px', borderRadius: 'var(--sb-r-chip)',
               background: selectedAcct ? 'var(--sb-warning)' : 'var(--sb-hairline)', border: 'none',
-              color: selectedAcct ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 700,
+              color: selectedAcct ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 700, // ui-guard: ink-ok
               cursor: selectedAcct ? 'pointer' : 'default',
             }}>
             Add to Calendar
@@ -466,11 +474,14 @@ function AccountPickerOverlay({
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface SmartDayPlannerProps {
+  /** Leave the planner: closes the modal, or — inline — goes back to the view you came from. */
   onClose: () => void
   onOpenTask?: (taskId: string) => void
+  /** Draw as a view in the Tasks page rather than a modal over it (no backdrop, no ✕/Cancel, no Escape). */
+  inline?: boolean
 }
 
-export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
+export function SmartDayPlanner({ onClose, onOpenTask, inline = false }: SmartDayPlannerProps) {
   const { tasks: allTasks, updateTask } = useTaskStore()
   const signedInEmail = useAuthStore(s => s.user?.email) ?? undefined
   const [blocks, setBlocks] = useState<ScheduledBlock[]>([])
@@ -492,10 +503,11 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   // to open it nobody found this; now that it has one, the way out is the first
   // thing a keyboard reaches for.
   useEffect(() => {
+    if (inline) return    // a view has nothing to dismiss: the switcher is the way out
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
-  }, [onClose])
+  }, [onClose, inline])
   const [accountPicker, setAccountPicker] = useState<{ task: Task; block: ScheduledBlock } | null>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
 
@@ -889,7 +901,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
    */
   async function removeLeftoverEvent(evt: GCalEvent) {
     const name = evt.summary ?? 'this event'
-    if (!window.confirm(`Remove "${name}" from your calendar?\n\nIt was made by the planner and no task uses it any more. This cannot be undone.`)) return
+    if (!await askConfirm({ title: `Remove "${name}" from your calendar?`, body: 'It was made by the planner and no task uses it any more. This cannot be undone.', confirmLabel: 'Remove it' })) return
     const calendarId = (evt as GCalEvent & { calendarId?: string }).calendarId ?? 'primary'
     const res = await deleteCalendarEvent(calendarId, evt.id)
     if (res.success) {
@@ -962,11 +974,13 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
         />
       )}
 
-      {/* Backdrop */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      {/* Backdrop — only when it is a modal; as a view it is part of the page */}
+      <div data-planner-view={inline ? '' : undefined} style={inline
+        ? { padding: '4px 28px 28px' }
+        : { position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         {/* Modal */}
         <div style={{
-          background: 'var(--sb-info-tint)', borderRadius: 'var(--sb-r-card)', width: '100%', maxWidth: 1000, maxHeight: '90vh',
+          background: 'var(--sb-info-tint)', borderRadius: 'var(--sb-r-card)', width: '100%', maxWidth: inline ? 'none' : 1000, maxHeight: inline ? 'calc(100vh - 150px)' : '90vh',
           display: 'flex', flexDirection: 'column',
           boxShadow: 'var(--sb-shadow-frame)',
           animation: 'sdp-in 0.3s cubic-bezier(0.16,1,0.3,1)', overflow: 'hidden',
@@ -975,21 +989,23 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
           <div style={{ padding: '18px 24px', background: 'var(--sb-overlay)', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <span style={{ fontSize: 'var(--sb-t-h2)' }}>✦</span>
             <span style={{ fontSize: 'var(--sb-t-h2)', fontWeight: 800, color: 'var(--sb-ink-1)', flex: 1 }}>Smart Day Planner</span>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex', borderRadius: 'var(--sb-r-chip)' }}>
-              <X size={ICON.lg} />
-            </button>
+            {!inline && (
+              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex', borderRadius: 'var(--sb-r-chip)' }}>
+                <X size={ICON.lg} />
+              </button>
+            )}
           </div>
 
           {/* Sub-header */}
           <div style={{ padding: '10px 24px', background: 'var(--sb-card)', borderBottom: 'var(--sb-border-width) solid var(--sb-info-tint)', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)' }}>📅 {dateLabel}</span>
-            <span style={{ fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)' }}>🕐 {timeLabel}</span>
+            <span style={{ fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{dateLabel}</span>
+            <span style={{ fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{timeLabel}</span>
             <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, background: 'var(--sb-info-tint)', color: 'var(--sb-ink-2)', borderRadius: 'var(--sb-r-card)', padding: '3px 10px' }}>
               {unscheduledCount} unscheduled
             </span>
             {/* The count means nothing without the set it counted: the same
                 number is a different fact under each side of the toggle. */}
-            <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, background: 'var(--sb-info-tint)', color: 'var(--sb-info)', borderRadius: 'var(--sb-r-card)', padding: '3px 10px' }}>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, background: 'var(--sb-info-tint)', color: 'var(--sb-ink-2)', borderRadius: 'var(--sb-r-card)', padding: '3px 10px' }}>
               {todayEvents.length} event{todayEvents.length !== 1 ? 's' : ''} ({onlyMine ? 'my calendars' : 'all calendars'})
             </span>
             <div style={{ flex: 1 }} />
@@ -1066,10 +1082,10 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                       display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none',
                       cursor: 'pointer', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', fontWeight: 500,
                     }}>
-                      {sortBy === 'priority' ? '🔥 Priority' : '🕐 Newest'} ∨
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{sortBy === 'priority' ? <><Flame size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />Priority</> : <><Clock size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />Newest</>} ∨</span>
                     </button>
                   </div>
-                  <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Drag to schedule · Creates GCal event automatically</p>
+                  <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Drag to schedule · Creates GCal event automatically</p>
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
                   {sortedTasks.map(task => (
@@ -1081,7 +1097,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                     />
                   ))}
                   {sortedTasks.length === 0 && (
-                    <div style={{ padding: '24px 12px', textAlign: 'center', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)' }}>
+                    <div style={{ padding: '24px 12px', textAlign: 'center', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)' }}>
                       No open tasks
                     </div>
                   )}
@@ -1110,13 +1126,15 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
               )}
             </span>
             <div style={{ flex: 1 }} />
-            <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 'var(--sb-r-card)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-hairline)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer' }}>
+            {!inline && (
+              <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 'var(--sb-r-card)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-hairline)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer' }}>
               Cancel
             </button>
+            )}
             <button onClick={applyPlan} disabled={!blocks.length} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 'var(--sb-r-card)',
-              background: blocks.length ? 'var(--sb-warning)' : 'var(--sb-hairline)', border: 'none',
-              color: blocks.length ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 700,
+              background: blocks.length ? 'var(--sb-warning)' : 'var(--sb-field)', border: 'none',
+              color: blocks.length ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', fontWeight: 700,
               cursor: blocks.length ? 'pointer' : 'default', transition: 'all 0.15s',
             }}>
               <Check size={ICON.sm} /> Apply Plan

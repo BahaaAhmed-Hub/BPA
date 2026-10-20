@@ -3,14 +3,13 @@ import { CALENDAR_COLORS } from '@/lib/palettes'
 import {
   ChevronLeft, ChevronRight, RefreshCw,
   AlertTriangle, TrendingUp, Lightbulb, Trophy,
-  Mic, Send, ExternalLink, Copy, X as XIcon,
-} from 'lucide-react'
+  Mic, Send, ExternalLink, Copy, X as XIcon, MapPin, CalendarDays } from 'lucide-react'
 import { getGoogleToken } from '@/lib/tokenManager'
 import { fetchCalendarEventsWithToken } from '@/lib/googleCalendar'
 import type { GCalEvent } from '@/lib/googleCalendar'
 import { useAuthStore } from '@/store/authStore'
 import { call } from '@/lib/professor'
-import { ICON } from '@/lib/type'
+import { ICON, STROKE } from '@/lib/type'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -121,7 +120,7 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
           )}
           {menu.event.location && (
             <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2, paddingLeft: 18, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              📍 {menu.event.location}
+              <MapPin size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden style={{ verticalAlign: '-2px', marginRight: 4 }} />{menu.event.location}
             </div>
           )}
         </div>
@@ -205,7 +204,7 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
         <div style={{ width: 52, flexShrink: 0 }}>
           {DAY_HOURS.map(h => (
             <div key={h} style={{ height: HOUR_PX, display: 'flex', alignItems: 'flex-start', paddingTop: 4, paddingRight: 8, justifyContent: 'flex-end' }}>
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>
                 {h === 12 ? '12PM' : h < 12 ? `${h}AM` : `${h - 12}PM`}
               </span>
             </div>
@@ -244,7 +243,7 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
                       background: color, borderRadius: 'var(--sb-r-chip)',
                       padding: '2px 5px', overflow: 'hidden', cursor: 'context-menu',
                     }}>
-                    <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-on-fill)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-on-fill)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                       {evt.summary ?? 'Event'}
                     </div>
                   </div>
@@ -413,7 +412,7 @@ export function PlanningAssistant() {
             {/* Plan Your Week */}
             <div style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: 'var(--sb-t-label)' }}>📅</span>
+                <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />
                 <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Plan Your Week</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

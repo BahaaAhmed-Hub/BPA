@@ -8,6 +8,7 @@ import { MoneyInput } from '../components/MoneyInput'
 import { schemeFor, setScheme, dormantWhy, returnRate, type RewardScheme } from '../cardRewards'
 import { lookUpRewards } from '../rewardLookup'
 import { inputStyle } from '@/lib/fields'
+import { DEFAULT_ACCOUNT_EMOJI } from '@/lib/glyphs'
 
 const RED   = NEGATIVE
 const GREEN = POSITIVE
@@ -30,7 +31,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
   const [balance,     setBalance]     = useState(account?.balance     ?? 0)
   const [creditLimit, setCreditLimit] = useState(account?.creditLimit ?? 0)
   const [last4,       setLast4]       = useState(account?.last4       ?? '')
-  const [emoji,       setEmoji]       = useState(account?.emoji       ?? '🏦')
+  const [emoji,       setEmoji]       = useState(account?.emoji       ?? DEFAULT_ACCOUNT_EMOJI)
   const [color,       setColor]       = useState(account?.color       ?? 'var(--sb-ink-4)')
 
   // ── What the card earns ──────────────────────────────────────────────────
@@ -68,7 +69,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
       currency,
       balance:     Number(balance),
       last4:       last4 || undefined,
-      emoji:       emoji || '🏦',
+      emoji:       emoji || DEFAULT_ACCOUNT_EMOJI,
       color,
       sortOrder:   account?.sortOrder ?? 0,
     }
@@ -209,7 +210,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               value={balance}
               onChange={setBalance}
             />
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 5, lineHeight: 1.45 }}>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 5, lineHeight: 1.45 }}>
               Where this account stood <b style={{ fontWeight: 600 }}>before the year you are looking at</b>.
               Entries move it from here — a card goes below zero as it is spent on, and
               back towards zero as it is paid off. Nothing is read from earlier years,
@@ -229,7 +230,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
                 value={creditLimit}
                 onChange={setCreditLimit}
               />
-              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 5, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 5, lineHeight: 1.45 }}>
                 The card's ceiling. Leave it at nothing and the card simply shows what is
                 owed, with no bar and no figure left.
               </div>
@@ -364,7 +365,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
                         display: 'inline-flex', alignItems: 'center', gap: 4,
                         padding: '1px 7px', borderRadius: 'var(--sb-r-chip)',
                         background: 'var(--sb-negative-tint)', color: 'var(--sb-ink-2)',
-                        fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                        fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                       }}>Cash earns nothing</span>
                   </>
                 )}
