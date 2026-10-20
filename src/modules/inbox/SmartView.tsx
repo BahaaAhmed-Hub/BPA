@@ -9,6 +9,8 @@ import type { SmartThread, PassResult } from '@/lib/mailSmartSync'
 import type { SmartSection } from '@/lib/mailSmart'
 import { canNeedAction, type MailKind } from '@/lib/mailKinds'
 import { tagOfMail, companyOfMail } from '@/lib/mailCompany'
+import { useProjectStore } from '@/store/projectStore'
+import { threadRef } from '@/modules/projects/threadLinks'
 import { useFocusClass } from '@/lib/companyFocus'
 import { isBusinessAccount } from '@/lib/businessAccounts'
 import { useRailOverflow } from '@/lib/railOverflow'
@@ -94,9 +96,9 @@ function when(ms: number): string {
 /** The reply state as a word and a mark. Colour is never the only signal. */
 function ReplyChip({ t }: { t: SmartThread }) {
   const [mark, word, ink] =
-    t.replyState === 'replied' ? ['✅', 'Replied', 'var(--sb-positive)'] :
+    t.replyState === 'replied' ? ['✅', 'Replied', 'var(--sb-positive-deep)'] :
     t.replyState === 'pending' ? ['⏳', 'Pending', 'var(--sb-warning)'] :
-    ['🔴', 'No reply', 'var(--sb-negative)']
+    ['🔴', 'No reply', 'var(--sb-negative-deep)']
   return (
     <span title={
       t.replyState === 'replied' ? 'You wrote the most recent message in this thread.'
@@ -554,6 +556,14 @@ function Row({
     const label = accountLabel(t.accountEmail)
     return label === company?.label ? '' : label
   }, [manyAccounts, t.accountEmail, company?.label])
+  // The project it is filed under, if any — drawn on the row so a thread you have
+  // filed is visibly filed, without opening it.
+  const projectLinks = useProjectStore(s => s.links)
+  const allProjects = useProjectStore(s => s.projects)
+  const project = useMemo(() => {
+    const l = projectLinks.find(x => x.kind === 'thread' && x.refId === threadRef(t.accountEmail, t.threadId))
+    return l ? allProjects.find(p => p.id === l.projectId) : undefined
+  }, [projectLinks, allProjects, t.accountEmail, t.threadId])
   return (
     <div className={focusClass(lensCompany)} style={{
       // `flex-start`, not the default stretch: a stretched checkbox centres its
@@ -595,6 +605,17 @@ function Row({
               letterSpacing: '-0.015em', color: 'var(--sb-ink-1)', textAlign: 'left',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{t.subject}</button>
+          {project && (
+            <span data-thread-project-chip={project.id} title={`In the project ${project.name}`} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
+              fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 8px',
+              borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-2)', background: 'var(--sb-field)',
+              maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              <span aria-hidden style={{ width: 6, height: 6, transform: 'rotate(45deg)', background: project.color ?? 'var(--sb-ink-4)', flexShrink: 0 }} />
+              {project.name}
+            </span>
+          )}
           {company && (
             <span title={`${company.label}${boxLabel ? ` · ${boxLabel}` : ''}`} style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,

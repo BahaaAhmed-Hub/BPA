@@ -6,7 +6,7 @@ import {
   fromLink, fromMilestone, fromProject, loadProjectData, orphanProjectTasks, pushProjectData,
 } from '@/modules/projects/projectDb'
 import type {
-  EventMeta, Project, ProjectLink, ProjectLinkKind, ProjectMilestone,
+  LinkMeta, Project, ProjectLink, ProjectLinkKind, ProjectMilestone,
 } from '@/modules/projects/types'
 
 // ─── Which rows this device has changed ──────────────────────────────────────
@@ -161,13 +161,13 @@ interface ProjectState {
   deleteMilestone: (id: string) => void
 
   /** Linking the same thing twice is one link. */
-  addLink: (projectId: string, kind: ProjectLinkKind, refId: string, meta?: EventMeta) => string
+  addLink: (projectId: string, kind: ProjectLinkKind, refId: string, meta?: LinkMeta) => string
   removeLink: (id: string) => void
   /** Every link to one thing, whichever project holds it — the thing was deleted.
    *  Returns what it removed, so a caller that can take the delete back can put them back. */
   removeLinksByRef: (kind: ProjectLinkKind, refId: string) => ProjectLink[]
-  /** Refresh what a link remembers about its event. */
-  setLinkMeta: (id: string, meta: EventMeta) => void
+  /** Refresh what a link remembers about what it points at. */
+  setLinkMeta: (id: string, meta: LinkMeta) => void
 
   loadFromDB: () => Promise<void>
   clearAll: () => void

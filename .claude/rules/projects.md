@@ -224,6 +224,48 @@ and delete handling in `CalendarIntelligence`, `scripts/project-events.mjs [pane
   not re-linking. Ink: 0 failing pairs over eleven Projects/calendar screens in four themes; an
   unreadable colour fails at 1.51 on both the new tab and the panel row.
 
+## Chunk 6 — mail threads belong to a project, and Mail offers one
+`modules/projects/{ThreadProjectBar,ProjectMail,threadLinks}.ts(x)`, the Mail tab in `ProjectPage`, a
+Project bar in `SmartReader`, a chip on `SmartView`'s row, a snapshot refresh and a focus door in
+`InboxModule`, `scripts/project-mail.mjs [reader|chip|suggest|page|sync]`.
+- **A thread's link is `project_links` kind `thread`, `refId = "mailbox|threadId"`** — a thread id is
+  only unique inside one mailbox, the same key mail's own marks use. Filing writes **nothing to
+  Gmail** (asserted: no non-GET beyond the existing mark-read on open) and works on any mailbox.
+- **The link carries a `ThreadMeta` snapshot** (subject, sender, when, mailbox), refreshed by
+  `InboxModule` whenever the list holds the thread — the same shape as the event snapshot, and the
+  same three rules: equal writes nothing, a thread the list does not hold keeps what it had, and a
+  link with no snapshot yet reads "A conversation" rather than guessing.
+- **One project per thread**: choosing another replaces. The row says it is filed — a small diamond
+  chip beside the company chip — and only that row (a control that drew it on every row failed).
+- **"Looks like Project X" is deterministic, explainable and quiet.** No model: instant, free, and it
+  can say why. Three tiers, and it offers only when **exactly one project wins the best tier**:
+  1 its whole name is in the subject; 2 every distinctive (≥4 letters) word of a name of two or more
+  is in it; 3 the sender is on ≥2 threads already in that project and on none in any other. A tie
+  (Budget / Budget review), an archived or finished project, an already-filed thread and a
+  correspondent who writes about two projects all get **nothing** — a wrong label is worse than none.
+  It only ever **offers**: nothing is filed without pressing Link; **Not this** is remembered per
+  browser (`project-suggest-dismissed`) and survives a reload.
+- **A vacuous control, caught:** the "two projects → no pattern" case opened a thread that was
+  *already filed*, so the early "already has a project" exit answered and the rule under test never
+  ran; the control for it passed. The fixture now has an unfiled fourth thread and asserts it is
+  unfiled before asserting the absence.
+- **Mail has a focus door now** (`focusOn({ module: 'inbox', id: 'mailbox|thread' })`): the project
+  page's open arrow lands on that thread in the reader. Before this nothing could send you to a
+  thread. A control with the door removed fails on "a reader is open", asserted first so the absence
+  claims below it are about something.
+- **Fixed on the way: `ReplyChip` used raw semantic tokens as text.** "No reply" was `--sb-negative`
+  on an opened row's accent tint — 4.05 in Evergreen. Text takes the `-deep` tokens (`Replied` too);
+  nothing had measured an opened row, and the audit's new reader visit is what found it.
+  `--sb-warning` has no `-deep` and is left as it was.
+- **Not done:** a suggestion marker on the *rows* (it is in the reader only — on the list it would
+  be the noise the kinds work removed), thread links on the flat list's unreachable branch, and
+  filing several selected rows at once.
+- **Controls** (each removed, the named assertion fails): name phrase, tie picks first, archived
+  suggested, filed re-suggested, correspondent rule, dismissal, replace, page order, other projects'
+  threads, no refresh, chip on every row, no focus door. Ink: 0 failing pairs over thirteen
+  Projects/calendar/mail screens in four themes; unreadable colour fails at 1.51 on the Mail tab and
+  the suggestion line.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and

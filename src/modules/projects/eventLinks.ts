@@ -21,6 +21,8 @@ export function eventMeta(ev: EventLike): EventMeta {
   }
 }
 
-export const sameMeta = (a: EventMeta | undefined, b: EventMeta): boolean =>
-  !!a && a.title === b.title && a.start === b.start && (a.end ?? '') === (b.end ?? '')
-  && a.allDay === b.allDay && (a.calendarId ?? '') === (b.calendarId ?? '')
+export const sameMeta = (a: unknown, b: EventMeta): boolean => {
+  const m = a as Partial<EventMeta> | undefined
+  return !!m && m.title === b.title && m.start === b.start && (m.end ?? '') === (b.end ?? '')
+    && m.allDay === b.allDay && (m.calendarId ?? '') === (b.calendarId ?? '')
+}

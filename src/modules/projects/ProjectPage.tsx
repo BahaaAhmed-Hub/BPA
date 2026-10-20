@@ -16,9 +16,10 @@ import { inputStyle } from '@/modules/library/fieldStyle'
 import { ProjectDialog } from './ProjectDialog'
 import { ProjectTimeline, byDate } from './ProjectTimeline'
 import { ProjectCalendar, projectCalendarItems } from './ProjectCalendar'
+import { ProjectMail } from './ProjectMail'
 import type { Project } from './types'
 
-type Tab = 'overview' | 'tasks' | 'timeline' | 'calendar'
+type Tab = 'overview' | 'tasks' | 'timeline' | 'calendar' | 'mail'
 
 const STATUS_LABEL: Record<Project['status'], string> = { idea: 'Idea', active: 'Active', paused: 'Paused', done: 'Done' }
 const CARD: React.CSSProperties = {
@@ -54,6 +55,7 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
     [project.companyId])
   const stats = projectStats(project, allTasks, milestones, today)
   const eventCount = projectCalendarItems(project, links, allTasks.filter(t => t.projectId === project.id)).length
+  const threadCount = links.filter(l => l.projectId === project.id && l.kind === 'thread').length
   const phases = milestones.filter(m => m.projectId === project.id).sort(byDate)
   const mine = allTasks.filter(t => t.projectId === project.id)
   const open = mine.filter(t => !t.completed && t.status !== 'done' && t.status !== 'cancelled')
@@ -154,6 +156,7 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
             { value: 'tasks' as const, label: `Tasks${stats.total ? ` · ${stats.total}` : ''}` },
             { value: 'timeline' as const, label: 'Timeline' },
             { value: 'calendar' as const, label: `Calendar${eventCount ? ` · ${eventCount}` : ''}` },
+            { value: 'mail' as const, label: `Mail${threadCount ? ` · ${threadCount}` : ''}` },
           ]} />
           <Button variant="secondary" onClick={() => setEditing(true)}><Pencil size={ICON.sm} /> Edit</Button>
         </span>
@@ -248,6 +251,7 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
         </div>
       )}
 
+      {tab === 'mail' && <ProjectMail project={project} />}
       {tab === 'calendar' && <ProjectCalendar project={project} tasks={mine} today={today} />}
       {tab === 'timeline' && <ProjectTimeline project={project} tasks={mine} today={today} />}
 

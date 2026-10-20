@@ -29,6 +29,9 @@ import {
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { SwipeRow } from './SwipeRow'
 import { SmartReader, type ReaderTarget } from './SmartReader'
+import { useProjectStore } from '@/store/projectStore'
+import { useUIStore } from '@/store/uiStore'
+import { sameThreadMeta, threadMeta, threadRef } from '@/modules/projects/threadLinks'
 import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -608,6 +611,40 @@ export function InboxModule() {
   const readingThread = useMemo(
     () => (reading ? smart?.threads.find(t => t.threadId === reading.threadId) ?? null : null),
     [reading, smart])
+
+  // A project's link to a thread remembers what the thread is (subject, sender,
+  // when), since the project page cannot read Gmail. Mail is the one place that
+  // has the thread loaded, so it refreshes the snapshot. Equal snapshots write
+  // nothing, and a thread this view does not hold keeps what it had.
+  const projectLinks = useProjectStore(s => s.links)
+  useEffect(() => {
+    if (!smart) return
+    for (const l of projectLinks) {
+      if (l.kind !== 'thread') continue
+      const t = smart.threads.find(x => threadRef(x.accountEmail, x.threadId) === l.refId)
+      if (!t) continue
+      const meta = threadMeta(t)
+      if (!sameThreadMeta(l.meta, meta)) useProjectStore.getState().setLinkMeta(l.id, meta)
+    }
+  }, [smart, projectLinks])
+
+  // Something elsewhere sent you to a thread — a project's Mail tab. The id is
+  // `mailbox|thread`; the subject comes from the list, or from what the link remembers.
+  const focus = useUIStore(s => s.focus)
+  const clearFocus = useUIStore(s => s.clearFocus)
+  useEffect(() => {
+    if (focus?.module !== 'inbox') return
+    const bar = focus.id.indexOf('|')
+    if (bar < 0) { clearFocus(); return }
+    const email = focus.id.slice(0, bar), threadId = focus.id.slice(bar + 1)
+    const account = accounts.find(a => a.email === email) ?? accounts[0]
+    if (account) {
+      const held = smart?.threads.find(t => t.threadId === threadId)
+      const meta = useProjectStore.getState().links.find(l => l.kind === 'thread' && l.refId === focus.id)?.meta as { subject?: string } | undefined
+      setReading({ threadId, account, subject: held?.subject ?? meta?.subject ?? '' })
+    }
+    clearFocus()
+  }, [focus, accounts, smart, clearFocus])
 
   function openSmartThread(t: SmartThread) {
     const account = accounts.find(a => a.email === t.accountEmail) ?? accounts[0]
@@ -2360,6 +2397,7 @@ export function InboxModule() {
             {reading && !compose && (
               <SmartReader
                 target={reading}
+                thread={readingThread ?? { accountEmail: reading.account.email, threadId: reading.threadId, subject: reading.subject, fromName: '', fromEmail: '', lastAt: 0 }}
                 width={readerWidth}
                 className="mail-smart-reader"
                 actions={{

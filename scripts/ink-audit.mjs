@@ -114,6 +114,8 @@ const PROJECTS = (() => {
       P(id(2), 'Kitchen renovation', { kind: 'personal', status: 'paused', color: '#1D8A6A', target_date: day(40) }),
       P(id(3), 'Learn calligraphy', { kind: 'personal', status: 'idea', color: '#B03A73' }),
       P(id(4), 'Annual report', { status: 'done', color: '#C2622B', target_date: day(-30) }),
+      // Named for the audit's own mail ("Message number 1"…), so Mail offers it.
+      P(id(5), 'Message number', { status: 'idea', color: '#7B84E8' }),
     ],
     project_milestones: [
       { id: 'bbbbbbbb-0000-4000-8000-000000000101', project_id: id(1), user_id: session.user.id, title: 'Beta goes live', due_date: day(9), done: false, sort_order: 1 },
@@ -133,6 +135,11 @@ const PROJECTS = (() => {
     // The audit's own calendar event (e1) linked to the project, and two more that
     // are only known by their snapshot — upcoming and earlier.
     project_links: [
+      // Two of the audit's own threads: one filed, drawn on its row and listed under Mail.
+      { id: 'cccccccc-0000-4000-8000-000000000201', project_id: id(1), user_id: session.user.id, kind: 'thread', ref_id: `${ME}|m3`,
+        meta: { subject: 'Message number 3', fromName: 'Person 3', fromEmail: 'p3@teradix.com', at: Date.now() - 3600000, accountEmail: ME }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000202', project_id: id(1), user_id: session.user.id, kind: 'thread', ref_id: `${ME}|gone`,
+        meta: null, created_at: now },
       { id: 'cccccccc-0000-4000-8000-000000000101', project_id: id(1), user_id: session.user.id, kind: 'event', ref_id: 'e1',
         meta: { title: 'OWI Actions Review', start: new Date(new Date().setHours(13, 0, 0, 0)).toISOString(), end: new Date(new Date().setHours(14, 0, 0, 0)).toISOString(), allDay: false, calendarId: 'primary' }, created_at: now },
       { id: 'cccccccc-0000-4000-8000-000000000102', project_id: id(1), user_id: session.user.id, kind: 'event', ref_id: 'evt-future',
@@ -687,6 +694,10 @@ for (const theme of THEMES) {
       await page.getByRole('tab', { name: /^Calendar/ }).click()
       await page.locator('[data-project-calendar]').waitFor({ state: 'visible', timeout: 5000 })
     })
+    await visit('Projects · a project, mail', async () => {
+      await page.getByRole('tab', { name: /^Mail/ }).click()
+      await page.locator('[data-project-mail]').waitFor({ state: 'visible', timeout: 5000 })
+    })
     await visit('Projects · back to the grid', async () => {
       await page.getByRole('button', { name: 'Back to all projects' }).click()
       await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 5000 })
@@ -713,6 +724,12 @@ for (const theme of THEMES) {
       await page.locator('[data-event-project]').first().waitFor({ state: 'visible', timeout: 8000 })
     })
     await page.keyboard.press('Escape')
+    // The mail side: a filed row's chip, and the reader with its Project row and a suggestion.
+    await visit('Mail · reader, project row and suggestion', async () => {
+      await page.locator('[data-side-rail] button[aria-label="Mail"]').click()
+      await page.getByRole('button', { name: 'Message number 1', exact: true }).first().click()
+      await page.locator('[data-project-suggestion]').waitFor({ state: 'visible', timeout: 10000 })
+    })
     // The same milestones on the calendar: a strip in the week, chips in the month.
     await visit('Calendar · milestone markers, week', async () => {
       await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()

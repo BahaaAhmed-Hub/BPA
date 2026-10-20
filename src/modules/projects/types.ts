@@ -42,12 +42,25 @@ export interface EventMeta {
   calendarId?: string
 }
 
+/** What a link to a mail thread remembers: the project page cannot read Gmail,
+ *  so the mail view refreshes this whenever it has the thread loaded. */
+export interface ThreadMeta {
+  subject: string
+  fromName: string
+  fromEmail: string
+  /** When its newest message arrived, ms since epoch. */
+  at: number
+  accountEmail: string
+}
+
+export type LinkMeta = EventMeta | ThreadMeta
+
 export interface ProjectLink {
   id: string
   projectId: string
   kind: ProjectLinkKind
   /** The other module's own id — a string, because an event id is not a uuid. */
   refId: string
-  /** Only an event link carries one. */
-  meta?: EventMeta
+  /** An event link carries an `EventMeta`, a thread link a `ThreadMeta`. */
+  meta?: LinkMeta
 }

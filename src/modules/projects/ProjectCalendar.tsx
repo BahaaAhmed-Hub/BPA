@@ -4,7 +4,7 @@ import type { Task } from '@/types'
 import { ICON, STROKE } from '@/lib/type'
 import { useProjectStore } from '@/store/projectStore'
 import { useUIStore } from '@/store/uiStore'
-import type { Project } from './types'
+import type { EventMeta, Project } from './types'
 
 const CARD: React.CSSProperties = {
   background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
@@ -53,7 +53,7 @@ export function projectCalendarItems(project: Project, links: ReturnType<typeof 
   }
   for (const l of links) {
     if (l.projectId !== project.id || l.kind !== 'event' || blocked.has(l.refId)) continue
-    const m = l.meta
+    const m = l.meta as EventMeta | undefined
     if (!m) { items.push({ key: `link:${l.id}`, title: 'A calendar event', day: '', at: Number.MAX_SAFE_INTEGER, when: '', via: 'link', refId: l.refId, linkId: l.id }); continue }
     const start = new Date(m.allDay ? `${m.start}T12:00:00` : m.start)
     const end = m.end && !m.allDay ? new Date(m.end) : undefined

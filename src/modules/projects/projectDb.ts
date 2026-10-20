@@ -7,7 +7,7 @@
  */
 import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
-import type { EventMeta, Project, ProjectKind, ProjectLink, ProjectLinkKind, ProjectMilestone, ProjectStatus } from './types'
+import type { LinkMeta, Project, ProjectKind, ProjectLink, ProjectLinkKind, ProjectMilestone, ProjectStatus } from './types'
 
 interface ProjectRow {
   id: string; user_id: string; name: string; kind: string; color: string | null; status: string
@@ -35,7 +35,7 @@ export const toMilestone = (r: MilestoneRow): ProjectMilestone => ({
 })
 export const toLink = (r: LinkRow): ProjectLink => ({
   id: r.id, projectId: r.project_id, kind: r.kind as ProjectLinkKind, refId: r.ref_id,
-  ...(r.meta ? { meta: r.meta as EventMeta } : {}),
+  ...(r.meta ? { meta: r.meta as LinkMeta } : {}),
 })
 
 // `?? null` on every optional: `undefined` is dropped on the way to JSON, so an
