@@ -53,7 +53,21 @@ export interface ThreadMeta {
   accountEmail: string
 }
 
-export type LinkMeta = EventMeta | ThreadMeta
+/** What a link to a finance entry remembers. Finance loads one year at a time,
+ *  so an entry from another year is not in the store; the project page reads
+ *  this instead, and Finance refreshes it whenever the entry is loaded. */
+export interface EntryMeta {
+  payee: string
+  amount: number
+  currency: string
+  /** YYYY-MM-DD — the day it belongs to. */
+  date: string
+  /** YYYY-MM-DD — the day the money moved. Absent means still owed. */
+  paidAt?: string
+  type: string
+}
+
+export type LinkMeta = EventMeta | ThreadMeta | EntryMeta
 
 export interface ProjectLink {
   id: string

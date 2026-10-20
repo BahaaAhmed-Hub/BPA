@@ -134,7 +134,30 @@ const PROJECTS = (() => {
     ],
     // The audit's own calendar event (e1) linked to the project, and two more that
     // are only known by their snapshot — upcoming and earlier.
+    // Habits the personal project serves, with a week of logs: five days ticked, and
+    // a part-day of a measured one.
+    habits: [
+      { id: 'hh000001', user_id: session.user.id, name: 'Write 30 min', emoji: '✍️', color: '#7F77DD', frequency: 'daily', is_active: true, created_at: now, type: 'boolean' },
+      { id: 'hh000002', user_id: session.user.id, name: 'Water', emoji: '💧', color: '#60A5FA', frequency: 'daily', is_active: true, created_at: now, type: 'quantity', goal: 8, unit: 'glasses' },
+    ],
+    habit_logs: [
+      ...[0, 1, 2, 3, 4].map(n => ({ habit_id: 'hh000001', user_id: session.user.id, date: day(-n), completed: true })),
+      { habit_id: 'hh000002', user_id: session.user.id, date: day(0), completed: false, quantity: 5 },
+    ],
     project_links: [
+      // The personal project's money (snapshots: Finance is not served here, so an entry
+      // of this year reads as gone — which draws that state too), habits and books.
+      { id: 'cccccccc-0000-4000-8000-000000000301', project_id: id(2), user_id: session.user.id, kind: 'entry', ref_id: 'tx-a', meta: { payee: 'Tile shop', amount: 1200, currency: 'EGP', date: day(-3), paidAt: day(-3), type: 'expense' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000302', project_id: id(2), user_id: session.user.id, kind: 'entry', ref_id: 'tx-b', meta: { payee: 'Cabinet deposit', amount: 500, currency: 'EGP', date: day(-1), type: 'expense' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000303', project_id: id(2), user_id: session.user.id, kind: 'entry', ref_id: 'tx-c', meta: { payee: 'Refund', amount: 100, currency: 'EGP', date: day(-2), paidAt: day(-2), type: 'income' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000304', project_id: id(2), user_id: session.user.id, kind: 'entry', ref_id: 'tx-d', meta: { payee: 'Dubai fittings', amount: 100, currency: 'AED', date: day(-4), paidAt: day(-4), type: 'expense' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000305', project_id: id(2), user_id: session.user.id, kind: 'entry', ref_id: 'tx-old', meta: { payee: 'Old boiler', amount: 300, currency: 'EGP', date: '2023-03-01', paidAt: '2023-03-01', type: 'expense' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000311', project_id: id(2), user_id: session.user.id, kind: 'habit', ref_id: 'hh000001', meta: null, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000312', project_id: id(2), user_id: session.user.id, kind: 'habit', ref_id: 'hh000002', meta: null, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000313', project_id: id(2), user_id: session.user.id, kind: 'habit', ref_id: 'hh-gone', meta: null, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000321', project_id: id(2), user_id: session.user.id, kind: 'book', ref_id: '00000000-0000-4000-8000-000000000000', meta: null, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000322', project_id: id(2), user_id: session.user.id, kind: 'book', ref_id: '00000000-0000-4000-8000-000000000001', meta: null, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000323', project_id: id(2), user_id: session.user.id, kind: 'book', ref_id: 'b-gone', meta: null, created_at: now },
       // Two of the audit's own threads: one filed, drawn on its row and listed under Mail.
       { id: 'cccccccc-0000-4000-8000-000000000201', project_id: id(1), user_id: session.user.id, kind: 'thread', ref_id: `${ME}|m3`,
         meta: { subject: 'Message number 3', fromName: 'Person 3', fromEmail: 'p3@teradix.com', at: Date.now() - 3600000, accountEmail: ME }, created_at: now },
@@ -702,6 +725,17 @@ for (const theme of THEMES) {
       await page.getByRole('button', { name: 'Back to all projects' }).click()
       await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 5000 })
     })
+    // The personal-life tabs, on the personal project: money, habits, books.
+    const openPersonal = async tab => {
+      await page.locator('[data-project-card]', { hasText: 'Kitchen renovation' }).first().click()
+      await page.locator('[data-project-overview]').waitFor({ state: 'visible', timeout: 5000 })
+      await page.getByRole('tab', { name: tab }).click()
+    }
+    await visit('Projects · money', async () => { await openPersonal(/^Money/); await page.locator('[data-project-money]').waitFor({ state: 'visible', timeout: 6000 }) })
+    await visit('Projects · habits', async () => { await page.getByRole('tab', { name: /^Habits/ }).click(); await page.locator('[data-habit-week]').first().waitFor({ state: 'visible', timeout: 6000 }) })
+    await visit('Projects · books', async () => { await page.getByRole('tab', { name: /^Books/ }).click(); await page.locator('[data-book-progress]').first().waitFor({ state: 'visible', timeout: 6000 }) })
+    await page.getByRole('button', { name: 'Back to all projects' }).click()
+    await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 5000 })
     await visit('Projects · new project', async () => {
       await page.getByRole('button', { name: /New project/ }).click()
       await page.locator('[data-project-dialog]').waitFor({ state: 'visible' })

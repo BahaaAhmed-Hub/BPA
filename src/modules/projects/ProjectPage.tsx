@@ -17,9 +17,14 @@ import { ProjectDialog } from './ProjectDialog'
 import { ProjectTimeline, byDate } from './ProjectTimeline'
 import { ProjectCalendar, projectCalendarItems } from './ProjectCalendar'
 import { ProjectMail } from './ProjectMail'
+import { ProjectMoney } from './ProjectMoney'
+import { ProjectHabits } from './ProjectHabits'
+import { ProjectBooks } from './ProjectBooks'
+import { moduleIsOff } from '@/lib/entitlements'
+import { useLibraryOff } from '@/modules/library/libraryPrefs'
 import type { Project } from './types'
 
-type Tab = 'overview' | 'tasks' | 'timeline' | 'calendar' | 'mail'
+type Tab = 'overview' | 'tasks' | 'timeline' | 'calendar' | 'mail' | 'money' | 'habits' | 'books'
 
 const STATUS_LABEL: Record<Project['status'], string> = { idea: 'Idea', active: 'Active', paused: 'Paused', done: 'Done' }
 const CARD: React.CSSProperties = {
@@ -56,6 +61,15 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
   const stats = projectStats(project, allTasks, milestones, today)
   const eventCount = projectCalendarItems(project, links, allTasks.filter(t => t.projectId === project.id)).length
   const threadCount = links.filter(l => l.projectId === project.id && l.kind === 'thread').length
+  // The personal tabs. A personal project offers them; a work project shows one
+  // only when it already holds something of that kind (a project that changed
+  // kind must not hide what is linked to it). A module that is off offers nothing.
+  const libraryOff = useLibraryOff()
+  const countOf = (k: 'entry' | 'habit' | 'book') => links.filter(l => l.projectId === project.id && l.kind === k).length
+  const personal = project.kind === 'personal'
+  const showMoney = !moduleIsOff('finance') && (personal || countOf('entry') > 0)
+  const showHabits = !moduleIsOff('habits') && (personal || countOf('habit') > 0)
+  const showBooks = !libraryOff && (personal || countOf('book') > 0)
   const phases = milestones.filter(m => m.projectId === project.id).sort(byDate)
   const mine = allTasks.filter(t => t.projectId === project.id)
   const open = mine.filter(t => !t.completed && t.status !== 'done' && t.status !== 'cancelled')
@@ -157,6 +171,9 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
             { value: 'timeline' as const, label: 'Timeline' },
             { value: 'calendar' as const, label: `Calendar${eventCount ? ` · ${eventCount}` : ''}` },
             { value: 'mail' as const, label: `Mail${threadCount ? ` · ${threadCount}` : ''}` },
+            ...(showMoney ? [{ value: 'money' as const, label: `Money${countOf('entry') ? ` · ${countOf('entry')}` : ''}` }] : []),
+            ...(showHabits ? [{ value: 'habits' as const, label: `Habits${countOf('habit') ? ` · ${countOf('habit')}` : ''}` }] : []),
+            ...(showBooks ? [{ value: 'books' as const, label: `Books${countOf('book') ? ` · ${countOf('book')}` : ''}` }] : []),
           ]} />
           <Button variant="secondary" onClick={() => setEditing(true)}><Pencil size={ICON.sm} /> Edit</Button>
         </span>
@@ -252,6 +269,9 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
       )}
 
       {tab === 'mail' && <ProjectMail project={project} />}
+      {tab === 'money' && showMoney && <ProjectMoney project={project} />}
+      {tab === 'habits' && showHabits && <ProjectHabits project={project} />}
+      {tab === 'books' && showBooks && <ProjectBooks project={project} />}
       {tab === 'calendar' && <ProjectCalendar project={project} tasks={mine} today={today} />}
       {tab === 'timeline' && <ProjectTimeline project={project} tasks={mine} today={today} />}
 

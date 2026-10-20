@@ -266,6 +266,50 @@ Project bar in `SmartReader`, a chip on `SmartView`'s row, a snapshot refresh an
   Projects/calendar/mail screens in four themes; unreadable colour fails at 1.51 on the Mail tab and
   the suggestion line.
 
+## Chunk 7 — money, habits and books for a personal project
+`modules/projects/{ProjectMoney,ProjectHabits,ProjectBooks,projectLife,useEntrySnapshots}.ts(x)`, three tabs in
+`ProjectPage`, `scripts/project-life.mjs [money|locked|money-off|habits|books|library-off|work]`.
+Linking is done **from the project page** (a picker per tab), not from Finance / Habits / the Library:
+all three are local stores the page can list from, unlike events and threads. No other module's
+screen or delete path was touched.
+- **Each tab is behind the gate of the module it reads.** Finance off → no Money tab and **no finance
+  table read** (`reads.finance` is empty — asserted beside "the page is open" so the absence means
+  something); the Library off (either switch, `libraryIsOff()`) → no Books tab and no library read;
+  Habits off → none. A personal project offers all three it may; a **work project offers none unless it
+  already holds one of that kind**, so changing a project's kind never hides what is linked to it.
+- **Money is behind the finance lock.** Locked, the tab draws a box that asks to be unlocked in place
+  (the Expenses box's own `Unlock`, now exported) and **nothing of the ledger exists in the page** —
+  no stat tile, no entry row, no payee or figure in its text. A wrong password opens nothing and says so.
+- **Money follows the ledger's own rules, not its own.** `isUnpaid` from `unpaid.ts`: spent is settled
+  expenses only; an unpaid expense is "Still owed", with its count; settled income is "Received" and is
+  never in Spent; a transfer or asset movement is neither. Everything is summed by `sumInBase`, and a
+  **currency with no rate is named and left out, never guessed**.
+- **An entry link carries a snapshot** (`EntryMeta`: payee, amount, currency, date, paidAt, type),
+  because Finance holds **one year at a time**. `useEntrySnapshots` (mounted by `ProjectsModule`)
+  refreshes it whenever the entry is loaded; equal writes nothing; an entry from another year keeps what
+  it had and is **not** called missing. "Not in Finance any more" is said only when the entry's year is
+  the loaded one, Finance is not loading, and the entry is absent.
+- **A deleted habit / book / entry is shown as deleted, with an unlink — never silently dropped.** Links
+  are deliberately *not* removed on delete: removing them in each module's delete path would have touched
+  three modules, and an undo of the delete (which restores the same id) brings the link back for free.
+- **Habits**: the week is seven squares, oldest first, from `dayProgress` — a measured habit's part-day
+  is drawn as a part-fill and **does not count as a done day** ("5 of 8 glasses" is 0.63, not 1). Asserted
+  on computed `backgroundColor` / `backgroundImage`, not on the `data-p` attribute. Only active, unarchived
+  habits are offered.
+- **Books**: progress is the Library's own `progressOf` (the furthest page any sitting reached), derived,
+  never stored; a book with no sittings says "No pages logged yet" rather than 0%.
+- **Two vacuous fixtures, caught by controls that passed**: no income entry was linked, so "income counted
+  as spent" could not fail; and two assertions failed only by *timing out* rather than asserting. Both now
+  assert existence first. An existing-state fixture has to be able to make the claim false.
+- **Not done:** a project budget (a target to compare Spent against — needs a column and a currency
+  decision), opening a book or habit from its row (the Library has no focus door), linking from the
+  other modules' own screens, and shopping lists (`list` links).
+- **Controls** (each removed, the named assertion fails): unpaid-as-spent, income-as-spent, unrated
+  currency unreported, lock ignored, Money with Finance off, no snapshot refresh, missing ignoring the
+  year, week order, part-day-as-done, retired habits offered, book progress ignoring sittings, Books with
+  the Library off, personal tabs on a work project. Ink: 0 failing pairs over twelve Projects screens in
+  four themes; unreadable colour fails at 1.51 on the money figures, the habit count, and the book lines.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and

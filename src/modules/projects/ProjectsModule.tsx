@@ -9,6 +9,7 @@ import { useProjectStore } from '@/store/projectStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
 import { ProjectPage } from './ProjectPage'
+import { useEntrySnapshots } from './useEntrySnapshots'
 import { ProjectCard } from './ProjectCard'
 import { ProjectDialog } from './ProjectDialog'
 import type { Project, ProjectKind } from './types'
@@ -27,6 +28,7 @@ export function ProjectsModule() {
   const [view, setView] = useState<View>('open')
   const [kind, setKind] = useState<KindFilter>('all')
   const [creating, setCreating] = useState(false)
+  useEntrySnapshots()
   const [openId, setOpenId] = useState<string | null>(null)
 
   // Something elsewhere sent you to a project — a task's own link to it.
