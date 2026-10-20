@@ -3,14 +3,13 @@ import { loadAccounts } from '@/lib/multiAccount'
 import { Link2, Building2, Flame, CheckSquare } from 'lucide-react'
 import { ICON, STROKE } from '@/lib/type'
 
-interface WizardData {
-  companies: unknown[]
-  selectedTemplates: string[]
-  customHabits: unknown[]
-  selectedTaskIds: Set<string>
-}
+interface WizardData { companies: unknown[] }
 
-interface Props { data: WizardData }
+interface Props {
+  data: WizardData
+  /** Finish, then open this screen — habits and tasks are set up there, not here. */
+  onGo: (to: 'habits' | 'tasks') => void
+}
 
 function CountUp({ target, duration = 800 }: { target: number; duration?: number }) {
   const [val, setVal] = useState(0)
@@ -29,17 +28,13 @@ function CountUp({ target, duration = 800 }: { target: number; duration?: number
   return <>{val}</>
 }
 
-export function Step6Done({ data }: Props) {
+export function Step3Done({ data, onGo }: Props) {
   const extraAccounts = loadAccounts().filter(a => !a.isPrimary).length
   const totalAccounts = 1 + extraAccounts
-  const totalHabits   = data.selectedTemplates.length + data.customHabits.length
-  const totalTasks    = data.selectedTaskIds.size
 
   const stats = [
     { label: 'Accounts',  value: totalAccounts,          color: 'var(--sb-info)', Icon: Link2 },
     { label: 'Companies', value: data.companies.length,   color: 'var(--sb-info)', Icon: Building2 },
-    { label: 'Habits',    value: totalHabits,             color: 'var(--sb-positive)', Icon: Flame },
-    { label: 'Tasks',     value: totalTasks,              color: 'var(--sb-warning)', Icon: CheckSquare },
   ]
 
   return (
@@ -64,11 +59,11 @@ export function Step6Done({ data }: Props) {
         You're all set
       </h2>
       <p style={{ margin: '0 0 32px', fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
-        Here's what we've set up for you:
+        Here's what is set up. Habits and tasks are one tap away:
       </p>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 32 }}>
         {stats.map(s => (
           <div key={s.label} style={{ padding: '16px 8px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
             <div style={{ marginBottom: 6, color: s.color }}><s.Icon size={ICON.lg} strokeWidth={STROKE.rest} aria-hidden /></div>
@@ -86,8 +81,17 @@ export function Step6Done({ data }: Props) {
         </p>
       </div>
 
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 16 }}>
+        <button type="button" onClick={() => onGo('habits')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer' }}>
+          <Flame size={ICON.md} strokeWidth={STROKE.rest} aria-hidden /> Pick your habits
+        </button>
+        <button type="button" onClick={() => onGo('tasks')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer' }}>
+          <CheckSquare size={ICON.md} strokeWidth={STROKE.rest} aria-hidden /> Add your tasks
+        </button>
+      </div>
+
       <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
-        Click <strong style={{ color: 'var(--sb-ink-1)' }}>Finish</strong> below to enter your workspace.
+        Or click <strong style={{ color: 'var(--sb-ink-1)' }}>Finish</strong> below to enter your workspace.
       </p>
 
       <style>{`

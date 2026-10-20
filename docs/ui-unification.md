@@ -238,4 +238,5 @@ If an existing harness breaks because it matched old text (e.g. "On fire! 🔥" 
 | P2.2 Split Settings | done | branch `claude/next-incomplete-phase-niej9p` — `Settings.tsx` 5,626 → 658 lines; 15 section files |
 | P2.3 Finance navigation | done | branch `claude/next-incomplete-phase-niej9p` — Money / Plan / Review groups; Shopping in the rail |
 | P2.4 Tasks views | done | branch `claude/next-incomplete-phase-niej9p` — one switcher: Board · Matrix · List · Plan; "Plan my day" button and overlay gone |
-| P2.1, P2.5 | blocked — need product decisions | |
+| P2.5 Setup wizard | done | branch `claude/next-incomplete-phase-niej9p` — 3 steps (You & accounts · Companies · Done); habits and tasks move to first-run prompts |
+| P2.1 | blocked — needs a product decision | |

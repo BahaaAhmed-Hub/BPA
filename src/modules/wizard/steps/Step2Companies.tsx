@@ -23,7 +23,7 @@ const inp: React.CSSProperties = {
   fontSize: 'var(--sb-t-body)', outline: 'none', width: '100%', boxSizing: 'border-box',
 }
 
-export function Step3Companies({ data, onChange }: Props) {
+export function Step2Companies({ data, onChange }: Props) {
   const accounts = loadAccounts()
   const [adding, setAdding] = useState(false)
   const [name, setName]     = useState('')

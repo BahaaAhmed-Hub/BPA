@@ -6,6 +6,8 @@ import { ICON, STROKE } from '@/lib/type'
 interface Props {
   data: WizardData
   onChange: (p: Partial<WizardData>) => void
+  /** Folded into one step with the accounts: no hero or feature cards, just the two questions. */
+  compact?: boolean
 }
 
 // Hero SVG illustration — warm landscape with sunrise, trees and a person
@@ -122,7 +124,7 @@ const FEATURES = [
   { Icon: Flame, title: 'Habit Tracking',   desc: 'Build systems that compound over time' },
 ]
 
-export function Step1Welcome({ data, onChange }: Props) {
+export function Step1You({ data, onChange, compact = false }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <style>{`
@@ -133,9 +135,9 @@ export function Step1Welcome({ data, onChange }: Props) {
       `}</style>
 
       {/* Hero illustration */}
-      <div style={{ borderRadius: 'var(--sb-r-card)', overflow: 'hidden', boxShadow: 'var(--sb-shadow-hover)' }}>
+      {!compact && <div style={{ borderRadius: 'var(--sb-r-card)', overflow: 'hidden', boxShadow: 'var(--sb-shadow-hover)' }}>
         <HeroIllustration />
-      </div>
+      </div>}
 
       {/* Heading */}
       <div style={{ textAlign: 'center' }}>
@@ -143,12 +145,12 @@ export function Step1Welcome({ data, onChange }: Props) {
           Welcome to The Professor
         </h1>
         <p style={{ margin: 0, fontSize: 'var(--sb-t-h3)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
-          Let's set up your AI executive OS in just a few minutes.
+          {compact ? 'Three quick steps and you are in.' : "Let's set up your AI executive OS in just a few minutes."}
         </p>
       </div>
 
       {/* Feature cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+      {!compact && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
         {FEATURES.map(f => (
           <div key={f.title} className="wz-feature-card" style={{
             padding: '14px 12px', borderRadius: 'var(--sb-r-nav)', textAlign: 'center',
@@ -160,7 +162,7 @@ export function Step1Welcome({ data, onChange }: Props) {
             <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>{f.desc}</div>
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* Name field */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -236,9 +238,9 @@ export function Step1Welcome({ data, onChange }: Props) {
         </div>
       </div>
 
-      <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', textAlign: 'center', fontStyle: 'italic' }}>
+      {!compact && <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', textAlign: 'center', fontStyle: 'italic' }}>
         This will only take about 2 minutes. Let's get started!
-      </p>
+      </p>}
     </div>
   )
 }

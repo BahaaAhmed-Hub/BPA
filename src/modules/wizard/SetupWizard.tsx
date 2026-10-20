@@ -3,17 +3,13 @@ import { Button } from '@/components/ui'
 import { X, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
-import { useHabitsStore } from '@/store/habitsStore'
-import { useTaskStore } from '@/store/taskStore'
 import { applyAppearance } from '@/lib/themes'
 import { saveCompaniesToDB } from '@/lib/dbSync'
 import type { CompanyRow } from '@/lib/dbSync'
-import { Step1Welcome } from './steps/Step1Welcome'
-import { Step2Accounts } from './steps/Step2Accounts'
-import { Step3Companies } from './steps/Step3Companies'
-import { Step4Habits } from './steps/Step4Habits'
-import { Step5Tasks } from './steps/Step5Tasks'
-import { Step6Done } from './steps/Step6Done'
+import { Step1You } from './steps/Step1You'
+import { Step1Accounts } from './steps/Step1Accounts'
+import { Step2Companies } from './steps/Step2Companies'
+import { Step3Done } from './steps/Step3Done'
 import { ICON } from '@/lib/type'
 
 // ─── Exported types ────────────────────────────────────────────────────────────
@@ -22,45 +18,13 @@ export interface CompanyDraft {
   id: string; name: string; color: string; emailDomain: string; accountId: string
 }
 
-export interface CustomHabitDraft {
-  name: string; emoji: string; color: string
-  type: 'boolean' | 'quantity'; goal?: number; unit?: string
-  frequency: 'daily' | 'weekdays' | 'weekly'
-}
-
-export interface TodoistTaskItem {
-  id: string; content: string; due?: string; priority: number
-}
-
 export interface WizardData {
   displayName: string; themeId: string
   companies: CompanyDraft[]
-  selectedTemplates: string[]; customHabits: CustomHabitDraft[]
-  todoistToken: string; importedTasks: TodoistTaskItem[]
-  selectedTaskIds: Set<string>
 }
 
-// ─── Habit templates (mirrored in Step4 for apply logic) ─────────────────────
-
-const HABIT_TEMPLATES = [
-// ui-guard: emoji-start — habit presets a person can pick
-  { id: 'water',       name: 'Drink Water',  emoji: '💧', color: 'var(--sb-info)', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
-  { id: 'exercise',    name: 'Exercise',      emoji: '💪', color: 'var(--sb-negative)', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'reading',     name: 'Reading',       emoji: '📚', color: 'var(--sb-info)', type: 'quantity' as const, goal: 30,   unit: 'min',     frequency: 'daily' as const },
-  { id: 'meditation',  name: 'Meditation',    emoji: '🧘', color: 'var(--sb-positive)', type: 'quantity' as const, goal: 10,   unit: 'min',     frequency: 'daily' as const },
-  { id: 'sleep',       name: '8h Sleep',      emoji: '😴', color: 'var(--sb-info)', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'journaling',  name: 'Journaling',    emoji: '📓', color: 'var(--sb-warning)', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'steps',       name: 'Steps',         emoji: '🚶', color: 'var(--sb-positive)', type: 'quantity' as const, goal: 10000, unit: 'steps',  frequency: 'daily' as const },
-  { id: 'cold-shower', name: 'Cold Shower',   emoji: '🚿', color: 'var(--sb-info)', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'no-phone-am', name: 'No Phone (AM)', emoji: '📵', color: 'var(--sb-info)', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'vitamins',    name: 'Vitamins',      emoji: '💊', color: 'var(--sb-negative)', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'prayer',      name: 'Prayer',        emoji: '🤲', color: 'var(--sb-accent)', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'no-sugar',    name: 'No Sugar',      emoji: '🚫', color: 'var(--sb-accent)', type: 'boolean'  as const,                               frequency: 'daily' as const },
-// ui-guard: emoji-end
-]
-
-const STEP_LABELS = ['Welcome', 'Accounts', 'Companies', 'Habits', 'Import', 'Done']
-const TOTAL_STEPS = 6
+const STEP_LABELS = ['You & accounts', 'Companies', 'Done']
+const TOTAL_STEPS = 3
 
 // Light-theme CSS variable overrides — applied inside the modal
 const LIGHT_VARS: React.CSSProperties = {
@@ -94,15 +58,9 @@ export function SetupWizard({ onClose }: Props) {
       accountId:   c.accountId   ?? '',
     }))
 
-    const existingHabits = useHabitsStore.getState().habits
-    const selectedTemplates = HABIT_TEMPLATES
-      .filter(t => existingHabits.some(h => h.name.toLowerCase() === t.name.toLowerCase()))
-      .map(t => t.id)
-
     return {
       displayName: authName, themeId: currentThemeId,
-      companies, selectedTemplates, customHabits: [],
-      todoistToken: '', importedTasks: [], selectedTaskIds: new Set(),
+      companies,
     }
   })
 
@@ -114,15 +72,12 @@ export function SetupWizard({ onClose }: Props) {
     try {
       const parsed = JSON.parse(saved)
       if (parsed.step) setStep(parsed.step)
-      if (parsed.data) {
-        setData({ ...parsed.data, selectedTaskIds: new Set(parsed.data.selectedTaskIds ?? []) })
-      }
+      if (parsed.data) setData({ displayName: parsed.data.displayName ?? '', themeId: parsed.data.themeId, companies: parsed.data.companies ?? [] })
     } catch { /* ignore */ }
   }, [])
 
   function saveForOAuth() {
-    const serializable = { ...data, selectedTaskIds: [...data.selectedTaskIds] }
-    sessionStorage.setItem('bpa-wizard-resume', JSON.stringify({ step, data: serializable }))
+    sessionStorage.setItem('bpa-wizard-resume', JSON.stringify({ step, data }))
   }
 
   const onChange = useCallback((patch: Partial<WizardData>) => {
@@ -139,7 +94,7 @@ export function SetupWizard({ onClose }: Props) {
   }
   function handleSkip() { localStorage.setItem('bpa-wizard-done', '1'); onClose() }
 
-  async function handleFinish() {
+  async function handleFinish(goTo?: 'habits' | 'tasks') {
     useUIStore.getState().setThemeId(data.themeId)
     applyAppearance({ themeId: data.themeId })
     if (data.displayName) localStorage.setItem('professor-display-name', data.displayName)
@@ -159,28 +114,8 @@ export function SetupWizard({ onClose }: Props) {
       try { await saveCompaniesToDB(rows) } catch { /* offline */ }
     }
 
-    const { addHabit, habits: existingHabits } = useHabitsStore.getState()
-    const existingNames = new Set(existingHabits.map(h => h.name.toLowerCase()))
-    for (const tid of data.selectedTemplates) {
-      const t = HABIT_TEMPLATES.find(x => x.id === tid)
-      if (t && !existingNames.has(t.name.toLowerCase())) {
-        addHabit({ name: t.name, emoji: t.emoji, color: t.color, type: t.type, goal: (t as {goal?: number}).goal, unit: (t as {unit?: string}).unit, frequency: t.frequency, isActive: true })
-      }
-    }
-    for (const ch of data.customHabits) {
-      if (!existingNames.has(ch.name.toLowerCase())) {
-        addHabit({ name: ch.name, emoji: ch.emoji, color: ch.color, type: ch.type, goal: ch.goal, unit: ch.unit, frequency: ch.frequency, isActive: true })
-      }
-    }
-
-    const addTask = useTaskStore.getState().addTask
-    for (const t of data.importedTasks) {
-      if (data.selectedTaskIds.has(t.id)) {
-        addTask({ title: t.content, quadrant: null, company: 'personal', status: 'open', completed: false, source: 'todoist' } as Parameters<typeof addTask>[0])
-      }
-    }
-
     localStorage.setItem('bpa-wizard-done', '1')
+    if (goTo) useUIStore.getState().setActiveModule(goTo)
     onClose()
   }
 
@@ -261,12 +196,14 @@ export function SetupWizard({ onClose }: Props) {
           {/* ── Step content ─────────────────────────────────────────────── */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
             <div key={`${step}-${animKey}`} style={{ animation: `${dir === 'fwd' ? 'wz-fwd' : 'wz-back'} 0.28s ease` }}>
-              {step === 1 && <Step1Welcome data={data} onChange={onChange} />}
-              {step === 2 && <Step2Accounts data={data} onChange={onChange} onBeforeOAuth={saveForOAuth} />}
-              {step === 3 && <Step3Companies data={data} onChange={onChange} />}
-              {step === 4 && <Step4Habits data={data} onChange={onChange} />}
-              {step === 5 && <Step5Tasks data={data} onChange={onChange} />}
-              {step === 6 && <Step6Done data={data} />}
+              {step === 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+                  <Step1You data={data} onChange={onChange} compact />
+                  <Step1Accounts data={data} onChange={onChange} onBeforeOAuth={saveForOAuth} />
+                </div>
+              )}
+              {step === 2 && <Step2Companies data={data} onChange={onChange} />}
+              {step === 3 && <Step3Done data={data} onGo={goTo => void handleFinish(goTo)} />}
             </div>
           </div>
 

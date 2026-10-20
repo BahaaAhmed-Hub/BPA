@@ -14,6 +14,7 @@ import { alpha } from '@/lib/alpha'
 import { dayProgress, dayTotals, spanTotals } from '@/lib/habitProgress'
 import { LOZENGE } from '../../components/SideRail'
 import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
+import { HabitStarter } from './HabitStarter'
 
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -1253,9 +1254,7 @@ export function HabitsModule() {
               )
             })}
             {activeHabits.length === 0 && (
-              <div style={{ gridColumn: '1/-1', padding: 32, textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>
-                No habits yet. Click "New habit" to get started.
-              </div>
+<HabitStarter />
             )}
           </div>
 
@@ -1298,9 +1297,7 @@ export function HabitsModule() {
             )
           })}
           {activeHabits.length === 0 && (
-            <div style={{ padding: 32, textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>
-              No habits yet. Click "New habit" to get started.
-            </div>
+<HabitStarter />
           )}
         </div>
       )}
@@ -1353,9 +1350,7 @@ export function HabitsModule() {
 
         {/* Empty state */}
         {activeHabits.length === 0 && (
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)' }}>
-            No habits yet. Click "New habit" to get started.
-          </div>
+<HabitStarter />
         )}
 
         {/* Habit rows */}

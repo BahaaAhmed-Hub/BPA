@@ -58,7 +58,7 @@ const providerTileStyle: React.CSSProperties = {
   position: 'relative',
 }
 
-export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth }: Props) {
+export function Step1Accounts({ data: _data, onChange: _onChange, onBeforeOAuth }: Props) {
   const user = useAuthStore(s => s.user)
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([])
   const [connecting, setConnecting] = useState(false)

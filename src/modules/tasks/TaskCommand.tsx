@@ -17,6 +17,7 @@ import { Search, X, Plus, SlidersHorizontal, LayoutGrid, Target, List as ListIco
 import type { Quadrant, Task } from '@/types'
 import { isTaskHidden, loadVisibleCompanies, getVisibleUsers, TASK_TYPE_META, inferTaskType } from '@/types'
 import { SmartDayPlanner } from './SmartDayPlanner'
+import { TodoistImport } from './TodoistImport'
 import { TaskListView } from './TaskListView'
 import { TaskBanner } from './TaskBanner'
 import { TASK_TYPE_ICON, TASK_TYPE_ORDER } from './taskVisuals'
@@ -443,6 +444,8 @@ export function TaskCommand() {
           </Button>
         </span>
       </div>
+
+      <TodoistImport empty={allTasks.length === 0} />
 
       {/* Main content */}
       {viewMode === 'plan' ? (
