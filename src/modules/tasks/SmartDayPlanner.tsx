@@ -22,6 +22,7 @@ import { loadAccounts, getPrimaryToken, type ConnectedAccount } from '@/lib/mult
 import { getGoogleToken } from '@/lib/tokenManager'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
+import { useInkOnKeeping } from '@/lib/ink'
 import { notify } from '@/lib/undo'
 import { QUADRANTS, QUADRANT_ORDER } from '@/lib/quadrants'
 import { askConfirm } from '@/lib/confirm'
@@ -89,6 +90,7 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
   gcalDone?: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
+  const keeping = useInkOnKeeping()
   const priority = task.quadrant ? PRIORITY_LABEL[task.quadrant] : null
   const color    = task.quadrant ? PRIORITY_COLOR[task.quadrant] : 'var(--sb-ink-4)'
   const dot      = task.urgent ? 'var(--sb-warning)' : (task.quadrant === 'do' ? 'var(--sb-negative)' : 'var(--sb-ink-4)')
@@ -116,7 +118,7 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
         </div>
         <div style={{ display: 'flex', gap: 5, marginTop: 4, flexWrap: 'wrap' }}>
           {priority && (
-            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: alpha(color, 8.2), color }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: alpha(color, 8.2), color: keeping(color, alpha(color, 8.2), 4.5) }}>
               {priority}
             </span>
           )}
@@ -229,6 +231,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
   /** Only for an event this planner made that no task claims any more. */
   onRemoveEvent?: (event: GCalEvent) => void
 }) {
+  const keeping = useInkOnKeeping()
   const { setNodeRef, isOver } = useDroppable({ id: `slot-${hour}`, disabled: isPast })
   const blocked = hour < 6 || hour >= 22
   const hasBusyStart = busyEventsAtStart && busyEventsAtStart.length > 0
@@ -268,7 +271,9 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
           }} />
         )}
         {/* Calendar busy block — only render at the start hour, spans full duration */}
-        {hasBusyStart && !block && busyEventsAtStart!.map(({ event: evt, durationHours, color, leftOver }) => (
+        {hasBusyStart && !block && busyEventsAtStart!.map(({ event: evt, durationHours, color, leftOver }) => {
+          const ink = keeping(color, alpha(color, 9.4), 4.5)
+          return (
           <div key={evt.id ?? evt.summary}
             onClick={() => onEventClick?.(evt, color)}
             style={{
@@ -282,7 +287,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
               cursor: 'pointer', overflow: 'hidden',
             }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
-              <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: ink, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {evt.summary ?? 'Busy'}
               </span>
               {/* **Says what it is before offering to remove it.** A block
@@ -292,7 +297,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
                 <>
                   <span style={{
                     flexShrink: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em',
-                    textTransform: 'uppercase', color,
+                    textTransform: 'uppercase', color: ink,
                   }}>left over</span>
                   <button
                     onClick={e => { e.stopPropagation(); onRemoveEvent(evt) }}
@@ -300,7 +305,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
                     aria-label={`Remove "${evt.summary ?? 'this event'}" from your calendar`}
                     style={{
                       flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
-                      color, padding: 0, display: 'flex', opacity: 0.8,
+                      color: ink, padding: 0, display: 'flex',
                     }}>
                     <X size={ICON.sm} />
                   </button>
@@ -308,10 +313,11 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
               )}
             </div>
             {evt.location && (
-              <span style={{ fontSize: 'var(--sb-t-meta)', color, opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{evt.location}</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden />{evt.location}</span>
             )}
           </div>
-        ))}
+          )
+        })}
         {/* Scheduled task block */}
         {block && (
           <div
@@ -468,11 +474,14 @@ function AccountPickerOverlay({
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface SmartDayPlannerProps {
+  /** Leave the planner: closes the modal, or — inline — goes back to the view you came from. */
   onClose: () => void
   onOpenTask?: (taskId: string) => void
+  /** Draw as a view in the Tasks page rather than a modal over it (no backdrop, no ✕/Cancel, no Escape). */
+  inline?: boolean
 }
 
-export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
+export function SmartDayPlanner({ onClose, onOpenTask, inline = false }: SmartDayPlannerProps) {
   const { tasks: allTasks, updateTask } = useTaskStore()
   const signedInEmail = useAuthStore(s => s.user?.email) ?? undefined
   const [blocks, setBlocks] = useState<ScheduledBlock[]>([])
@@ -494,10 +503,11 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   // to open it nobody found this; now that it has one, the way out is the first
   // thing a keyboard reaches for.
   useEffect(() => {
+    if (inline) return    // a view has nothing to dismiss: the switcher is the way out
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
-  }, [onClose])
+  }, [onClose, inline])
   const [accountPicker, setAccountPicker] = useState<{ task: Task; block: ScheduledBlock } | null>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
 
@@ -964,11 +974,13 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
         />
       )}
 
-      {/* Backdrop */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      {/* Backdrop — only when it is a modal; as a view it is part of the page */}
+      <div data-planner-view={inline ? '' : undefined} style={inline
+        ? { padding: '4px 28px 28px' }
+        : { position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         {/* Modal */}
         <div style={{
-          background: 'var(--sb-info-tint)', borderRadius: 'var(--sb-r-card)', width: '100%', maxWidth: 1000, maxHeight: '90vh',
+          background: 'var(--sb-info-tint)', borderRadius: 'var(--sb-r-card)', width: '100%', maxWidth: inline ? 'none' : 1000, maxHeight: inline ? 'calc(100vh - 150px)' : '90vh',
           display: 'flex', flexDirection: 'column',
           boxShadow: 'var(--sb-shadow-frame)',
           animation: 'sdp-in 0.3s cubic-bezier(0.16,1,0.3,1)', overflow: 'hidden',
@@ -977,9 +989,11 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
           <div style={{ padding: '18px 24px', background: 'var(--sb-overlay)', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <span style={{ fontSize: 'var(--sb-t-h2)' }}>✦</span>
             <span style={{ fontSize: 'var(--sb-t-h2)', fontWeight: 800, color: 'var(--sb-ink-1)', flex: 1 }}>Smart Day Planner</span>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex', borderRadius: 'var(--sb-r-chip)' }}>
-              <X size={ICON.lg} />
-            </button>
+            {!inline && (
+              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex', borderRadius: 'var(--sb-r-chip)' }}>
+                <X size={ICON.lg} />
+              </button>
+            )}
           </div>
 
           {/* Sub-header */}
@@ -991,7 +1005,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
             </span>
             {/* The count means nothing without the set it counted: the same
                 number is a different fact under each side of the toggle. */}
-            <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, background: 'var(--sb-info-tint)', color: 'var(--sb-info)', borderRadius: 'var(--sb-r-card)', padding: '3px 10px' }}>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, background: 'var(--sb-info-tint)', color: 'var(--sb-ink-2)', borderRadius: 'var(--sb-r-card)', padding: '3px 10px' }}>
               {todayEvents.length} event{todayEvents.length !== 1 ? 's' : ''} ({onlyMine ? 'my calendars' : 'all calendars'})
             </span>
             <div style={{ flex: 1 }} />
@@ -1112,13 +1126,15 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
               )}
             </span>
             <div style={{ flex: 1 }} />
-            <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 'var(--sb-r-card)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-hairline)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer' }}>
+            {!inline && (
+              <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 'var(--sb-r-card)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-hairline)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer' }}>
               Cancel
             </button>
+            )}
             <button onClick={applyPlan} disabled={!blocks.length} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 'var(--sb-r-card)',
-              background: blocks.length ? 'var(--sb-warning)' : 'var(--sb-hairline)', border: 'none',
-              color: blocks.length ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 700, // ui-guard: ink-ok
+              background: blocks.length ? 'var(--sb-warning)' : 'var(--sb-field)', border: 'none',
+              color: blocks.length ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', fontWeight: 700,
               cursor: blocks.length ? 'pointer' : 'default', transition: 'all 0.15s',
             }}>
               <Check size={ICON.sm} /> Apply Plan

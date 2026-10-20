@@ -254,6 +254,13 @@ for (const theme of THEMES) {
         await page.locator(`[data-side-rail] button[aria-label="${mod}"][aria-current="page"]`).waitFor({ timeout: 4000 })
       } catch { opened = false }
       if (mod === 'Tasks' && opened) {
+        // The planner is a view of Tasks: measured as a screen of its own (and it must really be the planner).
+        await page.getByRole('tablist', { name: 'View' }).getByRole('tab', { name: 'Plan', exact: true }).click({ timeout: 2000 }).catch(() => {})
+        const inPlan = await page.locator('[data-planner-view]').waitFor({ timeout: 4000 }).then(() => true).catch(() => false)
+        await measure(page, 'Tasks · Plan', { opened: inPlan })
+        await page.getByRole('tablist', { name: 'View' }).getByRole('tab', { name: 'Board', exact: true }).click({ timeout: 2000 }).catch(() => {})
+      }
+      if (mod === 'Tasks' && opened) {
         // The matrix is one view of several; ask for it by name if it is offered.
         await page.getByText('Matrix', { exact: true }).first().click({ timeout: 2000 }).catch(() => {})
       }

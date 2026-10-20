@@ -29,7 +29,11 @@ const TASKS_CONFIG_KEY = 'task-command-config'
 type GroupBy = 'none' | 'status' | 'type' | 'company' | 'owner'
 interface TaskConfig { hideCompleted: boolean; groupBy: GroupBy; allGroupsExpanded: boolean }
 interface TaskFilters { company: string; type: string; owner: string }
-type ViewMode = 'board' | 'eisenhower' | 'list'
+type ViewMode = 'board' | 'eisenhower' | 'list' | 'plan'
+/** The views a person *chooses to stay in*. The planner is a view too, but opening Tasks straight into it
+ *  (and into Google's calendar reads) because it was the last one used would be a surprise. */
+type StayView = Exclude<ViewMode, 'plan'>
+const STAY_VIEWS: StayView[] = ['board', 'eisenhower', 'list']
 
 const GROUP_BY_LABEL: Record<GroupBy, string> = {
   none: 'None', status: 'Status', type: 'Task type', company: 'Company', owner: 'Owner',
@@ -44,11 +48,16 @@ export function TaskCommand() {
   const { tasks: allTasks, moveTask, moveTaskBefore, reorderInbox, reorderQuadrant, updateTask, addTask } = useTaskStore()
   const tasks = allTasks.filter(t => !isTaskHidden(t))
 
-  const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    (localStorage.getItem('task-view-mode') as ViewMode) ?? 'board'
-  )
+  const [stayView, setStayView] = useState<StayView>(() => {
+    const saved = localStorage.getItem('task-view-mode') as StayView | null
+    return saved && STAY_VIEWS.includes(saved) ? saved : 'board'
+  })
+  const [planning, setPlanning] = useState(false)
+  const viewMode: ViewMode = planning ? 'plan' : stayView
   function switchView(mode: ViewMode) {
-    setViewMode(mode)
+    if (mode === 'plan') { setPlanning(true); return }
+    setPlanning(false)
+    setStayView(mode)
     localStorage.setItem('task-view-mode', mode)
   }
 
@@ -192,7 +201,6 @@ export function TaskCommand() {
     setModalTaskId(focus.id)
     clearFocus()
   }, [focus, clearFocus])
-  const [showPlanner,  setShowPlanner]  = useState(false)
 
   useEffect(() => {
     if (!openNewestRef.current || allTasks.length === 0) return
@@ -269,8 +277,8 @@ export function TaskCommand() {
         display: 'flex', alignItems: 'center', gap: 20,
       }}>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Filter button */}
-          <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
+          {/* Filter button — search, hide-completed and grouping act on the task views; the planner has its own controls */}
+          {viewMode !== 'plan' && <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
             <button onClick={() => setFilterOpen(o => !o)}
               style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer', boxShadow: 'var(--sb-shadow-control)' }}>
               <SlidersHorizontal size={ICON.sm} strokeWidth={STROKE.rest} />
@@ -411,9 +419,10 @@ export function TaskCommand() {
                 )}
               </div>
             )}
-          </div>
+          </div>}
 
-          {/* View switcher — Board | Matrix | List */}
+          {/* View switcher — Board | Matrix | List | Plan. One control for every way of looking at the same tasks;
+              Plan is the day laid against the calendar, not a different set of tasks. */}
           <Segmented<ViewMode>
             size="lg"
             aria-label="View"
@@ -423,18 +432,9 @@ export function TaskCommand() {
               { value: 'board',      label: <><LayoutGrid size={ICON.sm} strokeWidth={STROKE.active} /> Board</> },
               { value: 'eisenhower', label: <><Target size={ICON.sm} strokeWidth={STROKE.active} /> Matrix</> },
               { value: 'list',       label: <><ListIcon size={ICON.sm} strokeWidth={STROKE.active} /> List</> },
+              { value: 'plan',       label: <><CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> Plan</>, title: "Lay today's tasks out against the calendar" },
             ]}
           />
-
-          {/* The planner has existed all along with nothing to open it —
-              `showPlanner` was set false and never set true. It belongs beside
-              New task: one makes a thing to do, the other decides when. */}
-          <Button variant="secondary" onClick={() => setShowPlanner(true)}
-            title="Lay today's tasks out against the calendar"
-            style={{ boxSizing: 'border-box', flexShrink: 0 }}>
-            <CalendarClock size={ICON.md} strokeWidth={STROKE.active} />
-            Plan my day
-          </Button>
 
           {/* New task CTA */}
           <Button variant="accent" onClick={handleNewTask} style={{ boxSizing: 'border-box', flexShrink: 0 }}>
@@ -445,7 +445,10 @@ export function TaskCommand() {
       </div>
 
       {/* Main content */}
-      {viewMode === 'list' ? (
+      {viewMode === 'plan' ? (
+        // Leaving the planner (Apply Plan, or opening a task from it) goes back to the view you came from.
+        <SmartDayPlanner inline onClose={() => setPlanning(false)} onOpenTask={id => { setPlanning(false); setModalTaskId(id) }} />
+      ) : viewMode === 'list' ? (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {/* The list carries the same brain dump rail the matrix does */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0, padding: '4px 0 0 28px' }}>
@@ -501,7 +504,7 @@ export function TaskCommand() {
           <div style={{ display: 'flex', gap: 16, padding: '4px 28px 28px', alignItems: 'flex-start' }}>
             <BrainDumpRail tasks={dumpedTasks} onOpen={setModalTaskId} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => setShowPlanner(true)} />
+              <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => switchView('plan')} />
             </div>
             {modalTask && (
               <div data-task-node style={{ paddingBottom: 28 }}>
@@ -520,7 +523,6 @@ export function TaskCommand() {
         </DndContext>
       )}
 
-      {showPlanner && <SmartDayPlanner onClose={() => setShowPlanner(false)} onOpenTask={id => { setShowPlanner(false); setModalTaskId(id) }} />}
     </div>
   )
 }

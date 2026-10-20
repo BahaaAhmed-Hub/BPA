@@ -624,6 +624,12 @@ for (const theme of THEMES) {
   })
   await visit('Mail', async () => { await page.locator('[data-side-rail] button[aria-label="Mail"]').click() })
   await visit('Tasks', async () => { await page.locator('[data-side-rail] button[aria-label="Tasks"]').click() })
+  // The day planner is a view of Tasks now (it was a modal): measured on the page ground it sits on.
+  await visit('Tasks · Plan view', async () => {
+    await page.getByRole('tablist', { name: 'View' }).getByRole('tab', { name: 'Plan', exact: true }).click()
+    await page.locator('[data-planner-view]').waitFor({ timeout: 6000 })
+  })
+  await page.getByRole('tablist', { name: 'View' }).getByRole('tab', { name: 'Board', exact: true }).click().catch(() => {})
   await visit('Habits', async () => { await page.locator('[data-side-rail] button[aria-label="Habits"]').click() })
   await visit('Finance', async () => { await page.locator('[data-side-rail] button[aria-label="Finance"]').click() })
   // Shopping: the list with an item open (every field of the editor), the board
