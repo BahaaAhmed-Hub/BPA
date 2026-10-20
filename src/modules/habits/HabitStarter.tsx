@@ -50,7 +50,7 @@ export function HabitStarter() {
                   <Check size={ICON.sm} color={inkOn(t.color)} strokeWidth={STROKE.active} aria-hidden />
                 </span>
               )}
-              <div style={{ fontSize: 'var(--sb-t-h2)', marginBottom: 6 }}>{t.emoji}</div>
+              <div data-user-content style={{ fontSize: 'var(--sb-t-h2)', marginBottom: 6 }}>{t.emoji}</div>
               <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', marginBottom: 2 }}>{t.name}</div>
               <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                 {t.type === 'quantity' ? `${t.goal} ${t.unit}` : 'Daily check'}
