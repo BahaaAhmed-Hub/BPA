@@ -861,8 +861,8 @@ img { max-width: 100%; }
 
 /* The one display-size element on the route. Sized here so the step down at
    narrow widths is a media query rather than a width watched in JavaScript. */
-.cal-display { font-size: 34px; }
-@media (max-width: 900px) { .cal-display { font-size: 27px; } }
+.cal-display { font-size: 30px; }
+@media (max-width: 900px) { .cal-display { font-size: 24px; } }
 
 /* A month cell with nothing in it offers the one thing you would do there.
    The glyph is drawn on hover only, and only where there is room for it —
