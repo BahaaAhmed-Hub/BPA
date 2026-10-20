@@ -534,7 +534,7 @@ textarea:focus,
      *stretches* is the problem, so it is fixed at that parent — the Goals
      policy picker sets `alignSelf` on its own. `data-block` is still the opt-in
      for deliberately filling the width. */
-  padding: 3px;
+  padding: 2px;
   box-sizing: border-box;
   border-radius: var(--sb-r-pill);
   /* Not --sb-field: on the page ground those two are a couple of units apart
@@ -550,9 +550,12 @@ textarea:focus,
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  /* Inside a 3px track, so the control it sits in is --sb-h-pill tall and
-     moves with the theme like every other control. */
-  height: max(var(--sb-h-min), calc(var(--sb-h-pill) - 6px));
+  /* Inside a 2px track, so the whole control is exactly a Button tall
+     (`max(--sb-h-min, --sb-h-pill)`, the same expression) and moves with the
+     theme and the pointer like every other control. It used to floor the
+     *option* at --sb-h-min and then add the track, which made the control
+     36px beside a 34px button, and 38px at `lg`. */
+  height: calc(max(var(--sb-h-min), var(--sb-h-pill)) - 4px);
   padding: 0 12px;
   border: none;
   border-radius: var(--sb-r-pill);
@@ -576,8 +579,9 @@ textarea:focus,
 }
 .sb-segmented-opt:disabled { color: var(--sb-ink-4); cursor: default; }
 
-.sb-segmented[data-size="sm"] .sb-segmented-opt { height: max(calc(var(--sb-h-min) - 2px), calc(var(--sb-h-pill) - 10px)); padding: 0 10px; font-size: var(--sb-t-meta); gap: 5px; }
-.sb-segmented[data-size="lg"] .sb-segmented-opt { height: max(calc(var(--sb-h-min) + 2px), calc(var(--sb-h-pill) - 4px)); padding: 0 14px; font-size: var(--sb-t-body); }
+.sb-segmented[data-size="sm"] .sb-segmented-opt { height: calc(max(var(--sb-h-min), calc(var(--sb-h-pill) - 6px)) - 4px); padding: 0 10px; font-size: var(--sb-t-meta); gap: 5px; }
+/* `lg` is roomier type and padding, not a taller control: every selector is a Button tall. */
+.sb-segmented[data-size="lg"] .sb-segmented-opt { padding: 0 14px; font-size: var(--sb-t-body); }
 
 /* The event panel's values. Plain text in the row until the pointer or the
    keyboard reaches one, which is when it becomes evident that it is editable.

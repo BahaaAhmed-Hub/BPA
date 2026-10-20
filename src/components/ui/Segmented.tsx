@@ -26,7 +26,7 @@ export interface SegmentedProps<T extends string> {
   value: T
   onChange: (value: T) => void
   options: readonly SegmentedOption<T>[]
-  /** sm 24px · md 28px (the default) · lg 30px, all inside a 3px track. */
+  /** The whole control is a Button tall — sm matches a small button, md and lg a regular one; lg only has roomier type. */
   size?: 'sm' | 'md' | 'lg'
   /** Fill the width, each option an equal share. */
   block?: boolean

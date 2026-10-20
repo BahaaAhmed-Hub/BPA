@@ -803,3 +803,20 @@ the module the app opened on.
   rule gives a different number (a finished urgent task, an all-day event), and
   the doors. `supabase/functions/_shared/appGuide.ts` no longer lists Dashboard
   (an edge-function file: deploys with the functions workflow).
+
+## A selector is a Button tall
+`Segmented` (`.sb-segmented`) was 36px at `md` and 38px at `lg` beside 34px buttons,
+and on a theme with shorter buttons the gap was wider (36 against 30). The option
+was floored at `--sb-h-min` and the track's padding was then added on top, so the
+control grew past the height it was designed to match.
+- **The control's height is the Button's expression**: the option is
+  `max(--sb-h-min, --sb-h-pill) - 4px` inside a **2px** track, so the whole control
+  is exactly `max(--sb-h-min, --sb-h-pill)` — the same line `.sb-btn` uses — in every
+  theme and on a phone (40px with a coarse pointer). `sm` pairs with a small button.
+- **`lg` is roomier type and padding, not a taller control.** Nothing should be taller
+  than the button beside it.
+- `scripts/selector-is-button-height.mjs` — the real classes mounted next to a Button in
+  the live page for every size, all four themes, desktop and phone, plus the selectors
+  Tasks, Habits and Library really draw. Control: the old formula on the same element
+  measures 36 against 34; the harness fails 27 checks on the old CSS.
+- Calendar's Day/Week/Month is hand-built, not a `Segmented`; it was already 34.
