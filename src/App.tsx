@@ -18,6 +18,7 @@ import { ASK_EVENT } from './lib/assistantBridge'
 import { NameListener } from './modules/assistant/NameListener'
 import { useLibraryStore } from './modules/library/libraryStore'
 import { useProjectStore } from './store/projectStore'
+import { ProjectsModule } from './modules/projects/ProjectsModule'
 import { libraryIsOff, useLibraryOff } from './modules/library/libraryPrefs'
 import { useUIStore } from './store/uiStore'
 import { cachedModules, fetchModules, forgetEntitlements, moduleIsOff, useModules } from './lib/entitlements'
@@ -319,6 +320,12 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
       <rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l2.6 2.5L16 9.5"/>
     </svg>
   ),
+  // Three layers stacked — a body of work made of parts.
+  projects: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5L12 21l9-4.5"/>
+    </svg>
+  ),
   habits: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>
@@ -376,6 +383,7 @@ const NAV_ITEMS = [
   // reachable only by something else setting the module for you.
   { id: 'inbox',     label: 'Mail'     },
   { id: 'tasks',     label: 'Tasks'    },
+  { id: 'projects',  label: 'Projects' },
   { id: 'habits',    label: 'Habits'   },
   { id: 'finance',   label: 'Finance'  },
   // Off for two reasons — the plan (`my_modules()`) or the person (Settings →
@@ -752,6 +760,7 @@ function ActiveModule() {
       {everMounted.current.has('tasks') && !moduleIsOff('tasks')      && <div style={show('tasks')}><TaskCommand /></div>}
       {everMounted.current.has('calendar') && !moduleIsOff('calendar')   && <div style={show('calendar')}><CalendarModule /></div>}
       {everMounted.current.has('inbox') && !moduleIsOff('inbox')      && <div style={show('inbox')}><InboxModule /></div>}
+      {everMounted.current.has('projects') && !moduleIsOff('projects') && <div style={show('projects')}><ProjectsModule /></div>}
       {everMounted.current.has('habits') && !moduleIsOff('habits')     && <div style={show('habits')}><HabitsModule /></div>}
       {everMounted.current.has('review')     && <div style={show('review')}><ReviewModule /></div>}
       {everMounted.current.has('morning') && !moduleIsOff('morning')    && <div style={show('morning')}><MorningModule /></div>}

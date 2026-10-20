@@ -82,6 +82,39 @@ what the server sent. A task's `projectId` rides the existing task push, so
   Likewise assert the reload really happened (`reads.projects` rose) before
   claiming anything survived one.
 
+## Chunk 2 — the tab, the grid, the dialog
+`modules/projects/{ProjectsModule,ProjectCard,ProjectDialog}.tsx`, `lib/projectStats.ts`,
+`scripts/projects-tab.mjs [create|cards|narrow]`, three `Projects · …` screens in `ink-audit.mjs`.
+- **The rail entry is `projects` in `NAV_ITEMS`**, after Tasks, with a stacked-layers glyph.
+  Not entitlement-gated yet: `moduleIsOff` answers false for an id the registry has
+  never heard of, so it shows for everyone until a `modules` row exists.
+- **The bar is the rail's `LOZENGE`**, asserted against the rail's own pill in the page
+  (radius and ground), not against a copy of the values.
+- **Progress is derived from the tasks pointing at the project** (`projectStats`):
+  cancelled tasks count as neither done nor left, and the card says "1 of 3 tasks done ·
+  1 overdue". The bar's width is asserted as a measured fraction of its track, beside the
+  `aria-valuenow`, because an attribute can agree with itself and be drawn wrong.
+- **A cancelled task is stored as `deferred`** (`statusToDb`). The first fixture wrote
+  `cancelled` to the server, which reads back as an ordinary open task — the "cancelled
+  is excluded" assertion failed for a reason about the fixture, not the code.
+- **Colour is stripe and fill only; every word is an ink token.** A colour somebody chose
+  cannot be promised to carry text in all four themes. Overdue / "Was due" use
+  `--sb-negative-deep`. The audit passes all four themes over the three screens, and
+  fails on this screen when the status chip is given `#d8d2c0` (1.41) — so it can see it.
+- **A card opens the edit dialog for now.** Chunk 3's project page takes the click and
+  the dialog stays for create and for editing from the page.
+- **The dialog saves with the button, not live** (a half-typed name is not a name).
+  Personal clears `companyId` in the stored row, not only in the form. Delete is a second
+  step that says how many tasks stay. Escape closes without saving.
+- **`minmax(280px, 1fr)` overflowed at phone width** (card at x=114, 394px wide in a
+  390px window — the rail and padding leave 252). `minmax(min(280px, 100%), 1fr)`.
+  Found by the `narrow` mode, which measures the card's box against the viewport.
+- Segmented renders `role="tab"`, not `radio` — a harness that clicks the wrong role
+  waits the full 30s and fails about the harness.
+- **Controls** (each removed, the named assertion fails): save guard, personal-keeps-
+  company, cancelled-counted, archived-not-separated, grid min width, the delete
+  sentence, the Escape handler.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and

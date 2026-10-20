@@ -89,6 +89,43 @@ const BOOKING_SLOTS = (() => {
 // and a screen that has no account to file against is a screen that never
 // draws a draft.
 let outcomeFixture = false
+
+// Projects: a card in every state it has — overdue and late, personal and
+// work, idea / paused / done — and the tasks that give two of them progress.
+// Served only inside the Projects visits (`projectsFixture`) and torn out again
+// after, because the task store keeps what it was given when the server is
+// later empty, and the screens after this one should not inherit a project.
+let projectsFixture = false
+const PROJECTS = (() => {
+  const now = new Date().toISOString()
+  const day = n => new Date(Date.now() + n * 864e5).toLocaleDateString('en-CA')
+  const P = (id, name, o) => ({ id, user_id: session.user.id, name, kind: 'work', color: '#2F63A8', status: 'active',
+    company_id: null, start_date: null, target_date: null, notes: null, archived: false, created_at: now, updated_at: now, ...o })
+  const T = (n, title, o) => ({ id: `11111111-0000-4000-8000-0000000001${String(n).padStart(2, '0')}`, user_id: session.user.id,
+    company_id: null, title, description: null, quadrant: 'schedule', effort_minutes: null, due_date: null, status: 'todo',
+    delegated_to: null, done_looks_like: null, created_at: now, completed_at: null, planned_time: null, owner_id: null,
+    company_tag: null, completed: false, task_type: null, priority: null, board_status: null, calendar_id: null,
+    gcal_event_id: null, parent_task_id: null, captured_via: null, urgent: false, checklist: [], attachments: [], links: [],
+    project_id: null, milestone_id: null, ...o })
+  const a = 'aaaaaaaa-0000-4000-8000-0000000001', id = n => a + String(n).padStart(2, '0')
+  return {
+    projects: [
+      P(id(1), 'Launch the new website', { target_date: day(-6), color: '#2F63A8' }),
+      P(id(2), 'Kitchen renovation', { kind: 'personal', status: 'paused', color: '#1D8A6A', target_date: day(40) }),
+      P(id(3), 'Learn calligraphy', { kind: 'personal', status: 'idea', color: '#B03A73' }),
+      P(id(4), 'Annual report', { status: 'done', color: '#C2622B', target_date: day(-30) }),
+    ],
+    project_milestones: [
+      { id: 'bbbbbbbb-0000-4000-8000-000000000101', project_id: id(1), user_id: session.user.id, title: 'Beta goes live', due_date: day(9), done: false, sort_order: 0 },
+    ],
+    tasks: [
+      T(1, 'Design signed off', { project_id: id(1), completed: true, status: 'done', completed_at: now }),
+      T(2, 'Write the copy', { project_id: id(1), due_date: day(-2) }),
+      T(3, 'Ship it', { project_id: id(1), due_date: day(5) }),
+      T(4, 'Pick the tiles', { project_id: id(2) }),
+    ],
+  }
+})()
 const OUTCOME = (() => {
   const pad = n => String(n).padStart(2, '0')
   const now = new Date()
@@ -393,6 +430,7 @@ for (const theme of THEMES) {
     const t = /\/rest\/v1\/([a-z_]+)/.exec(u)?.[1]
     const GET = r.request().method() === 'GET'
     if (outcomeFixture && t && OUTCOME[t] && GET) return r.fulfill({ json: OUTCOME[t] })
+    if (projectsFixture && t && PROJECTS[t] && GET) return r.fulfill({ json: PROJECTS[t] })
     if (t && SHOPPING[t] && GET) return r.fulfill({ json: SHOPPING[t] })
     if (t && LIBRARY[t] && GET) return r.fulfill({ json: LIBRARY[t] })
     if (t === 'rpc' || u.includes('/rpc/has_module')) {
@@ -606,6 +644,35 @@ for (const theme of THEMES) {
     await page.waitForTimeout(800)
     if (await page.locator('[data-meeting-backlink="task"]').count() !== 1) throw new Error('the task shows no meeting chip')
   })
+  // Projects: the grid with a card in every state, the new-project dialog, and
+  // an existing one with its delete confirmation open (a danger-ink sentence).
+  if (!process.env.INK_ONLY || process.env.INK_ONLY.includes('Projects')) {
+    projectsFixture = true
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(2500)
+    const projectsTab = async () => {
+      await page.locator('[data-side-rail] button[aria-label="Projects"]').click()
+      await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 6000 })
+    }
+    await visit('Projects · grid', projectsTab)
+    await visit('Projects · new project', async () => {
+      await page.getByRole('button', { name: /New project/ }).click()
+      await page.locator('[data-project-dialog]').waitFor({ state: 'visible' })
+      await page.getByLabel('Start date').fill('2026-11-10')
+      await page.getByLabel('Target date').fill('2026-11-01')   // opens the date-problem line
+    }, 20)
+    await visit('Projects · edit, delete confirmation', async () => {
+      await page.keyboard.press('Escape')
+      await page.locator('[data-project-card]').first().click()
+      await page.locator('[data-project-dialog]').waitFor({ state: 'visible' })
+      await page.getByRole('button', { name: 'Delete' }).click()
+    }, 20)
+    await page.keyboard.press('Escape')
+    projectsFixture = false
+    await page.evaluate(() => { for (const k of ['professor-tasks', 'professor-projects', 'professor-ui']) if (k !== 'professor-ui') localStorage.removeItem(k) })
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(2500)
+  }
   // INK_ONLY stops here: everything below depends on the screens before it, so
   // a filter on `visit` alone would leave later steps clicking in a page that
   // never got where they expect.
