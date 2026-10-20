@@ -655,6 +655,18 @@ for (const theme of THEMES) {
       await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 6000 })
     }
     await visit('Projects · grid', projectsTab)
+    await visit('Projects · a project, overview', async () => {
+      await page.locator('[data-project-card]').first().click()
+      await page.locator('[data-project-overview]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await visit('Projects · a project, tasks', async () => {
+      await page.getByRole('tab', { name: /^Tasks/ }).click()
+      await page.locator('[data-project-tasks]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await visit('Projects · back to the grid', async () => {
+      await page.getByRole('button', { name: 'Back to all projects' }).click()
+      await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 5000 })
+    })
     await visit('Projects · new project', async () => {
       await page.getByRole('button', { name: /New project/ }).click()
       await page.locator('[data-project-dialog]').waitFor({ state: 'visible' })
@@ -664,6 +676,8 @@ for (const theme of THEMES) {
     await visit('Projects · edit, delete confirmation', async () => {
       await page.keyboard.press('Escape')
       await page.locator('[data-project-card]').first().click()
+      await page.locator('[data-project-overview]').waitFor({ state: 'visible', timeout: 5000 })
+      await page.getByRole('button', { name: /Edit/ }).click()
       await page.locator('[data-project-dialog]').waitFor({ state: 'visible' })
       await page.getByRole('button', { name: 'Delete' }).click()
     }, 20)

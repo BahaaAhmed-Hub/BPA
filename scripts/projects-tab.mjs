@@ -128,6 +128,18 @@ const railBox = await p.locator('[data-side-rail]').evaluate(root => {
 ok('its bar is the rail\'s own lozenge (radius and ground)', barBox.r === railBox.r && barBox.bg === railBox.bg, `${JSON.stringify(barBox)} vs ${JSON.stringify(railBox)}`)
 
 const dlg = p.locator('[data-project-dialog]')
+// A card opens the project's page; the edit dialog is behind its Edit button.
+const editFromCard = async (id) => {
+  await p.locator(`[data-project-card="${id}"]`).click()
+  await p.locator(`[data-project-page="${id}"]`).waitFor({ state: 'visible', timeout: 5000 })
+  await p.getByRole('button', { name: /Edit/ }).click()
+  await dlg.waitFor({ state: 'visible' })
+}
+const backToGrid = async (id) => {
+  await p.keyboard.press('Escape').catch(() => {})
+  if (await p.locator('[data-project-page]').count()) await p.getByRole('button', { name: 'Back to all projects' }).click()
+  await p.locator('[data-project-page]').waitFor({ state: 'detached', timeout: 5000 })
+}
 
 if (MODE === 'create') {
   ok('with no projects, the empty state is drawn', await p.locator('[data-projects-empty]').count() === 1)
@@ -177,17 +189,17 @@ if (MODE === 'create') {
   ok('it reached the server', db.projects.length === 1 && db.projects[0].name === 'Launch the site' && db.projects[0].company_id === 'co-teradix', JSON.stringify(db.projects.map(x => x.name)))
 
   // Edit: open it, change kind to personal, save → company is cleared in the store.
-  await card.click()
-  await dlg.waitFor({ state: 'visible' })
-  ok('editing opens with the stored values', (await dlg.getByLabel('Project name').inputValue()) === 'Launch the site' && (await dlg.getByLabel('Company').inputValue()) === 'co-teradix')
+  await editFromCard(s.id)
+  ok('a card opens the page, and Edit opens the dialog with the stored values', (await dlg.getByLabel('Project name').inputValue()) === 'Launch the site' && (await dlg.getByLabel('Company').inputValue()) === 'co-teradix')
   await dlg.getByRole('tab', { name: 'Personal' }).click()
   await dlg.getByRole('button', { name: 'Save' }).click()
   await p.waitForTimeout(300)
+  await backToGrid()
   const after = (await projects())[0]
   ok('making it personal clears the stored company', after.kind === 'personal' && after.companyId === undefined, JSON.stringify(after))
   ok('and the card stops naming a company', !(await card.innerText()).includes('Teradix Ltd') && (await card.innerText()).includes('Personal'))
   // Escape cancels without saving.
-  await card.click(); await dlg.waitFor({ state: 'visible' })
+  await editFromCard(s.id)
   await dlg.getByLabel('Project name').fill('Renamed but cancelled')
   await p.keyboard.press('Escape')
   ok('Escape closes without saving', await dlg.count() === 0 && (await projects())[0].name === 'Launch the site')
@@ -218,19 +230,21 @@ if (MODE === 'cards') {
   await p.getByLabel('Kind of project').getByText('All', { exact: true }).click()
 
   // Archive from the dialog moves it between views.
-  await cardA.click(); await dlg.waitFor({ state: 'visible' })
+  await editFromCard(P_A)
   await dlg.getByRole('button', { name: 'Archive' }).click()
   await p.waitForTimeout(300)
+  await backToGrid()
   ok('archiving takes it out of Open', await p.locator(`[data-project-card="${P_A}"]`).count() === 0)
   ok('and the store says archived', (await projects()).find(x => x.id === P_A)?.archived === true)
   await p.getByLabel('Which projects').getByText('Archived', { exact: true }).click()
   ok('it is in Archived now', await p.locator(`[data-project-card="${P_A}"]`).count() === 1)
 
   // Delete keeps its tasks.
-  await p.locator(`[data-project-card="${P_A}"]`).click(); await dlg.waitFor({ state: 'visible' })
+  await editFromCard(P_A)
   await dlg.getByRole('button', { name: 'Unarchive' }).click()
+  await backToGrid()
   await p.getByLabel('Which projects').getByText('Open', { exact: true }).click()
-  await p.locator(`[data-project-card="${P_A}"]`).click(); await dlg.waitFor({ state: 'visible' })
+  await editFromCard(P_A)
   await dlg.getByRole('button', { name: 'Delete' }).click()
   const warn = await dlg.innerText()
   ok('delete asks first, and says its tasks stay (with the number: 4)', /Its tasks \(4\) stay, unassigned/.test(warn), warn.replace(/\n/g, ' | ').slice(0, 200))
@@ -259,7 +273,7 @@ if (MODE === 'narrow') {
   ok('the card fits inside the viewport', box.x >= 0 && box.x + box.width <= W + 1, JSON.stringify(box))
   const hit = await p.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('[data-project-card]')?.getAttribute('data-project-card'), [box.x + box.width / 2, box.y + box.height / 2])
   ok('the card under a point is that card (hit-test)', hit === P_A, `${hit}`)
-  await p.locator(`[data-project-card="${P_A}"]`).click(); await dlg.waitFor({ state: 'visible' })
+  await editFromCard(P_A)
   const d = await dlg.boundingBox()
   ok('the dialog fits the phone width', d.x >= 0 && d.x + d.width <= W + 1, JSON.stringify(d))
   ok('and its Save button is reachable inside the viewport', await dlg.getByRole('button', { name: 'Save' }).evaluate(el => { const r = el.getBoundingClientRect(); return r.bottom <= innerHeight && r.right <= innerWidth && r.left >= 0 }))

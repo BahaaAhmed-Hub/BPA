@@ -115,6 +115,41 @@ what the server sent. A task's `projectId` rides the existing task push, so
   company, cancelled-counted, archived-not-separated, grid min width, the delete
   sentence, the Escape handler.
 
+## Chunk 3 — the project page, and the field on the task
+`modules/projects/ProjectPage.tsx`, the Project cell in `tasks/TaskDetailPanel.tsx`,
+`scripts/project-page.mjs [page|panel]`, three more `Projects · …` screens in `ink-audit.mjs`.
+- **A card opens the page** (Overview: progress / done / open / overdue, dates, company, notes;
+  Tasks: add, tick, bring in, take out). The edit dialog is behind **Edit** on the page and
+  still serves create. `ProjectsModule` holds `openId`; a project deleted while its page is
+  open (here or on another device) is a grid again, not a blank screen.
+- **A task added from the page is PLACED** (`placementForNew` → `do`, never the brain dump),
+  carries the project, and takes the project's company when it has one.
+- **Ticking goes through `useDeliverableGate`**, the same door the board uses, so a typed
+  `do` task still asks what it produced. The page does not own a second rule.
+- **"Bring in an existing task" offers only open tasks in no project.** Moving one between
+  projects is done from the task's own Project field.
+- **The Project cell in the task panel is one more field — it never moves the task.**
+  Quadrant and board are untouched (asserted against a task that is really placed: the first
+  fixture wrote `schedule` as the quadrant, which the database does not use —
+  `important_not_urgent` — so every task loaded as unplaced and the "untouched" claim was
+  vacuous until the control failed to fail). Choosing a different project clears the
+  milestone, since phases belong to a project.
+- **Live projects are offered; the one the task is already in always is**, so a finished
+  project cannot make its own tasks unselectable. The cell is hidden when no projects exist.
+  Its arrow sends you to the page through `focusOn({ module: 'projects', id })`, the same
+  door a task's calendar row uses.
+- **Row components are called, not rendered** (`TaskLine({ t })`): defined inside the page
+  they would be a new type every render and every row would remount on every store change.
+- **A dated task added to a project is pushed to the calendar by the existing rule** — the
+  harness shows a "not signed in to Google" notice for it. That is `useTaskCalendarPush`
+  doing what it always does, not the page.
+- **Controls:** cancelled-as-open, add without the project, add into the brain dump, offer
+  finished tasks, unlink does nothing, page survives deletion, overdue uncoloured, panel
+  resets the quadrant (needed the corrected fixture), current project not kept in the
+  choices. Ink: 0 failing pairs over six Projects screens in four themes; an unreadable
+  caption colour fails at 1.51 on the overview. The audit's blindness warning also caught
+  its own stale "delete confirmation" step once the card stopped opening the dialog.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and

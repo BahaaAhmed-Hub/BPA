@@ -8,12 +8,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   X, ChevronDown, ChevronRight,
   Plus, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check, User, Paperclip,
-  ExternalLink, Ban,
+  ExternalLink, Ban, ArrowUpRight,
 } from 'lucide-react'
 import type { Task, TaskType, Priority, ChecklistStep, TaskAttachment, TaskActivity } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
+import { useProjectStore, projectOfTask } from '@/store/projectStore'
 import { TASK_TYPE_ORDER, initials, resolveTaskVisuals, formatScheduleLabel } from './taskVisuals'
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 import { resolveTaskCalendar, verifyTaskEvent } from '@/lib/taskCalendar'
@@ -124,6 +125,11 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   const allUsers = getVisibleUsers()
   const users = task.companyId ? allUsers.filter(u => u.companyId === task.companyId) : allUsers
   const owner = task.owner ? allUsers.find(u => u.id === task.owner) : undefined
+  // The project it belongs to. Offered: the ones still being worked on, plus the
+  // one it is already in — a finished project must not make its tasks unselectable.
+  const projects = useProjectStore(s => s.projects)
+  const project = projectOfTask(task, projects)
+  const projectChoices = projects.filter(p => (!p.archived && p.status !== 'done') || p.id === task.projectId)
 
   // Your columns, from Settings. Read on every render so renaming one in
   // another tab shows here without a reload.
@@ -447,6 +453,37 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </label>
+
+          {/* Project — one more field on the task. It keeps its quadrant and every
+              other view; this only says which project it counts toward. */}
+          {projects.length > 0 && (
+            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8 }}>
+              <label data-task-project style={{ ...CELL, flex: 1, position: 'relative' }}>
+                <span aria-hidden style={{
+                  width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, boxSizing: 'border-box',
+                  background: project?.color ?? 'var(--sb-field)',
+                  border: project ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
+                }} />
+                <span style={{ ...CELL_VALUE, color: project ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
+                  {project ? project.name : 'No project'}
+                </span>
+                <ChevronDown size={ICON.sm} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
+                <select aria-label="Project" value={project?.id ?? ''}
+                  // A different project is a different set of phases, so the phase goes.
+                  onChange={e => patch({ projectId: e.target.value || undefined, milestoneId: undefined })} style={CELL_INPUT}>
+                  <option value="">No project</option>
+                  {projectChoices.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </label>
+              {project && (
+                <button type="button" title="Open this project" aria-label={`Open ${project.name}`}
+                  onClick={() => focusOn({ module: 'projects', id: project.id })}
+                  style={{ ...CELL, width: 'var(--sb-h-pill)', padding: 0, justifyContent: 'center', flexShrink: 0 }}>
+                  <ArrowUpRight size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-3)' }} />
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Owner */}
           <label style={{ ...CELL, gridColumn: '1 / -1', position: 'relative' }}>
