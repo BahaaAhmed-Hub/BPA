@@ -31,10 +31,23 @@ export interface ProjectMilestone {
 /** Everything that is not a task. Tasks carry `projectId` on the task itself. */
 export type ProjectLinkKind = 'event' | 'thread' | 'entry' | 'habit' | 'book' | 'list'
 
+/** What a link to an event remembers about it. The project page cannot ask
+ *  Google, so the calendar refreshes this whenever it loads the event. */
+export interface EventMeta {
+  title: string
+  /** An ISO date-time, or YYYY-MM-DD for an all-day event. */
+  start: string
+  end?: string
+  allDay: boolean
+  calendarId?: string
+}
+
 export interface ProjectLink {
   id: string
   projectId: string
   kind: ProjectLinkKind
   /** The other module's own id — a string, because an event id is not a uuid. */
   refId: string
+  /** Only an event link carries one. */
+  meta?: EventMeta
 }

@@ -127,6 +127,18 @@ const PROJECTS = (() => {
       T(2, 'Write the copy', { project_id: id(1), due_date: day(-2) }),
       T(3, 'Ship it', { project_id: id(1), due_date: day(5) }),
       T(4, 'Pick the tiles', { project_id: id(2) }),
+      // A task whose time block is on the calendar — the "Task block" row.
+      T(5, 'Prepare the review', { project_id: id(1), gcal_event_id: 'evt-block', due_date: day(0), planned_time: '11:00', effort_minutes: 45 }),
+    ],
+    // The audit's own calendar event (e1) linked to the project, and two more that
+    // are only known by their snapshot — upcoming and earlier.
+    project_links: [
+      { id: 'cccccccc-0000-4000-8000-000000000101', project_id: id(1), user_id: session.user.id, kind: 'event', ref_id: 'e1',
+        meta: { title: 'OWI Actions Review', start: new Date(new Date().setHours(13, 0, 0, 0)).toISOString(), end: new Date(new Date().setHours(14, 0, 0, 0)).toISOString(), allDay: false, calendarId: 'primary' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000102', project_id: id(1), user_id: session.user.id, kind: 'event', ref_id: 'evt-future',
+        meta: { title: 'Launch party', start: day(7) + 'T18:00:00Z', end: day(7) + 'T20:00:00Z', allDay: false }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000103', project_id: id(1), user_id: session.user.id, kind: 'event', ref_id: 'evt-old',
+        meta: { title: 'Planning session', start: day(-5) + 'T09:00:00Z', end: day(-5) + 'T10:00:00Z', allDay: false }, created_at: now },
     ],
   }
 })()
@@ -671,6 +683,10 @@ for (const theme of THEMES) {
       await page.getByRole('tab', { name: 'Timeline' }).click()
       await page.locator('[data-timeline-axis]').waitFor({ state: 'visible', timeout: 5000 })
     })
+    await visit('Projects · a project, calendar', async () => {
+      await page.getByRole('tab', { name: /^Calendar/ }).click()
+      await page.locator('[data-project-calendar]').waitFor({ state: 'visible', timeout: 5000 })
+    })
     await visit('Projects · back to the grid', async () => {
       await page.getByRole('button', { name: 'Back to all projects' }).click()
       await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 5000 })
@@ -689,6 +705,13 @@ for (const theme of THEMES) {
       await page.locator('[data-project-dialog]').waitFor({ state: 'visible' })
       await page.getByRole('button', { name: 'Delete' }).click()
     }, 20)
+    await page.keyboard.press('Escape')
+    // The calendar's side of the link: the Project row in an event's own panel.
+    await visit('Calendar · an event\'s project row', async () => {
+      await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
+      await page.locator('.event-card').first().click()
+      await page.locator('[data-event-project]').first().waitFor({ state: 'visible', timeout: 8000 })
+    })
     await page.keyboard.press('Escape')
     // The same milestones on the calendar: a strip in the week, chips in the month.
     await visit('Calendar · milestone markers, week', async () => {

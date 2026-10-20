@@ -15,9 +15,10 @@ import { useDeliverableGate } from '../tasks/DeliverablePrompt'
 import { inputStyle } from '@/modules/library/fieldStyle'
 import { ProjectDialog } from './ProjectDialog'
 import { ProjectTimeline, byDate } from './ProjectTimeline'
+import { ProjectCalendar, projectCalendarItems } from './ProjectCalendar'
 import type { Project } from './types'
 
-type Tab = 'overview' | 'tasks' | 'timeline'
+type Tab = 'overview' | 'tasks' | 'timeline' | 'calendar'
 
 const STATUS_LABEL: Record<Project['status'], string> = { idea: 'Idea', active: 'Active', paused: 'Paused', done: 'Done' }
 const CARD: React.CSSProperties = {
@@ -37,6 +38,7 @@ const dayDiff = (iso: string, today: string) =>
  *  not a new home for them. */
 export function ProjectPage({ project, onBack }: { project: Project; onBack: () => void }) {
   const milestones = useProjectStore(s => s.milestones)
+  const links = useProjectStore(s => s.links)
   const allTasks = useTaskStore(s => s.tasks)
   const addTask = useTaskStore(s => s.addTask)
   const updateTask = useTaskStore(s => s.updateTask)
@@ -51,6 +53,7 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
     () => (project.companyId ? loadDynamicCompanies().find(c => c.id === project.companyId) : undefined),
     [project.companyId])
   const stats = projectStats(project, allTasks, milestones, today)
+  const eventCount = projectCalendarItems(project, links, allTasks.filter(t => t.projectId === project.id)).length
   const phases = milestones.filter(m => m.projectId === project.id).sort(byDate)
   const mine = allTasks.filter(t => t.projectId === project.id)
   const open = mine.filter(t => !t.completed && t.status !== 'done' && t.status !== 'cancelled')
@@ -150,6 +153,7 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
             { value: 'overview' as const, label: 'Overview' },
             { value: 'tasks' as const, label: `Tasks${stats.total ? ` · ${stats.total}` : ''}` },
             { value: 'timeline' as const, label: 'Timeline' },
+            { value: 'calendar' as const, label: `Calendar${eventCount ? ` · ${eventCount}` : ''}` },
           ]} />
           <Button variant="secondary" onClick={() => setEditing(true)}><Pencil size={ICON.sm} /> Edit</Button>
         </span>
@@ -244,6 +248,7 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
         </div>
       )}
 
+      {tab === 'calendar' && <ProjectCalendar project={project} tasks={mine} today={today} />}
       {tab === 'timeline' && <ProjectTimeline project={project} tasks={mine} today={today} />}
 
       {editing && <ProjectDialog project={project} onClose={() => setEditing(false)} />}

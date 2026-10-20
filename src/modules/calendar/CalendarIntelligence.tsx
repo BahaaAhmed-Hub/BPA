@@ -65,6 +65,9 @@ import { syncTaskToEvent } from '@/lib/taskEventLink'
 import { parseRecurrence } from './recurrence'
 import { useUIStore } from '@/store/uiStore'
 import { MilestoneChip, useMilestoneMarkers } from '@/modules/projects/MilestoneMarkers'
+import { EventProjectRow } from '@/modules/projects/EventProjectRow'
+import { eventMeta, sameMeta } from '@/modules/projects/eventLinks'
+import { useProjectStore } from '@/store/projectStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
@@ -2163,8 +2166,12 @@ export function CalendarIntelligence() {
       ? await getGoogleToken(cal.accountEmail)
       : (await refreshPrimaryToken() || cal.accountToken)
     if (!token) return
+    // What is linked to it now — an undo writes the event again under a new id,
+    // and the links have to follow it there or the undo quietly loses them.
+    const wasLinked = useProjectStore.getState().links.filter(l => l.kind === 'event' && l.refId === ev.id)
     const ok = await deleteCalendarEventWithToken(token, ev.calendarId, ev.id)
     if (ok) {
+      useProjectStore.getState().removeLinksByRef('event', ev.id)
       // Google has no undelete, so taking this back means writing the same
       // event again. It comes back with a new id — which is why the undo says
       // "put it back" rather than pretending nothing happened.
@@ -2179,7 +2186,10 @@ export function CalendarIntelligence() {
       const calendarId = ev.calendarId
       pushUndo(`Deleted "${ev.summary ?? 'an event'}"`, async () => {
         const back = await createCalendarEventWithToken(token, calendarId, body)
-        if (back.event) setEvents(prev => [...prev, { ...back.event as GCalEvent, calendarId } as GCalEventExt])
+        if (back.event) {
+          setEvents(prev => [...prev, { ...back.event as GCalEvent, calendarId } as GCalEventExt])
+          for (const l of wasLinked) useProjectStore.getState().addLink(l.projectId, 'event', (back.event as GCalEvent).id, l.meta)
+        }
       })
       setEvents(prev => prev.filter(e => e.id !== ev.id))
       if (selectedEvent?.id === ev.id) setSelectedEvent(null)
@@ -2572,6 +2582,21 @@ export function CalendarIntelligence() {
     const start = getWeekStart(first, firstDow)
     return Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d })
   }, [anchorDate, firstDow])
+  // A project's link to an event remembers what the event is (title, hours), since
+  // the project page cannot ask Google. The calendar is the one thing that can see
+  // the event, so it refreshes the snapshot whenever it has the event loaded. Equal
+  // snapshots write nothing, which is what stops two open devices trading writes.
+  const projectLinks = useProjectStore(s => s.links)
+  useEffect(() => {
+    for (const l of projectLinks) {
+      if (l.kind !== 'event') continue
+      const ev = events.find(e => e.id === l.refId)
+      if (!ev) continue
+      const meta = eventMeta(ev)
+      if (!sameMeta(l.meta, meta)) useProjectStore.getState().setLinkMeta(l.id, meta)
+    }
+  }, [events, projectLinks])
+
   // Filter out block-events for rules with hideBlocked=true (or global originalsOnly).
   // Uses two paths: localStorage map (fast) + description marker (cross-device, no Apply needed).
   const displayedEvents = (() => {
@@ -3786,6 +3811,8 @@ export function CalendarIntelligence() {
               <OutcomesCard
                 eventId={ev.id} done={eventStatuses[ev.id] === 'done'}
                 onReopen={() => { const o = outcomeOf(ev.id); if (o) askAboutOutcome(o) }} />
+              {/* Which project it belongs to — the same link the project page lists. */}
+              <EventProjectRow ev={ev} />
               {/* What the Professor has read about this meeting. */}
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>Prep</span>

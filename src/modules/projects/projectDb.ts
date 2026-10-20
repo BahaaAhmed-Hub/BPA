@@ -7,7 +7,7 @@
  */
 import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
-import type { Project, ProjectKind, ProjectLink, ProjectLinkKind, ProjectMilestone, ProjectStatus } from './types'
+import type { EventMeta, Project, ProjectKind, ProjectLink, ProjectLinkKind, ProjectMilestone, ProjectStatus } from './types'
 
 interface ProjectRow {
   id: string; user_id: string; name: string; kind: string; color: string | null; status: string
@@ -18,7 +18,7 @@ interface MilestoneRow {
   id: string; project_id: string; user_id: string; title: string
   due_date: string | null; done: boolean; sort_order: number
 }
-interface LinkRow { id: string; project_id: string; user_id: string; kind: string; ref_id: string }
+interface LinkRow { id: string; project_id: string; user_id: string; kind: string; ref_id: string; meta?: unknown }
 
 // `null` from the server means "nothing here"; the app's types use absence.
 const opt = <T,>(v: T | null | undefined): T | undefined => (v ?? undefined)
@@ -35,6 +35,7 @@ export const toMilestone = (r: MilestoneRow): ProjectMilestone => ({
 })
 export const toLink = (r: LinkRow): ProjectLink => ({
   id: r.id, projectId: r.project_id, kind: r.kind as ProjectLinkKind, refId: r.ref_id,
+  ...(r.meta ? { meta: r.meta as EventMeta } : {}),
 })
 
 // `?? null` on every optional: `undefined` is dropped on the way to JSON, so an
@@ -49,9 +50,16 @@ export const fromMilestone = (m: ProjectMilestone, userId: string) => ({
   id: m.id, project_id: m.projectId, user_id: userId, title: m.title,
   due_date: m.dueDate ?? null, done: m.done, sort_order: m.sortOrder,
 })
-export const fromLink = (l: ProjectLink, userId: string) => ({
+/** `withMeta` false leaves the column out, for a database without 20260043. */
+export const fromLink = (l: ProjectLink, userId: string, withMeta = true) => ({
   id: l.id, project_id: l.projectId, user_id: userId, kind: l.kind, ref_id: l.refId,
+  ...(withMeta ? { meta: l.meta ?? null } : {}),
 })
+
+/** Set once a row has come back carrying `meta`: only then can a link that lost
+ *  its snapshot write the null. Cleared when the column is found missing. */
+let linkMeta = false
+let linkMetaMissing = false
 
 /** 42P01: undefined_table. PGRST205: PostgREST's cache has no such table. */
 const isMissing = (e: { code?: string } | null) => e?.code === '42P01' || e?.code === 'PGRST205'
@@ -81,6 +89,7 @@ export async function loadProjectData(): Promise<ProjectData | 'missing'> {
   if (isMissing(p.error) || isMissing(m.error) || isMissing(l.error)) return 'missing'
   const failed = p.error ?? m.error ?? l.error
   if (failed) throw new Error(failed.message)
+  if (((l.data ?? []) as LinkRow[]).some(r => 'meta' in r)) { linkMeta = true; linkMetaMissing = false }
   return {
     projects:   ((p.data ?? []) as ProjectRow[]).map(toProject),
     milestones: ((m.data ?? []) as MilestoneRow[]).map(toMilestone),
@@ -115,8 +124,16 @@ export async function pushProjectData(push: ProjectPush): Promise<void> {
   if (push.links.length) {
     // The unique (project, kind, ref) key is the second way a duplicate can
     // arrive: two devices linking one thing mint two ids. Ignore the loser.
-    const { error } = await supabase.from('project_links')
-      .upsert(push.links.map(l => fromLink(l, uid)), { onConflict: 'project_id,kind,ref_id' })
+    // `meta` is sent once a link holds one or the column is known to exist, so a
+    // database without 20260043 keeps saving every other link.
+    const send = !linkMetaMissing && (linkMeta || push.links.some(l => l.meta))
+    const write = (withMeta: boolean) => supabase.from('project_links')
+      .upsert(push.links.map(l => fromLink(l, uid, withMeta)), { onConflict: 'project_id,kind,ref_id' })
+    let { error } = await write(send)
+    if (error && send && /meta/.test(error.message)) {
+      linkMetaMissing = true
+      ;({ error } = await write(false))
+    }
     if (error) throw new Error(error.message)
   }
   // Children before parents on the way out too — though cascade would cover it.

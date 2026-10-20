@@ -185,6 +185,45 @@ cell in `TaskDetailPanel`, a strip and chips in `CalendarIntelligence`,
 - **Known, not mine:** `company-lens-dims.mjs calendar` fails "the header counts what is in
   focus" (reads "New event") on the calendar *without* these markers too.
 
+## Chunk 5 — events and time blocks belong to a project
+`20260043_project_link_meta.sql`, `modules/projects/{EventProjectRow,ProjectCalendar,eventLinks}.ts(x)`,
+the Calendar tab in `ProjectPage`, a `Project` row in the calendar's event panel, a snapshot refresh
+and delete handling in `CalendarIntelligence`, `scripts/project-events.mjs [panel|page|sync|delete]`.
+- **The link lives in `project_links` (kind `event`, `refId` = the Google event id), never on the
+  event.** Linking writes nothing to Google — asserted in every mode, as a non-GET count of 0 —
+  so no scope, no invitation, no round trip, and it works on a read-only calendar.
+- **A link carries a snapshot (`meta`: title, start, end, allDay, calendarId)** because the project
+  page cannot ask Google: only the calendar holds events, and only the week it is showing. The
+  calendar **refreshes the snapshot whenever it has the event loaded**; equal snapshots write
+  nothing (no ping-pong), and an event that is not loaded keeps what it had — it is never blanked.
+  `meta` is a separate migration and `projectDb` keeps working without it (sent only when a link
+  holds one or a row has come back carrying it; a rejection naming the column retries without it).
+- **Two defences overlap**, and a control has to remove both: the panel writes the snapshot on link,
+  and the calendar refreshes it. Removing only the first still passes (the refresh fills it in);
+  removing both fails — which is why the first control "passed".
+- **One project per event.** Choosing another *replaces* (`removeLinksByRef` then `addLink`); "No
+  project" removes. Offered: live projects, plus the one it is in.
+- **A task's block belongs to its task's project and says so** ("Launch the site · via its task"),
+  with no select — a second, competing answer would let the two disagree. Pressing it opens the
+  project. On the page it is listed as **Task block**, and an explicit link to the same event shows
+  once, as the task's. A block takes its hours from the task (`dueDate`, `plannedTime`, `duration`).
+- **The Calendar tab**: Upcoming (soonest first) and Earlier (latest first), a row each with day,
+  hours, title, **Task block / Linked**, an *open in calendar* arrow (`focusOn` calendar with the day)
+  and, for an explicit link only, an unlink. Another project's events are not listed.
+- **Deleting an event drops its links, and undoing the delete puts them back on the event's NEW
+  id** (the undo writes the event again; Google has no undelete). Without the second half an undo
+  quietly lost the project.
+- **A harness trap that cost a file:** `open(p,'w').write(open(p).read())` truncates before it
+  reads. A throwaway "touch" line emptied `CalendarIntelligence.tsx`; it came back from git, and
+  the edits were reapplied. Never write a file you are still reading in the same statement.
+- **Not done:** a project dot on the event cards in the grid, and linking while *composing* a new
+  event (the composer has no `extra` slot; link it once it exists). Recurring series link per
+  occurrence, since each has its own id.
+- **Controls** (each removed, the named assertion fails): snapshot (both defences), replace, task
+  block select, double-listing, other projects' links, order, no refresh, delete leaving links, undo
+  not re-linking. Ink: 0 failing pairs over eleven Projects/calendar screens in four themes; an
+  unreadable colour fails at 1.51 on both the new tab and the panel row.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and
