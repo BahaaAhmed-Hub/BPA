@@ -150,6 +150,41 @@ what the server sent. A task's `projectId` rides the existing task push, so
   caption colour fails at 1.51 on the overview. The audit's blindness warning also caught
   its own stale "delete confirmation" step once the card stopped opening the dialog.
 
+## Chunk 4 — milestones, the timeline, and the calendar markers
+`modules/projects/{ProjectTimeline,MilestoneMarkers}.tsx`, the Timeline tab in `ProjectPage`, a Phase
+cell in `TaskDetailPanel`, a strip and chips in `CalendarIntelligence`,
+`scripts/project-timeline.mjs [timeline|phase|calendar|calendar-none|month]`.
+- **A milestone is not an event.** Nothing is written to Google, nobody is invited, it has no
+  hour. The calendar draws it as a marker on its day and a click opens its **project**
+  (`focusOn({ module: 'projects', id })`), never an event panel. Asserted: no non-GET request
+  to `googleapis.com` in week, month or a week with nothing due.
+- **Week/day: a "Due" strip under the day headers, only when the week has one** — the same
+  rule as the All-day strip, capped at 68px with the same scroll. Month: two markers a cell
+  at most, and `stopPropagation` so a marker does not also open the day. Archived projects and
+  undated milestones draw nothing. Done ones draw a tick and are struck through.
+  The company lens does **not** dim markers yet (they carry a project, not a company).
+- **The axis is measured, not trusted.** Markers sit at their dates in proportion (15 of 55
+  days to within 1.2%), in order, with today and the start/target ticks where the dates put them;
+  labels alternate above and below, and are clamped to the card so an end label is not cut off
+  (the diamond is never moved). The range always holds every drawn date plus today while the
+  project is live; a single-day range is widened to a fortnight. `axisOf` is the one function.
+- **Rows commit on blur / Enter; Escape cancels.** Escape blurs the field and blur is what saves,
+  so a cancel flag is needed or the half-typed name is committed on the way out — shipped that
+  way first and caught by the harness. An empty name reverts.
+- **Deleting a milestone keeps its tasks in the project and clears their phase** — locally
+  (`taskStore.clearMilestone`) and on the server row. A task's phase is offered only from its
+  own project, from the page row and from the panel; changing project clears it.
+- **"After the target date"** is flagged on a milestone dated past the project's target.
+  It has a fixed 128px slot so the date columns line up whether or not a row has a note.
+- **Controls** (each removed, the named assertion fails): non-proportional axis, undated first,
+  delete leaving the phase, phases from every project, project change keeping the phase,
+  archived drawn, month uncapped, marker click falling through to the day, strip always drawn.
+  Ink: 0 failing pairs over nine Projects/calendar screens in four themes; an unreadable marker
+  colour fails at 1.51 in the week strip. The audit's calendar visits first used buttons for the
+  Month/Week switch — they are `role="tab"` — and its blindness warning said so.
+- **Known, not mine:** `company-lens-dims.mjs calendar` fails "the header counts what is in
+  focus" (reads "New event") on the calendar *without* these markers too.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and

@@ -110,13 +110,17 @@ const PROJECTS = (() => {
   const a = 'aaaaaaaa-0000-4000-8000-0000000001', id = n => a + String(n).padStart(2, '0')
   return {
     projects: [
-      P(id(1), 'Launch the new website', { target_date: day(-6), color: '#2F63A8' }),
+      P(id(1), 'Launch the new website', { start_date: day(-40), target_date: day(-6), color: '#2F63A8' }),
       P(id(2), 'Kitchen renovation', { kind: 'personal', status: 'paused', color: '#1D8A6A', target_date: day(40) }),
       P(id(3), 'Learn calligraphy', { kind: 'personal', status: 'idea', color: '#B03A73' }),
       P(id(4), 'Annual report', { status: 'done', color: '#C2622B', target_date: day(-30) }),
     ],
     project_milestones: [
-      { id: 'bbbbbbbb-0000-4000-8000-000000000101', project_id: id(1), user_id: session.user.id, title: 'Beta goes live', due_date: day(9), done: false, sort_order: 0 },
+      { id: 'bbbbbbbb-0000-4000-8000-000000000101', project_id: id(1), user_id: session.user.id, title: 'Beta goes live', due_date: day(9), done: false, sort_order: 1 },
+      { id: 'bbbbbbbb-0000-4000-8000-000000000102', project_id: id(1), user_id: session.user.id, title: 'Design review', due_date: day(-4), done: true, sort_order: 0 },
+      { id: 'bbbbbbbb-0000-4000-8000-000000000103', project_id: id(1), user_id: session.user.id, title: 'Content freeze', due_date: day(0), done: false, sort_order: 2 },
+      { id: 'bbbbbbbb-0000-4000-8000-000000000104', project_id: id(1), user_id: session.user.id, title: 'Public launch', due_date: day(30), done: false, sort_order: 3 },
+      { id: 'bbbbbbbb-0000-4000-8000-000000000105', project_id: id(1), user_id: session.user.id, title: 'Press kit', due_date: null, done: false, sort_order: 4 },
     ],
     tasks: [
       T(1, 'Design signed off', { project_id: id(1), completed: true, status: 'done', completed_at: now }),
@@ -663,6 +667,10 @@ for (const theme of THEMES) {
       await page.getByRole('tab', { name: /^Tasks/ }).click()
       await page.locator('[data-project-tasks]').waitFor({ state: 'visible', timeout: 5000 })
     })
+    await visit('Projects · a project, timeline', async () => {
+      await page.getByRole('tab', { name: 'Timeline' }).click()
+      await page.locator('[data-timeline-axis]').waitFor({ state: 'visible', timeout: 5000 })
+    })
     await visit('Projects · back to the grid', async () => {
       await page.getByRole('button', { name: 'Back to all projects' }).click()
       await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 5000 })
@@ -682,6 +690,16 @@ for (const theme of THEMES) {
       await page.getByRole('button', { name: 'Delete' }).click()
     }, 20)
     await page.keyboard.press('Escape')
+    // The same milestones on the calendar: a strip in the week, chips in the month.
+    await visit('Calendar · milestone markers, week', async () => {
+      await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
+      await page.locator('[data-cal-milestones]').waitFor({ state: 'visible', timeout: 8000 })
+    })
+    await visit('Calendar · milestone markers, month', async () => {
+      await page.getByRole('tab', { name: 'Month', exact: true }).click()
+      await page.locator('.cal-cell [data-milestone-marker]').first().waitFor({ state: 'visible', timeout: 8000 })
+    })
+    await page.getByRole('tab', { name: 'Week', exact: true }).click().catch(() => {})
     projectsFixture = false
     await page.evaluate(() => { for (const k of ['professor-tasks', 'professor-projects', 'professor-ui']) if (k !== 'professor-ui') localStorage.removeItem(k) })
     await page.reload({ waitUntil: 'domcontentloaded' })

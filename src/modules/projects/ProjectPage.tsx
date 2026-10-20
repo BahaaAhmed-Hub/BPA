@@ -14,9 +14,10 @@ import { placementForNew } from '../tasks/BrainDumpRail'
 import { useDeliverableGate } from '../tasks/DeliverablePrompt'
 import { inputStyle } from '@/modules/library/fieldStyle'
 import { ProjectDialog } from './ProjectDialog'
+import { ProjectTimeline, byDate } from './ProjectTimeline'
 import type { Project } from './types'
 
-type Tab = 'overview' | 'tasks'
+type Tab = 'overview' | 'tasks' | 'timeline'
 
 const STATUS_LABEL: Record<Project['status'], string> = { idea: 'Idea', active: 'Active', paused: 'Paused', done: 'Done' }
 const CARD: React.CSSProperties = {
@@ -50,6 +51,7 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
     () => (project.companyId ? loadDynamicCompanies().find(c => c.id === project.companyId) : undefined),
     [project.companyId])
   const stats = projectStats(project, allTasks, milestones, today)
+  const phases = milestones.filter(m => m.projectId === project.id).sort(byDate)
   const mine = allTasks.filter(t => t.projectId === project.id)
   const open = mine.filter(t => !t.completed && t.status !== 'done' && t.status !== 'cancelled')
   const done = mine.filter(t => t.completed || t.status === 'done')
@@ -107,6 +109,14 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
             {fmtShort(t.dueDate)}
           </span>
         )}
+        {phases.length > 0 && !finished && t.status !== 'cancelled' && (
+          <select aria-label={`Phase for ${t.title}`} value={phases.some(m => m.id === t.milestoneId) ? t.milestoneId : ''}
+            onChange={e => updateTask(t.id, { milestoneId: e.target.value || undefined })}
+            style={{ flex: '0 1 150px', minWidth: 0, height: 26, borderRadius: 'var(--sb-r-sm)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-field)', color: t.milestoneId ? 'var(--sb-ink-2)' : 'var(--sb-ink-4)', fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', padding: '0 6px' }}>
+            <option value="">No phase</option>
+            {phases.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+          </select>
+        )}
         <button type="button" aria-label={`Take ${t.title} out of this project`} title="Take it out of this project"
           onClick={() => updateTask(t.id, { projectId: undefined, milestoneId: undefined })}
           style={{ flexShrink: 0, background: 'none', border: 'none', padding: 4, cursor: 'pointer', color: 'var(--sb-ink-4)', display: 'flex' }}>
@@ -139,6 +149,7 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
           <Segmented aria-label="Project section" value={tab} onChange={setTab} options={[
             { value: 'overview' as const, label: 'Overview' },
             { value: 'tasks' as const, label: `Tasks${stats.total ? ` · ${stats.total}` : ''}` },
+            { value: 'timeline' as const, label: 'Timeline' },
           ]} />
           <Button variant="secondary" onClick={() => setEditing(true)}><Pencil size={ICON.sm} /> Edit</Button>
         </span>
@@ -232,6 +243,8 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
           )}
         </div>
       )}
+
+      {tab === 'timeline' && <ProjectTimeline project={project} tasks={mine} today={today} />}
 
       {editing && <ProjectDialog project={project} onClose={() => setEditing(false)} />}
       {deliverablePrompt}

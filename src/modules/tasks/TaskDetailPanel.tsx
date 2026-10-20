@@ -129,6 +129,13 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   // one it is already in — a finished project must not make its tasks unselectable.
   const projects = useProjectStore(s => s.projects)
   const project = projectOfTask(task, projects)
+  const milestones = useProjectStore(s => s.milestones)
+  // The phases of its project, soonest first. Only the project's own: a phase from
+  // another project would count this task toward work it is not part of.
+  const phases = project
+    ? milestones.filter(m => m.projectId === project.id).sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || a.sortOrder - b.sortOrder)
+    : []
+  const phase = phases.find(m => m.id === task.milestoneId)
   const projectChoices = projects.filter(p => (!p.archived && p.status !== 'done') || p.id === task.projectId)
 
   // Your columns, from Settings. Read on every render so renaming one in
@@ -483,6 +490,21 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 </button>
               )}
             </div>
+          )}
+
+          {/* Phase — a milestone of that project, when it has any. */}
+          {phases.length > 0 && (
+            <label data-task-phase style={{ ...CELL, gridColumn: '1 / -1', position: 'relative' }}>
+              <span aria-hidden style={{ width: 18, flexShrink: 0, textAlign: 'center', color: phase ? 'var(--sb-ink-2)' : 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)' }}>◆</span>
+              <span style={{ ...CELL_VALUE, color: phase ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
+                {phase ? `${phase.title}${phase.dueDate ? ` · ${new Date(phase.dueDate + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}` : 'No phase'}
+              </span>
+              <ChevronDown size={ICON.sm} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
+              <select aria-label="Phase" value={phase?.id ?? ''} onChange={e => patch({ milestoneId: e.target.value || undefined })} style={CELL_INPUT}>
+                <option value="">No phase</option>
+                {phases.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+              </select>
+            </label>
           )}
 
           {/* Owner */}

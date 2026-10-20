@@ -64,6 +64,7 @@ import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/wee
 import { syncTaskToEvent } from '@/lib/taskEventLink'
 import { parseRecurrence } from './recurrence'
 import { useUIStore } from '@/store/uiStore'
+import { MilestoneChip, useMilestoneMarkers } from '@/modules/projects/MilestoneMarkers'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
@@ -1606,6 +1607,8 @@ export function CalendarIntelligence() {
   const focus = useUIStore(s => s.focus)
   const clearFocus = useUIStore(s => s.clearFocus)
   const focusOn = useUIStore(s => s.focusOn)
+  // Milestones of live projects, by day — drawn as markers, never as events.
+  const milestonesByDay = useMilestoneMarkers()
   const pendingFocusId = useRef<string | null>(null)
   useEffect(() => {
     if (focus?.module !== 'calendar') return
@@ -3219,6 +3222,8 @@ export function CalendarIntelligence() {
                     fontVariantNumeric: 'tabular-nums',
                   }}>{day.getDate()}</span>
 
+                  {(milestonesByDay.get(ds) ?? []).slice(0, 2).map(mk => <MilestoneChip key={mk.id} marker={mk} compact />)}
+
                   {shown.map(e => {
                     const cal = allCalendars.find(c => c.id === (e as GCalEventExt).calendarId)
                     const col = cal ? calEffectiveColor(cal) : undefined
@@ -3318,6 +3323,24 @@ export function CalendarIntelligence() {
               )
             })}
           </div>
+
+          {/* Milestones — only when the week has one due. They are not events: nothing
+              is written to Google and nobody is invited. Each opens its project. */}
+          {weekDays.some(day => milestonesByDay.has(localDateStr(day))) && (
+            <div data-cal-milestones style={{ display: 'flex', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', flexShrink: 0, minHeight: 22 }}>
+              <div style={{ width: 84, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 12, paddingTop: 8, fontFamily: MONO, fontSize: 9.5, fontWeight: 500, color: 'var(--sb-ink-4)', letterSpacing: '0.14em', textTransform: 'uppercase' as const, whiteSpace: 'nowrap' }}>
+                Due
+              </div>
+              {weekDays.map(day => {
+                const ds = localDateStr(day)
+                return (
+                  <div key={ds} style={{ flex: 1, padding: '6px 4px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 68, overflowY: 'auto' }}>
+                    {(milestonesByDay.get(ds) ?? []).map(mk => <MilestoneChip key={mk.id} marker={mk} />)}
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
           {/* All-day events strip — only shown when the week has at least one all-day event */}
           {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
