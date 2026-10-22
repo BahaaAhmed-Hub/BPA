@@ -344,8 +344,12 @@ export function ProfessorCard({ rows, dayLabel }: { rows: RailEvent[]; dayLabel:
               // the event itself.
               title="Open the events this is about"
               style={{
-                height: 34, padding: '0 16px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: 'var(--sb-t-body)', fontWeight: 600,
+                // minHeight, not height: the label is model-written and can run to
+                // two lines, which a fixed 34px clipped. The radius is a fixed
+                // pill-end rather than 999 so a taller button stays a pill, not a stadium.
+                minHeight: 34, padding: '7px 16px', borderRadius: 17, cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 'var(--sb-t-body)', fontWeight: 600, lineHeight: 1.25, textAlign: 'center',
+                maxWidth: '100%',
                 background: i === 0 ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                 border: i === 0 ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
                 color: i === 0 ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-2)',
