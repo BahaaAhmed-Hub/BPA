@@ -2,6 +2,7 @@
 // Uncategorised capture on the left of the matrix, with a per-task suggestion
 // and an auto-distribute footer that reads each task's own fields.
 
+import { useProjectFocusClass } from '@/modules/projects/useProjectFocusClass'
 import { useState } from 'react'
 import { Plus, Sparkles, GripVertical, Check, AlertTriangle, RotateCcw, Trash2, ChevronLeft, ChevronRight, ScanLine } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
@@ -118,10 +119,12 @@ function DumpCard({ task, onOpen, onDelete }: {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
   const [hovered, setHovered] = useState(false)
   const s = suggestPlacement(task)
+  const projectFocus = useProjectFocusClass()
 
   return (
     <div
       data-task-node
+      className={projectFocus.task(task.projectId)}
       ref={setNodeRef}
       onClick={e => { if (!(e.target as HTMLElement).closest('[data-nm]')) onOpen(task.id) }}
       onMouseEnter={() => setHovered(true)}

@@ -58,6 +58,7 @@ import type { OutcomeEvent } from './MeetingOutcome'
 import type { OutcomeCalendarPort, OutcomeEventRef, PortResult } from './outcome/shared'
 import { OutcomesCard } from './outcome/OutcomesCard'
 import { useFocusClass, useCompanyFocus } from '@/lib/companyFocus'
+import { useProjectFocusClass } from '@/modules/projects/useProjectFocusClass'
 import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
 import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
@@ -1406,6 +1407,7 @@ export function CalendarIntelligence() {
   // map is rebuilt when Settings changes the companies, and the class comes
   // from `companyFocus` so the fade is the same one tasks and mail wear.
   const focusClass = useFocusClass()
+  const projectFocus = useProjectFocusClass({ taskBlocks: true })
   const [lensCompany] = useCompanyFocus()
   const [focusCompanies, setFocusCompanies] = useState<DynamicCompany[]>(
     () => loadDynamicCompanies().filter(c => !c.hidden))
@@ -3645,7 +3647,7 @@ export function CalendarIntelligence() {
                           isSelected={selectedEvent?.id === ev.id}
                           isDragSrc={draggingEvt?.id === ev.id && dragMode === 'move'}
                           colorOverride={cal ? calEffectiveColor(cal) : undefined}
-                          focusClass={focusClass(companyOfCalendar((ev as GCalEventExt).calendarId))}
+                          focusClass={focusClass(companyOfCalendar((ev as GCalEventExt).calendarId)) || projectFocus.event(ev.id)}
                           onStatusToggle={s => {
                             toggleStatus(ev.id, s)
                           }}

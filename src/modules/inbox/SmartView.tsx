@@ -12,6 +12,7 @@ import { tagOfMail, companyOfMail } from '@/lib/mailCompany'
 import { useProjectStore } from '@/store/projectStore'
 import { threadRef } from '@/modules/projects/threadLinks'
 import { useFocusClass } from '@/lib/companyFocus'
+import { useProjectFocusClass } from '@/modules/projects/useProjectFocusClass'
 import { isBusinessAccount } from '@/lib/businessAccounts'
 import { useRailOverflow } from '@/lib/railOverflow'
 import { LOZENGE } from '../../components/SideRail'
@@ -532,6 +533,7 @@ function Row({
   // counterparty-first resolver the chip beside the sender already uses — the
   // chip wants a label, the lens wants an id, and both come from one answer.
   const focusClass = useFocusClass()
+  const projectFocus = useProjectFocusClass()
   const lensCompany = useMemo(
     () => companyOfMail({ fromEmail: t.fromEmail, accountEmail: t.accountEmail })?.id,
     [t.fromEmail, t.accountEmail])
@@ -565,7 +567,7 @@ function Row({
     return l ? allProjects.find(p => p.id === l.projectId) : undefined
   }, [projectLinks, allProjects, t.accountEmail, t.threadId])
   return (
-    <div className={focusClass(lensCompany)} style={{
+    <div className={focusClass(lensCompany) || projectFocus.thread(t.accountEmail, t.threadId)} style={{
       // `flex-start`, not the default stretch: a stretched checkbox centres its
       // own glyph against the whole row and drifts away from the title it
       // selects.

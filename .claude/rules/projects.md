@@ -339,6 +339,35 @@ open tasks**. Both end in a **draft you review** — nothing is written until Ad
   one-per-task validation. Modes: templates, ai, messy, fail, nokey, schedule.
 - **Not done:** AI replanning of an existing project, estimating effort, per-user templates.
 
+## Chunk 9 — the project lens, beside the company one
+
+`lib/projectFocus.ts` (the lens: `professor-project-focus`, an event, `useProjectFocus`),
+`modules/projects/useProjectFocusClass.ts` (what a row asks), a **Focus** button on the project page, a chip in
+the rail, `scripts/project-lens.mjs [tasks|calendar|mail|rail]`.
+- **Same rules as the company lens, deliberately:** dimmed never hidden (the shared `sb-out-of-focus` class and
+  its `!important`), hover brings a row back, a row that is not demonstrably the project's is out, and the way
+  out is always drawn. The two lenses **AND**: `companyClass || projectClass`, one fade, so with both on a row
+  has to be in both.
+- **This file never decides what belongs to a project.** A task answers from its own `projectId`; an event from
+  the project's `event` links **plus the calendar blocks (`gcalEventId`) of its tasks** — the project's own
+  Calendar tab lists those too, so dimming them would contradict it; a thread from its `thread` links, keyed
+  `mailbox|thread` like everywhere else. Wired in `TaskCard`, `TaskRow` (the List view *and* the matrix rows),
+  `DumpCard`, the calendar's `EventBlock`, and `SmartView`'s row.
+- **The rail chip** is drawn only while the lens is on, ringed in the project's colour, glyph in ink; it names
+  the project in its label and clears the lens. **A project that is deleted while it is the lens clears it** (the
+  same self-clean as a vanished company), but only once the store holds some projects — a cold start must not
+  clear a lens that is about to be valid.
+- **Not covered, on purpose:** Today, Finance, Habits, the Library, milestone markers on the calendar. Money,
+  habits and books have their own tabs on the page; the lens is for the three modules that hold the project's
+  working items.
+- **Found on the way (the harness did this):** the List view's rows are `TaskRow`, not `TaskCard`, and `TaskRow`
+  has **never** dimmed under the *company* lens either — the first run failed on exactly that. Only the project
+  lens is added there; the company one is still missing from `TaskRow` and `DumpCard`. Worth its own fix.
+- **Measured as drawn opacity** — the element's and every ancestor's multiplied — and the dimmed rows are
+  asserted to still have a box. **Controls** (each removed, the named assertion fails): the lens class on the
+  list row, task-block ids, the mailbox half of the thread key, the self-clear on delete.
+  Ink: 0 failing pairs over sixteen Projects screens in four themes.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and

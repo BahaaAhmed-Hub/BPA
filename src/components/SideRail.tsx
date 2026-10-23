@@ -30,7 +30,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { loadDynamicCompanies, type DynamicCompany } from '@/types'
+import { FolderKanban } from 'lucide-react'
 import { useCompanyFocus } from '@/lib/companyFocus'
+import { useProjectFocus } from '@/lib/projectFocus'
+import { useProjectStore } from '@/store/projectStore'
 import { CompanyMark } from './CompanyMark'
 
 // `initialsOf` and the disc itself live in `CompanyMark` now: the rail's tile
@@ -143,6 +146,9 @@ export function SideRail({ items, activeModule, onPick }: {
   onPick: (id: string) => void
 }) {
   const [lens, setLens] = useCompanyFocus()
+  const [projectLens, setProjectLens] = useProjectFocus()
+  const lensProject = useProjectStore(s => projectLens ? s.projects.find(x => x.id === projectLens) : undefined)
+  const projectsLoaded = useProjectStore(s => s.projects.length > 0)
   const [companies, setCompanies] = useState<DynamicCompany[]>(() =>
     loadDynamicCompanies().filter(c => !c.hidden))
 
@@ -165,6 +171,15 @@ export function SideRail({ items, activeModule, onPick }: {
   useEffect(() => {
     if (lens && !companies.some(c => c.id === lens)) railRef.current(null)
   }, [lens, companies])
+
+  // Same rule for a project: one that is gone would leave the app dimmed with no
+  // chip to press. Waits for the store to have something, so a cold start (the list
+  // not yet hydrated) does not clear a lens that is about to be valid.
+  const projRef = useRef(setProjectLens)
+  projRef.current = setProjectLens
+  useEffect(() => {
+    if (projectLens && projectsLoaded && !lensProject) projRef.current(null)
+  }, [projectLens, projectsLoaded, lensProject])
 
   return (
     <nav aria-label="Main" data-side-rail style={{
@@ -216,6 +231,22 @@ export function SideRail({ items, activeModule, onPick }: {
               ALL
             </button>
           )}
+        </div>
+      )}
+      {projectLens && (
+        <div data-project-lens style={{ ...PILL, padding: '9px' }}>
+          <button
+            onClick={() => setProjectLens(null)}
+            title={`Showing ${lensProject?.name ?? 'one project'} only — press to show everything`}
+            aria-label={`${lensProject?.name ?? 'A project'}, the only project shown. Press to show everything.`}
+            style={{
+              width: 40, height: 40, flexShrink: 0, padding: 0, cursor: 'pointer', position: 'relative',
+              borderRadius: '50%', border: 'none', background: 'color-mix(in srgb, var(--sb-ink-1) 8%, transparent)',
+              color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: `0 0 0 2px var(--sb-overlay), 0 0 0 4px ${lensProject?.color ?? 'var(--sb-ink-3)'}`,
+            }}>
+            <FolderKanban size={18} aria-hidden />
+          </button>
         </div>
       )}
       </div>

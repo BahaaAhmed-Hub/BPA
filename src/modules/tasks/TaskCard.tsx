@@ -6,6 +6,7 @@ import type { Task, TaskType, Priority } from '@/types'
 import { TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies, isOnFire, companyIdOfTask } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { useFocusClass } from '@/lib/companyFocus'
+import { useProjectFocusClass } from '@/modules/projects/useProjectFocusClass'
 import { useDeliverableGate } from './DeliverablePrompt'
 import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
 import type { ExtractedTask } from '@/lib/professor'
@@ -86,6 +87,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   const allUsers = getVisibleUsers()
   const companies = loadVisibleCompanies()
   const focusClass = useFocusClass()
+  const projectFocus = useProjectFocusClass()
   const users = task.companyId ? allUsers.filter(u => u.companyId === task.companyId) : allUsers
   const attachmentCount = task.attachments?.length ?? 0
 
@@ -100,7 +102,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
       // Whose task this is, under the company lens. `companyIdOfTask` is the
       // one resolver: `companyId` alone is empty for every task filed under a
       // static tag, which dimmed them all.
-      className={focusClass(companyIdOfTask(task))}
+      className={focusClass(companyIdOfTask(task)) || projectFocus.task(task.projectId)}
       ref={setNodeRef}
       {...listeners}
       {...attributes}

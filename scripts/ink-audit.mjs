@@ -705,6 +705,12 @@ for (const theme of THEMES) {
       await page.locator('[data-project-card]').first().click()
       await page.locator('[data-project-overview]').waitFor({ state: 'visible', timeout: 5000 })
     })
+    // The lens: Focus pressed on the page, and the rail's chip that is the way out.
+    await visit('Projects · lens on, rail chip', async () => {
+      await page.locator('[data-project-focus]').click()
+      await page.locator('[data-project-lens]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await page.locator('[data-project-lens] button').click()
     await visit('Projects · a project, tasks', async () => {
       await page.getByRole('tab', { name: /^Tasks/ }).click()
       await page.locator('[data-project-tasks]').waitFor({ state: 'visible', timeout: 5000 })

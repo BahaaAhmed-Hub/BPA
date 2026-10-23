@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { ArrowLeft, Check, Pencil, Plus, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, Check, Focus, Pencil, Plus, Sparkles, X } from 'lucide-react'
+import { setFocusedProject, useProjectFocus } from '@/lib/projectFocus'
 import { Button, Segmented } from '@/components/ui'
 import { LOZENGE } from '@/components/SideRail'
 import { CompanyMark } from '@/components/CompanyMark'
@@ -54,6 +55,8 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
   const [tab, setTab] = useState<Tab>('overview')
   const [editing, setEditing] = useState(false)
   const [planning, setPlanning] = useState(false)
+  const [lens] = useProjectFocus()
+  const focused = lens === project.id
   const [draft, setDraft] = useState('')
 
   const today = new Date().toLocaleDateString('en-CA')
@@ -177,6 +180,9 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
             ...(showHabits ? [{ value: 'habits' as const, label: `Habits${countOf('habit') ? ` · ${countOf('habit')}` : ''}` }] : []),
             ...(showBooks ? [{ value: 'books' as const, label: `Books${countOf('book') ? ` · ${countOf('book')}` : ''}` }] : []),
           ]} />
+          <Button variant="secondary" aria-pressed={focused} data-project-focus
+            title={focused ? 'Showing only this project in Tasks, Calendar and Mail — press to show everything' : 'Dim everything that is not this project in Tasks, Calendar and Mail'}
+            onClick={() => setFocusedProject(focused ? null : project.id)}><Focus size={ICON.sm} /> {focused ? 'Focused' : 'Focus'}</Button>
           <Button variant="secondary" onClick={() => setPlanning(true)}><Sparkles size={ICON.sm} /> Plan</Button>
           <Button variant="secondary" onClick={() => setEditing(true)}><Pencil size={ICON.sm} /> Edit</Button>
         </span>
