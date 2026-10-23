@@ -111,7 +111,7 @@ const PROJECTS = (() => {
   return {
     projects: [
       P(id(1), 'Launch the new website', { start_date: day(-40), target_date: day(-6), color: '#2F63A8' }),
-      P(id(2), 'Kitchen renovation', { kind: 'personal', status: 'paused', color: '#1D8A6A', target_date: day(40) }),
+      P(id(2), 'Kitchen renovation', { kind: 'personal', status: 'paused', color: '#1D8A6A', target_date: day(40), budget_amount: 1000, budget_currency: 'EGP' }),   // under what its entry cost: the over state
       P(id(3), 'Learn calligraphy', { kind: 'personal', status: 'idea', color: '#B03A73' }),
       P(id(4), 'Annual report', { status: 'done', color: '#C2622B', target_date: day(-30) }),
       // Named for the audit's own mail ("Message number 1"…), so Mail offers it.

@@ -14,6 +14,8 @@ export interface Project {
   startDate?: string    // YYYY-MM-DD
   targetDate?: string   // YYYY-MM-DD
   notes?: string
+  /** What the project is meant to cost, in the currency it was set in. Optional: most have none. */
+  budget?: { amount: number; currency: string }
   archived: boolean
   createdAt: string
   updatedAt: string

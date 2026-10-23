@@ -1,4 +1,4 @@
-// node scripts/project-life.mjs [money|locked|money-off|habits|books|library-off|work]
+// node scripts/project-life.mjs [money|locked|money-off|habits|books|library-off|work|budget|budget-locked|budget-loaded|budget-nocolumn]
 // Needs a dev server on 5199.
 //
 // Chunk 7 of Projects: the personal-life tabs — Money (finance entries), Habits
@@ -17,6 +17,11 @@
 //              habit named as such; inactive habits are not offered
 //   books      progress is the Library's own (furthest page), a deleted book is named
 //   library-off the Library switched off: no Books tab, no library table read
+//   budget     a project's budget against what it has spent: set, edited, over, unrated, removed,
+//              refused when it is not an amount; owed shown apart; understated when a currency has no rate
+//   budget-locked  behind the finance lock: no budget figure exists in the page while locked
+//   budget-loaded  read from the server row; a budget cleared on another device clears here
+//   budget-nocolumn  a database without 20260045: the project still saves, the budget stays here, the banner names the file
 //   work       a work project offers none of the three — unless it already holds one
 import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { chromium } from 'playwright-core'
@@ -79,9 +84,10 @@ const BOOKS = [
 const SESSIONS = [{ id: 's-1', user_id: U, book_id: 'b-deep', kind: 'read', on_date: DAYS_AGO(2), minutes: 30, pages: 214, to_page: 214, created_at: NOW }]
 
 const db = { tasks: [], projects: [], project_milestones: [], project_links: [] }
-db.projects = [project(P_P, 'Kitchen renovation'), project(P_W, 'Launch the site', { kind: 'work', color: '#2F63A8' })]
+db.projects = [project(P_P, 'Kitchen renovation', MODE === 'budget-loaded' ? { budget_amount: 5000, budget_currency: 'EGP' } : MODE.startsWith('budget') && MODE !== 'budget-nocolumn' ? { budget_amount: null, budget_currency: null } : {}), project(P_W, 'Launch the site', { kind: 'work', color: '#2F63A8' })]
+const budgetRefused = []
 const lastYear = `${new Date().getFullYear() - 2}-03-01`
-if (MODE === 'money' || MODE === 'locked' || MODE === 'money-off') db.project_links = [
+if (MODE === 'money' || MODE === 'locked' || MODE === 'money-off' || MODE.startsWith('budget')) db.project_links = [
   link(1, P_P, 'entry', 'tx-tile', meta(T('tx-tile'))),
   link(2, P_P, 'entry', 'tx-cabinet', meta(T('tx-cabinet'))),
   link(3, P_P, 'entry', 'tx-plumber', { ...meta(T('tx-plumber')), payee: 'Old plumber name', amount: 700 }),      // stale snapshot
@@ -133,6 +139,7 @@ await ctx.route('**://placeholder.supabase.co/**', r => {
   if (table === 'project_links') linkWrites++
   if (m === 'POST') {
     const body = JSON.parse(q.postData() || '[]'); const rows = Array.isArray(body) ? body : [body]
+    if (MODE === 'budget-nocolumn' && table === 'projects' && rows.some(r => 'budget_amount' in r)) { budgetRefused.push(rows.map(r => r.budget_amount)); return j({ code: 'PGRST204', message: "Could not find the 'budget_amount' column of 'projects' in the schema cache" }, 400) }
     for (const rw of rows) {
       const i = db[table].findIndex(x => x.id === rw.id || (table === 'project_links' && x.project_id === rw.project_id && x.kind === rw.kind && x.ref_id === rw.ref_id))
       if (i >= 0) db[table][i] = { ...db[table][i], ...rw }; else db[table].push(rw)
@@ -148,7 +155,7 @@ await ctx.addInitScript(([s, lock, locked, libOff]) => { try {
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'projects', themeId: 'sunlit-bento' }, version: 0 }))
   if (locked) localStorage.setItem('finance-lock', JSON.stringify(lock))
   if (libOff) localStorage.setItem('library-settings', JSON.stringify({ enabled: false }))
-} catch {} }, [session, LOCK, MODE === 'locked', MODE === 'library-off'])
+} catch {} }, [session, LOCK, MODE === 'locked' || MODE === 'budget-locked', MODE === 'library-off'])
 
 const p = await ctx.newPage()
 const traffic = watchTraffic(p)
@@ -213,6 +220,97 @@ if (MODE === 'money') {
   ok('a reload that changes nothing writes nothing back (no ping-pong)', linkWrites === before, `${before} -> ${linkWrites}`)
 }
 
+if (MODE.startsWith('budget') && MODE !== 'budget-locked') {
+  const card = () => p.locator('[data-project-budget]')
+  const projNow = () => S(proj => proj.getState().projects.find(x => x.id === 'aaaaaaaa-0000-4000-8000-00000000000a'))
+  const srvBudget = () => ({ a: db.projects.find(x => x.id === P_P)?.budget_amount, c: db.projects.find(x => x.id === P_P)?.budget_currency })
+  const fill = () => card().locator('[data-budget-fill]')
+  const widthFrac = () => fill().evaluate(e => e.getBoundingClientRect().width / e.parentElement.getBoundingClientRect().width)
+  const colorOfVar = v => p.evaluate(name => { const d = document.createElement('i'); d.style.color = `var(${name})`; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c }, v)
+  const set = async (amt, cur) => {
+    await card().getByRole('button', { name: /Set a budget|Edit/ }).click()
+    await p.getByLabel('Budget amount').fill(amt)
+    if (cur !== undefined) await p.getByLabel('Budget currency').fill(cur)
+    await card().getByRole('button', { name: 'Save', exact: true }).click()
+  }
+  await openProject(P_P, /^Money/)
+  await card().waitFor({ state: 'visible', timeout: 8000 })
+  await p.waitForTimeout(2500)
+
+  if (MODE === 'budget') {
+    ok('with no budget the card says so and draws no figure or bar', await card().locator('[data-budget-empty]').count() === 1 && await card().locator('[data-budget-figure]').count() === 0 && await fill().count() === 0)
+    await set('10,000')
+    const pr = await projNow()
+    ok('Save stores it, in the base currency by default', pr?.budget?.amount === 10000 && pr?.budget?.currency === 'EGP', JSON.stringify(pr?.budget))
+    ok('the card shows the budget and what is left of it: 7,650 (spent 2,350, settled only)', /10,000/.test(await card().locator('[data-budget-figure]').innerText()) && /7,650(\.00)? left/.test(await card().locator('[data-budget-left]').innerText()), await card().innerText())
+    const f = await widthFrac()
+    ok('the bar is drawn at the measured fraction of its track: 23.5%', Math.abs(f - 0.235) < 0.004, String(f))
+    ok('and agrees with its aria value (24)', (await card().getByRole('progressbar').getAttribute('aria-valuenow')) === '24')
+    ok('the unpaid deposit is apart: 7,150 would be left once it is paid', /7,150(\.00)? would be left once the unpaid bill is paid/.test(await card().innerText()), await card().innerText())
+    ok('an entry with no rate makes the figure "at least", not exact', /at least/.test(await card().innerText()))
+    await p.waitForTimeout(2800)
+    ok('it reached the server with its currency', srvBudget().a === 10000 && srvBudget().c === 'EGP', JSON.stringify(srvBudget()))
+    // Edit to below what is spent: over.
+    await set('2000')
+    ok('below what is spent it says Over by 350', /Over by .*350/.test(await card().locator('[data-budget-left]').innerText()), await card().locator('[data-budget-left]').innerText())
+    const red = await colorOfVar('--sb-negative-deep'), ink = await colorOfVar('--sb-ink-2')
+    const lc = await card().locator('[data-budget-left]').evaluate(e => getComputedStyle(e).color)
+    ok('in the deep negative ink (text), not the fill colour', lc === red && lc !== ink, `${lc} vs ${red}`)
+    ok('the bar is full and filled in the negative colour', Math.abs((await widthFrac()) - 1) < 0.004 && (await fill().evaluate(e => getComputedStyle(e).backgroundColor)) === await colorOfVar('--sb-negative'))
+    // Validation.
+    await card().getByRole('button', { name: 'Edit' }).click()
+    const w = db.projects.find(x => x.id === P_P).budget_amount
+    await p.getByLabel('Budget amount').fill(''); await card().getByRole('button', { name: 'Save', exact: true }).click()
+    ok('an empty amount is refused with a reason', await card().getByRole('alert').count() === 1)
+    await p.getByLabel('Budget amount').fill('-5'); await card().getByRole('button', { name: 'Save', exact: true }).click()
+    ok('a negative one too', await card().getByRole('alert').count() === 1 && (await projNow()).budget.amount === 2000)
+    await p.getByLabel('Budget amount').fill('900'); await p.getByLabel('Budget currency').fill('EG'); await card().getByRole('button', { name: 'Save', exact: true }).click()
+    ok('and a currency that is not three letters', await card().getByRole('alert').count() === 1 && (await projNow()).budget.amount === 2000)
+    await p.keyboard.press('Escape')
+    ok('Escape leaves the budget as it was', (await projNow()).budget.amount === 2000 && await card().locator('[data-budget-figure]').count() === 1)
+    void w
+    // A currency nobody has a rate for is never guessed.
+    await set('500', 'USD')
+    ok('a budget in a currency with no rate says so and compares nothing', await card().locator('[data-budget-unrated]').count() === 1 && await card().locator('[data-budget-left]').count() === 0 && await fill().count() === 0 && /no exchange rate for USD/.test(await card().innerText()), await card().innerText())
+    ok('but it is still stored as set', (await projNow()).budget.currency === 'USD' && (await projNow()).budget.amount === 500)
+    // Remove.
+    await card().getByRole('button', { name: 'Edit' }).click(); await card().getByRole('button', { name: 'Remove' }).click(); await p.waitForTimeout(2800)
+    ok('Remove clears it here and on the server', (await projNow()).budget === undefined && srvBudget().a === null && srvBudget().c === null, JSON.stringify(srvBudget()))
+    ok('and the card is back to "No budget"', await card().locator('[data-budget-empty]').count() === 1)
+  }
+  if (MODE === 'budget-loaded') {
+    ok('a budget on the server row is shown', /5,000/.test(await card().locator('[data-budget-figure]').innerText()) && /2,650(\.00)? left/.test(await card().locator('[data-budget-left]').innerText()), await card().innerText())
+    db.projects.find(x => x.id === P_P).budget_amount = null; db.projects.find(x => x.id === P_P).budget_currency = null
+    await p.evaluate(() => window.dispatchEvent(new Event('online'))); await p.waitForTimeout(4500)
+    ok('cleared on another device, it clears here (an explicit "none", not silence)', await card().locator('[data-budget-empty]').count() === 1 && (await projNow()).budget === undefined, JSON.stringify((await projNow()).budget))
+    db.projects.find(x => x.id === P_P).budget_amount = 7000; db.projects.find(x => x.id === P_P).budget_currency = 'EGP'
+    await p.evaluate(() => window.dispatchEvent(new Event('online'))); await p.waitForTimeout(4500)
+    ok('and set on another device, it arrives', /7,000/.test(await card().locator('[data-budget-figure]').innerText()))
+  }
+  if (MODE === 'budget-nocolumn') {
+    await set('3000')
+    await p.waitForTimeout(3500)
+    ok('the first write is refused naming the column, then retried without it', budgetRefused.length >= 1)
+    ok('the project row still saved (name and all)', db.projects.some(x => x.id === P_P && x.name === 'Kitchen renovation') && !('budget_amount' in db.projects.find(x => x.id === P_P)))
+    ok('the budget stays on this device and is still drawn', (await projNow()).budget?.amount === 3000 && /3,000/.test(await card().locator('[data-budget-figure]').innerText()))
+    await p.evaluate(() => window.dispatchEvent(new Event('online'))); await p.waitForTimeout(4500)
+    ok('a reload from a server that lacks the columns does not wipe it', (await projNow()).budget?.amount === 3000)
+    ok('and the banner names 20260045', /20260045_project_budget\.sql/.test(await p.locator('[data-projects-gap]').innerText().catch(() => '')))
+    const n = budgetRefused.length
+    await p.evaluate(() => window.dispatchEvent(new Event('online'))); await p.waitForTimeout(4500)
+    ok('it does not keep retrying the refused write (no ping-pong)', budgetRefused.length === n, `${n} -> ${budgetRefused.length}`)
+  }
+}
+if (MODE === 'budget-locked') {
+  db.projects.find(x => x.id === P_P).budget_amount = 5000; db.projects.find(x => x.id === P_P).budget_currency = 'EGP'
+  await p.evaluate(() => window.dispatchEvent(new Event('online'))); await p.waitForTimeout(3500)
+  await openProject(P_P)
+  await p.getByRole('tab', { name: /^Money/ }).click()
+  await p.locator('[data-project-money-locked]').waitFor({ state: 'visible', timeout: 6000 }).catch(() => {})
+  ok('the locked box is drawn (so the absence below is about something)', await p.locator('[data-project-money-locked]').count() === 1)
+  const txt = await p.locator('[data-project-page]').innerText()
+  ok('locked: no budget, no figure of it, no card', await p.locator('[data-project-budget]').count() === 0 && !/5,000|Budget|left/.test(txt), txt.replace(/\n/g, ' | ').slice(0, 160))
+}
 if (MODE === 'locked') {
   await openProject(P_P)
   ok('the Money tab is still offered when locked', (await tabNames()).some(t => /^Money/.test(t)), JSON.stringify(await tabNames()))

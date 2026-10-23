@@ -53,7 +53,9 @@ export function SyncGapBanner() {
         {projectGap && (
           <p data-projects-gap={projectGap.kind} style={{ ...T.body, margin: others.length ? '6px 0 0' : 0, color: 'var(--sb-ink-2)' }}>
             {projectGap.kind === 'tables' && <>Projects are only on this device — the database has no projects tables, so nothing you add is reaching your other devices. Run {MIGRATION_FOR.projects} in Supabase.</>}
-            {projectGap.kind === 'columns' && <>Projects are saving, but what a linked event, thread or entry looks like (its title, its time) stays on this device. Run 20260043_project_link_meta.sql in Supabase.</>}
+            {projectGap.kind === 'columns' && (/budget/.test(projectGap.detail ?? '')
+              ? <>Projects are saving, but a project&apos;s budget stays on this device. Run 20260045_project_budget.sql in Supabase.</>
+              : <>Projects are saving, but what a linked event, thread or entry looks like (its title, its time) stays on this device. Run 20260043_project_link_meta.sql in Supabase.</>)}
             {projectGap.kind === 'cache' && <>Supabase will not store everything about projects — check the migration ran on project <strong>{supabaseProjectRef}</strong>.</>}
             {projectGap.kind === 'error' && <>projects: {projectGap.detail ?? 'sync failed'}</>}
           </p>

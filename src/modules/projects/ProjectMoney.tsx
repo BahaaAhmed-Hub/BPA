@@ -6,10 +6,11 @@ import { useFinanceLock } from '@/modules/finance/useFinanceLock'
 import { markActive } from '@/modules/finance/lock'
 import { useFinanceStore } from '@/modules/finance/financeStore'
 import { baseCurrency } from '@/modules/finance/fx'
+import { Button } from '@/components/ui'
 import { isUnpaid } from '@/modules/finance/unpaid'
 import { Unlock } from '@/modules/calendar/outcome/ExpensesBox'
 import { useProjectStore } from '@/store/projectStore'
-import { entryLinks, entryMeta, moneyTotals } from './projectLife'
+import { budgetStatus, entryLinks, entryMeta, moneyTotals } from './projectLife'
 import type { EntryMeta, Project } from './types'
 
 const CARD: React.CSSProperties = {
@@ -86,6 +87,7 @@ function MoneyOpen({ project }: { project: Project }) {
           </div>
         ))}
       </div>
+      <BudgetCard project={project} totals={totals} base={base} />
       {totals.unconverted.length > 0 && (
         <p data-project-money-unconverted style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative-deep)' }}>
           No exchange rate for {totals.unconverted.join(', ')} — {totals.unconverted.length > 1 ? 'those are' : 'that is'} left out of these figures rather than guessed. Set one in Finance.
@@ -135,6 +137,84 @@ function MoneyOpen({ project }: { project: Project }) {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  )
+}
+
+
+/** What the project is meant to cost, against what it has. **In the Money tab, so behind the lock** — a budget
+ *  and how much of it is gone are exactly the figures the lock exists to hide. */
+function BudgetCard({ project, totals, base }: { project: Project; totals: ReturnType<typeof moneyTotals>; base: string }) {
+  const update = useProjectStore(s => s.updateProject)
+  const [editing, setEditing] = useState(false)
+  const [amount, setAmount] = useState('')
+  const [currency, setCurrency] = useState('')
+  const [bad, setBad] = useState('')
+  const b = project.budget
+  const status = b ? budgetStatus(b, totals, base) : null
+
+  const open = () => { setAmount(b ? String(b.amount) : ''); setCurrency(b?.currency ?? base); setBad(''); setEditing(true) }
+  const save = () => {
+    const n = Number(amount.replace(/,/g, ''))
+    const cur = currency.trim().toUpperCase()
+    if (!amount.trim() || !Number.isFinite(n) || n < 0) { setBad('Enter an amount of zero or more.'); return }
+    if (!/^[A-Z]{3}$/.test(cur)) { setBad('A currency is three letters, like EGP.'); return }
+    update(project.id, { budget: { amount: n, currency: cur } })
+    setEditing(false)
+  }
+
+  return (
+    <div data-project-budget style={{ ...CARD, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={CAP}>Budget</span>
+        <span style={{ flex: 1 }} />
+        {!editing && <Button size="sm" variant="secondary" onClick={open}>{b ? 'Edit' : 'Set a budget'}</Button>}
+      </div>
+
+      {editing && (
+        <form onSubmit={e => { e.preventDefault(); save() }} onKeyDown={e => { if (e.key === 'Escape') setEditing(false) }}
+          style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input autoFocus aria-label="Budget amount" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" style={{ ...inputStyle, width: 140 }} />
+          <input aria-label="Budget currency" value={currency} maxLength={3} onChange={e => setCurrency(e.target.value.toUpperCase())} style={{ ...inputStyle, width: 72, textTransform: 'uppercase' }} />
+          <Button size="sm" variant="primary" onClick={save}>Save</Button>
+          {b && <Button size="sm" variant="ghost" onClick={() => { update(project.id, { budget: undefined }); setEditing(false) }}>Remove</Button>}
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+          {bad && <span role="alert" style={{ flexBasis: '100%', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative-deep)' }}>{bad}</span>}
+        </form>
+      )}
+
+      {!editing && !b && (
+        <div data-budget-empty style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
+          No budget. Set one and this tab shows how much of it is gone.
+        </div>
+      )}
+
+      {!editing && b && status?.kind === 'unrated' && (
+        <div data-budget-unrated style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative-deep)' }}>
+          {money(b.amount, b.currency)} — there is no exchange rate for {status.currency}, so it cannot be compared with what has been spent. Set one in Finance.
+        </div>
+      )}
+
+      {!editing && b && status?.kind === 'ok' && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <span data-budget-figure style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
+              {money(b.amount, b.currency)}
+            </span>
+            <span data-budget-left style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: status.over ? 'var(--sb-negative-deep)' : 'var(--sb-ink-2)' }}>
+              {status.over ? `Over by ${money(-status.left, base)}` : `${money(status.left, base)} left`}
+            </span>
+          </div>
+          <div role="progressbar" aria-label="Budget used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(status.fraction * 100)}
+            style={{ height: 8, borderRadius: 999, background: 'var(--sb-field)', overflow: 'hidden' }}>
+            <div data-budget-fill style={{ width: `${status.fraction * 100}%`, height: '100%', borderRadius: 999, background: status.over ? 'var(--sb-negative)' : 'var(--sb-ink-1)' }} />
+          </div>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
+            {money(status.spent, base)} spent{totals.owed.count ? ` · ${money(status.afterOwed, base)} would be left once ${totals.owed.count === 1 ? 'the unpaid bill is' : `the ${totals.owed.count} unpaid bills are`} paid` : ''}
+            {status.partial ? ' · at least — some linked entries have no exchange rate yet' : ''}
+          </div>
+        </>
       )}
     </div>
   )

@@ -5,7 +5,7 @@ import { moduleIsOff } from '@/lib/entitlements'
 import { clearSyncGap, reportSyncGap } from '@/lib/syncStatus'
 import { useTaskStore } from '@/store/taskStore'
 import {
-  fromLink, fromMilestone, fromProject, loadProjectData, orphanProjectTasks, pushProjectData,
+  budgetColumnsUsable, fromLink, fromMilestone, fromProject, loadProjectData, orphanProjectTasks, pushProjectData,
 } from '@/modules/projects/projectDb'
 import type {
   LinkMeta, Project, ProjectLink, ProjectLinkKind, ProjectMilestone,
@@ -315,12 +315,12 @@ export const useProjectStore = create<ProjectState>()(
           // sent — an unconditional push is a change event, which makes the
           // other device reload and push back, for as long as both are open.
           const onServer = new Map<string, string>([
-            ...data.projects.map(r => [r.id, JSON.stringify(fromProject(r, ''))] as [string, string]),
+            ...data.projects.map(r => [r.id, JSON.stringify(fromProject(r, '', budgetColumnsUsable()))] as [string, string]),
             ...data.milestones.map(r => [r.id, JSON.stringify(fromMilestone(r, ''))] as [string, string]),
             ...data.links.map(r => [r.id, JSON.stringify(fromLink(r, ''))] as [string, string]),
           ])
           const differing = [
-            ...p.merged.filter(r => !sameRow(onServer.get(r.id), JSON.stringify(fromProject(r, '')))),
+            ...p.merged.filter(r => !sameRow(onServer.get(r.id), JSON.stringify(fromProject(r, '', budgetColumnsUsable())))),
             ...m.merged.filter(r => !sameRow(onServer.get(r.id), JSON.stringify(fromMilestone(r, '')))),
             ...l.merged.filter(r => !sameRow(onServer.get(r.id), JSON.stringify(fromLink(r, '')))),
           ].map(r => r.id)

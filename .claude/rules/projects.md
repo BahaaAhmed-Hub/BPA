@@ -299,8 +299,7 @@ screen or delete path was touched.
 - **Two vacuous fixtures, caught by controls that passed**: no income entry was linked, so "income counted
   as spent" could not fail; and two assertions failed only by *timing out* rather than asserting. Both now
   assert existence first. An existing-state fixture has to be able to make the claim false.
-- **Not done:** a project budget (a target to compare Spent against — needs a column and a currency
-  decision), opening a book or habit from its row (the Library has no focus door), linking from the
+- **Not done:** (the budget has since been added — see the follow-ups) opening a book or habit from its row (the Library has no focus door), linking from the
   other modules' own screens, and shopping lists (`list` links).
 - **Controls** (each removed, the named assertion fails): unpaid-as-spent, income-as-spent, unrated
   currency unreported, lock ignored, Money with Finance off, no snapshot refresh, missing ignoring the
@@ -437,6 +436,32 @@ and the row is absent when there are none.
   mail and composer visits were silently skipped by it — the earlier "0 failing over 16 screens" did not include
   the mail row chip or the event row. Use `INK_ONLY="Projects|Calendar · an event|Calendar · composer|Mail · reader|Calendar · milestone"`
   (21 screens, 0 failing in four themes).
+
+### A project budget
+`20260045_project_budget.sql` (`budget_amount`, `budget_currency`, nullable, non-negative), `Project.budget`,
+`BudgetCard` in the Money tab, `budgetStatus` in `projectLife.ts`, `project-life.mjs budget*`.
+- **Decisions.** The budget keeps **the currency it was set in** (default: the base currency): "base" is a per-person
+  setting that can change, and a bare number would quietly mean something else the day it does. It is compared in
+  base using the ledger's own rates (`convert`); a budget in a currency **with no rate says so and compares nothing**
+  (`unrated`) — never a 1:1 guess. One budget per project; none is normal and draws "No budget".
+- **What counts as spent is the ledger's rule, not a new one**: settled expenses only. Unpaid bills are shown apart
+  ("…would be left once the unpaid bill is paid"), and a linked entry with no rate makes the figure "at least".
+- **It is in the Money tab, so behind the finance lock.** A budget and how much of it is gone are exactly what the
+  lock exists to hide; locked, no budget card exists in the page (control: the card drawn in the locked branch fails).
+  Consequence: a project with no money links and not personal has no Money tab, hence no budget — by design.
+- **Over is text in `--sb-negative-deep` and a fill in `--sb-negative`** (colour is fill, words are ink); the bar's
+  width is asserted as a measured fraction of its track beside `aria-valuenow`. The audit's Kitchen fixture is
+  over-budget on purpose so the red text is on a screen it measures (1.51 when made unreadable).
+- **Sync.** Columns are sent only when a project has a budget or the table has shown it carries them, and a refusal
+  naming them retries without (`projects.budget` gap, banner names 20260045). `toProject` gives an **explicit
+  `budget: undefined` when the row carries the columns and they are null**, so clearing on another device clears
+  here; a row *without* the columns says nothing, so a budget this browser holds is not wiped by a database that
+  cannot store it. Row comparisons use the same `budgetColumnsUsable()` so a missing column does not make every
+  load look different (the ping-pong guard).
+- **Controls** (each removed, the named assertions fail): guessing a missing rate, owed counted as spent, plain
+  negative text, clearing as silence, columns always sent, the card in the locked branch.
+- **Not done:** per-milestone budgets, budget alerts, a budget shown on the project card (it is a figure, and the
+  grid is not behind the lock).
 
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,

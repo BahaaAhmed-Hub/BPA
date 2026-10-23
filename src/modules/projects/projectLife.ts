@@ -1,6 +1,6 @@
 import type { Habit, HabitLogs, HabitQuantityLogs } from '@/store/habitsStore'
 import { dayProgress } from '@/lib/habitProgress'
-import { sumInBase } from '@/modules/finance/fx'
+import { convert, sumInBase } from '@/modules/finance/fx'
 import { isUnpaid } from '@/modules/finance/unpaid'
 import type { Transaction } from '@/modules/finance/types'
 import type { EntryMeta, ProjectLink } from './types'
@@ -43,6 +43,38 @@ export function moneyTotals(entries: { meta: EntryMeta }[]): MoneyTotals {
     spent: spent.total, received: received.total,
     owed: { count: metas.filter(m => m.type === 'expense' && isUnpaid(m)).length, total: owed.total },
     unconverted: [...new Set([...spent.unconverted, ...received.unconverted, ...owed.unconverted])],
+  }
+}
+
+export type BudgetStatus =
+  /** The budget is in a currency with no rate to the base: it cannot be compared, and is not guessed. */
+  | { kind: 'unrated'; currency: string }
+  | {
+      kind: 'ok'
+      /** The budget, in the base currency. */
+      budget: number
+      spent: number
+      left: number
+      over: boolean
+      /** 0..1 of the budget spent, clamped; a zero budget with any spend is full. */
+      fraction: number
+      /** What would be left once the unpaid bills are paid. */
+      afterOwed: number
+      /** Some linked currency has no rate, so spent may be understated. */
+      partial: boolean
+    }
+
+/** A budget set against what the project has spent. Spent is the ledger's own: settled expenses only, so
+ *  money that has not moved is not counted — it is shown as `afterOwed`. A currency nobody has a rate for
+ *  is never invented: the budget's own, `unrated`; a linked entry's, `partial`. */
+export function budgetStatus(budget: { amount: number; currency: string }, totals: MoneyTotals, base: string): BudgetStatus {
+  const inBase = convert(budget.amount, budget.currency, base)
+  if (inBase === null) return { kind: 'unrated', currency: budget.currency.toUpperCase() }
+  const left = inBase - totals.spent
+  return {
+    kind: 'ok', budget: inBase, spent: totals.spent, left, over: left < 0,
+    fraction: inBase > 0 ? Math.min(totals.spent / inBase, 1) : totals.spent > 0 ? 1 : 0,
+    afterOwed: left - totals.owed.total, partial: totals.unconverted.length > 0,
   }
 }
 

@@ -14,6 +14,7 @@ interface ProjectRow {
   id: string; user_id: string; name: string; kind: string; color: string | null; status: string
   company_id: string | null; start_date: string | null; target_date: string | null
   notes: string | null; archived: boolean; created_at: string; updated_at: string
+  budget_amount?: number | string | null; budget_currency?: string | null
 }
 interface MilestoneRow {
   id: string; project_id: string; user_id: string; title: string
@@ -29,6 +30,10 @@ export const toProject = (r: ProjectRow): Project => ({
   status: r.status as ProjectStatus, companyId: opt(r.company_id),
   startDate: opt(r.start_date), targetDate: opt(r.target_date), notes: opt(r.notes),
   archived: r.archived, createdAt: r.created_at, updatedAt: r.updated_at,
+  // A row that carries the columns says what the budget is, including "none" — an explicit key, so
+  // clearing it on another device clears it here. A row without them (migration not run) says nothing,
+  // and the budget this browser holds is left alone.
+  ...('budget_amount' in r ? { budget: r.budget_amount != null && r.budget_currency ? { amount: Number(r.budget_amount), currency: r.budget_currency } : undefined } : {}),
 })
 export const toMilestone = (r: MilestoneRow): ProjectMilestone => ({
   id: r.id, projectId: r.project_id, title: r.title, dueDate: opt(r.due_date),
@@ -41,11 +46,12 @@ export const toLink = (r: LinkRow): ProjectLink => ({
 
 // `?? null` on every optional: `undefined` is dropped on the way to JSON, so an
 // upsert would never *clear* a field the person emptied.
-export const fromProject = (p: Project, userId: string) => ({
+export const fromProject = (p: Project, userId: string, withBudget = true) => ({
   id: p.id, user_id: userId, name: p.name, kind: p.kind, color: p.color ?? null,
   status: p.status, company_id: p.companyId ?? null, start_date: p.startDate ?? null,
   target_date: p.targetDate ?? null, notes: p.notes ?? null, archived: p.archived,
   created_at: p.createdAt, updated_at: p.updatedAt,
+  ...(withBudget ? { budget_amount: p.budget?.amount ?? null, budget_currency: p.budget?.currency ?? null } : {}),
 })
 export const fromMilestone = (m: ProjectMilestone, userId: string) => ({
   id: m.id, project_id: m.projectId, user_id: userId, title: m.title,
@@ -61,6 +67,11 @@ export const fromLink = (l: ProjectLink, userId: string, withMeta = true) => ({
  *  its snapshot write the null. Cleared when the column is found missing. */
 let linkMeta = false
 let linkMetaMissing = false
+/** The same two flags for the budget columns (20260045). */
+let budgetCols = false
+let budgetMissing = false
+/** Whether a project row should carry the budget columns at all — also what the store compares rows by. */
+export const budgetColumnsUsable = () => !budgetMissing
 
 /** 42P01: undefined_table. PGRST205: PostgREST's cache has no such table. */
 export const isMissing = (e: { code?: string } | null | undefined) => e?.code === '42P01' || e?.code === 'PGRST205'
@@ -94,6 +105,7 @@ export async function loadProjectData(): Promise<ProjectData | 'missing'> {
   const failed = p.error ?? m.error ?? l.error
   if (failed) throw failure(failed)
   if (((l.data ?? []) as LinkRow[]).some(r => 'meta' in r)) { linkMeta = true; linkMetaMissing = false }
+  if (((p.data ?? []) as ProjectRow[]).some(r => 'budget_amount' in r)) { budgetCols = true; budgetMissing = false }
   return {
     projects:   ((p.data ?? []) as ProjectRow[]).map(toProject),
     milestones: ((m.data ?? []) as MilestoneRow[]).map(toMilestone),
@@ -116,8 +128,17 @@ export async function pushProjectData(push: ProjectPush): Promise<void> {
   const uid = await userId()
 
   if (push.projects.length) {
-    const { error } = await supabase.from('projects')
-      .upsert(push.projects.map(p => fromProject(p, uid)), { onConflict: 'id' })
+    // The budget columns go only when a project has a budget or the table has shown it carries them, so a
+    // database without 20260045 keeps saving every other field; a refusal naming them retries without.
+    const send = !budgetMissing && (budgetCols || push.projects.some(p => p.budget))
+    const write = (withBudget: boolean) => supabase.from('projects')
+      .upsert(push.projects.map(p => fromProject(p, uid, withBudget)), { onConflict: 'id' })
+    let { error } = await write(send)
+    if (error && send && /budget/.test(error.message)) {
+      budgetMissing = true
+      reportSyncGap('projects', 'columns', 'projects.budget — run 20260045_project_budget.sql')
+      ;({ error } = await write(false))
+    }
     if (error) throw failure(error)
   }
   if (push.milestones.length) {
