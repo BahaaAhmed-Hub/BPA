@@ -280,3 +280,20 @@ Tests: `assistant-approval` (19), `assistant-library` (23), `assistant-calendar-
 
 ## Telegram and Siri use the same policy
 The consent policy (`approvalFor`, `DECLINED`) now lives in `supabase/functions/_shared/assistantGate.ts` and the guide in `_shared/appGuide.ts`; `src/lib/assistantPolicy.ts` and `src/lib/appGuide.ts` re-export them, so the panel, the Telegram bot and Siri gate the same acts and answer from the same text. How the bots park and approve an act is in `server.md` ("Telegram and Siri are the app's assistant too").
+
+## The conversation is being moved to the server (step 1 of 6: the schema)
+`20260042_assistant_conversations.sql`: `assistant_conversations` and `assistant_messages`. The panel's thread used to
+be React state only, so iPad Safari reloading a dimmed tab lost it. **Nothing reads or writes these tables yet** —
+step 2 (client persists and hydrates, id in the URL `?c=`), 3 (drafts, refetch on `visibilitychange`/`pageshow`, a
+"still reconnecting" line, auth/key restore), 4 (an edge function generates for **Anthropic and Groq** and keeps going
+if the client disconnects), 5 (resume by polling a `streaming` row), 6 (tools and approvals server-side) follow.
+- **Plain text per message plus the chip** (`role = 'tool'`, `tool`, `tool_state`), as `telegram_turns`: tool_use /
+  tool_result blocks are not stored. Attachments keep **name and kind only** (`files`), shown as chips after a reload.
+- **`status` (`streaming`|`complete`|`error`) is how a reload knows an answer is on its way.** Order by `id`, never
+  `created_at`. `client_id` (unique per conversation) makes a retried insert land on one row.
+- **A person may write their own rows** (the panel writes its own turns until step 4); every policy pins
+  `user_id = auth.uid()` and a message can only go in a conversation its writer owns. The service role writes the
+  assistant's. Closing the window will archive (`archived_at`), not delete.
+`scripts/assistant-conversations-sql.sh <socket-dir> [port]` — 47 assertions on a throwaway Postgres 16 (needs a
+non-root user to run the server), each refusal asserted with its reason, plus a control (RLS off → B reads A's rows).
+The cross-user update/delete counts have no RLS-off control of their own; the read control covers the policy set.
