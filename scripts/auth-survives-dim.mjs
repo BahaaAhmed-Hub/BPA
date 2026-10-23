@@ -63,11 +63,12 @@ async function run(name, mode, { reload = true, seed = stale(), upAfterMs = 0 } 
   }
   const early = await p.waitForSelector('[data-side-rail]', { timeout: mode === 'offline' ? 1500 : 15000 }).then(() => true).catch(() => false)
   const loading = (await p.evaluate(() => document.body.innerText)).includes('Loading your system')
+  const hint = mode === 'offline' ? await p.waitForSelector('[data-loading-slow]', { timeout: 9000 }).then(() => true).catch(() => false) : null
   const rail = await p.waitForSelector('[data-side-rail]', { timeout: 40000 }).then(() => true).catch(() => false)
   const stored = await p.evaluate(k => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return 'bad' } }, KEY)
   const body = await p.evaluate(() => document.body.innerText.slice(0, 400))
   await ctx.close()
-  return { rail, early, loading, stored, refreshes, body }
+  return { rail, early, loading, hint, stored, refreshes, body }
 }
 
 const A = await run('A', 'ok')
@@ -83,8 +84,10 @@ const C = await run('C', 'refuse')
 ok(!C.rail, 'C CONTROL: a refused refresh token signs out (the fixture can fail)')
 ok(C.stored === null, 'C CONTROL: stored session removed')
 
-const D = await run('D', 'offline', { upAfterMs: 8000 })
+const D = await run('D', 'offline', { upAfterMs: 20000 })
 ok(!D.early && D.loading, 'D during the outage: not signed out - the app waits on "Loading your system…"')
+ok(D.hint === true, 'D after 6s of waiting the screen says it is still reconnecting and that you are signed in')
+ok(C.hint === null && !C.rail, 'D CONTROL: a normal sign-out shows no reconnecting hint')
 ok(D.rail, 'D network back: the shell arrives, signed in')
 ok(D.stored && D.stored.expires_at > now() + 1800, 'D stored session refreshed once it could connect')
 

@@ -19,6 +19,7 @@ set -uo pipefail
 DIR="${1:?socket directory of a running postgres}"
 PORT="${2:-5598}"
 SQL="$(cd "$(dirname "$0")/.." && pwd)/supabase/migrations/20260042_assistant_conversations.sql"
+SQL2="$(cd "$(dirname "$0")/.." && pwd)/supabase/migrations/20260043_assistant_tool_calls.sql"
 
 q() { psql -h "$DIR" -p "$PORT" -U bpa -d postgres -v ON_ERROR_STOP=1 -qtA "$@"; }
 
@@ -75,6 +76,15 @@ SQL
 # ─── Apply, and apply again ─────────────────────────────────────────────────
 q -f "$SQL" >/dev/null 2>&1 && ok "it applies" 1 || ok "it applies" 0
 q -f "$SQL" >/dev/null 2>&1 && ok "a second apply exits 0" 1 || ok "a second apply exits 0" 0
+q -f "$SQL2" >/dev/null 2>&1 && ok "20260043 applies on top" 1 || ok "20260043 applies on top" 0
+q -f "$SQL2" >/dev/null 2>&1 && ok "20260043 second apply exits 0" 1 || ok "20260043 second apply exits 0" 0
+# A project that already ran the first version of 20260042 has the client_id index as a PARTIAL one. 20260043 must turn it
+# into the plain one PostgREST can upsert against. Recreate that state, then apply.
+q >/dev/null -c "drop index public.assistant_messages_client_uniq; create unique index assistant_messages_client_uniq on public.assistant_messages (conversation_id, client_id) where client_id is not null"
+is "CONTROL: the old partial index is in place before the repair" 1 "select count(*) from pg_indexes where indexname='assistant_messages_client_uniq' and indexdef ilike '%where%'"
+q -f "$SQL2" >/dev/null 2>&1
+is "20260043 turns it into the plain index" 0 "select count(*) from pg_indexes where indexname='assistant_messages_client_uniq' and indexdef ilike '%where%'"
+is "…and it is still unique on (conversation_id, client_id)" 1 "select count(*) from pg_indexes where indexname='assistant_messages_client_uniq' and indexdef ilike '%(conversation_id, client_id)%'"
 
 # Supabase grants these by default; granted here so every refusal below is RLS's
 # and not a missing privilege.
@@ -150,8 +160,8 @@ refused "a message needs a conversation that exists" "foreign key" \
 # ─── A retried insert lands on one row ──────────────────────────────────────
 refused "the same client_id twice in one conversation is refused" "assistant_messages_client_uniq" \
   "insert into public.assistant_messages(conversation_id,user_id,client_id,role,content) values ('$CA','$A','$M1','user','again')"
-q -c "insert into public.assistant_messages(conversation_id,user_id,client_id,role,content) values ('$CA','$A','$M1','user','again') on conflict (conversation_id, client_id) where client_id is not null do nothing" >/dev/null 2>&1
-is "…and an upsert of it leaves exactly one" 1 "select count(*) from public.assistant_messages where client_id='$M1'"
+q -c "insert into public.assistant_messages(conversation_id,user_id,client_id,role,content) values ('$CA','$A','$M1','user','again') on conflict (conversation_id, client_id) do nothing" >/dev/null 2>&1
+is "…and an upsert of it (naming just the columns, as PostgREST must) leaves exactly one" 1 "select count(*) from public.assistant_messages where client_id='$M1'"
 q >/dev/null -c "insert into public.assistant_conversations(id,user_id) values ('$CB','$B')"
 allowed "the same client_id in ANOTHER conversation is fine" \
   "insert into public.assistant_messages(conversation_id,user_id,client_id,role,content) values ('$CB','$B','$M1','user','mine')"
@@ -166,10 +176,33 @@ is "a message update bumps its conversation's updated_at" t \
 is "…and the message's own updated_at" t \
   "select updated_at >= created_at from public.assistant_messages where client_id='$M1' and conversation_id='$CA'"
 
+# ─── 20260043: the lock, the claim, the parked call ─────────────────────────
+q >/dev/null -c "insert into public.assistant_conversations(id,user_id) values ('dddddddd-0000-0000-0000-000000000001','$A')"
+D1=dddddddd-0000-0000-0000-000000000001
+allowed "A starts a streaming answer" "$AS_A insert into public.assistant_messages(conversation_id,user_id,role,status) values ('$D1','$A','assistant','streaming')"
+refused "a SECOND streaming answer in the same conversation is refused (the lock)" "assistant_one_streaming" \
+  "$AS_A insert into public.assistant_messages(conversation_id,user_id,role,status) values ('$D1','$A','assistant','streaming')"
+allowed "…after the first completes, the next may start" \
+  "$AS_A update public.assistant_messages set status='complete' where conversation_id='$D1' and status='streaming'; insert into public.assistant_messages(conversation_id,user_id,role,status) values ('$D1','$A','assistant','streaming')"
+allowed "a tool call is parked with its id and input" \
+  "$AS_A insert into public.assistant_messages(conversation_id,user_id,role,tool,tool_state,tool_use_id,tool_input) values ('$D1','$A','tool','list_habits','running','toolu_1','{\"a\":1}')"
+refused "the same tool_use id twice is refused" "assistant_tool_use_uniq" \
+  "$AS_A insert into public.assistant_messages(conversation_id,user_id,role,tool,tool_state,tool_use_id) values ('$D1','$A','tool','list_habits','running','toolu_1')"
+is "device one claims it" 1 \
+  "$AS_A with c as (update public.assistant_messages set claimed_by='dev1', claimed_at=now() where tool_use_id='toolu_1' and (claimed_by is null or claimed_at < now() - interval '2 minutes') returning 1) select count(*) from c"
+is "device two cannot claim it while the claim is fresh" 0 \
+  "$AS_A with c as (update public.assistant_messages set claimed_by='dev2', claimed_at=now() where tool_use_id='toolu_1' and (claimed_by is null or claimed_at < now() - interval '2 minutes') returning 1) select count(*) from c"
+q >/dev/null -c "update public.assistant_messages set claimed_at = now() - interval '3 minutes' where tool_use_id='toolu_1'"
+is "…but can once the claim is three minutes old" 1 \
+  "$AS_A with c as (update public.assistant_messages set claimed_by='dev2', claimed_at=now() where tool_use_id='toolu_1' and (claimed_by is null or claimed_at < now() - interval '2 minutes') returning 1) select count(*) from c"
+is "B cannot read A's turn state or tool input" 0 "$AS_B select count(*) from public.assistant_messages where tool_use_id='toolu_1'"
+allowed "the conversation can hold the in-flight turn, and clear it" \
+  "$AS_A update public.assistant_conversations set turn='{\"msgs\":[]}' where id='$D1'; update public.assistant_conversations set turn=null where id='$D1'"
+
 # ─── Archive, then forget ───────────────────────────────────────────────────
 allowed "A archives their conversation" "$AS_A update public.assistant_conversations set archived_at = now() where id='$CA'"
 is "an archived conversation is out of the live list's index predicate" 0 \
-  "select count(*) from public.assistant_conversations where user_id='$A' and archived_at is null"
+  "select count(*) from public.assistant_conversations where id='$CA' and archived_at is null"
 is "…but its messages are kept" 4 "select count(*) from public.assistant_messages where conversation_id='$CA'"
 allowed "A deletes it for good" "$AS_A delete from public.assistant_conversations where id='$CA'"
 is "deleting a conversation takes its messages" 0 "select count(*) from public.assistant_messages where conversation_id='$CA'"

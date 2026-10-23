@@ -345,3 +345,11 @@ the model asked, and had no Library, no habit create/edit/delete, no "what needs
 real `Deno.serve` block lifted out of the files**. Controls: remove `reply_email` from the gate → 2 fail; drop the
 expiry check → "an expired act cannot be approved" fails; drop the chat check → 2 fail. **Not exercised here: a live
 Telegram button tap, a live Siri Shortcut, or the Anthropic model choosing the tool** — those need the deployed bots.
+
+## `assistant-chat` — the web assistant's model call
+Not a bot: the browser's own assistant, moved server-side so an answer survives a frozen page. Deployed by
+`deploy-functions.yml` **with the JWT gateway on** (its caller is always a signed-in browser spending that person's
+key). `_shared/assistantChat.ts` is pure and dependency-injected so Node tests it; `index.ts` only authenticates,
+checks the conversation is the caller's, resolves the key and backs `ChatDb` with Supabase. Full behaviour and tests:
+`assistant.md` ("The conversation lives on the server").
+

@@ -270,6 +270,11 @@ function LoginScreen() {
 // ─── Loading screen ────────────────────────────────────────────────────────────
 
 function LoadingScreen() {
+  // Waking a dimmed iPad often finds the network a second or two behind the page. The session is kept and refreshing
+  // retries on its own (measured: signed in again as soon as the connection returns), but a splash that says nothing
+  // for 15–30 seconds reads as a hang, so say what is happening.
+  const [slow, setSlow] = useState(false)
+  useEffect(() => { const t = setTimeout(() => setSlow(true), 6000); return () => clearTimeout(t) }, [])
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -291,6 +296,17 @@ function LoadingScreen() {
         </svg>
       </div>
       <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>Loading your system…</span>
+      {slow && (
+        <div role="status" data-loading-slow style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, maxWidth: 300, textAlign: 'center' }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
+            Still reconnecting. You are signed in; this carries on as soon as the connection is back.
+          </span>
+          <button type="button" onClick={() => location.reload()} style={{
+            fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-1)', background: 'var(--sb-card)',
+            border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-pill)', padding: '6px 14px', cursor: 'pointer',
+          }}>Reload</button>
+        </div>
+      )}
       <style>{`
         @keyframes sbPulse {
           0%, 100% { opacity: 1; transform: scale(1); }
@@ -1439,6 +1455,7 @@ function App() {
         open={assistantOpen}
         minimised={assistantAside}
         onMinimise={() => setAssistantAside(true)}
+        onOpenRequest={() => { setAssistantOpen(true); setAssistantAside(false) }}
         onClose={() => { setAssistantOpen(false); setAssistantAside(false) }} />
       {/* While it is put aside the button is back in its "open me" state, so
           either the tab or the button brings it back. */}

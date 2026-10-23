@@ -37,3 +37,12 @@ create unique index if not exists assistant_one_streaming
 -- Plain (not partial) so PostgREST's upsert can name it; NULLs never collide.
 create unique index if not exists assistant_tool_use_uniq
   on public.assistant_messages (conversation_id, tool_use_id);
+
+-- 20260042 first shipped this index as a PARTIAL one (`where client_id is not null`), and editing a migration does not
+-- change an index that already exists. PostgREST's upsert can only name columns, never a predicate, so make the
+-- project's index the plain one the file now describes. NULLs never collide in a unique index, so nothing about which
+-- rows are accepted changes.
+drop index if exists public.assistant_messages_client_uniq;
+create unique index if not exists assistant_messages_client_uniq
+  on public.assistant_messages (conversation_id, client_id);
+

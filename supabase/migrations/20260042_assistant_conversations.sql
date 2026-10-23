@@ -76,10 +76,11 @@ create table if not exists public.assistant_messages (
 create index if not exists assistant_messages_thread_idx
   on public.assistant_messages (conversation_id, id);
 
--- One row per client-named bubble within a conversation.
+-- One row per client-named bubble within a conversation. Not a partial index:
+-- NULLs never collide in a unique index anyway, and PostgREST's upsert can only
+-- name the columns, not a predicate.
 create unique index if not exists assistant_messages_client_uniq
-  on public.assistant_messages (conversation_id, client_id)
-  where client_id is not null;
+  on public.assistant_messages (conversation_id, client_id);
 
 -- Keeps "most recently active" honest, and lets a list sort by it. A streaming
 -- update counts: an answer arriving is activity.
