@@ -672,6 +672,14 @@ written before this reads unchanged):
   `ownDated = isDated(rule) && running`. Left ungated, an envelope whose budget
   did not apply still reported a whole **year** of spending — ten times the
   month's, with nothing beside it to say what it was.
+- **SUPERSEDED — the Budget screen reads every envelope as the month on screen,
+  dated ones included.** `THE YEAR` / `SpanChip`, `span`, `yearBase` and the
+  modal's `partsDated`/`subRules` are gone: a dated envelope shows spent *this
+  month* against `monthlyAmount(rule, monthKey)` — the instalment that falls in
+  it (0 in a month with none, drawn as `nothing due` rather than `set a budget`,
+  via `nothingDue`). The year is the year chart's question; the month picker
+  asks it of another month. The reasoning below on why a twelfth is wrong still
+  holds: nothing divides — a month with no instalment simply has no budget.
 - **A dated budget is never divided.** Four instalments of 45,000 are four
   instalments of 45,000; as a monthly figure they become 15,000 a month, which
   leaves the account on no day of the year — and measuring a month's spending
