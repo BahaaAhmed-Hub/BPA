@@ -221,6 +221,17 @@ for (const [status, message, want] of [[401, 'invalid x-api-key', /refused the k
   ok(out === 'error' && /more steps than I will chain/.test(db.s.rows.find(r => r.role === 'assistant').content), 'a runaway tool loop is stopped with a sentence')
 }
 
+// 7b ── the other two ways the chosen model stops working, each with its own sentence
+for (const [status, message, want, label] of [
+  [404, 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', /cannot use the model “claude-x”.*Settings → AI/, 'a model the key cannot use'],
+  [400, 'Your credit balance is too low to access the Anthropic API.', /out of credit or past its billing date.*Settings → AI/, 'an account out of credit'],
+]) {
+  const db = makeDb(); user(db, 'hello')
+  const out = await M.runStep(deps(db, fakeFetch([{ status, message }])), P(db))
+  const a = db.s.rows.find(r => r.role === 'assistant')
+  ok(out === 'error' && want.test(a.content) && !/refused the key/.test(a.content), `${label} reads as that, not as a bad key`, a?.content)
+}
+
 // 8 ── Groq
 {
   const db = makeDb(); user(db, 'hi')

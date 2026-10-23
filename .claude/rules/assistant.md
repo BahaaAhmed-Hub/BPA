@@ -324,3 +324,31 @@ control: lock removed → both requests call the model; also typechecks `index.t
 on a timer: page killed mid-answer then reopened, second device, bfcache, interrupted answer, drafts, tool run once
 across two devices, approval card across a reload, 404 fallback, file stays in the browser, ✕ archives),
 `auth-survives-dim.mjs` (12). **Not exercised: the real Deno function, a real Anthropic/Groq stream, Realtime, a real iPad.**
+
+## The model is the person's choice, and one that stops working is replaced
+`lib/modelCatalog.ts`, `settings/sections/ModelPicker.tsx`, `claudeModel` in `AIConfig`, `ModelBadge`. The Groq id was a
+hard-coded constant, so when Groq answered *"The model `llama-3.3-70b-versatile` does not exist or you do not have access
+to it"* there was nothing to do but wait for a developer.
+- **Settings → AI → "Which model"** is a combo box fed by the provider's own model list asked with the person's key
+  (`GET /models`; Groq's speech, guard and TTS models are filtered out), and it takes any typed id. On Groq the chosen
+  model is also **tried with one token** — "listed" is not "allowed", and that gap is the report. A model that fails is
+  named in the provider's words with a one-click "Use <best the key can use> instead". Claude's is not tried (that would
+  be a paid request per keystroke); an empty Claude box means "the app's default" so a default that moves moves for
+  everyone who never chose. `claudeModelOf(cfg)` is the one place that reads it; the assistant, the panel header and
+  `professor.ts` all do.
+- **Self-heal on send** (`ensureWorkingGroqModel`, in `sendMessage` before both the server and the browser path): one probe
+  per `key|model` per page session. Only a definite *"that model is not available"* (404, or the provider's words) changes
+  anything — offline, a bad key and a rate limit leave the choice alone, and a billing refusal is **not** a missing model
+  (`isBillingMessage`). It tries a few candidates, best first (`GROQ_PREFERENCE`, then whatever else the key has), saves the
+  working one, and `notify`s what it switched from and where to change it.
+- **Three failures, three sentences** (the panel and the function's `friendlyError`): a refused key, an account out of credit
+  or past its billing date ("choose another provider or model in Settings → AI"), a model the key cannot use.
+- **The header shows the model in use**, redrawn when Settings saves (`professor:aiConfigChanged`), and a long id is cut
+  with an ellipsis (the label box, `minWidth: 0` all the way up the header) with the whole id as the tooltip.
+  `describeModel` drops a publisher prefix and knows initialisms: `openai/gpt-oss-120b` is "GPT OSS 120B", not
+  "Openai/gpt Oss 120B".
+- **Not covered**: the Telegram bot and Siri choose their own models server-side and do not read this setting.
+Tests: `assistant-models.mjs` (31, the real catalog against a provider that refuses; offline / bad key / rate limit leave the
+choice alone), `assistant-model-choice.mjs` (browser: the exact error in the report, the picker, the heal, billing, the
+ellipsis measured against the header's buttons, Settings→header with no reload, Claude's choice reaching the request).
+

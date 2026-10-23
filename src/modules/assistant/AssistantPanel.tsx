@@ -21,7 +21,9 @@ import { recognitionLang, speak, speechSupported, startListening, stopSpeaking, 
 import { cleanName, labelOf, loadPersona as loadPersonaNow, NAME_MAX, savePersona, usePersona } from '@/lib/assistantPersona'
 import { AssistantAvatar } from './AssistantAvatar'
 import { ModelBadge } from './ModelBadge'
-import { ASSISTANT_CLAUDE_MODEL } from '@/lib/modelInfo'
+import { AI_CONFIG_EVENT, claudeModelOf, saveAIConfig } from '@/modules/settings/model'
+import { ensureWorkingGroqModel, isBillingMessage, isModelMissingMessage } from '@/lib/modelCatalog'
+import { notify } from '@/lib/undo'
 import { clampWidth, loadChosenWidth, rightGap, saveWidth, widthFromDrag, DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH } from '@/lib/assistantWindow'
 import { ASK_EVENT, takePendingAsk } from '@/lib/assistantBridge'
 import {
@@ -675,7 +677,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     const groq = cfg.provider === 'groq'
     return {
       conversationId, mode, provider: groq ? 'groq' as const : 'anthropic' as const,
-      model: groq ? cfg.groqModel : ASSISTANT_CLAUDE_MODEL,
+      model: groq ? cfg.groqModel : claudeModelOf(cfg),
       system: buildSystemPrompt(userName, today, samuraiActive, persona.name),
       tools: (groq ? toGroqTools(ASSISTANT_TOOLS) : ASSISTANT_TOOLS) as unknown[],
       key: (groq ? cfg.groqKey : cfg.anthropicKey) || undefined,
@@ -805,7 +807,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
       let   accumText  = ''
 
       const stream = client.messages.stream({
-        model: ASSISTANT_CLAUDE_MODEL, max_tokens: 4096,
+        model: claudeModelOf(cfg), max_tokens: 4096,
         system, tools: ASSISTANT_TOOLS, messages: msgs,
       })
 
@@ -909,7 +911,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     // A file on its own is a message: "what is this?" is implied by dropping it.
     if ((!trimmed && attachments.length === 0) || thinking) return
 
-    const cfg = loadAIConfig()
+    let cfg = loadAIConfig()
     stopSpeaking()
 
     // What this provider cannot take is said before the request, not after it
@@ -925,6 +927,19 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     if (cfg.provider === 'groq' && !cfg.groqKey) {
       setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'error', content: 'No Groq API key set. Go to Settings → AI.' }])
       return
+    }
+
+    // A Groq model the key cannot use ("does not exist or you do not have access to it") is found out here, once per
+    // model, with a one-token request — and replaced by one that works, with the person told. Only a definite "that
+    // model is not available" changes anything; being offline or rate-limited leaves the choice alone.
+    if (cfg.provider === 'groq') {
+      const healed = await ensureWorkingGroqModel(cfg.groqKey, cfg.groqModel)
+      if (healed.switched) {
+        const from = cfg.groqModel
+        cfg = { ...cfg, groqModel: healed.model }
+        saveAIConfig(cfg)
+        notify(`Groq cannot use ${from} with your key, so I switched to ${healed.model}. Change it any time in Settings → AI.`)
+      }
     }
 
     // If provider switched since last message, reset that provider's history
@@ -975,9 +990,16 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
       const msg     = err instanceof Error ? err.message : String(err)
       const is401   = msg.includes('401') || msg.includes('authentication') || msg.includes('invalid_api_key')
       const sent = cfg.provider === 'groq' ? cfg.groqKey : cfg.anthropicKey
+      const label    = cfg.provider === 'groq' ? 'Groq' : 'Anthropic'
+      const model    = cfg.provider === 'groq' ? cfg.groqModel : claudeModelOf(cfg)
+      // Three different problems that all end in "it did not answer", with three different fixes — so three sentences.
       const friendly = is401
-        ? `${cfg.provider === 'groq' ? 'Groq' : 'Anthropic'} refused the key that was sent: ${maskKey(sent)}. Check Settings → AI. It said: ${msg.slice(0, 200)}`
-        : `Error: ${msg}`
+        ? `${label} refused the key that was sent: ${maskKey(sent)}. Check Settings → AI. It said: ${msg.slice(0, 200)}`
+        : isBillingMessage(msg)
+          ? `${label} says the account is out of credit or past its billing date. Top it up with ${label}, or choose another provider or model in Settings → AI. It said: ${msg.slice(0, 200)}`
+          : isModelMissingMessage(msg)
+            ? `${label} says your key cannot use the model “${model}”. Pick another in Settings → AI — the list there is what your key can use. It said: ${msg.slice(0, 200)}`
+            : `Error: ${msg}`
       setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'error', content: friendly }])
     } finally {
       setThinking(false)
@@ -1052,6 +1074,15 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
   useEffect(() => { if (!open) { micRef.current?.stop(); stopSpeaking() } }, [open])
   useEffect(() => () => { micRef.current?.stop(); stopSpeaking() }, [])
 
+  // Settings → AI can change the model while this window is open (the same page, or another tab): redraw the header.
+  const [, setCfgTick] = useState(0)
+  useEffect(() => {
+    const on = () => setCfgTick(n => n + 1)
+    window.addEventListener(AI_CONFIG_EVENT, on)
+    window.addEventListener('storage', on)
+    return () => { window.removeEventListener(AI_CONFIG_EVENT, on); window.removeEventListener('storage', on) }
+  }, [])
+
   useEffect(() => {
     const t = setTimeout(() => saveDraft(input), 250)
     return () => clearTimeout(t)
@@ -1122,9 +1153,10 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
           padding: '14px 16px', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0,
         }}>
           <AssistantAvatar size={38} radius="50%" name={persona.name} />
-          <div style={{ flex: 1 }}>
+          {/* minWidth 0: a flex child will not shrink below its content otherwise, and a long model id would push the buttons out. */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{labelOf(persona)}</p>
-            <ModelBadge provider={cfg.provider === 'groq' ? 'groq' : 'anthropic'} model={cfg.provider === 'groq' ? cfg.groqModel : ASSISTANT_CLAUDE_MODEL} />
+            <ModelBadge provider={cfg.provider === 'groq' ? 'groq' : 'anthropic'} model={cfg.provider === 'groq' ? cfg.groqModel : claudeModelOf(cfg)} />
           </div>
           {!isEmpty && (
             <button onClick={clearConversation}

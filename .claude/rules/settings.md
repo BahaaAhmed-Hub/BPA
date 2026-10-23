@@ -652,3 +652,11 @@ Import, Done).
   received two rows". Controls: a habit on the server keeps the starter away, a
   task keeps the Todoist prompt away, and the pre-change code fails the wizard
   assertions. **Not measured:** the Todoist connect/import itself (a real OAuth popup).
+
+## Settings → AI — "Which model" sits under the key, and asks the provider
+`sections/ModelPicker.tsx`, mounted by `ProfessorSection` after the key field (it needs the key). The provider pills still
+choose a *provider* and nothing else; the model is a separate row, per provider (`groqModel`, `claudeModel`), so neither can
+land in the other's field. What it does and why is in `assistant.md` ("The model is the person's choice…"). The old
+`GROQ_MODELS` export (it still offered Mixtral, long retired, and nothing read it) is gone. `settings-snapshot.mjs` will
+show the AI section changed — that is this row.
+

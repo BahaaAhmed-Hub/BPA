@@ -290,10 +290,18 @@ export function throttledWriter(write: (text: string) => Promise<void>, ms: numb
 // ── The step ─────────────────────────────────────────────────────────────────
 
 /** A sentence that says which kind of failure it was and what to do. */
-export function friendlyError(provider: Provider, e: unknown, key: string): string {
+export function friendlyError(provider: Provider, e: unknown, key: string, model = ''): string {
   const msg = e instanceof Error ? e.message : String(e)
   const name = provider === 'groq' ? 'Groq' : 'Anthropic'
   const status = e instanceof ModelError ? e.status : 0
+  // Out of credit is a 400 (Anthropic) or a 402/429 (others), and "the model is gone" is a 404 or a 400 with words in it.
+  // Neither is the key's fault and neither is cured by asking again; both are cured in Settings → AI.
+  if (/credit balance|billing|payment required|insufficient[_ ]quota|quota (exceeded|has been)/i.test(msg) || status === 402) {
+    return `${name} says the account is out of credit or past its billing date. Top it up with ${name}, or choose another provider or model in Settings → AI. It said: ${msg.slice(0, 200)}`
+  }
+  if (status === 404 || /does not exist|do not have access|don.t have access|model_not_found|decommission|deprecated|no longer (available|supported)/i.test(msg)) {
+    return `${name} says your key cannot use the model${model ? ` “${model}”` : ''}. Pick another in Settings → AI — the list there is what your key can use. It said: ${msg.slice(0, 200)}`
+  }
   if (status === 401 || status === 403 || /invalid.api.key|authentication/i.test(msg)) {
     const tail = key ? `…${key.slice(-4)}` : '(none)'
     return `${name} refused the key that was sent (${tail}). Check Settings → AI. It said: ${msg.slice(0, 200)}`
@@ -374,7 +382,7 @@ export async function runStep(deps: StepDeps, p: StepParams): Promise<StepOutcom
     return 'done'
   } catch (e) {
     await writer.finish().catch(() => '')
-    await db.finishAnswer(answerId, 'error', friendlyError(p.provider, e, p.key)).catch(() => {})
+    await db.finishAnswer(answerId, 'error', friendlyError(p.provider, e, p.key, p.model)).catch(() => {})
     await db.setTurn(p.conversationId, null).catch(() => {})
     return 'error'
   }

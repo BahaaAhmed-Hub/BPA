@@ -40,10 +40,12 @@ function Mark({ kind, size }: { kind: ModelMarkKind; size: number }) {
 export function ModelBadge({ provider, model }: { provider: 'anthropic' | 'groq'; model: string }) {
   const m = describeModel(provider, model)
   return (
+    // Long ids ("meta-llama/llama-4-scout-17b-16e-instruct", or whatever a person typed) are cut with an ellipsis rather
+    // than pushing the header's buttons out; the whole id is the tooltip and the accessible name.
     <span data-model-badge data-model-id={m.id} title={`${m.id} · ${m.vendor}`} aria-label={`Model: ${m.vendor} ${m.label}`}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
-      <Mark kind={m.mark} size={14} />
-      <span>{m.label}</span>
+      style={{ display: 'flex', alignItems: 'center', gap: 6, margin: 0, minWidth: 0, maxWidth: '100%', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
+      <span style={{ display: 'inline-flex', flexShrink: 0 }}><Mark kind={m.mark} size={14} /></span>
+      <span data-model-label style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.label}</span>
     </span>
   )
 }
