@@ -7,6 +7,7 @@
  */
 import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
+import { reportSyncGap } from '@/lib/syncStatus'
 import type { LinkMeta, Project, ProjectKind, ProjectLink, ProjectLinkKind, ProjectMilestone, ProjectStatus } from './types'
 
 interface ProjectRow {
@@ -62,7 +63,10 @@ let linkMeta = false
 let linkMetaMissing = false
 
 /** 42P01: undefined_table. PGRST205: PostgREST's cache has no such table. */
-const isMissing = (e: { code?: string } | null) => e?.code === '42P01' || e?.code === 'PGRST205'
+export const isMissing = (e: { code?: string } | null | undefined) => e?.code === '42P01' || e?.code === 'PGRST205'
+
+/** The server's refusal as an Error that still carries its code, so the caller can tell a missing table from a failed write. */
+const failure = (e: { message: string; code?: string }) => Object.assign(new Error(e.message), { code: e.code })
 
 async function userId(): Promise<string> {
   const { data } = await supabase.auth.getSession()
@@ -88,7 +92,7 @@ export async function loadProjectData(): Promise<ProjectData | 'missing'> {
   ])
   if (isMissing(p.error) || isMissing(m.error) || isMissing(l.error)) return 'missing'
   const failed = p.error ?? m.error ?? l.error
-  if (failed) throw new Error(failed.message)
+  if (failed) throw failure(failed)
   if (((l.data ?? []) as LinkRow[]).some(r => 'meta' in r)) { linkMeta = true; linkMetaMissing = false }
   return {
     projects:   ((p.data ?? []) as ProjectRow[]).map(toProject),
@@ -114,12 +118,12 @@ export async function pushProjectData(push: ProjectPush): Promise<void> {
   if (push.projects.length) {
     const { error } = await supabase.from('projects')
       .upsert(push.projects.map(p => fromProject(p, uid)), { onConflict: 'id' })
-    if (error) throw new Error(error.message)
+    if (error) throw failure(error)
   }
   if (push.milestones.length) {
     const { error } = await supabase.from('project_milestones')
       .upsert(push.milestones.map(m => fromMilestone(m, uid)), { onConflict: 'id' })
-    if (error) throw new Error(error.message)
+    if (error) throw failure(error)
   }
   if (push.links.length) {
     // The unique (project, kind, ref) key is the second way a duplicate can
@@ -132,9 +136,11 @@ export async function pushProjectData(push: ProjectPush): Promise<void> {
     let { error } = await write(send)
     if (error && send && /meta/.test(error.message)) {
       linkMetaMissing = true
+      // Links still save; only what they remember about the other module's item stays here.
+      reportSyncGap('projects', 'columns', 'project_links.meta — run 20260043_project_link_meta.sql')
       ;({ error } = await write(false))
     }
-    if (error) throw new Error(error.message)
+    if (error) throw failure(error)
   }
   // Children before parents on the way out too — though cascade would cover it.
   for (const [table, ids] of [
@@ -144,7 +150,7 @@ export async function pushProjectData(push: ProjectPush): Promise<void> {
   ] as const) {
     if (!ids.length) continue
     const { error } = await supabase.from(table).delete().eq('user_id', uid).in('id', ids)
-    if (error) throw new Error(error.message)
+    if (error) throw failure(error)
   }
   markLocalWrite('projects')
 }
@@ -157,5 +163,5 @@ export async function orphanProjectTasks(projectId: string): Promise<void> {
     .update({ project_id: null, milestone_id: null })
     .eq('user_id', uid).eq('project_id', projectId)
   // Before 20260042 there is no column to clear, and nothing points at it.
-  if (error && error.code !== '42703' && !isMissing(error)) throw new Error(error.message)
+  if (error && error.code !== '42703' && !isMissing(error)) throw failure(error)
 }

@@ -390,6 +390,21 @@ the rail, `scripts/project-lens.mjs [tasks|calendar|mail|rail]`.
   The stub **refuses like RLS** (`NO_RLS=1` stops it), and a control has to remove *every* defence: removing
   only the hydrate skip still passed because `loadFromDB`'s own guard answered.
 
+### The sync-gap banner says when Projects cannot save
+`SyncEntity` has `projects`; `scripts/project-sync-gap.mjs [ok|tables|columns|error|recovers]`.
+- Until now a missing table, a refused write and a missing column all went to `console.warn`: rows stayed
+  dirty and retried, and the other device simply never saw the project. Three voices, one banner paragraph
+  (the habit/task sentences talk about pictures and notes, so projects have their own):
+  **`tables`** (42P01 / PGRST205, from a push *or* the first read) — "only on this device … run 20260042";
+  **`columns`** (`project_links.meta` refused, the existing silent fallback) — "saving, but what a linked event,
+  thread or entry looks like stays on this device … run 20260043"; **`error`** — the server's own words.
+- `projectDb` throws an Error that still carries the server's `code` (it used to flatten it to a message, so
+  nothing downstream could tell a missing table from a refusal).
+- **A success clears only what it proves.** `clearSyncGap('projects', ['tables','error'])`: a push that landed
+  says the tables are there, not that a column still being left out has appeared.
+- Controls (each removed, the named assertion fails): the push-path report, the load-path report, the meta
+  report, the clear. Healthy server: no banner and the rows landed.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and

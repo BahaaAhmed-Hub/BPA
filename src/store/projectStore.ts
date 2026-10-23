@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { markLocalWrite } from '@/lib/liveSync'
 import { moduleIsOff } from '@/lib/entitlements'
+import { clearSyncGap, reportSyncGap } from '@/lib/syncStatus'
 import { useTaskStore } from '@/store/taskStore'
 import {
   fromLink, fromMilestone, fromProject, loadProjectData, orphanProjectTasks, pushProjectData,
@@ -113,8 +114,16 @@ function pushNow(): void {
       for (const id of pushed) { d.delete(id); e.delete(id) }
       saveIdSet(DIRTY_KEY, d)
       saveIdSet(EDITED_KEY, e)
+      // The tables answered: whatever stopped the last write has gone. A column still being left out has not.
+      clearSyncGap('projects', ['tables', 'error'])
     })
-    .catch(console.warn)
+    .catch((err: { message?: string; code?: string }) => {
+      console.warn(err)
+      // Said out loud, because nothing else would: the rows stay marked dirty and retry, and until
+      // they land the other device simply never sees this project.
+      if (err?.code === '42P01' || err?.code === 'PGRST205') reportSyncGap('projects', 'tables', err.message)
+      else if (err?.message && err.message !== 'not signed in') reportSyncGap('projects', 'error', err.message)
+    })
 }
 
 function schedulePush(): void {
@@ -287,7 +296,8 @@ export const useProjectStore = create<ProjectState>()(
           // A warm boot starts this read on the cached plan; the answer can land while it is
           // in flight. Applying it then would put back what the plan just took away.
           if (moduleIsOff('projects')) return
-          if (data === 'missing') { set({ missing: true }); return }
+          if (data === 'missing') { set({ missing: true }); reportSyncGap('projects', 'tables'); return }
+          clearSyncGap('projects', ['tables', 'error'])
           const dirty = loadIdSet(DIRTY_KEY), edited = loadIdSet(EDITED_KEY), gone = loadGone()
           const s = get()
 

@@ -17,9 +17,12 @@ export function SyncGapBanner() {
 
   if (dismissed || gaps.length === 0) return null
 
-  const missing = gaps.filter(g => g.kind === 'columns')
-  const stale   = gaps.filter(g => g.kind === 'cache')
-  const failing = gaps.filter(g => g.kind === 'error')
+  // Projects have their own sentences: the habit/task ones talk about pictures and notes.
+  const projectGap = gaps.find(g => g.entity === 'projects')
+  const others  = gaps.filter(g => g.entity !== 'projects')
+  const missing = others.filter(g => g.kind === 'columns')
+  const stale   = others.filter(g => g.kind === 'cache')
+  const failing = others.filter(g => g.kind === 'error')
 
   return (
     <div style={{
@@ -45,6 +48,14 @@ export function SyncGapBanner() {
             talks to project <strong>{supabaseProjectRef}</strong> — check the SQL editor is open on
             that one, then run <code style={{ ...T.meta, background: 'color-mix(in srgb, var(--sb-ink-1) 6.0%, transparent)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)' }}>
             notify pgrst, 'reload schema';</code>
+          </p>
+        )}
+        {projectGap && (
+          <p data-projects-gap={projectGap.kind} style={{ ...T.body, margin: others.length ? '6px 0 0' : 0, color: 'var(--sb-ink-2)' }}>
+            {projectGap.kind === 'tables' && <>Projects are only on this device — the database has no projects tables, so nothing you add is reaching your other devices. Run {MIGRATION_FOR.projects} in Supabase.</>}
+            {projectGap.kind === 'columns' && <>Projects are saving, but what a linked event, thread or entry looks like (its title, its time) stays on this device. Run 20260043_project_link_meta.sql in Supabase.</>}
+            {projectGap.kind === 'cache' && <>Supabase will not store everything about projects — check the migration ran on project <strong>{supabaseProjectRef}</strong>.</>}
+            {projectGap.kind === 'error' && <>projects: {projectGap.detail ?? 'sync failed'}</>}
           </p>
         )}
         {failing.length > 0 && (
