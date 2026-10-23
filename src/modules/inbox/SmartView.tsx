@@ -10,7 +10,7 @@ import type { SmartSection } from '@/lib/mailSmart'
 import { canNeedAction, type MailKind } from '@/lib/mailKinds'
 import { tagOfMail, companyOfMail } from '@/lib/mailCompany'
 import { useProjectStore } from '@/store/projectStore'
-import { threadRef } from '@/modules/projects/threadLinks'
+import { dismissSuggestion, loadDismissed, suggestProject, threadMeta, threadRef } from '@/modules/projects/threadLinks'
 import { useFocusClass } from '@/lib/companyFocus'
 import { useProjectFocusClass } from '@/modules/projects/useProjectFocusClass'
 import { isBusinessAccount } from '@/lib/businessAccounts'
@@ -566,6 +566,13 @@ function Row({
     const l = projectLinks.find(x => x.kind === 'thread' && x.refId === threadRef(t.accountEmail, t.threadId))
     return l ? allProjects.find(p => p.id === l.projectId) : undefined
   }, [projectLinks, allProjects, t.accountEmail, t.threadId])
+  // A thread with no project that clearly looks like one: offered, never filed unasked. The same
+  // deterministic rule as the reader's, so the two can never disagree about the same row.
+  const addProjectLink = useProjectStore(s => s.addLink)
+  const [dismissedSuggestions, setDismissedSuggestions] = useState(loadDismissed)
+  const suggestion = useMemo(
+    () => project ? null : suggestProject(t, threadRef(t.accountEmail, t.threadId), allProjects, projectLinks, dismissedSuggestions),
+    [project, t, allProjects, projectLinks, dismissedSuggestions])
   return (
     <div className={focusClass(lensCompany) || projectFocus.thread(t.accountEmail, t.threadId)} style={{
       // `flex-start`, not the default stretch: a stretched checkbox centres its
@@ -616,6 +623,27 @@ function Row({
             }}>
               <span aria-hidden style={{ width: 6, height: 6, transform: 'rotate(45deg)', background: project.color ?? 'var(--sb-ink-4)', flexShrink: 0 }} />
               {project.name}
+            </span>
+          )}
+          {suggestion && (
+            <span data-thread-suggestion={suggestion.project.id} style={{
+              display: 'inline-flex', alignItems: 'center', flexShrink: 0, maxWidth: 170,
+              fontSize: 'var(--sb-t-micro)', fontWeight: 600, borderRadius: 'var(--sb-r-chip)',
+              color: 'var(--sb-ink-2)', border: 'var(--sb-border-width) dashed var(--sb-border)',
+            }}>
+              <button type="button" title={`Looks like ${suggestion.project.name} — ${suggestion.reason}. Press to file it there.`}
+                aria-label={`File under ${suggestion.project.name}: ${suggestion.reason}`}
+                onClick={e => { e.stopPropagation(); addProjectLink(suggestion.project.id, 'thread', threadRef(t.accountEmail, t.threadId), threadMeta(t)) }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, minWidth: 0, padding: '1px 4px 1px 8px', border: 'none',
+                  background: 'transparent', cursor: 'pointer', font: 'inherit', color: 'inherit',
+                }}>
+                <span aria-hidden style={{ width: 6, height: 6, transform: 'rotate(45deg)', flexShrink: 0, border: `1.5px solid ${suggestion.project.color ?? 'var(--sb-ink-4)'}` }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggestion.project.name}?</span>
+              </button>
+              <button type="button" title="Not this one" aria-label={`Not ${suggestion.project.name}`}
+                onClick={e => { e.stopPropagation(); dismissSuggestion(threadRef(t.accountEmail, t.threadId), suggestion.project.id); setDismissedSuggestions(loadDismissed()) }}
+                style={{ padding: '1px 6px 1px 2px', border: 'none', background: 'transparent', cursor: 'pointer', font: 'inherit', color: 'var(--sb-ink-3)' }}>×</button>
             </span>
           )}
           {company && (

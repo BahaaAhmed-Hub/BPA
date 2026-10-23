@@ -257,8 +257,7 @@ Project bar in `SmartReader`, a chip on `SmartView`'s row, a snapshot refresh an
   on an opened row's accent tint — 4.05 in Evergreen. Text takes the `-deep` tokens (`Replied` too);
   nothing had measured an opened row, and the audit's new reader visit is what found it.
   `--sb-warning` has no `-deep` and is left as it was.
-- **Not done:** a suggestion marker on the *rows* (it is in the reader only — on the list it would
-  be the noise the kinds work removed), thread links on the flat list's unreachable branch, and
+- **Not done:** (the row marker has since been added — see the follow-ups) thread links on the flat list's unreachable branch, and
   filing several selected rows at once.
 - **Controls** (each removed, the named assertion fails): name phrase, tie picks first, archived
   suggested, filed re-suggested, correspondent rule, dismissal, replace, page order, other projects'
@@ -414,6 +413,19 @@ on every fill; **the name is its label** (`role="img"`, `aria-label`, title) —
 - Drawn on the grid's cards only (not the drag overlay); nothing for an event in no project. Not text, so the
   ink audit has nothing to measure on it — the claim is the computed colour, the box inside the card, and
   the count (three dots for three owned events, not one per card). Controls: task blocks left out, link kind.
+
+### A suggestion marker on mail rows
+`SmartView`'s row, `project-mail.mjs rows`. The reader already offered "Looks like Alpha"; the list now offers
+the same thing, **quietly**: a dashed chip `◇ Alpha?` beside where the filed chip would be, and a `×`.
+- **The same function answers** (`suggestProject`), so the row and the reader cannot disagree. It appears only
+  when exactly one project wins the best tier — a tie, an archived or finished project, an already-filed
+  thread and a correspondent who writes about two projects all get nothing, so a list of mail stays a list of
+  mail. (That was the objection to doing this at all; it is dashed, 10px and ink-2 for that reason.)
+- **Pressing the chip files it** (with the thread snapshot, nothing written to Gmail) and `stopPropagation`s;
+  `×` is the reader's "Not this" and shares its per-browser memory, so a dismissal in either place holds in both.
+- **Two guards overlap** — the row skips a filed thread, and `suggestProject` does too — so the control removes
+  both; with only the row's removed it still passed. A "row click falls through" assertion was dropped: only the
+  subject button opens a thread, so there was nothing to fall through to and it could not fail.
 
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,

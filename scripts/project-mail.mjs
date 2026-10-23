@@ -64,7 +64,7 @@ db.projects = [
   project(P_BUD, 'Budget', { color: '#C2622B' }), project(P_BUD2, 'Budget review', { color: '#B03A73' }),
   project(P_ARCH, 'Hidden project', { archived: true }),
 ]
-if (MODE === 'chip') db.project_links = [link(1, P_A, 't2')]
+if (MODE === 'chip' || MODE === 'rows') db.project_links = [link(1, P_A, 't2')]
 if (MODE === 'suggest') db.project_links = [
   link(1, P_A, 't4a'), link(2, P_A, 't4b'),                       // Ben is on two threads in A, none elsewhere
   link(3, P_A, 't6a'), link(4, P_A, 't6b'), link(5, P_B, 't6c'),   // Cy is on threads in both: no pattern
@@ -187,6 +187,33 @@ if (MODE === 'chip') {
   ok('unfiling removes the chip', await p.locator('[data-thread-project-chip]').count() === 0)
 }
 
+if (MODE === 'rows') {
+  // The list offers the same suggestion the reader does, quietly, on the row.
+  const sug = () => p.locator('[data-thread-suggestion]')
+  await sug().first().waitFor({ state: 'visible', timeout: 8000 })
+  const rowText = el => el.evaluate(e => { let n = e; for (let i = 0; i < 8 && n; i++, n = n.parentElement) { if (n.querySelector('input[type=checkbox]')) return n.innerText } return '' })
+  const ids = await sug().evaluateAll(els => els.map(e => e.getAttribute('data-thread-suggestion')))
+  ok('two rows offer a project — the two that clearly fit', ids.length === 2 && ids.includes(P_A) && ids.includes(P_B), JSON.stringify(ids))
+  const forP_A = p.locator(`[data-thread-suggestion="${P_A}"]`)
+  ok('the first is on the copy-review row', /copy review/.test(await rowText(forP_A)))
+  ok('a tie (Budget / Budget review) offers nothing on its row', !(await p.getByRole('button', { name: 'Budget review for Q4', exact: true }).evaluate(e => { let n = e; for (let i = 0; i < 8 && n; i++, n = n.parentElement) { if (n.querySelector('input[type=checkbox]')) return !!n.querySelector('[data-thread-suggestion]') } return true })))
+  ok('an already-filed row shows its filed chip and no suggestion', await p.locator('[data-thread-project-chip]').count() === 1 && await p.getByRole('button', { name: 'Lunch on Friday?', exact: true }).evaluate(e => { let n = e; for (let i = 0; i < 8 && n; i++, n = n.parentElement) { if (n.querySelector('input[type=checkbox]')) return !n.querySelector('[data-thread-suggestion]') } return false }))
+  ok('offering alone files nothing', (await linksNow()).length === 1)
+  const w0 = gmailWrites.length
+  await forP_A.getByRole('button', { name: /File under Launch the site/ }).click(); await p.waitForTimeout(2800)
+  const l = await linksNow()
+  ok('pressing the chip files it: that thread, that project, with its snapshot', l.length === 2 && l.some(x => x.refId === ref('t0') && x.projectId === P_A && x.meta?.subject === 'Launch the site — copy review'), JSON.stringify(l.map(x => [x.projectId, x.refId])))
+  ok('and it reached the server', db.project_links.some(x => x.ref_id === ref('t0') && x.project_id === P_A))
+  ok('the row now wears the filed chip instead, and that suggestion is gone', await p.locator(`[data-thread-suggestion="${P_A}"]`).count() === 0 && await p.locator('[data-thread-project-chip]').count() === 2)
+  ok('nothing was written to Gmail', gmailWrites.length === w0, JSON.stringify(gmailWrites.slice(w0)))
+  // Not this
+  await p.locator(`[data-thread-suggestion="${P_B}"]`).getByRole('button', { name: /^Not Kitchen renovation/ }).click(); await p.waitForTimeout(500)
+  ok('"×" hides that suggestion', await sug().count() === 0)
+  ok('and files nothing', (await linksNow()).length === 2)
+  await p.reload({ waitUntil: 'domcontentloaded' }); await settled(p, traffic, 7000)
+  await p.getByRole('button', { name: 'Lunch on Friday?', exact: true }).first().waitFor({ state: 'visible', timeout: 10000 })
+  ok('it stays dismissed after a reload', await sug().count() === 0)
+}
 if (MODE === 'suggest') {
   const sug = () => p.locator('[data-project-suggestion]')
   await openThread('Launch the site — copy review')
