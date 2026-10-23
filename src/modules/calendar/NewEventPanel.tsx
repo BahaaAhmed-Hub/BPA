@@ -30,6 +30,7 @@ import { isMyCalendar, myCalendarAddresses } from '@/lib/calendarEvents'
 import { toRecurrence, presetRecur, type Recur } from './recurrence'
 import { useInkOn } from '@/lib/ink'
 import LinkPreviews from '../../components/LinkPreviews'
+import { ComposerProjectRow } from '../projects/ComposerProjectRow'
 
 // ─── The palette, once ───────────────────────────────────────────────────────
 
@@ -251,6 +252,8 @@ export interface ComposerResult {
   status?: 'done' | 'cancelled'
   /** Drive files already uploaded while composing. */
   attachments?: EventAttachment[]
+  /** The project chosen while composing; linked by the caller once the event exists. */
+  projectId?: string
 }
 
 /** What Google keeps about a file on an event. */
@@ -561,6 +564,7 @@ export function NewEventPanel({
   const notesRef = useRef<HTMLTextAreaElement>(null)
   const [visibility, setVisibility] = useState<'default' | 'private' | 'public'>(existing?.visibility ?? 'default')
   const [status, setStatus] = useState<'done' | 'cancelled' | null>(existing?.status ?? null)
+  const [projectId, setProjectId] = useState('')
   const [moveError, setMoveError] = useState<string | null>(null)
 
   const ref = useRef<HTMLDivElement>(null)
@@ -687,6 +691,7 @@ export function NewEventPanel({
       ...(visibility !== 'default' ? { visibility } : {}),
       ...(status ? { status } : {}),
       ...(attached(files).length ? { attachments: attached(files) } : {}),
+      ...(projectId ? { projectId } : {}),
     })
   }
 
@@ -1242,6 +1247,7 @@ export function NewEventPanel({
       </div>
 
       {extra && <div style={{ ...CARD, gap: 8 }}>{extra}</div>}
+      {!editing && <ComposerProjectRow value={projectId} onChange={setProjectId} wrap={{ ...CARD, gap: 8 }} />}
 
       {moveError && (
         <div style={{ ...CARD, gap: 0, fontSize: 'var(--sb-t-meta)', color: C.bad }}>{moveError}</div>

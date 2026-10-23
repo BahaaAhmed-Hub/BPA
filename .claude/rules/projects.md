@@ -216,8 +216,7 @@ and delete handling in `CalendarIntelligence`, `scripts/project-events.mjs [pane
 - **A harness trap that cost a file:** `open(p,'w').write(open(p).read())` truncates before it
   reads. A throwaway "touch" line emptied `CalendarIntelligence.tsx`; it came back from git, and
   the edits were reapplied. Never write a file you are still reading in the same statement.
-- **Not done:** a project dot on the event cards in the grid, and linking while *composing* a new
-  event (the composer has no `extra` slot; link it once it exists). Recurring series link per
+- **Not done:** (dot on cards and composing-time linking have since been added — see the follow-ups) Recurring series link per
   occurrence, since each has its own id.
 - **Controls** (each removed, the named assertion fails): snapshot (both defences), replace, task
   block select, double-listing, other projects' links, order, no refresh, delete leaving links, undo
@@ -426,6 +425,18 @@ the same thing, **quietly**: a dashed chip `◇ Alpha?` beside where the filed c
 - **Two guards overlap** — the row skips a filed thread, and `suggestProject` does too — so the control removes
   both; with only the row's removed it still passed. A "row click falls through" assertion was dropped: only the
   subject button opens a thread, so there was nothing to fall through to and it could not fail.
+
+### Linking an event while composing it
+`ComposerProjectRow`, `ComposerResult.projectId`, `project-events.mjs compose`. The composer has a Project row
+(new events only; the existing-event panel keeps its own). It **only holds the choice**: with no event there is
+no id to link, so `handleCreateEvent` links it after Google has answered, using the id Google gave and a
+snapshot of the event. A refused create therefore leaves **no link** (the control that linked on the temp id
+left one for an event that never existed). Nothing about the project is sent to Google. Live projects only,
+and the row is absent when there are none.
+- **The audit filter trap:** `INK_ONLY=Projects` only runs visits whose *name* contains it, so the calendar,
+  mail and composer visits were silently skipped by it — the earlier "0 failing over 16 screens" did not include
+  the mail row chip or the event row. Use `INK_ONLY="Projects|Calendar · an event|Calendar · composer|Mail · reader|Calendar · milestone"`
+  (21 screens, 0 failing in four themes).
 
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,

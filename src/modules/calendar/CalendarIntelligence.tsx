@@ -130,6 +130,8 @@ interface NewEventData {
   status?:      EventStatus
   /** Drive files uploaded while composing. */
   attachments?: { fileUrl: string; fileId?: string; title?: string; mimeType?: string }[]
+  /** Chosen in the composer; linked here, once Google has given the event an id. */
+  projectId?:   string
 }
 
 interface CalWithAccount extends GCalCalendar {
@@ -2784,6 +2786,11 @@ export function CalendarIntelligence() {
         : e
       ))
       if (data.status && created.id) toggleStatus(created.id, data.status)
+      // Linked only now: there was no id to link while composing, and a failed create leaves nothing behind.
+      if (data.projectId && created.id) {
+        useProjectStore.getState().addLink(data.projectId, 'event', created.id,
+          eventMeta({ ...created, calendarId: data.calId }))
+      }
     } else {
       setEvents(prev => prev.filter(e => e.id !== tempId))
     }

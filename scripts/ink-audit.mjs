@@ -784,6 +784,13 @@ for (const theme of THEMES) {
       await page.locator('[data-event-project]').first().waitFor({ state: 'visible', timeout: 8000 })
     })
     await page.keyboard.press('Escape')
+    // The same row while the event is still being composed.
+    await visit('Calendar · composer, project row', async () => {
+      await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
+      await page.getByRole('button', { name: /New event/i }).first().click()
+      await page.locator('[data-composer-project]').waitFor({ state: 'visible', timeout: 8000 })
+    })
+    await page.keyboard.press('Escape')
     // The mail side: a filed row's chip, and the reader with its Project row and a suggestion.
     await visit('Mail · reader, project row and suggestion', async () => {
       await page.locator('[data-side-rail] button[aria-label="Mail"]').click()

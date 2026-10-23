@@ -1,4 +1,4 @@
-// node scripts/project-events.mjs [panel|page|sync|delete]
+// node scripts/project-events.mjs [panel|page|sync|delete|compose]
 // Needs a dev server on 5199.
 //
 // Chunk 5 of Projects: an event belongs to a project, from the calendar's own
@@ -12,6 +12,7 @@
 //           a block that is also linked shows once, unlink, open in calendar
 //   sync    the calendar refreshes a link's snapshot when it loads the event, and
 //           writes nothing when the snapshot is already right or the event is not loaded
+//   compose the composer holds a Project choice and links it once Google has made the event
 //   delete  deleting the event drops its links; undoing the delete puts them back
 //           on the event's new id
 import { chromium } from 'playwright-core'
@@ -79,6 +80,7 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers
 const googleWrites = []
 let linkWrites = 0
 let created = []
+let failCreate = false
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--ignore-certificate-errors'] })
 const ctx = await b.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1500, height: 1000 }, timezoneId: 'UTC', locale: 'en-GB' })
 await ctx.route('**://placeholder.supabase.co/**', r => {
@@ -112,6 +114,7 @@ await ctx.route('**://*.googleapis.com/**', r => {
   if (q.method() !== 'GET') {
     googleWrites.push(`${q.method()} ${u.replace(/\?.*/, '')}`)
     if (q.method() === 'DELETE') { const id = decodeURIComponent(u.match(/events\/([^/?]+)/)?.[1] ?? ''); const at = gEvents.findIndex(e => e.id === id); if (at >= 0) gEvents.splice(at, 1); return r.fulfill({ status: 204, headers: cors, body: '' }) }
+    if (q.method() === 'POST' && failCreate) return r.fulfill({ status: 500, headers: cors, json: { error: { message: 'nope' } } })
     if (q.method() === 'POST') { const body = JSON.parse(q.postData() || '{}'); const ev = { ...body, id: `evt-new-${created.length + 1}`, status: 'confirmed', calendarId: 'primary' }; created.push(ev); gEvents.push({ ...ev }); return r.fulfill({ headers: cors, json: ev }) }
     return r.fulfill({ headers: cors, json: {} })
   }
@@ -152,6 +155,40 @@ const openEvent = async title => {
 }
 const sel = () => p.getByLabel('Project for this event')
 
+if (MODE === 'compose') {
+  const open = async () => {
+    await p.getByRole('button', { name: /New event/i }).first().click()
+    await p.getByPlaceholder('Event title').waitFor({ state: 'visible', timeout: 8000 })
+  }
+  const sel = () => p.getByLabel('Project for this event')
+  await p.locator('.event-card').first().waitFor({ state: 'visible', timeout: 10000 })
+  await open()
+  ok('the composer has a Project row, before anything exists', await p.locator('[data-composer-project]').count() === 1)
+  const opts = await sel().locator('option').allTextContents()
+  ok('it offers live projects only', JSON.stringify(opts) === JSON.stringify(['No project', 'Launch the site', 'Kitchen renovation']), JSON.stringify(opts))
+  await p.getByPlaceholder('Event title').fill('Planning session')
+  await sel().selectOption({ label: 'Launch the site' })
+  ok('choosing one links NOTHING yet — there is no event to link', (await linksNow()).length === 0 && linkWrites === 0)
+  await p.getByRole('button', { name: /Create event/ }).click(); await p.waitForTimeout(3500)
+  const made = created[0]
+  ok('Google was asked to create exactly one event', created.length === 1 && made?.summary === 'Planning session', JSON.stringify(created.map(c => c.summary)))
+  ok('the project is not in what Google was sent', !/Launch|project/i.test(JSON.stringify(made).replace(/Planning session/, '')), JSON.stringify(made).slice(0, 160))
+  const l = (await linksNow()).filter(x => x.kind === 'event')
+  ok('then it is linked: that project, the id Google gave', l.length === 1 && l[0].projectId === P_A && l[0].refId === made?.id, JSON.stringify(l))
+  ok('with a snapshot of the event', l[0]?.meta?.title === 'Planning session' && l[0].meta.allDay === false, JSON.stringify(l[0]?.meta))
+  ok('and it reached the server', db.project_links.some(x => x.ref_id === made?.id && x.project_id === P_A))
+  ok('the only things written to Google are the create', googleWrites.length === 1 && /POST/.test(googleWrites[0]), JSON.stringify(googleWrites))
+  // No project chosen: no link.
+  await open(); await p.getByPlaceholder('Event title').fill('Loose chat')
+  await p.getByRole('button', { name: /Create event/ }).click(); await p.waitForTimeout(3500)
+  ok('an event made with no project is linked to nothing', created.length === 2 && (await linksNow()).filter(x => x.kind === 'event').length === 1)
+  // A failed create leaves no link behind.
+  failCreate = true
+  await open(); await p.getByPlaceholder('Event title').fill('Will fail')
+  await sel().selectOption({ label: 'Kitchen renovation' })
+  await p.getByRole('button', { name: /Create event/ }).click(); await p.waitForTimeout(3500)
+  ok('when Google refuses, no link is made', (await linksNow()).filter(x => x.kind === 'event').length === 1 && created.length === 2, JSON.stringify(await linksNow()))
+}
 if (MODE === 'panel') {
   await openEvent('Kickoff meeting')
   ok('the event panel has a Project row', await p.locator('[data-event-project]').count() === 1)
