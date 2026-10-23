@@ -24,6 +24,15 @@ import { ModelBadge } from './ModelBadge'
 import { ASSISTANT_CLAUDE_MODEL } from '@/lib/modelInfo'
 import { clampWidth, loadChosenWidth, rightGap, saveWidth, widthFromDrag, DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH } from '@/lib/assistantWindow'
 import { ASK_EVENT, takePendingAsk } from '@/lib/assistantBridge'
+import {
+  awaitingContinue, busyOf, chatIdFromUrl, claimable, deviceId, isStaleStreaming, loadDraft, rowsToBubbles, saveDraft, urlWithChat,
+  type ChatRow,
+} from '@/lib/assistantChatView'
+import {
+  archiveConversation, claimTool, createConversation, deleteMessageByClientId, fetchConversation, fetchLatestConversationId,
+  fetchMessages, finishTool, insertUserMessage, markInterrupted, mergeRows, persistBubbles, refreshClaim, requestStep, subscribeMessages,
+} from '@/lib/assistantChatApi'
+import { alternating } from '../../../supabase/functions/_shared/assistantChat.ts'
 
 // ─── Groq types (OpenAI-compatible) ──────────────────────────────────────────
 
@@ -345,9 +354,11 @@ interface AssistantPanelProps {
   /** Collapsed to the button, but still here — the conversation is untouched. */
   minimised?: boolean
   onMinimise?: () => void
+  /** A conversation found on load (URL or another device) has an answer on its way: bring the window up to show it. */
+  onOpenRequest?: () => void
 }
 
-export function AssistantPanel({ open, onClose, minimised = false, onMinimise }: AssistantPanelProps) {
+export function AssistantPanel({ open, onClose, minimised = false, onMinimise, onOpenRequest }: AssistantPanelProps) {
   const persona = usePersona()
   // ── The window: where it floats, how wide it is, and when it steps aside ───
   /** On screen. Collapsed (`minimised`) is faded out and kept mounted — the thread, the draft and an answer still arriving carry on. */
@@ -442,8 +453,28 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
   const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>([])
   const [anthropicMsgs, setAnthropicMsgs] = useState<Anthropic.MessageParam[]>([])
   const [groqMsgs,      setGroqMsgs]      = useState<GroqMessage[]>([])
-  const [input,         setInput]          = useState('')
-  const [thinking,      setThinking]       = useState(false)
+  // A half-typed message survives a reload (and a dimmed iPad): it is kept per device, not per conversation.
+  const [input,         setInput]          = useState(() => loadDraft())
+  /** A turn this page is running itself (the in-browser path) or a request it has just handed to the server. */
+  const [localThinking, setThinking]       = useState(false)
+  // ── The conversation lives on the server (20260042/43, functions/assistant-chat) ──
+  const [convId, setConvId] = useState<string | null>(null)
+  const convRef = useRef<string | null>(null)
+  const [rows, setRows] = useState<ChatRow[]>([])
+  const rowsRef = useRef<ChatRow[]>([])
+  const [tick, setTick] = useState(0) // re-reads the clock so an answer that stops arriving is seen to have stopped
+  /** `unknown` until the function has answered once; `no` for the rest of this page's life if it cannot be used. */
+  const serverMode = useRef<'unknown' | 'yes' | 'no'>('unknown')
+  const serverFails = useRef(0)
+  /** Set while a turn runs in the browser (a message with a file, or no function to call): the thread is drawn from state, not rows. */
+  const legacyRef = useRef(false)
+  const legacyStart = useRef<Set<string>>(new Set())
+  const awaiting = useRef<{ after: number } | null>(null)
+  const executing = useRef<Set<number>>(new Set())
+  const interrupted = useRef<Set<number>>(new Set())
+  const continueAsked = useRef<{ sig: string; at: number; n: number } | null>(null)
+  const serverBusy = busyOf(rows, Date.now())
+  const thinking = localThinking || serverBusy
   // A screenshot of an invoice or a PDF statement is the fastest way to tell
   // the assistant something. Three ways in: the clip, a paste, a drop.
   const [attachments,   setAttachments]    = useState<Attachment[]>([])
@@ -501,6 +532,16 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
     setDisplayMessages(prev => prev.map(m => (m.id === id ? { ...m, state } : m)))
   }
 
+  /** Mirrors of render-time values for the effects below, which must not re-subscribe on every render. */
+  const runToolRef = useRef(runTool)
+  runToolRef.current = runTool
+  const displayRef = useRef<DisplayMessage[]>([])
+  displayRef.current = displayMessages
+  const userIdRef = useRef<string | undefined>(undefined)
+  userIdRef.current = user?.id
+  const onOpenRequestRef = useRef(onOpenRequest)
+  onOpenRequestRef.current = onOpenRequest
+
   /** Every tool call goes through here. A call that is outward, destructive or about money shows what it will do
    *  and waits for the person; only a click runs it, and a refusal is handed back to the model as a refusal. */
   async function runTool(name: string, input: Record<string, unknown>): Promise<unknown> {
@@ -511,6 +552,240 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
       if (!ok) return DECLINED
     }
     return executeTool(name, input, ctx)
+  }
+
+
+  // ── The conversation on the server: load it, follow it, run its tools, resume it ──────────────
+  //
+  // The thread is `assistant_messages`; this panel draws it. The model is called by the
+  // `assistant-chat` function, which keeps writing the answer when this page is frozen or
+  // reloaded (iPad Safari does both to a dimmed tab). Tools still run HERE — they read and
+  // write the app's own stores and wait on an approval card — so the function parks each call
+  // as a row, this page takes it (once; two open devices cannot both run `delete_task`), and
+  // asks for the next step. If the server or its tables are not there, or the message carries
+  // a file, the old in-browser loop below runs unchanged.
+
+  const attach = useCallback((id: string, got: ChatRow[], opts?: { open?: boolean }) => {
+    convRef.current = id; setConvId(id)
+    rowsRef.current = got; setRows(got)
+    try { history.replaceState(history.state, '', urlWithChat(location.href, id)) } catch { /* the address bar is a convenience */ }
+    if (opts?.open && busyOf(got, Date.now())) onOpenRequestRef.current?.()
+  }, [])
+  const detach = useCallback(() => {
+    convRef.current = null; setConvId(null)
+    rowsRef.current = []; setRows([])
+    try { history.replaceState(history.state, '', urlWithChat(location.href, null)) } catch { /* as above */ }
+  }, [])
+  const applyRows = useCallback((next: ChatRow[]) => { rowsRef.current = next; setRows(next) }, [])
+
+  // On load: the conversation in the address, else the newest live one (that is how a second device finds the thread).
+  useEffect(() => {
+    const uid = user?.id
+    if (!uid) return
+    let dead = false
+    void (async () => {
+      let id = chatIdFromUrl(location.href)
+      const fromUrl = !!id
+      if (id) {
+        const c = await fetchConversation(id)
+        if (!c || c.archived) { id = null; try { history.replaceState(history.state, '', urlWithChat(location.href, null)) } catch { /* as above */ } }
+      }
+      if (!id) id = await fetchLatestConversationId(uid)
+      if (!id || dead || convRef.current) return
+      const got = await fetchMessages(id)
+      if (!got || dead || convRef.current) return
+      attach(id, got, { open: fromUrl })
+    })()
+    return () => { dead = true }
+  }, [user?.id, attach])
+
+  // Read the thread again — authoritative, so it replaces. Used when the page comes back and while an answer is on its way.
+  const lastRefresh = useRef(0)
+  const refreshLater = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const refresh = useCallback(async (force = false): Promise<void> => {
+    const now = Date.now()
+    // visibilitychange, pageshow and focus arrive together: one read covers them — but a read still happens AFTER the
+    // last of them, or whatever the later event was announcing would be dropped with it.
+    if (!force && now - lastRefresh.current < 1000) {
+      if (!refreshLater.current) refreshLater.current = setTimeout(() => { refreshLater.current = null; void refresh(true) }, 1000 - (now - lastRefresh.current) + 50)
+      return
+    }
+    lastRefresh.current = now
+    const uid = userIdRef.current
+    if (!uid || legacyRef.current) return
+    let id = convRef.current
+    if (!id) { id = await fetchLatestConversationId(uid); if (!id || convRef.current) return }
+    const got = await fetchMessages(id)
+    if (!got || legacyRef.current) return
+    if (!convRef.current) attach(id, got, { open: false })
+    else if (convRef.current === id) applyRows(got)
+  }, [attach, applyRows])
+
+  useEffect(() => {
+    const back = () => { if (document.visibilityState === 'visible') void refresh() }
+    document.addEventListener('visibilitychange', back)
+    window.addEventListener('pageshow', back)   // a tab restored from the back/forward cache never fires "load" again
+    window.addEventListener('online', back)
+    window.addEventListener('focus', back)
+    return () => {
+      document.removeEventListener('visibilitychange', back)
+      window.removeEventListener('pageshow', back)
+      window.removeEventListener('online', back)
+      window.removeEventListener('focus', back)
+    }
+  }, [refresh])
+
+  // Rows arrive by Realtime; while an answer is on its way a poll backs it up (a websocket does not survive a dimmed iPad).
+  useEffect(() => {
+    if (!convId) return
+    return subscribeMessages(convId, got => applyRows(mergeRows(rowsRef.current, got)), gone => applyRows(rowsRef.current.filter(r => r.id !== gone)))
+  }, [convId, applyRows])
+  useEffect(() => {
+    // `thinking`, not only a streaming row: right after Send the only row is the question, and a parked tool call
+    // or the first word of the answer has to be found by somebody.
+    if (!convId || !thinking) return
+    const poll = setInterval(() => { if (document.visibilityState === 'visible') void refresh(true) }, 2500)
+    const tick = setInterval(() => setTick(t => t + 1), 5000)
+    return () => { clearInterval(poll); clearInterval(tick) }
+  }, [convId, thinking, refresh])
+
+  // An answer nobody is writing any more is over; say so on every device.
+  useEffect(() => {
+    for (const r of rows) {
+      if (isStaleStreaming(r, Date.now()) && !interrupted.current.has(r.id)) { interrupted.current.add(r.id); void markInterrupted(r.id) }
+    }
+  }, [rows, tick])
+
+  // The thread on screen is the rows (unless a turn is running in the browser, which draws itself).
+  useEffect(() => {
+    if (!convId || legacyRef.current) return
+    setDisplayMessages(rowsToBubbles(rows, Date.now()) as DisplayMessage[])
+  }, [rows, convId, tick])
+  // Release the composer once the server's answer has begun to appear.
+  useEffect(() => {
+    const a = awaiting.current
+    if (a && rows.some(r => r.id > a.after && r.role !== 'user')) { awaiting.current = null; setThinking(false) }
+  }, [rows])
+
+  /** What a model step needs from this page, which owns the system prompt, the tool list and the key. */
+  const stepBody = (mode: 'turn' | 'continue', conversationId: string) => {
+    const cfg = loadAIConfig()
+    const today = new Date().toISOString().slice(0, 10)
+    const userName = user?.name?.split(' ')[0] ?? user?.email ?? 'there'
+    const groq = cfg.provider === 'groq'
+    return {
+      conversationId, mode, provider: groq ? 'groq' as const : 'anthropic' as const,
+      model: groq ? cfg.groqModel : ASSISTANT_CLAUDE_MODEL,
+      system: buildSystemPrompt(userName, today, samuraiActive, persona.name),
+      tools: (groq ? toGroqTools(ASSISTANT_TOOLS) : ASSISTANT_TOOLS) as unknown[],
+      key: (groq ? cfg.groqKey : cfg.anthropicKey) || undefined,
+    }
+  }
+  const stepBodyRef = useRef(stepBody)
+  stepBodyRef.current = stepBody
+
+  // Run the tool calls the model asked for. A call is taken once (a conditional update is the claim), only by a page
+  // that is in front of the person, and its approval card appears here as it always did.
+  useEffect(() => {
+    const id = convRef.current
+    if (!id || document.visibilityState !== 'visible') return
+    const todo = claimable(rows, Date.now(), deviceId()).filter(r => !executing.current.has(r.id))
+    if (!todo.length) return
+    for (const r of todo) executing.current.add(r.id)
+    void (async () => {
+      for (const r of todo) {
+        const dev = deviceId()
+        if (!(await claimTool(r.id, dev))) { executing.current.delete(r.id); continue }
+        const beat = setInterval(() => void refreshClaim(r.id, dev), 30_000) // still deciding on the card: keep the claim
+        let state: 'done' | 'failed' = 'done'
+        let out = ''
+        try { out = JSON.stringify(await runToolRef.current(r.tool ?? '', (r.tool_input ?? {}) as Record<string, unknown>)) ?? 'null' }
+        catch (e) { state = 'failed'; out = `Error: ${e instanceof Error ? e.message : String(e)}` }
+        clearInterval(beat)
+        await finishTool(r.id, state, out)
+        applyRows(mergeRows(rowsRef.current, [{ ...r, tool_state: state, tool_result: out, claimed_by: dev, updated_at: new Date().toISOString() }]))
+      }
+    })()
+  }, [rows, applyRows])
+
+  // Every tool of a step has come back and nothing has started after: ask for the next step. Whichever page sees it
+  // first asks; a second ask finds the answer already streaming and is turned away by the server. This is also how a
+  // page that was reloaded between the last tool and the next step finishes the job.
+  useEffect(() => {
+    const id = convRef.current
+    if (!id || document.visibilityState !== 'visible') return
+    const sig = awaitingContinue(rows)
+    if (!sig) return
+    const prev = continueAsked.current
+    if (prev && prev.sig === sig && (Date.now() - prev.at < 30_000 || prev.n >= 3)) return
+    continueAsked.current = { sig, at: Date.now(), n: prev && prev.sig === sig ? prev.n + 1 : 1 }
+    void requestStep(stepBodyRef.current('continue', id))
+  }, [rows])
+
+  /** Hand a message to the server. False means "use the browser path": nothing is left behind. */
+  async function sendViaServer(trimmed: string, cfg: AIConfig, clientId: string): Promise<boolean> {
+    const uid = user?.id
+    if (!uid || serverMode.current === 'no') return false
+    const existing = convRef.current
+    const id = existing ?? crypto.randomUUID()
+    const failed = () => { if (++serverFails.current >= 2) serverMode.current = 'no' }
+    if (!existing && !(await createConversation(id, uid, cfg.provider === 'groq' ? 'groq' : 'anthropic'))) { failed(); return false }
+    if (!(await insertUserMessage({ conversationId: id, userId: uid, clientId, text: trimmed }))) {
+      if (!existing) await archiveConversation(id)
+      failed(); return false
+    }
+    const res = await requestStep(stepBodyRef.current('turn', id))
+    if (res !== 'accepted') {
+      await deleteMessageByClientId(id, clientId)
+      if (!existing) await archiveConversation(id)
+      if (res === 'unavailable') serverMode.current = 'no'
+      return false
+    }
+    serverFails.current = 0
+    serverMode.current = 'yes'
+    const got = (await fetchMessages(id)) ?? []
+    if (!existing) attach(id, got); else applyRows(got)
+    awaiting.current = { after: Math.max(0, ...got.map(r => r.id)) }
+    // If the answer never starts to show (a slow cold start), do not hold the box shut for ever.
+    setTimeout(() => { if (awaiting.current) { awaiting.current = null; setThinking(false) } }, 30_000)
+    return true
+  }
+
+  // A turn that ran in the browser is written to the server afterwards, so the thread still survives a reload.
+  useEffect(() => {
+    if (localThinking || !legacyRef.current) return
+    legacyRef.current = false
+    const uid = user?.id
+    const fresh = displayMessages.filter(m => !legacyStart.current.has(m.id))
+    if (!uid || !fresh.length) return
+    void (async () => {
+      let id = convRef.current
+      const isNew = !id
+      if (!id) {
+        id = crypto.randomUUID()
+        if (!(await createConversation(id, uid, loadAIConfig().provider === 'groq' ? 'groq' : 'anthropic'))) return
+      }
+      const ok = await persistBubbles(id, uid, fresh.map(m => ({
+        clientId: m.role === 'tool' ? null : m.id, role: m.role, content: m.content,
+        ...(m.role === 'tool' ? { tool: m.tool ?? m.content, toolUseId: m.id.replace(/^tool-/, ''), toolState: m.state } : {}),
+        ...(m.files?.length ? { files: m.files } : {}),
+      })))
+      if (!ok) return
+      const got = await fetchMessages(id)
+      // Rows that did not come back mean the tables are not really there: keep drawing from state.
+      if (!got || got.length < fresh.length) return
+      if (isNew) attach(id, got); else applyRows(got)
+    })()
+  }, [localThinking]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // What the model should remember when the in-browser path takes over a thread that was read from the server.
+  function plainHistory(): { anthropic: Anthropic.MessageParam[]; groq: GroqMessage[] } {
+    const turns = alternating(displayRef.current
+      .filter(m => (m.role === 'user' || m.role === 'assistant') && m.content.trim())
+      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })))
+    // The message about to be sent is the next user turn; a trailing one (its answer failed) would make two in a row.
+    while (turns.length && turns[turns.length - 1].role === 'user') turns.pop()
+    return { anthropic: turns.map(t => ({ role: t.role, content: t.content })), groq: turns.map(t => ({ role: t.role, content: t.content }) as GroqMessage) }
   }
 
   // ── Anthropic agentic loop (streaming) ─────────────────────────────────────
@@ -664,6 +939,23 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
     const system   = buildSystemPrompt(userName, today, samuraiActive, persona.name)
 
     const sending = attachments
+
+    // The server answers it (and keeps answering if this page is frozen or reloaded). A message with a file stays in the
+    // browser: the bytes are not sent through the function, so that turn is written to the thread afterwards instead.
+    if (!sending.length && user?.id && serverMode.current !== 'no') {
+      const clientId = crypto.randomUUID()
+      setInput('')
+      setAttachError(null)
+      setThinking(true)
+      setDisplayMessages(prev => [...prev, { id: clientId, role: 'user', content: trimmed }])
+      if (await sendViaServer(trimmed, cfg, clientId)) return
+      setDisplayMessages(prev => prev.filter(m => m.id !== clientId))
+      setThinking(false)
+    }
+
+    legacyRef.current = true
+    legacyStart.current = new Set(displayRef.current.map(m => m.id))
+    const carried = plainHistory()
     setInput('')
     setAttachments([])
     setAttachError(null)
@@ -675,9 +967,9 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
 
     try {
       if (cfg.provider === 'groq') {
-        await runGroq(trimmed, cfg, system, groqMsgs, sending)
+        await runGroq(trimmed, cfg, system, groqMsgs.length ? groqMsgs : carried.groq, sending)
       } else {
-        await runAnthropic(trimmed, cfg, system, anthropicMsgs, sending)
+        await runAnthropic(trimmed, cfg, system, anthropicMsgs.length ? anthropicMsgs : carried.anthropic, sending)
       }
     } catch (err) {
       const msg     = err instanceof Error ? err.message : String(err)
@@ -760,6 +1052,11 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
   useEffect(() => { if (!open) { micRef.current?.stop(); stopSpeaking() } }, [open])
   useEffect(() => () => { micRef.current?.stop(); stopSpeaking() }, [])
 
+  useEffect(() => {
+    const t = setTimeout(() => saveDraft(input), 250)
+    return () => clearTimeout(t)
+  }, [input])
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(input) }
   }
@@ -771,6 +1068,11 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
     setDisplayMessages([])
     setAnthropicMsgs([])
     setGroqMsgs([])
+    // "Forget the conversation" archives it: out of sight on every device, kept on the server.
+    const id = convRef.current
+    if (id) void archiveConversation(id)
+    awaiting.current = null
+    detach()
   }
 
   const cfg   = loadAIConfig()
