@@ -34,6 +34,10 @@ export interface Row {
 
 export interface ToolCall { id: string; name: string; input: Record<string, unknown> }
 
+/** What one request to the model cost, as the PROVIDER reported it — never estimated here. */
+export interface Tokens { input: number; output: number; cacheRead: number; cacheWrite: number }
+export interface Usage extends Tokens { model: string; provider: Provider }
+
 export interface Turn {
   provider: Provider
   msgs: unknown[]
@@ -52,7 +56,7 @@ export interface ChatDb {
    *  (the unique index): somebody else is answering. */
   startAnswer(conversationId: string): Promise<number | null>
   updateAnswer(id: number, content: string): Promise<void>
-  finishAnswer(id: number, status: 'complete' | 'error', content: string): Promise<void>
+  finishAnswer(id: number, status: 'complete' | 'error', content: string, usage?: Usage): Promise<void>
   deleteRow(id: number): Promise<void>
   addToolRows(conversationId: string, calls: ToolCall[]): Promise<void>
   /** Rows of this conversation's tool calls with these ids. */
@@ -161,6 +165,8 @@ type Block =
   | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
 
 export interface StepResult {
+  /** what the provider said this request used (zeros when it said nothing) */
+  tokens: Tokens
   text: string
   calls: ToolCall[]
   /** the assistant message to append to the turn, in the provider's format */
@@ -186,6 +192,7 @@ export async function streamAnthropic(p: {
   }
   const blocks: Block[] = []
   const json: string[] = []
+  const tokens: Tokens = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
   let text = ''
   let stop = ''
   for await (const ev of sseData(res.body)) {
@@ -194,7 +201,15 @@ export async function streamAnthropic(p: {
       const e = ev.error as { message?: string } | undefined
       throw new ModelError(e?.message ?? 'The model stream failed.', 529)
     }
-    if (type === 'content_block_start') {
+    if (type === 'message_start') {
+      const u = (ev.message as { usage?: Record<string, number> } | undefined)?.usage
+      if (u) {
+        tokens.input = u.input_tokens ?? 0
+        tokens.cacheRead = u.cache_read_input_tokens ?? 0
+        tokens.cacheWrite = u.cache_creation_input_tokens ?? 0
+        tokens.output = u.output_tokens ?? 0
+      }
+    } else if (type === 'content_block_start') {
       const i = ev.index as number
       const cb = ev.content_block as { type: string; id?: string; name?: string }
       blocks[i] = cb.type === 'tool_use'
@@ -220,12 +235,15 @@ export async function streamAnthropic(p: {
       }
     } else if (type === 'message_delta') {
       stop = ((ev.delta as { stop_reason?: string } | undefined)?.stop_reason) ?? stop
+      // `output_tokens` here is the running total for the message, not an increment.
+      const u = ev.usage as { output_tokens?: number } | undefined
+      if (u?.output_tokens !== undefined) tokens.output = u.output_tokens
     }
   }
   const kept = blocks.filter(b => b && !(b.type === 'text' && !b.text))
   const calls = kept.filter((b): b is Extract<Block, { type: 'tool_use' }> => b.type === 'tool_use')
     .map(b => ({ id: b.id, name: b.name, input: b.input }))
-  return { text, calls, assistant: { role: 'assistant', content: kept }, truncated: stop === 'max_tokens' && !calls.length }
+  return { tokens, text, calls, assistant: { role: 'assistant', content: kept }, truncated: stop === 'max_tokens' && !calls.length }
 }
 
 // ── Groq: one request, one reply ─────────────────────────────────────────────
@@ -249,7 +267,10 @@ export async function callGroq(p: {
     try { const j = await res.json() as { error?: { message?: string } }; if (j.error?.message) msg = j.error.message } catch { /* keep the status */ }
     throw new ModelError(msg, res.status)
   }
-  const data = await res.json() as { choices: Array<{ message: { content: string | null; tool_calls?: GroqCall[] }; finish_reason: string }> }
+  const data = await res.json() as {
+    choices: Array<{ message: { content: string | null; tool_calls?: GroqCall[] }; finish_reason: string }>
+    usage?: { prompt_tokens?: number; completion_tokens?: number }
+  }
   const choice = data.choices[0]
   const calls: ToolCall[] = (choice.message.tool_calls ?? []).map(c => {
     let input: Record<string, unknown> = {}
@@ -258,6 +279,7 @@ export async function callGroq(p: {
   })
   const text = (choice.message.content ?? '').trim()
   return {
+    tokens: { input: data.usage?.prompt_tokens ?? 0, output: data.usage?.completion_tokens ?? 0, cacheRead: 0, cacheWrite: 0 },
     text, calls, truncated: choice.finish_reason === 'length' && !calls.length,
     assistant: { role: 'assistant', content: choice.message.content ?? null, ...(choice.message.tool_calls?.length ? { tool_calls: choice.message.tool_calls } : {}) },
   }
@@ -328,6 +350,8 @@ function resultMessages(turn: Turn, rows: Row[]): unknown[] {
   return turn.pending.map(id => ({ role: 'tool', tool_call_id: id, content: text(by.get(id)!) }))
 }
 
+const usageOf = (p: StepParams, t: Tokens): Usage => ({ ...t, model: p.model, provider: p.provider })
+
 export async function runStep(deps: StepDeps, p: StepParams): Promise<StepOutcome> {
   const { db } = deps
   const fetchFn = deps.fetchFn ?? fetch
@@ -372,12 +396,13 @@ export async function runStep(deps: StepDeps, p: StepParams): Promise<StepOutcom
       turn = { ...turn, msgs: [...turn.msgs, r.assistant], pending: r.calls.map(c => c.id), steps: turn.steps + 1 }
       // Turn state BEFORE the rows: the moment a row exists a device may ask to continue.
       await db.setTurn(p.conversationId, turn)
-      if (text.trim()) await db.finishAnswer(answerId, 'complete', text)
-      else await db.deleteRow(answerId)
+      // The row stays even with no words: it is where this request's tokens are kept, and a tool loop is several
+      // requests, every one billed. The page draws a complete answer with no text as nothing.
+      await db.finishAnswer(answerId, 'complete', text, usageOf(p, r.tokens))
       await db.addToolRows(p.conversationId, r.calls)
       return 'tools'
     }
-    await db.finishAnswer(answerId, 'complete', text.trim() ? text : '(The model sent no answer.)')
+    await db.finishAnswer(answerId, 'complete', text.trim() ? text : '(The model sent no answer.)', usageOf(p, r.tokens))
     await db.setTurn(p.conversationId, null)
     return 'done'
   } catch (e) {

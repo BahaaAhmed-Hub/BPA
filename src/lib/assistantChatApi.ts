@@ -6,10 +6,11 @@
 // panel carries on exactly as it did before this existed.
 import { supabase } from './supabase'
 import { CLAIM_MS, ADOPT_WITHIN_MS, mergeRows, type ChatRow } from './assistantChatView'
+import { usageFromRow, type ModelUsage } from './aiUsage'
 
 export type StepResult = 'accepted' | 'unavailable' | 'offline'
 
-const COLS = 'id, conversation_id, client_id, role, content, status, tool, tool_state, tool_use_id, tool_input, tool_result, files, created_at, updated_at, claimed_by, claimed_at'
+const COLS = 'id, conversation_id, client_id, role, content, status, tool, tool_state, tool_use_id, tool_input, tool_result, files, created_at, updated_at, claimed_by, claimed_at, usage'
 
 /** Postgres / PostgREST saying the table is not there at all. */
 const missing = (e: { code?: string; message?: string } | null) =>
@@ -114,6 +115,7 @@ export function subscribeMessages(conversationId: string, onRows: (rows: ChatRow
 export async function persistBubbles(conversationId: string, userId: string, rows: Array<{
   clientId: string | null; role: 'user' | 'assistant' | 'tool' | 'error'; content: string
   tool?: string; toolUseId?: string; toolState?: 'running' | 'done' | 'failed'; files?: { name: string; kind: string }[]
+  usage?: ModelUsage
 }>): Promise<boolean> {
   if (!rows.length) return true
   const { error } = await supabase.from('assistant_messages').insert(rows.map(r => ({
@@ -121,8 +123,18 @@ export async function persistBubbles(conversationId: string, userId: string, row
     content: r.content, status: r.role === 'error' ? 'error' : 'complete',
     ...(r.tool ? { tool: r.tool, tool_use_id: r.toolUseId ?? null, tool_state: r.toolState === 'running' ? 'failed' : (r.toolState ?? 'done') } : {}),
     ...(r.files?.length ? { files: r.files } : {}),
+    ...(r.usage ? { usage: r.usage } : {}),
   })))
   return !error || missing(error)
+}
+
+/** Everything the assistant used since the first of this month, as the rows record it. Null when it could not be read. */
+export async function fetchMonthUsage(userId: string, now = new Date()): Promise<ModelUsage[] | null> {
+  const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const { data, error } = await supabase.from('assistant_messages').select('usage')
+    .eq('user_id', userId).not('usage', 'is', null).gte('created_at', from).limit(20000)
+  if (error || !Array.isArray(data)) return null
+  return (data as Array<{ usage: unknown }>).map(r => usageFromRow(r.usage)).filter((u): u is ModelUsage => !!u)
 }
 
 export { mergeRows }

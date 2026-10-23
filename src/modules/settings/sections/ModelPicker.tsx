@@ -4,6 +4,9 @@ import { ICON } from '@/lib/type'
 import { inputStyle } from '@/lib/fields'
 import { ASSISTANT_CLAUDE_MODEL, describeModel } from '@/lib/modelInfo'
 import { fallbackOrder, listModels, probeGroq, type ModelOption } from '@/lib/modelCatalog'
+import { useAuthStore } from '@/store/authStore'
+import { fetchMonthUsage } from '@/lib/assistantChatApi'
+import { amountText, formatTokens, groupByModel, priceFor, summarise, type ModelUsage } from '@/lib/aiUsage'
 import { type AIConfig } from '../model'
 import { FieldRow } from '../ui'
 import { PILL_BASE } from '../pillStyles'
@@ -119,6 +122,95 @@ export function ModelPicker({ ai, setAI }: { ai: AIConfig; setAI: (p: Partial<AI
           </div>
         </div>
       </FieldRow>
+
+      <PriceRow ai={ai} setAI={setAI} model={effective} />
+      <MonthUsageRow ai={ai} />
     </>
+  )
+}
+
+/** The rate behind the counter's amount. The built-in figure is a list-price estimate for a few model families; the
+ *  person's own rate (from their billing page) replaces it for that model, and a model with no known price stays
+ *  tokens-only until they set one. */
+function PriceRow({ ai, setAI, model }: { ai: AIConfig; setAI: (p: Partial<AIConfig>) => void; model: string }) {
+  const known = priceFor(model, ai.prices)
+  const own = ai.prices?.[model]
+  const est = known?.source === 'estimate' ? known.price : null
+  const put = (k: 'in' | 'out', raw: string) => {
+    const next = { ...(ai.prices ?? {}) }
+    const cur = next[model] ?? { in: NaN, out: NaN }
+    const n = raw.trim() === '' ? NaN : Number(raw)
+    const merged = { ...cur, [k]: n }
+    if (Number.isNaN(merged.in) && Number.isNaN(merged.out)) delete next[model]
+    else next[model] = merged
+    setAI({ prices: next })
+  }
+  const box = (k: 'in' | 'out', label: string) => (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
+      {label}
+      <input type="number" inputMode="decimal" min={0} step="0.01" aria-label={`Price per million ${label.toLowerCase()} tokens, US dollars`}
+        value={own && Number.isFinite(own[k]) ? own[k] : ''} placeholder={est ? String(est[k]) : 'not known'}
+        onChange={e => put(k, e.target.value)}
+        style={{ ...inputStyle, width: 92, fontVariantNumeric: 'tabular-nums' }} />
+    </label>
+  )
+  return (
+    <FieldRow label="Price" sub="US$ per million tokens, for the amount beside the model name">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>{box('in', 'In')}{box('out', 'Out')}</div>
+        <p data-price-note={known ? known.source : 'none'} style={{ margin: 0, fontSize: 'var(--sb-t-meta)', lineHeight: 1.45, color: 'var(--sb-ink-3)' }}>
+          {known?.source === 'yours' ? 'Using your rate for this model. Clear both boxes to go back to the estimate.'
+            : known ? 'Showing a list-price estimate. Enter the rate on your billing page to make the amount yours.'
+            : 'No price is known for this model, so only tokens are counted. Enter its rate to see an amount.'}
+        </p>
+      </div>
+    </FieldRow>
+  )
+}
+
+/** What the assistant has used since the first of the month, summed from the rows it keeps — so it includes every
+ *  device. It is the assistant's chat only: the morning brief, mail drafts and the other AI features draw on the same
+ *  key but are not counted here, and the provider's own page is the only total for the key as a whole. */
+function MonthUsageRow({ ai }: { ai: AIConfig }) {
+  const uid = useAuthStore(s => s.user?.id)
+  const [list, setList] = useState<ModelUsage[] | null | undefined>(undefined)   // undefined: loading, null: could not read
+  const [again, setAgain] = useState(0)
+  useEffect(() => {
+    if (!uid) { setList(null); return }
+    let dead = false
+    setList(undefined)
+    void fetchMonthUsage(uid).then(l => { if (!dead) setList(l) })
+    return () => { dead = true }
+  }, [uid, again])
+  const sum = list ? summarise(list, ai.prices) : null
+  const lines = list ? groupByModel(list).sort((a, b) => (b.input + b.output) - (a.input + a.output)).slice(0, 4) : []
+  return (
+    <FieldRow label="Used this month" sub="The assistant’s chat, on all your devices">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span data-month-usage={sum ? sum.total : list === null ? 'unreadable' : 'loading'} style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+            {list === undefined ? 'Reading…'
+              : sum === null ? 'Could not read the usage just now.'
+              : sum.total === 0 ? 'Nothing recorded yet this month.'
+              : `${formatTokens(sum.total)} tokens${sum.usd !== null ? ` · ${amountText(sum)}` : ''}`}
+          </span>
+          <button type="button" onClick={() => setAgain(n => n + 1)} aria-label="Refresh this month’s usage" title="Refresh"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
+            <RefreshCw size={ICON.sm} />
+          </button>
+        </div>
+        {lines.map(l => {
+          const one = summarise([l], ai.prices)
+          return (
+            <span key={`${l.provider}|${l.model}`} data-month-line={l.model} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
+              {describeModel(l.provider, l.model).label} · {formatTokens(one.total)} tokens{one.usd !== null ? ` · ${amountText(one)}` : ''}
+            </span>
+          )
+        })}
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
+          Tokens are exact (the provider reports them). Amounts are estimates unless you set your own rate above. This does not include the brief, mail drafts or other AI features, and neither provider lets an app read your balance — their billing page is the total for the key.
+        </span>
+      </div>
+    </FieldRow>
   )
 }

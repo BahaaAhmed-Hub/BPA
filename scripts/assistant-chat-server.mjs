@@ -36,7 +36,7 @@ function makeDb({ lock = true } = {}) {
       s.rows.push(r); s.log.push('startAnswer'); return r.id
     },
     async updateAnswer(id, content) { const r = s.rows.find(x => x.id === id); r.content = content; r.writes = (r.writes ?? 0) + 1 },
-    async finishAnswer(id, status, content) { const r = s.rows.find(x => x.id === id); r.status = status; r.content = content; s.log.push('finish:' + status) },
+    async finishAnswer(id, status, content, usage) { const r = s.rows.find(x => x.id === id); r.status = status; r.content = content; if (usage) r.usage = usage; s.log.push('finish:' + status) },
     async deleteRow(id) { s.rows = s.rows.filter(x => x.id !== id); s.log.push('deleteRow') },
     async addToolRows(_c, calls) { for (const c of calls) s.rows.push({ id: s.nextId++, role: 'tool', content: c.name, status: 'complete', tool: c.name, tool_state: 'running', tool_use_id: c.id, tool_input: c.input }); s.log.push('toolRows') },
     async toolRows(_c, ids) { return s.rows.filter(r => r.tool_use_id && ids.includes(r.tool_use_id)).map(r => ({ ...r })) },
@@ -54,6 +54,10 @@ const textStream = (...chunks) => [
   ...chunks.map(t => ({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: t } })),
   { type: 'content_block_stop', index: 0 }, { type: 'message_delta', delta: { stop_reason: 'end_turn' } },
 ]
+/** Put the numbers a provider reports into a stream: input at message_start, the running output total at message_delta. */
+const withUsage = (events, u) => events.map(e => e.type === 'message_start'
+  ? { ...e, message: { ...(e.message ?? {}), usage: { input_tokens: u.input, output_tokens: 1, cache_read_input_tokens: u.cacheRead ?? 0, cache_creation_input_tokens: u.cacheWrite ?? 0 } } }
+  : e.type === 'message_delta' ? { ...e, usage: { output_tokens: u.output } } : e)
 const toolStream = (lead, id, name, jsonParts) => [
   { type: 'message_start' },
   ...(lead ? [{ type: 'content_block_start', index: 0, content_block: { type: 'text' } }, { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: lead } }, { type: 'content_block_stop', index: 0 }] : []),
@@ -141,7 +145,9 @@ const deps = (db, fetchFn) => ({ db, fetchFn, now: () => (clock += 1000) })
 {
   const db = makeDb(); user(db, 'q')
   await M.runStep(deps(db, fakeFetch([{ events: toolStream('', 'toolu_9', 'delete_task', ['{}']) }])), P(db))
-  ok(db.s.rows.some(r => r.role === 'assistant') === false, 'a step with no text leaves no empty answer row')
+  const kept = db.s.rows.find(r => r.role === 'assistant')
+  ok(kept && kept.status === 'complete' && kept.content === '', 'a step with no words keeps its (empty) answer row — it is where the tokens are counted')
+  ok(M.turnStart([...db.s.rows, { id: 99, role: 'user', content: 'next', status: 'complete' }]).every(m => m.content.trim()), 'and an empty answer is never sent back to the model as history')
   const t = db.s.rows.find(r => r.role === 'tool'); t.tool_state = 'failed'; t.tool_result = 'DECLINED by the person'
   const f = fakeFetch([{ events: textStream('Okay, left it.') }])
   await M.runStep(deps(db, f), P(db, { mode: 'continue' }))
@@ -219,6 +225,42 @@ for (const [status, message, want] of [[401, 'invalid x-api-key', /refused the k
   db.s.rows.push({ id: 90, role: 'tool', content: 't', status: 'complete', tool: 't', tool_state: 'done', tool_use_id: 'x', tool_result: '1' })
   const out = await M.runStep(deps(db, fakeFetch([])), P(db, { mode: 'continue' }))
   ok(out === 'error' && /more steps than I will chain/.test(db.s.rows.find(r => r.role === 'assistant').content), 'a runaway tool loop is stopped with a sentence')
+}
+
+// 6b ── what it cost: the provider's own numbers, kept on the answer
+{
+  const db = makeDb(); user(db, 'hello')
+  const f = fakeFetch([{ events: withUsage(textStream('Hi'), { input: 1234, output: 56, cacheRead: 1000, cacheWrite: 200 }) }])
+  await M.runStep(deps(db, f), P(db))
+  const a = db.s.rows.find(r => r.role === 'assistant')
+  ok(a.usage && a.usage.input === 1234 && a.usage.output === 56 && a.usage.cacheRead === 1000 && a.usage.cacheWrite === 200, 'Anthropic: input from message_start, output from the running total in message_delta, cache tokens too', JSON.stringify(a.usage))
+  ok(a.usage.model === 'claude-x' && a.usage.provider === 'anthropic', '…tagged with the model and provider that produced them (a conversation can change both)')
+}
+{
+  const db = makeDb(); user(db, 'q')
+  const f = fakeFetch([{ events: withUsage(toolStream('', 'toolu_u', 'list_habits', ['{}']), { input: 900, output: 30 }) }, { events: withUsage(textStream('done'), { input: 1000, output: 12 }) }])
+  await M.runStep(deps(db, f), P(db))
+  const t = db.s.rows.find(r => r.role === 'tool'); t.tool_state = 'done'; t.tool_result = '[]'
+  await M.runStep(deps(db, f), P(db, { mode: 'continue' }))
+  const rows = db.s.rows.filter(r => r.role === 'assistant')
+  ok(rows.length === 2 && rows[0].usage.input === 900 && rows[1].usage.input === 1000, 'a tool loop is two requests and both are counted, each on its own row', JSON.stringify(rows.map(r => r.usage)))
+  ok(rows.reduce((n, r) => n + r.usage.input + r.usage.output, 0) === 900 + 30 + 1000 + 12, 'the sum of the rows is exactly what the provider reported')
+}
+{
+  const db = makeDb(); user(db, 'hi')
+  const f = fakeFetch([{ groq: { choices: [{ finish_reason: 'stop', message: { content: 'yo' } }], usage: { prompt_tokens: 321, completion_tokens: 9, total_tokens: 330 } } }])
+  await M.runStep(deps(db, f), P(db, { provider: 'groq', model: 'openai/gpt-oss-120b', key: 'gsk_1', tools: [] }))
+  const a = db.s.rows.find(r => r.role === 'assistant')
+  ok(a.usage?.input === 321 && a.usage.output === 9 && a.usage.provider === 'groq' && a.usage.model === 'openai/gpt-oss-120b', 'Groq: prompt_tokens and completion_tokens, tagged', JSON.stringify(a.usage))
+}
+{
+  const db = makeDb(); user(db, 'hi')
+  await M.runStep(deps(db, fakeFetch([{ status: 401, message: 'bad' }])), P(db))
+  ok(db.s.rows.find(r => r.role === 'assistant').usage === undefined, 'CONTROL: a request that failed has no usage to record (nothing is invented)')
+  const db2 = makeDb(); user(db2, 'hi')
+  await M.runStep(deps(db2, fakeFetch([{ events: textStream('no numbers') }])), P(db2))
+  const u = db2.s.rows.find(r => r.role === 'assistant').usage
+  ok(u && u.input === 0 && u.output === 0, 'a provider that said nothing records zeros, not a guess', JSON.stringify(u))
 }
 
 // 7b ── the other two ways the chosen model stops working, each with its own sentence

@@ -352,3 +352,35 @@ Tests: `assistant-models.mjs` (31, the real catalog against a provider that refu
 choice alone), `assistant-model-choice.mjs` (browser: the exact error in the report, the picker, the heal, billing, the
 ellipsis measured against the header's buttons, Settings→header with no reload, Claude's choice reaching the request).
 
+## The usage counter sits beside the model name, and tokens are exact while money is not
+`lib/aiUsage.ts` (pure), `ModelBadge` (`data-usage-counter`), the header block in `AssistantPanel`, `20260044_assistant_usage.sql`,
+`MonthUsageRow` / `PriceRow` in `settings/sections/ModelPicker.tsx`. "I need the counter of tokens or used amount reflected
+beside the model during usage."
+- **Tokens are what the provider reported** — Anthropic in `message_start` (input, cache) and the *running total* in
+  `message_delta` (output), Groq in `usage` — kept as `assistant_messages.usage` on the answer that request produced
+  (`{input, output, cacheRead, cacheWrite, model, provider}`). A conversation's figure is a sum of rows, so every device
+  and a reload agree. **A step that only asked for a tool keeps its empty answer row** (the page draws a complete answer
+  with no words as nothing): a tool loop is several requests and every one is billed. A failed request records nothing;
+  a provider that said nothing records zeros — never a guess.
+- **Counted once.** The in-browser path writes its usage with the turn (`persistBubbles`, grouped per model, on the last
+  answer or on an empty answer row if there was none), marks the entries `persisted` so a later write cannot repeat them,
+  and drops them from the live list only when the rows that now hold them have been read back.
+- **During usage**: the figure moves while an answer is written — characters ÷ 4 for the streaming row, drawn with a "~"
+  (`data-usage-live`) — and the exact number replaces it when the row completes. The name gives way (ellipsis), the
+  counter does not (`flexShrink: 0`), measured against the header's Close button.
+- **The amount is an estimate and says so** ("≈", and the tooltip). Neither provider lets an app read a balance or an
+  invoice, so money is tokens × a price per million. `BUILT_IN` in `aiUsage.ts` are list-price estimates for a few
+  families **entered from memory — check them**; a model with no price shows tokens and **no amount** (never `$0`); a
+  person's own rate (Settings → AI → Price, `AIConfig.prices[modelId]`) beats the estimate and, when every priced figure is
+  theirs, drops the "≈". Sub-cent is "<$0.01" with no "≈"; a conversation that changed model shows "+" (a floor) and names
+  what had no price. Cache writes bill at 1.25× input and reads at 0.1×.
+- **Settings → AI → Used this month** is a sum over this month's rows (RLS makes it the person's own), across devices,
+  per model. **It is the assistant's chat only** — the morning brief, mail drafts and the other AI features use the same
+  key and are not counted; the provider's billing page is the only total for a key.
+Tests: `assistant-usage.mjs` (36, the arithmetic and wording), `assistant-chat-server.mjs` (66: both providers' usage,
+a tool loop counted per request, a failed request records nothing), `assistant-usage-counter.mjs` (browser: exact on both
+providers, live then exact, counted once and rebuilt from rows after a reload, a tool loop, unpriced model, own rate,
+layout with a very long model name, month total excluding last month, the price row), the SQL harness (20260044).
+**Not exercised: a real provider's usage fields (the stand-ins send the documented shapes), or the built-in prices being
+right.**
+

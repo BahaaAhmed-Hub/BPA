@@ -57,9 +57,10 @@ function getAIConfig(): AIConfig {
       groqKey: (saved.groqKey ?? '').replace(/\s+/g, ''),
       groqModel: saved.groqModel ?? 'llama-3.3-70b-versatile',
       claudeModel: saved.claudeModel ?? '',
+      prices: saved.prices ?? {},
     }
   } catch {
-    return { provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile', claudeModel: '' }
+    return { provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile', claudeModel: '', prices: {} }
   }
 }
 

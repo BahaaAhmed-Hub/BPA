@@ -59,9 +59,12 @@ export interface AIConfig {
   /** Which Claude model. Empty means "the app's own default" (`ASSISTANT_CLAUDE_MODEL`), so a default that moves
    *  moves for everyone who never chose — and a chosen one stays where it was put. */
   claudeModel: string
+  /** The person's own price per million tokens, by model id — what turns the usage counter's tokens into an amount that
+   *  is theirs rather than an estimate. Absent for a model means the built-in estimate (or none, if the app has none). */
+  prices: Record<string, { in: number; out: number }>
 }
 const AI_CONFIG_DEFAULTS: AIConfig = {
-  provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile', claudeModel: '',
+  provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile', claudeModel: '', prices: {},
 }
 /** The Claude model to send: the one chosen in Settings → AI, else the app's default. */
 export const claudeModelOf = (c: Pick<AIConfig, 'claudeModel'>): string => (c.claudeModel ?? '').trim() || ASSISTANT_CLAUDE_MODEL

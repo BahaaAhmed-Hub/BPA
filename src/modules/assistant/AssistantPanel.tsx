@@ -20,7 +20,8 @@ import { addressedTo } from '@/lib/callName'
 import { recognitionLang, speak, speechSupported, startListening, stopSpeaking, unlockSpeech, type Listening, type ListenError } from '@/lib/speech'
 import { cleanName, labelOf, loadPersona as loadPersonaNow, NAME_MAX, savePersona, usePersona } from '@/lib/assistantPersona'
 import { AssistantAvatar } from './AssistantAvatar'
-import { ModelBadge } from './ModelBadge'
+import { ModelBadge, type BadgeUsage } from './ModelBadge'
+import { counterText, estimateOutputTokens, groupByModel, summarise, usageFromRow, type ModelUsage } from '@/lib/aiUsage'
 import { AI_CONFIG_EVENT, claudeModelOf, saveAIConfig } from '@/modules/settings/model'
 import { ensureWorkingGroqModel, isBillingMessage, isModelMissingMessage } from '@/lib/modelCatalog'
 import { notify } from '@/lib/undo'
@@ -54,6 +55,7 @@ interface GroqResponse {
     message: { role: 'assistant'; content: string | null; tool_calls?: GroqToolCall[] }
     finish_reason: string
   }>
+  usage?: { prompt_tokens?: number; completion_tokens?: number }
   error?: { message?: string }
 }
 
@@ -476,6 +478,13 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
   const interrupted = useRef<Set<number>>(new Set())
   const continueAsked = useRef<{ sig: string; at: number; n: number } | null>(null)
   const serverBusy = busyOf(rows, Date.now())
+  /** What the in-browser path has used that is not yet on a row: shown at once, handed to `persistBubbles` with the turn,
+   *  and dropped the moment the rows that now carry it are read back (so it is never counted twice). */
+  const [legacyUsage, setLegacyUsage] = useState<Array<{ u: ModelUsage; persisted: boolean }>>([])
+  const legacyUsageRef = useRef<Array<{ u: ModelUsage; persisted: boolean }>>([])
+  /** Characters of the in-browser answer being written, for the counter's live estimate. */
+  const [liveChars, setLiveChars] = useState(0)
+  const recordUsage = (u: ModelUsage) => { legacyUsageRef.current = [...legacyUsageRef.current, { u, persisted: false }]; setLegacyUsage(legacyUsageRef.current) }
   const thinking = localThinking || serverBusy
   // A screenshot of an invoice or a PDF statement is the fastest way to tell
   // the assistant something. Three ways in: the clip, a paste, a drop.
@@ -760,6 +769,9 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     const uid = user?.id
     const fresh = displayMessages.filter(m => !legacyStart.current.has(m.id))
     if (!uid || !fresh.length) return
+    // What this turn used, per model, to be written ONCE on the rows it produced.
+    const mine = legacyUsageRef.current.filter(e => !e.persisted)
+    const byModel = groupByModel(mine.map(e => e.u))
     void (async () => {
       let id = convRef.current
       const isNew = !id
@@ -767,15 +779,28 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
         id = crypto.randomUUID()
         if (!(await createConversation(id, uid, loadAIConfig().provider === 'groq' ? 'groq' : 'anthropic'))) return
       }
-      const ok = await persistBubbles(id, uid, fresh.map(m => ({
+      const toWrite = fresh.map(m => ({
         clientId: m.role === 'tool' ? null : m.id, role: m.role, content: m.content,
         ...(m.role === 'tool' ? { tool: m.tool ?? m.content, toolUseId: m.id.replace(/^tool-/, ''), toolState: m.state } : {}),
         ...(m.files?.length ? { files: m.files } : {}),
-      })))
+      })) as Parameters<typeof persistBubbles>[2]
+      // The first model's tokens ride on the turn's last answer; any further model, or a turn with no answer at all (an
+      // error), gets an empty answer row of its own — the tokens were spent either way.
+      const lastAnswer = toWrite.map(r => r.role).lastIndexOf('assistant')
+      byModel.forEach((u, i) => {
+        if (i === 0 && lastAnswer >= 0) toWrite[lastAnswer] = { ...toWrite[lastAnswer], usage: u }
+        else toWrite.push({ clientId: null, role: 'assistant', content: '', usage: u })
+      })
+      const ok = await persistBubbles(id, uid, toWrite)
       if (!ok) return
+      // Written: never write them again, but keep showing them until the rows that now hold them are read back.
+      legacyUsageRef.current = legacyUsageRef.current.map(e => mine.includes(e) ? { ...e, persisted: true } : e)
+      setLegacyUsage(legacyUsageRef.current)
       const got = await fetchMessages(id)
       // Rows that did not come back mean the tables are not really there: keep drawing from state.
       if (!got || got.length < fresh.length) return
+      legacyUsageRef.current = legacyUsageRef.current.filter(e => !e.persisted)
+      setLegacyUsage(legacyUsageRef.current)
       if (isNew) attach(id, got); else applyRows(got)
     })()
   }, [localThinking]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -813,6 +838,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
 
       stream.on('text', chunk => {
         accumText += chunk
+        setLiveChars(accumText.length)
         setDisplayMessages(prev => {
           const exists = prev.some(m => m.id === streamId)
           return exists
@@ -822,6 +848,10 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
       })
 
       const response = await stream.finalMessage()
+      // What the provider says this request used — the only exact number there is.
+      const ru = response.usage as { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null } | undefined
+      setLiveChars(0)
+      if (ru) recordUsage({ provider: 'anthropic', model: claudeModelOf(cfg), input: ru.input_tokens ?? 0, output: ru.output_tokens ?? 0, cacheRead: ru.cache_read_input_tokens ?? 0, cacheWrite: ru.cache_creation_input_tokens ?? 0 })
       msgs = [...msgs, { role: 'assistant', content: response.content }]
 
       if (response.stop_reason !== 'tool_use') {
@@ -873,6 +903,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
       }
 
       const data  = await res.json() as GroqResponse
+      if (data.usage) recordUsage({ provider: 'groq', model: cfg.groqModel, input: data.usage.prompt_tokens ?? 0, output: data.usage.completion_tokens ?? 0, cacheRead: 0, cacheWrite: 0 })
       const choice = data.choices[0]
       const msg    = choice.message
 
@@ -1103,10 +1134,24 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     const id = convRef.current
     if (id) void archiveConversation(id)
     awaiting.current = null
+    legacyUsageRef.current = []; setLegacyUsage([]); setLiveChars(0)
     detach()
   }
 
   const cfg   = loadAIConfig()
+  // ── The usage counter beside the model name: what this conversation has used, exact where the provider said so ──
+  const shownModel = cfg.provider === 'groq' ? cfg.groqModel : claudeModelOf(cfg)
+  const spent: ModelUsage[] = [
+    ...rows.map(r => usageFromRow(r.usage)).filter((u): u is ModelUsage => !!u),
+    ...legacyUsage.map(e => e.u),
+  ]
+  // An answer still being written has no count yet (the provider reports it when the reply ends); estimate it from what
+  // is on screen so the counter moves while it works, and mark the figure "~" until the real one replaces it.
+  const writing = rows.find(r => r.status === 'streaming' && !isStaleStreaming(r, Date.now()))
+  const liveOut = estimateOutputTokens(writing ? writing.content.length : liveChars)
+  if (liveOut > 0) spent.push({ provider: cfg.provider === 'groq' ? 'groq' : 'anthropic', model: shownModel, input: 0, output: liveOut, cacheRead: 0, cacheWrite: 0 })
+  const usageSummary = summarise(spent, cfg.prices)
+  const counter: BadgeUsage = { ...counterText(usageSummary, liveOut > 0), live: liveOut > 0, tokens: usageSummary.total, usd: usageSummary.usd }
   const isEmpty = displayMessages.length === 0
 
   return (
@@ -1156,7 +1201,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
           {/* minWidth 0: a flex child will not shrink below its content otherwise, and a long model id would push the buttons out. */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{labelOf(persona)}</p>
-            <ModelBadge provider={cfg.provider === 'groq' ? 'groq' : 'anthropic'} model={cfg.provider === 'groq' ? cfg.groqModel : claudeModelOf(cfg)} />
+            <ModelBadge provider={cfg.provider === 'groq' ? 'groq' : 'anthropic'} model={shownModel} usage={counter} />
           </div>
           {!isEmpty && (
             <button onClick={clearConversation}
