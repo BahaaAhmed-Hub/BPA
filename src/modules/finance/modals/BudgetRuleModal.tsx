@@ -522,12 +522,6 @@ interface Props {
   subs: Category[]
   transactions: Transaction[]
   monthKey: string          // YYYY-MM
-  /** True when this category has no figure of its own and its parts carry
-   *  dates — the figure shown is then a year's, like theirs. */
-  partsDated?: boolean
-  /** Each part's own rule, so its figure is read over the span *it* is
-   *  measured on rather than the one its parent happens to be. */
-  subRules?: Record<string, BudgetRule | undefined>
   currency: string
   /** Only so a budget with a day can say where its money comes from. */
   /** `accountType` so the panel can say that a card is the wrong place for
@@ -548,7 +542,7 @@ interface Props {
 }
 
 export function BudgetRuleModal({
-  category, parent, partsBudget = 0, partsDated = false, rule, subs, subRules = {}, transactions, monthKey, currency, accounts = [],
+  category, parent, partsBudget = 0, rule, subs, transactions, monthKey, currency, accounts = [],
   onChange, onDelete, onPromote, onRename, onEditCategory, onAddSub, onEditSub, onDrill, onClose,
 }: Props) {
   const box = useRef<HTMLDivElement>(null)
@@ -590,12 +584,9 @@ export function BudgetRuleModal({
   const cur = rule.currency ?? currency
   const wanted = category.txType === 'income' ? 'income' : 'expense'
   const ids = new Set([category.id, ...subs.map(s => s.id)])
-  // A dated budget is measured over the year it is spread across, not against
-  // one month of it — dividing four instalments into twelve equal months
-  // invents a figure that never leaves the account.
-  const own0 = activeIn(rule, monthKey) ? budgetTotal(rule, monthKey.slice(0, 4)) : 0
-  const span = isDated(rule) || (own0 === 0 && partsDated) ? 'year' : 'month'
-  const scope = span === 'year' ? monthKey.slice(0, 4) : monthKey
+  // The month on screen, whatever shape the budget is — a dated budget is
+  // read as the instalment that falls in this month, like the envelope behind.
+  const scope = monthKey
   // The same reading the Budget screen makes, to the letter.
   //
   // This filed by the entry's own date and counted the unpaid, while the
@@ -619,7 +610,7 @@ export function BudgetRuleModal({
   const others = [...othersSet]
 
   const running = activeIn(rule, monthKey)
-  const own    = running ? budgetTotal(rule, monthKey.slice(0, 4)) : 0
+  const own    = running ? monthlyAmount(rule, monthKey) : 0
   // Same rule the envelope uses: its own figure where there is one, otherwise
   // what its parts add up to. Never both — that would count a split twice.
   const budget = own > 0 ? own : partsBudget
@@ -712,7 +703,7 @@ export function BudgetRuleModal({
             </span>
             <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
               {budget > 0
-                ? `of ${cur} ${fmt(budget)} ${span === 'year' ? `across ${monthKey.slice(0, 4)}` : 'this month'}${fromParts ? ', from its sub-categories' : ''}`
+                ? `of ${cur} ${fmt(budget)} this month${fromParts ? ', from its sub-categories' : ''}`
                 : rule.amount > 0 && !running
                   ? `budget not running this month`
                   : 'no budget set'}
@@ -1074,7 +1065,7 @@ export function BudgetRuleModal({
         {subs.map(sub => {
           const subSpend = settled(transactions)
             .filter(tx => tx.categoryId === sub.id
-              && whenPaid(tx).startsWith(isDated(subRules[sub.id]) ? monthKey.slice(0, 4) : monthKey))
+              && whenPaid(tx).startsWith(monthKey))
             .reduce((s, tx) => s + (toBase(Math.abs(tx.amount), tx.currency, cur) ?? 0), 0)
           return (
             <button key={sub.id} onClick={() => onEditSub(sub)}

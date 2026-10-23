@@ -16,7 +16,7 @@ import { useUIStore } from '@/store/uiStore'
 import {
   BudgetRuleModal, defaultRule, monthlyAmount, activeIn, ordinal, bucketOf, BUCKETS,
   loadRules, saveRules, BUDGET_RULES_EVENT,
-  isDated, budgetTotal, linesOf,
+  isDated, budgetTotal,
   type BudgetRule, type Bucket,
 } from '../modals/BudgetRuleModal'
 import type { Category, Transaction } from '../types'
@@ -213,13 +213,11 @@ interface EnvelopeRow {
   plannedBase: number | null
   children: { cat: Category; planned: number; budgeted: boolean; actual: number; inEnvelope: number | null
               inEnvelopeMonth: number | null
-              cur: string
-              /** Whether this part's figures are a month's or a whole year's. */
-              span: 'month' | 'year' }[]
+              cur: string }[]
   currencies: string[]
-  /** Whether this envelope's figures are a month's or a whole year's. A budget
-   *  with dates on it is not a monthly allowance, so it is not measured as one. */
-  span: 'month' | 'year'
+  /** A budget with dates on it that asks for nothing in the month on screen —
+   *  "nothing due" is a fact about the month, "set a budget" is a to-do. */
+  nothingDue: boolean
   /** The same envelope last month, for the styles that compare the two. */
   prev: number
   /** Spent on each of the last seven days, oldest first. */
@@ -344,28 +342,6 @@ function DueChip({ day }: { day: number | undefined }) {
   )
 }
 
-/**
- *  Says a figure is a year's, not a month's.
- *
- *  Every other envelope on the screen is a month, so one that is not has to say
- *  so where the figure is — otherwise 132,000 sitting beside 6,000 reads as a
- *  category somebody has lost control of rather than a year of school fees.
- */
-function SpanChip({ span, dates }: { span?: 'month' | 'year'; dates?: number }) {
-  if (span !== 'year') return null
-  return (
-    <span title={`A budget with dates on it is not a monthly allowance, so it is shown in full${
-      dates ? ` — ${dates} ${dates === 1 ? 'date' : 'dates'}` : ''} and measured against the whole year.`}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-meta)', fontWeight: 700,
-        letterSpacing: '0.06em', padding: '0 5px', borderRadius: 'var(--sb-r-chip)', whiteSpace: 'nowrap',
-        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
-      }}>
-      <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> THE YEAR
-    </span>
-  )
-}
-
 // ─── Till slips ──────────────────────────────────────────────────────────────
 
 function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }: {
@@ -407,7 +383,6 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                             {cat.name || 'Untitled'}
                           </span>
                           <DueChip day={rules[cat.id]?.dueDay} />
-                          <SpanChip span={row.span} dates={linesOf(rules[cat.id] ?? {}).length} />
                           <CurBadge mixed={mixed} cur={cur} currency={currency} />
                         </span>
                         {/* One thin rule under the name — a receipt does not
@@ -446,7 +421,7 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                 <Draggable key={child.cat.id} id={child.cat.id} grow>
                   {() => (
                     <button onClick={() => onPick(child.cat.id)}
-                      title={`${child.cat.name} — inside ${cat.name}. ${money(child.actual, cur)} spent ${child.span === 'year' ? 'this year' : 'this month'}.`}
+                      title={`${child.cat.name} — inside ${cat.name}. ${money(child.actual, cur)} spent this month.`}
                       style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: 8,
                         padding: '4px 8px 4px 30px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', textAlign: 'left',
@@ -458,7 +433,6 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                         {child.cat.name}
                       </span>
                       <DueChip day={rules[child.cat.id]?.dueDay} />
-                      <SpanChip span={child.span} dates={linesOf(rules[child.cat.id] ?? {}).length} />
                       <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-meta)', fontVariantNumeric: 'tabular-nums', color: cOver ? RUST : 'var(--sb-ink-3)', flexShrink: 0 }}>
                         {fig(child.actual)}{child.budgeted ? ` / ${fig(child.inEnvelope ?? child.planned)}` : ''}
                       </span>
@@ -656,7 +630,6 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
                         ) : null
                       )}
                       {roomy && <span style={{ position: 'relative' }}><DueChip day={rules[cat.id]?.dueDay} /></span>}
-                      {roomy && <span style={{ position: 'relative' }}><SpanChip span={row.span} /></span>}
 
                       {/* Its parts, along the bottom, split the same way. */}
                       {showChildren && (
@@ -671,7 +644,7 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
                                 <Draggable id={child.cat.id} grow>
                                   {() => (
                                     <button onClick={e => { e.stopPropagation(); onPick(child.cat.id) }}
-                                      title={`${child.cat.name} — inside ${cat.name}, ${money(child.actual, cur)} ${child.span === 'year' ? 'this year' : 'this month'}`}
+                                      title={`${child.cat.name} — inside ${cat.name}, ${money(child.actual, cur)} this month`}
                                       style={{
                                         width: '100%', height: 14, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                                         padding: 0, border: 'none',
@@ -811,7 +784,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
           rules={rules} dragging={dragging} currency={currency} />
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px 14px' }}>
-          {rows.map(({ cat, actual, planned, plannedFrom, cur, children, currencies, prev, trend, span }) => {
+          {rows.map(({ cat, actual, planned, plannedFrom, cur, children, currencies, prev, trend, nothingDue }) => {
             // Spending with nothing set is not a full envelope. This drew a
             // complete ring for it, which reads as "at its limit" — the one
             // thing it cannot be when no limit exists.
@@ -838,7 +811,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                 title={`${cat.name} — ${money(actual, cur)}${
                   planned > 0
                     ? ` of ${money(planned, cur)}${plannedFrom === 'parts' ? ', added up from its sub-categories' : ''}`
-                    : ' · no budget set'}${span === 'year' ? ' · across the year, not a month' : ''}${dueDay ? ` · paid on the ${ordinal(dueDay)}` : ''}`}
+                    : nothingDue ? ' · nothing due this month' : ' · no budget set'}${dueDay ? ` · paid on the ${ordinal(dueDay)}` : ''}`}
                 style={{
                   width: 104, padding: '8px 2px 6px', borderRadius: 'var(--sb-r-nav)',
                   background: over ? 'color-mix(in srgb, var(--sb-positive) 16.0%, transparent)' : on ? 'rgba(var(--sb-accent-rgb),0.20)' : 'transparent',
@@ -888,11 +861,8 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                       display: 'inline-flex', alignItems: 'center', height: 16, padding: '0 7px',
                       borderRadius: 'var(--sb-r-pill)', border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-3)',
                       fontSize: 'var(--sb-t-meta)', whiteSpace: 'nowrap',
-                    }}>set a budget</span>
+                    }}>{nothingDue ? 'nothing due' : 'set a budget'}</span>
                   )}
-                  {/* 132,000 beside 6,000 reads as a category out of control
-                      unless the row says one of them is a year. */}
-                  {budgeted && <SpanChip span={span} dates={linesOf(rules[cat.id] ?? {}).length} />}
                   {style === 'dial' && (
                     <span style={{ marginTop: 3 }} title="What was spent here on each of the last seven days">
                       <Spark days={trend} color={color} />
@@ -1248,13 +1218,10 @@ export function BudgetScreen(_props?: any) {
       // are built out of — a limit alone cannot say "worse than last month" or
       // "slowing down".
       let prevBase = 0
-      // The whole year of it, which is what a dated budget is measured against.
-      let yearBase = 0
       const dayBase = new Array<number>(7).fill(0)
       // What each part has spent, kept apart so a sub-category can show its
       // own filling rather than only counting towards its parent's.
       const byChild = new Map<string, number>()
-      const byChildYear = new Map<string, number>()
       const currencies = new Set<string>()
       // An envelope holds what has been spent out of it. A bill that is only
       // due has taken nothing out of it yet.
@@ -1263,20 +1230,13 @@ export function BudgetScreen(_props?: any) {
         if (tx.type !== wanted) continue
         const on = whenPaid(tx)
         const thisMonth = on.startsWith(monthKey)
-        const thisYear  = on.startsWith(String(year))
         const lastMonth = on.startsWith(prevKey)
         const dayIndex  = dayKeys.indexOf(on)
-        if (!thisMonth && !thisYear && !lastMonth && dayIndex < 0) continue
+        if (!thisMonth && !lastMonth && dayIndex < 0) continue
         const v = toBase(Math.abs(tx.amount), tx.currency, currency)
         if (v === null) { if (thisMonth) currencies.add(tx.currency); continue }  // no rate — say so, never guess
         if (lastMonth) prevBase += v
         if (dayIndex >= 0) dayBase[dayIndex] += v
-        // A dated budget is measured over the year it is spread across, so the
-        // year has to be counted as well as the month.
-        if (thisYear) {
-          yearBase += v
-          if (tx.categoryId !== cat.id) byChildYear.set(tx.categoryId, (byChildYear.get(tx.categoryId) ?? 0) + v)
-        }
         if (!thisMonth) continue
         base += v
         if (tx.categoryId !== cat.id) byChild.set(tx.categoryId, (byChild.get(tx.categoryId) ?? 0) + v)
@@ -1287,22 +1247,14 @@ export function BudgetScreen(_props?: any) {
       // month's spending, and comparing it raw made every non-monthly envelope
       // look untouched. And a budget that has not begun, or has ended, is not
       // a budget this month — both ends were collected and never consulted.
-      // Four instalments of 45,000 are four instalments of 45,000. Divided into
-      // a monthly figure they become 15,000 a month, which never leaves the
-      // account on any day of the year — so a dated budget shows its total and
-      // is measured against the year, not against one twelfth of itself.
+      // Every envelope on this page is the month on screen, a dated budget
+      // included: spent this month against what *this month* asks for — the
+      // instalment that falls in it, not a twelfth of the year and not the
+      // whole of it. The year is the year chart's question, and the month
+      // picker is how you ask this one of another month.
       const running  = activeIn(rule, monthKey)
-      // A rule that is not in force this month is not a *dated* one this month
-      // either. Left true, the envelope kept reporting a whole year of spending
-      // against no budget at all — a figure ten times the month's, with nothing
-      // beside it to say what it was.
-      const ownDated = isDated(rule) && running
-      const own      = running ? (ownDated ? budgetTotal(rule, String(year)) : monthlyAmount(rule, monthKey)) : 0
-      // What *this month* asks for, whatever shape the budget is. Every total
-      // on the page is a month, so this is the figure that goes into them —
-      // adding a year of school fees to eleven monthly envelopes would make the
-      // page's headline number mean nothing at all.
-      const ownMonth = running ? monthlyAmount(rule, monthKey) : 0
+      const own      = running ? monthlyAmount(rule, monthKey) : 0
+      const ownMonth = own
 
       // A sub-category keeps its budget in its own currency. Added at face
       // value, a 250 USD sub-budget put 250 onto a 5,000 EGP parent — so each
@@ -1311,11 +1263,10 @@ export function BudgetScreen(_props?: any) {
       const children = categories.filter(c => c.parentId === cat.id).map(child => {
         const r = rules[child.id]
         // A part can carry its own dates — school fees split into terms, say —
-        // and it is read the same way its parent would be.
+        // and is read the same way: what this month asks of it.
         const kidRuns  = activeIn(r, monthKey)
-        const kidDated = isDated(r) && kidRuns
-        const own      = kidRuns ? (kidDated ? budgetTotal(r, String(year)) : monthlyAmount(r, monthKey)) : 0
-        const ownMonth = kidRuns ? monthlyAmount(r, monthKey) : 0
+        const own      = kidRuns ? monthlyAmount(r, monthKey) : 0
+        const ownMonth = own
         const childCur = r?.currency ?? cur
         const inBase   = own === 0 ? 0 : toBase(own, childCur, currency)
         const inBaseM  = ownMonth === 0 ? 0 : toBase(ownMonth, childCur, currency)
@@ -1332,17 +1283,12 @@ export function BudgetScreen(_props?: any) {
           budgeted: own > 0,
           /** Spent under this part alone, in the envelope's currency, so it
            *  can be compared with the budget written beside it. */
-          actual: rate === null ? 0 : ((kidDated ? byChildYear : byChild).get(child.id) ?? 0) / rate,
-          /** Whether its figures are a month's or a year's. */
-          span: (kidDated ? 'year' : 'month') as 'year' | 'month',
+          actual: rate === null ? 0 : (byChild.get(child.id) ?? 0) / rate,
         }
       })
       const fromParts = children.reduce((n, c) => n + (c.inEnvelope ?? 0), 0)
       const fromPartsMonth = children.reduce((n, c) => n + (c.inEnvelopeMonth ?? 0), 0)
-      // A parent with no figure of its own takes its parts' — and takes their
-      // span with it, or its budget would be a year and its spending a month.
-      const dated  = ownDated || (own === 0 && children.some(c => c.span === 'year'))
-      const actual = rate === null ? 0 : (dated ? yearBase : base) / rate
+      const actual = rate === null ? 0 : base / rate
 
       // A budget on a sub-category is a budget. It was counted nowhere: the
       // envelope showed "set a budget" and the month's total ignored it, so
@@ -1363,9 +1309,9 @@ export function BudgetScreen(_props?: any) {
 
       return {
         cat, actual, planned, plannedFrom, cur, actualBase, plannedBase, children,
-        /** Whether this envelope's figures are a month's or a whole year's.
-         *  Every place that writes "this month" beside one has to ask. */
-        span: (dated ? 'year' : 'month') as 'year' | 'month',
+        nothingDue: plannedMonth === 0 && (
+          (isDated(rule) && budgetTotal(rule, String(year)) > 0)
+          || categories.some(c => c.parentId === cat.id && isDated(rules[c.id]) && budgetTotal(rules[c.id], String(year)) > 0)),
         currencies: [...currencies],
         // Back into the envelope's own currency, like `actual`, so the two are
         // the same kind of number wherever they are shown side by side.
@@ -1791,18 +1737,10 @@ export function BudgetScreen(_props?: any) {
             .reduce((n, c) => {
               const r = rules[c.id]
               if (!activeIn(r, monthKey)) return n
-              // A part with dates on it contributes its whole set, not a month
-              // of it — the parent's figure has to be the same kind of number.
-              return n + (isDated(r) ? budgetTotal(r, String(year)) : monthlyAmount(r, monthKey))
+              return n + monthlyAmount(r, monthKey)
             }, 0)}
-          // `rule` is never falsy here — it falls back to defaultRule() — so the
-          // question is whether this category has a figure of its own, not
-          // whether it has a rule object.
-          partsDated={budgetTotal(rules[selectedCat.id], String(year)) === 0
-            && categories.filter(c => c.parentId === selectedCat.id).some(c => isDated(rules[c.id]))}
           rule={rule ?? defaultRule()}
           subs={subs(selectedCat.id)}
-          subRules={rules}
           transactions={transactions}
           monthKey={monthKey}
           currency={currency}
