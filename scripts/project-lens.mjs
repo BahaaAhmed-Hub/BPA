@@ -1,4 +1,4 @@
-// node scripts/project-lens.mjs [tasks|calendar|mail|rail]
+// node scripts/project-lens.mjs [tasks|calendar|mail|rail|dots]
 // Needs a dev server on 5199.
 //
 // Chunk 9 of Projects: the project lens, beside the company one. With a project in
@@ -10,6 +10,7 @@
 //   calendar  an event answers from the project's event links, and so does the
 //             calendar block of one of its tasks
 //   mail      a thread answers from the project's thread links (mailbox|thread)
+//   dots      each calendar card wears the colour of its project (a link, or its task's) and says its name
 //   rail      the Focus button sets it, the rail chip shows it and clears it,
 //             it survives a reload, and a project that is deleted takes it with it
 import { chromium } from 'playwright-core'
@@ -39,7 +40,7 @@ const stored = [mrow('ta', 'Alpha copy review', 0), mrow('tb', 'Beta tiles quote
 
 const db = { tasks: [], projects: [project(P_A, 'Alpha'), project(P_B, 'Beta', { kind: 'personal', color: '#1D8A6A' })], project_milestones: [], project_links: [] }
 if (MODE === 'tasks' || MODE === 'rail') db.tasks = [task(1, 'Alpha task one', { project_id: P_A }), task(2, 'Beta task two', { project_id: P_B }), task(3, 'Loose task three')]
-if (MODE === 'calendar') {
+if (MODE === 'calendar' || MODE === 'dots') {
   db.tasks = [task(4, 'Alpha block task', { project_id: P_A, gcal_event_id: 'e-block', due_date: TODAY, planned_time: '15:00', effort_minutes: 60 })]
   db.project_links = [link(1, P_A, 'event', 'e-a'), link(2, P_B, 'event', 'e-b')]
 }
@@ -87,7 +88,7 @@ await ctx.route('**://www.googleapis.com/**', r => {
   if (/\/calendars\/[^/]+\/events/.test(u)) return r.fulfill({ headers: cors, json: { items: gEvents } })
   return r.fulfill({ headers: cors, json: { items: [] } })
 })
-const START = { tasks: 'tasks', calendar: 'calendar', mail: 'inbox', rail: 'projects' }[MODE]
+const START = { tasks: 'tasks', calendar: 'calendar', dots: 'calendar', mail: 'inbox', rail: 'projects' }[MODE]
 const CALS = [{ id: 'primary', summary: 'Work', backgroundColor: '#7F77DD', primary: true, accessRole: 'owner', accountEmail: 'a@x.com' }]
 await ctx.addInitScript(([s, start, cals, lens]) => { try {
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
@@ -96,7 +97,7 @@ await ctx.addInitScript(([s, start, cals, lens]) => { try {
   localStorage.setItem('google_provider_token', 'tok'); localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
   localStorage.setItem('cal-intel-cals-cache', JSON.stringify(cals)); localStorage.setItem('cal-view', 'week')
   if (lens && !sessionStorage.getItem('lens-seeded')) { localStorage.setItem('professor-project-focus', lens); sessionStorage.setItem('lens-seeded', '1') }
-} catch {} }, [session, START, CALS, MODE === 'rail' ? null : P_A])
+} catch {} }, [session, START, CALS, MODE === 'rail' || MODE === 'dots' ? null : P_A])
 
 const p = await ctx.newPage()
 const traffic = watchTraffic(p)
@@ -139,6 +140,22 @@ if (MODE === 'calendar') {
   ok('an event linked to nothing is quiet', await quiet(C, 'Gamma lunch'))
   await setLens(null); await p.waitForTimeout(400)
   ok('clearing it puts all four back', (await Promise.all(['Alpha kickoff', 'Beta standup', 'Gamma lunch', 'Alpha task block'].map(t => full(C, t)))).every(Boolean))
+}
+if (MODE === 'dots') {
+  const C = '.event-card'
+  for (const t of ['Alpha kickoff', 'Beta standup', 'Gamma lunch', 'Alpha task block']) await p.locator(C, { hasText: t }).first().waitFor({ state: 'visible', timeout: 12000 })
+  const dot = t => p.locator(C, { hasText: t }).first().evaluate(card => {
+    const d = card.querySelector('[data-event-project-dot]'); if (!d) return null
+    const r = d.getBoundingClientRect(), c = card.getBoundingClientRect()
+    return { bg: getComputedStyle(d).backgroundColor, label: d.getAttribute('aria-label'), inside: r.left >= c.left && r.right <= c.right && r.top >= c.top && r.bottom <= c.bottom, w: r.width }
+  })
+  const a = await dot('Alpha kickoff'), bb = await dot('Beta standup'), n = await dot('Gamma lunch'), blk = await dot('Alpha task block')
+  ok('an event linked to a project wears its colour and name', a?.bg === 'rgb(47, 99, 168)' && a.label === 'Project: Alpha', JSON.stringify(a))
+  ok('another project\'s event wears that one\'s', bb?.bg === 'rgb(29, 138, 106)' && bb.label === 'Project: Beta', JSON.stringify(bb))
+  ok('an event in no project wears none', n === null)
+  ok('a task\'s calendar block wears its task\'s project', blk?.bg === 'rgb(47, 99, 168)', JSON.stringify(blk))
+  ok('the dot sits inside its card and is a real dot', a?.inside && a.w === 9, JSON.stringify(a))
+  ok('exactly three dots on the grid — not one per card', await p.locator('[data-event-project-dot]').count() === 3)
 }
 if (MODE === 'mail') {
   const C = 'div'

@@ -405,6 +405,16 @@ the rail, `scripts/project-lens.mjs [tasks|calendar|mail|rail]`.
 - Controls (each removed, the named assertion fails): the push-path report, the load-path report, the meta
   report, the clear. Healthy server: no banner and the rows landed.
 
+### A project dot on the calendar's event cards
+`modules/projects/useEventProject.ts` (one memo for the grid), `EventBlock`'s `project` prop,
+`project-lens.mjs dots`. A 9px dot top-right, the project's colour with a ring in `--sb-overlay` so it reads
+on every fill; **the name is its label** (`role="img"`, `aria-label`, title) — colour alone identifies nothing.
+- **Same answer as the event's panel:** a task's block belongs to its task's project, any other event to the
+  project it is linked to. Archived and finished projects still own their events.
+- Drawn on the grid's cards only (not the drag overlay); nothing for an event in no project. Not text, so the
+  ink audit has nothing to measure on it — the claim is the computed colour, the box inside the card, and
+  the count (three dots for three owned events, not one per card). Controls: task blocks left out, link kind.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and

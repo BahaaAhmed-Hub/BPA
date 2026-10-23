@@ -59,6 +59,7 @@ import type { OutcomeCalendarPort, OutcomeEventRef, PortResult } from './outcome
 import { OutcomesCard } from './outcome/OutcomesCard'
 import { useFocusClass, useCompanyFocus } from '@/lib/companyFocus'
 import { useProjectFocusClass } from '@/modules/projects/useProjectFocusClass'
+import { useEventProject } from '@/modules/projects/useEventProject'
 import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
 import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
@@ -764,7 +765,7 @@ function ResizeHandle({ eventId, edge }: { eventId: string; edge: 'top' | 'botto
 }
 
 // ─── EventBlock (draggable, positioned in time grid) ─────────────────────────
-function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, focusClass, onStatusToggle, onClick, onContextMenu }: {
+function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, focusClass, project, onStatusToggle, onClick, onContextMenu }: {
   event: GCalEventExt
   layout: EventLayout
   status: EventStatus | undefined
@@ -776,6 +777,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
    *  is), the out-of-focus class when it is not. Decided at the call site,
    *  which is where the calendar→company map lives. */
   focusClass?: string
+  /** The project this event belongs to, drawn as a dot — colour is the identity, the name is the label. */
+  project?: { name: string; color?: string }
   onStatusToggle: (s: EventStatus) => void
   onClick: (e: React.MouseEvent) => void
   onContextMenu?: (e: React.MouseEvent) => void
@@ -964,6 +967,16 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         position: 'absolute', left: 4, top: 4, bottom: 4, width: 3, borderRadius: 999,
         background: color, opacity: isCancelled ? 0.4 : 0.85,
       }} />
+
+      {/* Which project it belongs to: a dot in the project's colour, ringed in the card's own ground so
+          it reads on every fill. The name is the label — colour alone identifies nothing. */}
+      {project && !isDragOverlay && (
+        <span data-event-project-dot title={`Project: ${project.name}`} aria-label={`Project: ${project.name}`} role="img" style={{
+          position: 'absolute', top: 5, right: 5, width: 9, height: 9, borderRadius: '50%', zIndex: 1,
+          background: project.color ?? 'var(--sb-ink-3)',
+          boxShadow: '0 0 0 1.5px var(--sb-overlay)',
+        }} />
+      )}
 
       {/* Done is a tick in front of the name; cancelled strikes the name
           through. Neither touches the card's colour — that belongs to the
@@ -1408,6 +1421,7 @@ export function CalendarIntelligence() {
   // from `companyFocus` so the fade is the same one tasks and mail wear.
   const focusClass = useFocusClass()
   const projectFocus = useProjectFocusClass({ taskBlocks: true })
+  const projectOfEvent = useEventProject()
   const [lensCompany] = useCompanyFocus()
   const [focusCompanies, setFocusCompanies] = useState<DynamicCompany[]>(
     () => loadDynamicCompanies().filter(c => !c.hidden))
@@ -3648,6 +3662,7 @@ export function CalendarIntelligence() {
                           isDragSrc={draggingEvt?.id === ev.id && dragMode === 'move'}
                           colorOverride={cal ? calEffectiveColor(cal) : undefined}
                           focusClass={focusClass(companyOfCalendar((ev as GCalEventExt).calendarId)) || projectFocus.event(ev.id)}
+                          project={projectOfEvent(ev.id)}
                           onStatusToggle={s => {
                             toggleStatus(ev.id, s)
                           }}
