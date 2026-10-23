@@ -232,6 +232,26 @@ if (MODE === 'tasks') {
   await b.close(); process.exit(code)
 }
 
+if (MODE === 'tasks-list') {
+  // The List view draws TaskRow, and the pile beside it DumpCard — neither used to dim
+  // under the lens. Every node showing the title is measured, since which one a
+  // first-match finder returns is the very thing that hid this (the pile comes first).
+  await p.locator('[data-company-tile="co-dx"]').click()
+  await p.waitForTimeout(600)
+  await p.locator('[data-side-rail] button[aria-label="Tasks"]').click()
+  await p.waitForTimeout(2500)
+  await p.getByRole('tab', { name: /List/ }).click()
+  await p.waitForTimeout(800)
+  const all = title => p.evaluate(t => [...document.querySelectorAll('[data-task-node]')]
+    .filter(n => (n.innerText || '').includes(t) && !n.querySelector('[data-task-node]'))
+    .map(n => { const r = n.getBoundingClientRect(); return { x: Math.round(r.left), w: r.width, opacity: parseFloat(getComputedStyle(n).opacity) } }), title)
+  ok('the List view is what is showing (not the board)', await p.evaluate(() => localStorage.getItem('task-view-mode')) === 'list')
+  const theirs = await all('send the deck'), mine = await all('chase the invoice')
+  ok('each task is drawn somewhere', theirs.length > 0 && mine.length > 0, JSON.stringify({ theirs, mine }))
+  ok("the chosen company's task is untouched wherever it is drawn", mine.every(n => n.opacity === 1), JSON.stringify(mine))
+  ok("the other company's task is dimmed wherever it is drawn, and still has a box", theirs.every(n => n.opacity < 0.5 && n.w > 0), JSON.stringify(theirs))
+  await b.close(); process.exit(code)
+}
 // MODE === 'clear'
 {
   await p.locator('[data-company-tile="co-teradix"]').click()

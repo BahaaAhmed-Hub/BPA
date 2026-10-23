@@ -360,9 +360,11 @@ the rail, `scripts/project-lens.mjs [tasks|calendar|mail|rail]`.
 - **Not covered, on purpose:** Today, Finance, Habits, the Library, milestone markers on the calendar. Money,
   habits and books have their own tabs on the page; the lens is for the three modules that hold the project's
   working items.
-- **Found on the way (the harness did this):** the List view's rows are `TaskRow`, not `TaskCard`, and `TaskRow`
-  has **never** dimmed under the *company* lens either — the first run failed on exactly that. Only the project
-  lens is added there; the company one is still missing from `TaskRow` and `DumpCard`. Worth its own fix.
+- **Found on the way, fixed after:** the List view's rows are `TaskRow` and the pile beside it is `DumpCard`, and
+  **neither had ever dimmed under the company lens** (only `TaskCard` did). Both now wear both lenses.
+  `company-lens-dims.mjs tasks-list` measures *every* node showing the title: the first version found the first
+  match, which is the pile, so removing the line from `TaskRow` still passed — each component's control now fails
+  on its own node.
 - **Measured as drawn opacity** — the element's and every ancestor's multiplied — and the dimmed rows are
   asserted to still have a box. **Controls** (each removed, the named assertion fails): the lens class on the
   list row, task-block ids, the mailbox half of the thread key, the self-clear on delete.

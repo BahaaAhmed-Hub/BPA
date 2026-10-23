@@ -7,7 +7,8 @@ import { useState } from 'react'
 import { Plus, Sparkles, GripVertical, Check, AlertTriangle, RotateCcw, Trash2, ChevronLeft, ChevronRight, ScanLine } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
 import type { Task, Quadrant } from '@/types'
-import { loadVisibleCompanies } from '@/types'
+import { loadVisibleCompanies, companyIdOfTask } from '@/types'
+import { useFocusClass } from '@/lib/companyFocus'
 import { useTaskStore } from '@/store/taskStore'
 import { suppressUndo } from '@/lib/undo'
 import { CountBadge } from './controls'
@@ -120,11 +121,12 @@ function DumpCard({ task, onOpen, onDelete }: {
   const [hovered, setHovered] = useState(false)
   const s = suggestPlacement(task)
   const projectFocus = useProjectFocusClass()
+  const focusClass = useFocusClass()
 
   return (
     <div
       data-task-node
-      className={projectFocus.task(task.projectId)}
+      className={focusClass(companyIdOfTask(task)) || projectFocus.task(task.projectId)}
       ref={setNodeRef}
       onClick={e => { if (!(e.target as HTMLElement).closest('[data-nm]')) onOpen(task.id) }}
       onMouseEnter={() => setHovered(true)}
