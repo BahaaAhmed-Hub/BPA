@@ -825,7 +825,10 @@ async function loadAllFromDB(
     // iPad — each device saw only what it had entered itself.
     off('finance') ? Promise.resolve() : useFinanceStore.getState().loadFromDB(),
     libraryIsOff() ? Promise.resolve() : useLibraryStore.getState().loadFromDB(),
-    useProjectStore.getState().loadFromDB(),
+    // Off means never loaded — and not drawn from a copy this device kept while it was on:
+    // the store is emptied, so every place that offers a project (the task panel, the
+    // event and mail rows, the lens) has nothing to offer.
+    moduleIsOff('projects') ? Promise.resolve(useProjectStore.getState().clearAll()) : useProjectStore.getState().loadFromDB(),
     // Companies
     loadCompaniesFromDB().then(companies => {
       if (companies.length === 0) return
@@ -963,6 +966,10 @@ function App() {
   const stopPrefSync = useRef<(() => void) | null>(null)
   const stopLiveSync = useRef<(() => void) | null>(null)
   useEffect(() => () => { stopPrefSync.current?.(); stopLiveSync.current?.() }, [])
+  // The plan can change under an open app, or differ from the answer a warm boot started on.
+  // Either way a module that has gone is emptied here: its kept copy must not stay drawn.
+  const planModules = useModules()
+  useEffect(() => { if (moduleIsOff('projects')) useProjectStore.getState().clearAll() }, [planModules])
   const loadTasksFromDB  = useTaskStore(s => s.loadFromDB)
   const clearTasks       = useTaskStore(s => s.clearAll)
   const loadHabitsFromDB = useHabitsStore(s => s.loadFromDB)
@@ -980,7 +987,7 @@ function App() {
       // Asked at call time, not at start: the person can switch the Library on
       // while the app is open, and a handler fixed at boot would never wake.
       library: async () => { if (!libraryIsOff()) await useLibraryStore.getState().loadFromDB() },
-      projects: () => useProjectStore.getState().loadFromDB(),
+      projects: async () => { if (!moduleIsOff('projects')) await useProjectStore.getState().loadFromDB() },
     })
     // Shopping has its own Realtime channel — start it alongside liveSync.
     // It tears its own previous channel down, as this function does above.

@@ -370,6 +370,26 @@ the rail, `scripts/project-lens.mjs [tasks|calendar|mail|rail]`.
   list row, task-block ids, the mailbox half of the thread key, the self-clear on delete.
   Ink: 0 failing pairs over sixteen Projects screens in four themes.
 
+## Follow-ups after the plan (one commit each)
+
+### The plan gate — Projects is a module like the others
+`20260044_projects_module.sql`, `project-module-gate.mjs [on|off|warm-off|lapsed]`.
+- **Registered as the module `projects`** for every plan that lists anything (the `20260039` lesson: a plan
+  that was not named lost the module), and `has_module(…, 'projects')` is in the three tables' policies.
+  **Tasks are not gated here**: `project_id` rides the task row under the `tasks` policy, so a plan without
+  Projects keeps every task and its pointer (read as unassigned, since no project loads).
+- **Off means never loaded** (`entitlements.md` rule): the hydrate read, the live-sync handler and
+  `projectStore.loadFromDB` each ask first. `loadFromDB` asks again *after* its read, because a warm boot starts
+  on the cached plan and the answer can land mid-flight; applying that read would put back what the plan took.
+- **A kept copy is not drawn.** The store persists to localStorage, so a device that had Projects still holds
+  them. When the module is off the store is emptied (on hydrate and on every plan change), which hides every
+  cross-module offer at once — the task panel's Project and Phase cells, the event and mail rows, the lens —
+  because all of them already say nothing when there are no projects. The project lens also reads as null.
+- **Measured:** cold boot with Projects off → none of the three tables read while tasks are (the control);
+  warm boot on a stale "on" → emptied; plan lost while open → the tab goes and the next sync reads nothing.
+  The stub **refuses like RLS** (`NO_RLS=1` stops it), and a control has to remove *every* defence: removing
+  only the hydrate skip still passed because `loadFromDB`'s own guard answered.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and

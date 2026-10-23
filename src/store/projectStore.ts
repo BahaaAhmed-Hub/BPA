@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { markLocalWrite } from '@/lib/liveSync'
+import { moduleIsOff } from '@/lib/entitlements'
 import { useTaskStore } from '@/store/taskStore'
 import {
   fromLink, fromMilestone, fromProject, loadProjectData, orphanProjectTasks, pushProjectData,
@@ -281,7 +282,11 @@ export const useProjectStore = create<ProjectState>()(
 
       loadFromDB: async () => {
         try {
+          if (moduleIsOff('projects')) return
           const data = await loadProjectData()
+          // A warm boot starts this read on the cached plan; the answer can land while it is
+          // in flight. Applying it then would put back what the plan just took away.
+          if (moduleIsOff('projects')) return
           if (data === 'missing') { set({ missing: true }); return }
           const dirty = loadIdSet(DIRTY_KEY), edited = loadIdSet(EDITED_KEY), gone = loadGone()
           const s = get()

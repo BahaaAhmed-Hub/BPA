@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { MODULES_CHANGED, moduleIsOff } from './entitlements'
 
 // ─── Looking at one project, across every screen ────────────────────────────
 //
@@ -14,6 +15,8 @@ const KEY = 'professor-project-focus'
 export const PROJECT_FOCUS_EVENT = 'professor:projectFocusChanged'
 
 export function focusedProject(): string | null {
+  // A lens on a module that is off would dim the app with no chip to press.
+  if (moduleIsOff('projects')) return null
   try { return localStorage.getItem(KEY) || null } catch { return null }
 }
 
@@ -32,9 +35,11 @@ export function useProjectFocus(): [string | null, (id: string | null) => void] 
   useEffect(() => {
     const read = () => setLens(focusedProject())
     window.addEventListener(PROJECT_FOCUS_EVENT, read)
+    window.addEventListener(MODULES_CHANGED, read)
     window.addEventListener('storage', read)
     return () => {
       window.removeEventListener(PROJECT_FOCUS_EVENT, read)
+      window.removeEventListener(MODULES_CHANGED, read)
       window.removeEventListener('storage', read)
     }
   }, [])
