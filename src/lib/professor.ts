@@ -258,6 +258,14 @@ export async function call(system: string, userMessage: string): Promise<string>
   }
 }
 
+/** Whether a model call could be made at all — the key for the provider chosen in
+ *  Settings → AI is present. Lets a screen say so *before* offering a button that
+ *  would only answer "no key". */
+export function aiConfigured(): boolean {
+  const c = getAIConfig()
+  return c.provider === 'groq' ? !!c.groqKey : !!c.anthropicKey
+}
+
 /** Parse JSON from a response that may wrap it in a fenced code block. */
 function parseJson<T>(raw: string): T | null {
   try {

@@ -751,6 +751,26 @@ for (const theme of THEMES) {
       await page.getByRole('button', { name: 'Delete' }).click()
     }, 20)
     await page.keyboard.press('Escape')
+    // The planner: the choices (no key in the audit, so the AI's own note shows), a template's
+    // reviewable draft, and the dating tab on a project with one undated task.
+    await visit('Projects · planner, choices', async () => {
+      await page.getByRole('button', { name: 'Back to all projects' }).click()   // the edit dialog left project 1's page open
+      await page.locator('[data-project-card]', { hasText: 'Kitchen renovation' }).first().click()
+      await page.locator('[data-project-overview]').waitFor({ state: 'visible', timeout: 5000 })
+      await page.getByRole('button', { name: /^Plan$|Plan$/ }).first().click()
+      await page.locator('[data-planner-nokey]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await visit('Projects · planner, a template draft', async () => {
+      await page.locator('[data-template="renovation"]').click()
+      await page.locator('[data-planner-preview]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await visit('Projects · planner, dating tab', async () => {
+      await page.locator('[data-project-planner]').getByRole('button', { name: 'Back', exact: true }).click()
+      await page.getByRole('tab', { name: /Date my open tasks/ }).click()
+    })
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Back to all projects' }).click().catch(() => {})
+    await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 5000 })
     // The calendar's side of the link: the Project row in an event's own panel.
     await visit('Calendar · an event\'s project row', async () => {
       await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()

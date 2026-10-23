@@ -310,6 +310,35 @@ screen or delete path was touched.
   the Library off, personal tabs on a work project. Ink: 0 failing pairs over twelve Projects screens in
   four themes; unreadable colour fails at 1.51 on the money figures, the habit count, and the book lines.
 
+## Chunk 8 — a plan from a template or from words, and dates for the undated
+
+`ProjectPlanner.tsx` (Plan button on the page; a prompt card on an empty Overview), `projectPlan.ts`
+(templates, validation, prompts). Two modes: **plan** (a template, or a description to the AI) and **date my
+open tasks**. Both end in a **draft you review** — nothing is written until Add / Date.
+- **No request until pressed; no write until confirmed.** Opening the dialog, choosing a template, Back and
+  Cancel write nothing and ask nothing. `scripts/project-plan.mjs` counts both (store, server rows, and the
+  Anthropic stub's request log).
+- **Model output is untrusted.** `normalizeDraft` / `normalizeProposals` run on every answer: fenced JSON is
+  read; blanks, non-objects and case-insensitive duplicates dropped; caps 8 milestones / 24 tasks; titles cut
+  to 120; impossible dates (`2026-02-30`) and unknown priorities dropped; a phase named by index or by title
+  resolves, a phase that does not exist leaves the task with none. A proposal survives only if the id was
+  asked about, the date is real and inside [today-or-start, target], and it is the first for that task.
+  Prose, a 500 and an answer empty once validated each say so and write nothing; the next press works.
+- **Templates are stretched to the target** (last milestone = target, tasks dated before their phase); no
+  target means a default spread from today. Personal projects are offered personal templates first.
+- **Only ticked rows, with their edits, are written.** A task whose phase is unticked goes in with no phase,
+  and says so. Tasks are placed with `placementForNew` (never the brain dump). One `pushUndo` removes the
+  whole plan (tasks, then milestones); dating uses the task store's `_remember` snapshot, so one undo also
+  puts back the quadrant a first date moved it out of.
+- **Dated tasks reach the calendar** (`useTaskCalendarPush`), so the footer says how many will.
+- **No key:** `aiConfigured()` disables the AI button with a note; templates still work.
+- **Harness gotchas:** the Anthropic SDK retries a 5xx twice by itself (one press = 3 requests); the
+  calendar scheduler and the assistant call the same endpoint, so count only the planner's prompts; an
+  existing automation dates any undated **P0** task to today, so a P0 in a fixture is dated behind your back.
+- **Controls** (removed, the named assertions fail): draft caps/dedupe/blank filtering; proposal id, window and
+  one-per-task validation. Modes: templates, ai, messy, fail, nokey, schedule.
+- **Not done:** AI replanning of an existing project, estimating effort, per-user templates.
+
 ## Plan
 0 rules file · 1 migration, types, store, sync (no UI) · 2 rail tab, cards,
 create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and

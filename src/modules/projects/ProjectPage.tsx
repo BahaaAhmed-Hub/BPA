@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ArrowLeft, Check, Pencil, Plus, X } from 'lucide-react'
+import { ArrowLeft, Check, Pencil, Plus, Sparkles, X } from 'lucide-react'
 import { Button, Segmented } from '@/components/ui'
 import { LOZENGE } from '@/components/SideRail'
 import { CompanyMark } from '@/components/CompanyMark'
@@ -14,6 +14,7 @@ import { placementForNew } from '../tasks/BrainDumpRail'
 import { useDeliverableGate } from '../tasks/DeliverablePrompt'
 import { inputStyle } from '@/modules/library/fieldStyle'
 import { ProjectDialog } from './ProjectDialog'
+import { ProjectPlanner } from './ProjectPlanner'
 import { ProjectTimeline, byDate } from './ProjectTimeline'
 import { ProjectCalendar, projectCalendarItems } from './ProjectCalendar'
 import { ProjectMail } from './ProjectMail'
@@ -52,6 +53,7 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
   const { requestComplete, prompt: deliverablePrompt } = useDeliverableGate()
   const [tab, setTab] = useState<Tab>('overview')
   const [editing, setEditing] = useState(false)
+  const [planning, setPlanning] = useState(false)
   const [draft, setDraft] = useState('')
 
   const today = new Date().toLocaleDateString('en-CA')
@@ -175,12 +177,22 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
             ...(showHabits ? [{ value: 'habits' as const, label: `Habits${countOf('habit') ? ` · ${countOf('habit')}` : ''}` }] : []),
             ...(showBooks ? [{ value: 'books' as const, label: `Books${countOf('book') ? ` · ${countOf('book')}` : ''}` }] : []),
           ]} />
+          <Button variant="secondary" onClick={() => setPlanning(true)}><Sparkles size={ICON.sm} /> Plan</Button>
           <Button variant="secondary" onClick={() => setEditing(true)}><Pencil size={ICON.sm} /> Edit</Button>
         </span>
       </div>
 
       {tab === 'overview' && (
         <div data-project-overview style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {stats.total === 0 && phases.length === 0 && (
+            <div data-project-plan-prompt style={{ ...CARD, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+                <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Nothing planned yet</div>
+                <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 2, lineHeight: 1.45 }}>Start from a template, or describe it and let the AI draft milestones and tasks. You review the draft before anything is added.</div>
+              </div>
+              <Button variant="accent" onClick={() => setPlanning(true)}><Sparkles size={ICON.md} /> Plan this project</Button>
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: 12 }}>
             {[
               { k: 'progress', label: 'Progress', value: `${stats.pct}%` },
@@ -276,6 +288,7 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
       {tab === 'timeline' && <ProjectTimeline project={project} tasks={mine} today={today} />}
 
       {editing && <ProjectDialog project={project} onClose={() => setEditing(false)} />}
+      {planning && <ProjectPlanner project={project} onClose={() => setPlanning(false)} />}
       {deliverablePrompt}
     </div>
   )
