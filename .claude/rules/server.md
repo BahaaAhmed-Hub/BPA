@@ -364,6 +364,6 @@ had nowhere to put an address and either dropped the request or claimed it was d
   and appends** — a PATCH replaces the list, so sending just the new address would uninvite everyone already on it.
 - **It is an outward act, so it is gated** (`assistantGate.ts`): `add_calendar_event` with guests, or
   `update_calendar_event` with `add_guests`, parks for ✅ Approve (Telegram) / "say yes" (Siri) showing the real addresses.
-  Without guests neither is asked about, as before. The app's own `create_calendar_event` is a separate tool and unchanged.
-`scripts/bots-invite-guests.mjs` — 29 assertions on the real functions lifted from both files against a fake Google that
+  Without guests neither is asked about, as before. The in-app assistant has the same two arguments on `create_calendar_event` / `update_calendar_event` (`src/lib/assistantTools.ts`), gated by the same file; `parseGuests` lives in `_shared/guests.ts` for all three.
+`scripts/bots-invite-guests.mjs` — 45 assertions on the real functions lifted from both bots and the app's two cases against a fake Google that
 can refuse. **Not exercised: a live Telegram tap, a live Siri Shortcut, or the model choosing the argument.**

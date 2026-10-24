@@ -38,6 +38,7 @@ const TITLES: Record<string, string> = {
   rsvp_invitation: 'Answer an invitation — the organiser is told',
   update_calendar_event: 'Change an event — its guests are told',
   add_calendar_event: 'Create an event and invite guests — they are emailed',
+  create_calendar_event: 'Create an event and invite guests — they are emailed',
 }
 
 /** Naming guests on a bot's `add_calendar_event` / `add_guests` on its update is an email to someone else. */
@@ -57,7 +58,7 @@ export function approvalFor(name: string, input: Record<string, unknown>): Appro
   if (
     OUTWARD.has(name) ||
     (name === 'update_calendar_event' && (input.confirm_notify_guests === true || hasGuests(input.add_guests))) ||
-    (name === 'add_calendar_event' && hasGuests(input.guests))
+    ((name === 'add_calendar_event' || name === 'create_calendar_event') && hasGuests(input.guests))
   ) kind = 'outward'
   else if (/(^|_)(delete|remove)_/.test(name)) kind = 'destructive'
   else if (MONEY.has(name)) kind = 'money'

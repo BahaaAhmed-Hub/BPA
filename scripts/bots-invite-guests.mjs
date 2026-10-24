@@ -81,6 +81,58 @@ console.log(JSON.stringify(out))
   ok(`${bot}: a refusal is not reported as an invitation`, !/Invited/.test(o.refused) && !o.refusedCalls.some(c => c.method === 'PATCH'), o.refused)
 }
 
+// The in-app assistant: the real `create_calendar_event` / `update_calendar_event` cases, lifted out of
+// src/lib/assistantTools.ts and run against the same kind of fake Google.
+{
+  const src = fs.readFileSync('src/lib/assistantTools.ts', 'utf8')
+  const grab = name => {
+    const a = src.indexOf(`    case '${name}': {`)
+    const b = src.indexOf('\n    }\n', a)
+    return a < 0 ? null : src.slice(a, b + 7).replace(`case '${name}': {`, `${name}: async (input: any, acctEmail: any, ctx: any) => {`)
+  }
+  const c = grab('create_calendar_event'), u = grab('update_calendar_event')
+  ok('app: both cases found', !!c && !!u)
+  ok('app: the schema offers guests / add_guests', /guests:\s+\{ type: 'array'/.test(src) && /add_guests:\s+\{ type: 'array'/.test(src))
+  if (c && u) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'appinv-'))
+    const file = path.join(dir, 'a.ts')
+    const fix = t => t.replace(/\n    \}\n$/, '\n    },')
+    fs.writeFileSync(file, `
+import { parseGuests } from ${JSON.stringify(path.resolve('supabase/functions/_shared/guests.ts'))}
+const calls: any[] = []
+let cur: any = { summary: 'Sync', attendees: [{ email: 'me@x.com', self: true, organizer: true }, { email: 'old@x.com', responseStatus: 'accepted' }], start: { dateTime: '2030-05-10T15:00:00Z' }, end: { dateTime: '2030-05-10T16:00:00Z' } }
+const tokenForEmail = async (_: any, __: any) => 't'
+const calGet = async (_t: string, p: string) => { calls.push({ method: 'GET', path: p }); return cur }
+const calPost = async (_t: string, p: string, body: any, method = 'POST') => { calls.push({ method, path: p, body }); return { id: 'n1', htmlLink: 'l' } }
+const T: any = {
+${fix(c)}
+${fix(u)}
+}
+const out: any = {}
+out.create = await T.create_calendar_event({ title: 'T', start_datetime: '2030-05-10T15:00:00', end_datetime: '2030-05-10T16:00:00', guests: ['ahmed@x.com', 'Sara'] }, undefined, {})
+out.createCall = calls.splice(0)[0]
+await T.create_calendar_event({ title: 'Solo', start_datetime: 'a', end_datetime: 'b' }, undefined, {})
+out.soloCall = calls.splice(0)[0]
+out.nameOnly = await T.create_calendar_event({ title: 'T', start_datetime: 'a', end_datetime: 'b', guests: ['Sara'] }, undefined, {}).catch((e: any) => 'ERR ' + e.message)
+out.nameOnlyCalls = calls.splice(0).length
+out.upd = await T.update_calendar_event({ event_id: 'ev1', add_guests: ['new@x.com', 'OLD@x.com'] }, undefined, {})
+out.updCalls = calls.splice(0)
+out.plain = await T.update_calendar_event({ event_id: 'ev1', title: 'Renamed' }, undefined, {})
+out.plainCalls = calls.splice(0)
+console.log(JSON.stringify(out))`)
+    const o = JSON.parse(execFileSync('node', ['--experimental-strip-types', '--no-warnings', file], { encoding: 'utf8' }).trim().split('\n').pop())
+    ok('app: create sends the invitations', /sendUpdates=all/.test(o.createCall.path), o.createCall.path)
+    ok('app: create attendees are exactly the real address', JSON.stringify(o.createCall.body.attendees) === '[{"email":"ahmed@x.com"}]', JSON.stringify(o.createCall.body.attendees))
+    ok('app: the reply says who was and was not invited', /ahmed@x.com invited/.test(o.create.message) && /Sara/.test(o.create.message), o.create.message)
+    ok('app: control — no guests, no attendees, no sendUpdates', o.soloCall.body.attendees === undefined && !/sendUpdates/.test(o.soloCall.path))
+    ok('app: only a name creates nothing', /^ERR Not an email/.test(o.nameOnly) && o.nameOnlyCalls === 0, o.nameOnly)
+    const pat = o.updCalls.find(x => x.method === 'PATCH')
+    ok('app: update keeps the old guest and their reply, adds the new one once', JSON.stringify(pat.body.attendees.map(a => a.email)) === '["me@x.com","old@x.com","new@x.com"]' && pat.body.attendees[1].responseStatus === 'accepted', JSON.stringify(pat.body.attendees))
+    ok('app: update with add_guests tells them without asking twice', /sendUpdates=all/.test(pat.path) && o.upd.success === true, JSON.stringify(o.upd))
+    ok('app: control — a plain edit of an event with guests still asks first', o.plain.needs_confirmation === true && !o.plainCalls.some(x => x.method === 'PATCH'), JSON.stringify(o.plain))
+  }
+}
+
 // The gate: guests make it an outward act, in front of the person.
 const gate = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'gate-')), 'g.ts')
 fs.writeFileSync(gate, `
@@ -92,6 +144,8 @@ console.log(JSON.stringify([
   k('add_calendar_event', { title: 't', start: 's', guests: [] }),
   k('update_calendar_event', { event_id: 'e', add_guests: ['a@x.com'] }),
   k('update_calendar_event', { event_id: 'e', title: 'x' }),
+  k('create_calendar_event', { title: 't', guests: ['a@x.com'] }),
+  k('create_calendar_event', { title: 't' }),
   JSON.stringify(approvalFor('add_calendar_event', { title: 't', start: 's', guests: ['a@x.com'] })?.lines),
 ]))`)
 const g = JSON.parse(execFileSync('node', ['--experimental-strip-types', '--no-warnings', gate], { encoding: 'utf8' }).trim())
@@ -99,7 +153,8 @@ ok('gate: creating with guests is outward', g[0] === 'outward')
 ok('gate: control — creating alone is not asked about', g[1] === null && g[2] === null)
 ok('gate: adding guests to an event is outward', g[3] === 'outward')
 ok('gate: control — a plain edit is not asked about', g[4] === null)
-ok('gate: the card shows the real address', /a@x\.com/.test(g[5]))
+ok('gate: the app\'s create with guests is outward, without is not', g[5] === 'outward' && g[6] === null)
+ok('gate: the card shows the real address', /a@x\.com/.test(g[7]))
 
 console.log(failed ? `\n${failed} failed` : '\nall passed')
 process.exit(failed ? 1 : 0)
