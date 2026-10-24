@@ -137,13 +137,13 @@ export function yearMarkdown(r: YearReview): string {
   else if (r.listenMinutes) out.push(`- **${hours(r.listenMinutes)}** listening, over **${r.daysRead}** day${r.daysRead === 1 ? '' : 's'}`)
   if (r.longestStreak > 1) out.push(`- A longest streak of **${r.longestStreak}** days`)
   if (r.busiest) out.push(`- Busiest month: **${MONTH[r.busiest.month]}** (${r.busiest.count})`)
-  if (r.ratings.avg !== null) out.push(`- Average rating **${r.ratings.avg}** ★ across ${r.ratings.rated} rated`)
+  if (r.ratings.avg !== null) out.push(`- Average rating **${r.ratings.avg}** ★ across ${r.ratings.rated} rated`) // ui-guard: emoji-ok — exported markdown, not interface
   if (r.longest && r.shortest && r.longest.id !== r.shortest.id) out.push(`- Longest: *${r.longest.title}* (${r.longest.pages} pages) · shortest: *${r.shortest.title}* (${r.shortest.pages})`)
   if (r.fastest && r.slowest && r.fastest.book.id !== r.slowest.book.id) out.push(`- Fastest: *${r.fastest.book.title}* (${r.fastest.days} day${r.fastest.days === 1 ? '' : 's'}) · slowest: *${r.slowest.book.title}* (${r.slowest.days})`)
   if (r.topAuthor) out.push(`- Most read: **${r.topAuthor.name}** (${r.topAuthor.count} books)`)
   if (r.spent.length) out.push(`- ${spentLine(r)}`)
   if (r.quotes) out.push(`- **${r.quotes}** quote${r.quotes === 1 ? '' : 's'} saved`)
   if (r.top.length) { out.push('', '## Five stars', ...r.top.map(b => `- ${b.title}${b.authors[0] ? ` — ${b.authors[0]}` : ''}`)) }
-  out.push('', '## Finished', ...r.finished.map(b => `- ${b.finishedOn}  ${b.title}${b.authors[0] ? ` — ${b.authors[0]}` : ''}${b.rating ? `  ${'★'.repeat(b.rating)}` : ''}`))
+  out.push('', '## Finished', ...r.finished.map(b => `- ${b.finishedOn}  ${b.title}${b.authors[0] ? ` — ${b.authors[0]}` : ''}${b.rating ? `  ${'★'.repeat(b.rating)}` : ''}`)) // ui-guard: emoji-ok — exported markdown, not interface
   return out.join('\n')
 }

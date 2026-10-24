@@ -6,7 +6,7 @@
 // Also: live stats, goals, rules, and variance analysis.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { X, MessageSquare, BarChart2, Target, Settings2, GitCompare, Plus, Trash2, Check, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import { X, MessageSquare, BarChart2, Target, Settings2, GitCompare, Plus, Trash2, Check, ChevronDown, ChevronUp, Sparkles, Lock } from 'lucide-react'
 import {
   type IdealBlock, type IdealGoal, type IdealRule, type IdealChatMsg, type IdealVariance,
   type IdealWeekAction,
@@ -17,6 +17,7 @@ import {
 } from '../../lib/idealWeekStore'
 import { chatIdealWeek } from '../../lib/idealWeekAI'
 import type { GCalEvent } from '../../lib/googleCalendar'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── Layout constants ──────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
     if (h.length) return h
     return [{
       id: nanoid(), role: 'assistant',
-      content: 'Tell me about your ideal week 😊  I can help you design your perfect weekly schedule — just describe what matters most to you, or start drawing blocks on the canvas.',
+      content: 'Tell me about your ideal week. I can help you design your perfect weekly schedule — just describe what matters most to you, or start drawing blocks on the canvas.',
       applied: true, ts: new Date().toISOString(),
     }]
   })
@@ -100,11 +101,11 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
   const applyActions = useCallback((actions: IdealWeekAction[]) => {
     for (const a of actions) {
       if (a.type === 'add_block') {
-        setBlocks(prev => [...prev, { id: nanoid(), day: a.day, startHour: a.startHour, endHour: a.endHour, title: a.title, category: a.category, color: a.color ?? CATEGORY_COLORS[a.category] ?? '#7F8C8D', blockType: a.blockType }])
+        setBlocks(prev => [...prev, { id: nanoid(), day: a.day, startHour: a.startHour, endHour: a.endHour, title: a.title, category: a.category, color: a.color ?? CATEGORY_COLORS[a.category] ?? 'var(--sb-ink-3)', blockType: a.blockType }])
       } else if (a.type === 'remove_block') {
         setBlocks(prev => prev.filter(b => b.id !== a.id))
       } else if (a.type === 'add_goal') {
-        setGoals(prev => [...prev, { id: nanoid(), title: a.title, category: a.category, color: a.color ?? CATEGORY_COLORS[a.category] ?? '#7F8C8D', targetHoursWeek: a.targetHoursWeek, horizon: a.horizon, deadline: a.deadline, enabled: true }])
+        setGoals(prev => [...prev, { id: nanoid(), title: a.title, category: a.category, color: a.color ?? CATEGORY_COLORS[a.category] ?? 'var(--sb-ink-3)', targetHoursWeek: a.targetHoursWeek, horizon: a.horizon, deadline: a.deadline, enabled: true }])
       } else if (a.type === 'add_rule') {
         setRules(prev => [...prev, { id: nanoid(), title: a.title, description: a.description, ruleType: a.ruleType, config: a.config, enabled: true, createdFrom: 'ai-chat', createdAt: new Date().toISOString(), triggerCount: 0 }])
       } else if (a.type === 'clear_canvas') {
@@ -221,7 +222,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
           <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 17, fontWeight: 700, color: 'var(--sb-ink-1)', flex: 1 }}>
             Ideal Week
           </div>
-          <span style={{ fontSize: 11.5, color: 'var(--sb-ink-3)', fontWeight: 500 }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>
             {blocks.length} block{blocks.length !== 1 ? 's' : ''} · {totalHours}h
           </span>
           <button
@@ -238,7 +239,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
             {/* Day headers */}
             <div style={{ display: 'flex', paddingLeft: 40, flexShrink: 0, borderBottom: '1px solid var(--sb-hairline)' }}>
               {DAY_LABELS.map((d, i) => (
-                <div key={i} style={{ flex: 1, minWidth: DAY_WIDTH_MIN, padding: '8px 4px', textAlign: 'center', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--sb-ink-3)' }}>{d}</div>
+                <div key={i} style={{ flex: 1, minWidth: DAY_WIDTH_MIN, padding: '8px 4px', textAlign: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--sb-ink-3)' }}>{d}</div>
               ))}
             </div>
 
@@ -248,7 +249,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
               <div style={{ width: 40, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                 {Array.from({ length: HOURS_END - HOURS_START }, (_, i) => (
                   <div key={i} style={{ height: HOUR_HEIGHT, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 2, flexShrink: 0 }}>
-                    <span style={{ fontSize: 9.5, color: 'var(--sb-ink-4)', lineHeight: 1 }}>{hourLabel(i + HOURS_START)}</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1 }}>{hourLabel(i + HOURS_START)}</span>
                   </div>
                 ))}
               </div>
@@ -305,7 +306,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
                   }}
                 >
                   <Icon size={14} strokeWidth={2} />
-                  <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</span>
+                  <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</span>
                 </button>
               ))}
             </div>
@@ -316,15 +317,15 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
               {/* ── INIT PROMPT (blank vs load) ──────────────────────────────── */}
               {pendingInit && panel === 'chat' && (
                 <div style={{ padding: 16, borderBottom: '1px solid var(--sb-hairline)', background: 'var(--sb-field)', flexShrink: 0 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--sb-ink-1)', marginBottom: 8 }}>Start with…</div>
+                  <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', marginBottom: 8 }}>Start with…</div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       onClick={() => setPendingInit(false)}
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-1)', cursor: 'pointer' }}
+                      style={{ flex: 1, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', cursor: 'pointer' }}
                     >Blank canvas</button>
                     <button
                       onClick={loadCurrentCalendar}
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: 10, border: 'none', background: 'var(--sb-ink-1)', fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-on-dark)', cursor: 'pointer' }}
+                      style={{ flex: 1, padding: '8px 12px', borderRadius: 10, border: 'none', background: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-on-dark)', cursor: 'pointer' }}
                     >Load my calendar</button>
                   </div>
                 </div>
@@ -354,11 +355,11 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
                     return (
                       <div key={cat}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ width: 8, height: 8, borderRadius: 2, background: CATEGORY_COLORS[cat], display: 'inline-block' }} />
                             {cat}
                           </span>
-                          <span style={{ fontSize: 11.5, color: 'var(--sb-ink-3)' }}>{h}h / week</span>
+                          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{h}h / week</span>
                         </div>
                         <div style={{ height: 6, borderRadius: 3, background: 'var(--sb-field)', overflow: 'hidden' }}>
                           <div style={{ height: '100%', borderRadius: 3, background: CATEGORY_COLORS[cat], width: `${Math.min(100, (h / weekCapacity) * 100)}%`, transition: 'width 0.3s' }} />
@@ -367,7 +368,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
                     )
                   })}
                   {Object.values(catHours).every(h => !h) && (
-                    <div style={{ fontSize: 12.5, color: 'var(--sb-ink-3)', textAlign: 'center', marginTop: 32 }}>Draw blocks on the canvas to see stats</div>
+                    <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', textAlign: 'center', marginTop: 32 }}>Draw blocks on the canvas to see stats</div>
                   )}
                 </div>
               )}
@@ -381,7 +382,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
                       onToggle={() => setGoals(prev => prev.map(x => x.id === g.id ? { ...x, enabled: !x.enabled } : x))} />
                   ))}
                   {!goals.length && (
-                    <div style={{ fontSize: 12.5, color: 'var(--sb-ink-3)', textAlign: 'center', marginTop: 32 }}>
+                    <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', textAlign: 'center', marginTop: 32 }}>
                       Tell the AI "I want to exercise 5h a week" to create goals
                     </div>
                   )}
@@ -397,7 +398,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
                       onToggle={() => setRules(prev => prev.map(x => x.id === r.id ? { ...x, enabled: !x.enabled } : x))} />
                   ))}
                   {!rules.length && (
-                    <div style={{ fontSize: 12.5, color: 'var(--sb-ink-3)', textAlign: 'center', marginTop: 32 }}>
+                    <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', textAlign: 'center', marginTop: 32 }}>
                       Tell the AI "no meetings on Friday mornings" to create rules
                     </div>
                   )}
@@ -470,8 +471,8 @@ function DayColumn({ day: _day, blocks, drawing, selected, hoursStart, hoursEnd,
       {/* Current time indicator */}
       {isToday && nowTop >= 0 && nowTop <= totalH && (
         <>
-          <div style={{ position: 'absolute', left: 0, right: 0, top: nowTop, height: 2, background: '#E74C3C', pointerEvents: 'none', zIndex: 4 }} />
-          <div style={{ position: 'absolute', left: -4, top: nowTop - 4, width: 10, height: 10, borderRadius: 5, background: '#E74C3C', pointerEvents: 'none', zIndex: 4 }} />
+          <div style={{ position: 'absolute', left: 0, right: 0, top: nowTop, height: 2, background: 'var(--sb-negative)', pointerEvents: 'none', zIndex: 4 }} />
+          <div style={{ position: 'absolute', left: -4, top: nowTop - 4, width: 10, height: 10, borderRadius: 5, background: 'var(--sb-negative)', pointerEvents: 'none', zIndex: 4 }} />
         </>
       )}
 
@@ -524,12 +525,12 @@ function BlockChip({ block, hoursStart, hourHeight, isSelected, onClick, onDelet
         transition: 'box-shadow 0.15s',
       }}
     >
-      <div style={{ fontSize: Math.min(11, height / 2), fontWeight: 600, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: height < 28 ? 'nowrap' : 'normal' }}>
+      <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: height < 28 ? 'nowrap' : 'normal' }}>
         {block.title}
       </div>
       {height >= 40 && (
-        <div style={{ fontSize: 9.5, color: '#ffffffCC', fontWeight: 500 }}>
-          {block.blockType === 'hard' ? '🔒' : '·'} {block.category}
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'color-mix(in srgb, var(--sb-ink-on-fill) 80%, transparent)', fontWeight: 500 }}>
+          {block.blockType === 'hard' ? <Lock size={ICON.sm} strokeWidth={STROKE.rest} aria-label="Fixed" style={{ verticalAlign: '-2px' }} /> : '·'} {block.category}
         </div>
       )}
       {isSelected && (
@@ -557,24 +558,24 @@ function BlockEditor({ block, onChange, onDelete, onClose }: {
       <input
         value={block.title}
         onChange={e => onChange({ ...block, title: e.target.value })}
-        style={{ flex: 1, minWidth: 120, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--sb-border)', background: 'var(--sb-field)', fontSize: 13, color: 'var(--sb-ink-1)', fontFamily: 'inherit' }}
+        style={{ flex: 1, minWidth: 120, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--sb-border)', background: 'var(--sb-field)', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit' }}
       />
       <select
         value={block.category}
         onChange={e => onChange({ ...block, category: e.target.value, color: CATEGORY_COLORS[e.target.value] ?? block.color })}
-        style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid var(--sb-border)', background: 'var(--sb-field)', fontSize: 12.5, color: 'var(--sb-ink-1)', fontFamily: 'inherit' }}
+        style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid var(--sb-border)', background: 'var(--sb-field)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', fontFamily: 'inherit' }}
       >
         {CATEGORY_LIST.map(c => <option key={c} value={c}>{c}</option>)}
       </select>
       <select
         value={block.blockType}
         onChange={e => onChange({ ...block, blockType: e.target.value as 'hard' | 'soft' })}
-        style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid var(--sb-border)', background: 'var(--sb-field)', fontSize: 12.5, color: 'var(--sb-ink-1)', fontFamily: 'inherit' }}
+        style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid var(--sb-border)', background: 'var(--sb-field)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', fontFamily: 'inherit' }}
       >
         <option value="hard">Hard block (never yields)</option>
         <option value="soft">Soft block (can move)</option>
       </select>
-      <button onClick={onDelete} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #C62828', background: 'transparent', color: '#C62828', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Delete</button>
+      <button onClick={onDelete} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--sb-negative)', background: 'transparent', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer' }}>Delete</button>
       <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 999, border: '1px solid var(--sb-border)', background: 'var(--sb-field)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-2)' }}>
         <X size={13} />
       </button>
@@ -622,11 +623,11 @@ function MarkdownContent({ text }: { text: string }) {
       }
       blocks.push(
         <div key={blocks.length} style={{ overflowX: 'auto', margin: '10px 0', borderRadius: 8, border: '1px solid var(--sb-border)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--sb-t-meta)' }}>
             <thead>
               <tr style={{ background: 'var(--sb-field)' }}>
                 {headers.map((h, j) => (
-                  <th key={j} style={{ padding: '7px 11px', textAlign: 'left', fontWeight: 700, borderBottom: '1px solid var(--sb-border)', color: 'var(--sb-ink-2)', fontSize: 10.5, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                  <th key={j} style={{ padding: '7px 11px', textAlign: 'left', fontWeight: 700, borderBottom: '1px solid var(--sb-border)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-micro)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                     {renderInline(h)}
                   </th>
                 ))}
@@ -659,7 +660,7 @@ function MarkdownContent({ text }: { text: string }) {
       blocks.push(
         <ol key={blocks.length} style={{ margin: '6px 0', paddingLeft: 22, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {items.map((item, j) => (
-            <li key={j} style={{ fontSize: 12.5, color: 'var(--sb-ink-1)', lineHeight: 1.55 }}>{renderInline(item)}</li>
+            <li key={j} style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', lineHeight: 1.55 }}>{renderInline(item)}</li>
           ))}
         </ol>
       )
@@ -676,7 +677,7 @@ function MarkdownContent({ text }: { text: string }) {
       blocks.push(
         <ul key={blocks.length} style={{ margin: '6px 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, listStyleType: 'disc' }}>
           {items.map((item, j) => (
-            <li key={j} style={{ fontSize: 12.5, color: 'var(--sb-ink-1)', lineHeight: 1.55 }}>{renderInline(item)}</li>
+            <li key={j} style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', lineHeight: 1.55 }}>{renderInline(item)}</li>
           ))}
         </ul>
       )
@@ -694,7 +695,7 @@ function MarkdownContent({ text }: { text: string }) {
 
     if (para.length) {
       blocks.push(
-        <p key={blocks.length} style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.6, color: 'var(--sb-ink-1)' }}>
+        <p key={blocks.length} style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.6, color: 'var(--sb-ink-1)' }}>
           {renderInline(para.join(' '))}
         </p>
       )
@@ -735,14 +736,14 @@ function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onCh
               padding: m.role === 'user' ? '9px 13px' : '11px 14px 10px',
             }}>
               {m.role === 'user'
-                ? <div style={{ fontSize: 12.5, lineHeight: 1.55 }}>{m.content}</div>
+                ? <div style={{ fontSize: 'var(--sb-t-body-s)', lineHeight: 1.55 }}>{m.content}</div>
                 : <MarkdownContent text={m.content} />
               }
               {m.actions && m.actions.length > 0 && (
                 <div style={{
                   marginTop: 8, paddingTop: 7, borderTop: '1px solid var(--sb-hairline)',
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  fontSize: 10.5, color: 'var(--sb-positive)', fontWeight: 700, letterSpacing: '0.04em',
+                  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)', fontWeight: 700, letterSpacing: '0.04em',
                 }}>
                   <Check size={10} strokeWidth={3} />
                   {m.actions.length} action{m.actions.length !== 1 ? 's' : ''} applied to canvas
@@ -767,7 +768,7 @@ function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onCh
         )}
 
         {error && (
-          <div style={{ fontSize: 11.5, color: 'var(--sb-negative)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--sb-negative) 8%, var(--sb-card))', border: '1px solid color-mix(in srgb, var(--sb-negative) 18%, transparent)' }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)', padding: '8px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--sb-negative) 8%, var(--sb-card))', border: '1px solid color-mix(in srgb, var(--sb-negative) 18%, transparent)' }}>
             {error}
           </div>
         )}
@@ -786,7 +787,7 @@ function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onCh
             rows={1}
             style={{
               flex: 1, resize: 'none', border: 'none', background: 'transparent', outline: 'none',
-              fontSize: 12.5, color: 'var(--sb-ink-1)', fontFamily: 'inherit', lineHeight: 1.5,
+              fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', lineHeight: 1.5,
               maxHeight: 100, overflow: 'auto', padding: '2px 0',
             }}
           />
@@ -797,14 +798,14 @@ function ChatPanel({ messages, loading, error, input, inputRef, chatEndRef, onCh
             style={{
               width: 32, height: 32, borderRadius: 9, border: 'none', flexShrink: 0,
               background: input.trim() && !loading ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-              color: input.trim() && !loading ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+              color: input.trim() && !loading ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
               cursor: input.trim() && !loading ? 'pointer' : 'default',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'background 0.15s, color 0.15s',
             }}
           ><Sparkles size={14} /></button>
         </div>
-        <div style={{ fontSize: 10, color: 'var(--sb-ink-4)', textAlign: 'center', marginTop: 5, letterSpacing: '0.02em' }}>
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textAlign: 'center', marginTop: 5, letterSpacing: '0.02em' }}>
           Enter to send · Shift+Enter for new line
         </div>
       </div>
@@ -826,15 +827,15 @@ function StatBanner({ totalHours, workdayHours, weekCapacity }: { totalHours: nu
     <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 16 }}>
       <div style={{ flex: 1, textAlign: 'center' }}>
         <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Outfit,sans-serif', color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>{totalHours}h</div>
-        <div style={{ fontSize: 10.5, color: 'var(--sb-ink-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Scheduled</div>
+        <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Scheduled</div>
       </div>
       <div style={{ flex: 1, textAlign: 'center' }}>
         <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Outfit,sans-serif', color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>{workdayHours - totalHours > 0 ? workdayHours - totalHours : 0}h</div>
-        <div style={{ fontSize: 10.5, color: 'var(--sb-ink-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Free (M–F)</div>
+        <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Free (M–F)</div>
       </div>
       <div style={{ flex: 1, textAlign: 'center' }}>
         <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'Outfit,sans-serif', color: pct > 80 ? 'var(--sb-negative)' : 'var(--sb-positive)', fontVariantNumeric: 'tabular-nums' }}>{pct}%</div>
-        <div style={{ fontSize: 10.5, color: 'var(--sb-ink-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Capacity</div>
+        <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Capacity</div>
       </div>
     </div>
   )
@@ -849,7 +850,7 @@ function GoalCard({ goal, blocks, onDelete, onToggle }: { goal: IdealGoal; block
     <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12, padding: '11px 14px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <span style={{ width: 10, height: 10, borderRadius: 3, background: goal.color, display: 'inline-block', flexShrink: 0 }} />
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>{goal.title}</span>
+        <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{goal.title}</span>
         <button onClick={onToggle} style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid var(--sb-border)', background: goal.enabled ? 'var(--sb-ink-1)' : 'var(--sb-field)', color: goal.enabled ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
           <Check size={11} />
         </button>
@@ -858,13 +859,13 @@ function GoalCard({ goal, blocks, onDelete, onToggle }: { goal: IdealGoal; block
         </button>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{ fontSize: 11.5, color: 'var(--sb-ink-3)' }}>{blocked}h blocked of {goal.targetHoursWeek}h/week</span>
-        <span style={{ fontSize: 11.5, fontWeight: 700, color: pct >= 100 ? 'var(--sb-positive)' : 'var(--sb-ink-3)' }}>{pct}%</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{blocked}h blocked of {goal.targetHoursWeek}h/week</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: pct >= 100 ? 'var(--sb-positive)' : 'var(--sb-ink-3)' }}>{pct}%</span>
       </div>
       <div style={{ height: 5, borderRadius: 2.5, background: 'var(--sb-field)', overflow: 'hidden' }}>
         <div style={{ height: '100%', borderRadius: 2.5, background: pct >= 100 ? 'var(--sb-positive)' : goal.color, width: `${pct}%`, transition: 'width 0.3s' }} />
       </div>
-      <div style={{ fontSize: 10.5, color: 'var(--sb-ink-4)', marginTop: 4, textTransform: 'capitalize' }}>{goal.horizon} · {goal.category}</div>
+      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 4, textTransform: 'capitalize' }}>{goal.horizon} · {goal.category}</div>
     </div>
   )
 }
@@ -876,7 +877,7 @@ function RuleCard({ rule, onDelete, onToggle }: { rule: IdealRule; onDelete: () 
   return (
     <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12, padding: '10px 14px', opacity: rule.enabled ? 1 : 0.6 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: 'var(--sb-ink-1)' }}>{rule.title}</span>
+        <span style={{ flex: 1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{rule.title}</span>
         <button onClick={() => setOpen(v => !v)} style={{ width: 22, height: 22, border: 'none', background: 'transparent', color: 'var(--sb-ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
           {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
         </button>
@@ -887,8 +888,8 @@ function RuleCard({ rule, onDelete, onToggle }: { rule: IdealRule; onDelete: () 
           <Trash2 size={11} />
         </button>
       </div>
-      {open && <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>{rule.description}</div>}
-      <div style={{ fontSize: 10.5, color: 'var(--sb-ink-4)', marginTop: 6, textTransform: 'capitalize' }}>{rule.ruleType.replace('-', ' ')} · from {rule.createdFrom.replace('-', ' ')}</div>
+      {open && <div style={{ marginTop: 8, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>{rule.description}</div>}
+      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 6, textTransform: 'capitalize' }}>{rule.ruleType.replace('-', ' ')} · from {rule.createdFrom.replace('-', ' ')}</div>
     </div>
   )
 }
@@ -902,7 +903,7 @@ function VariancePanel({ variance, onApply }: { variance: IdealVariance[]; onApp
   if (!variance.length) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, flexDirection: 'column', gap: 10 }}>
       <Check size={28} style={{ color: 'var(--sb-positive)' }} />
-      <div style={{ fontSize: 13, color: 'var(--sb-ink-2)', textAlign: 'center' }}>Your calendar matches your ideal week — no variances found.</div>
+      <div style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-2)', textAlign: 'center' }}>Your calendar matches your ideal week — no variances found.</div>
     </div>
   )
 
@@ -913,11 +914,11 @@ function VariancePanel({ variance, onApply }: { variance: IdealVariance[]; onApp
           <div key={v.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '9px 12px', borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
             <input type="checkbox" checked={checked.has(v.id)} onChange={() => toggle(v.id)} style={{ marginTop: 2, flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-1)' }}>{v.idealTitle}</div>
-              <div style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginTop: 2 }}>{DAY_LABELS[v.day]} · {hourLabel(v.startHour)}–{hourLabel(v.endHour)}</div>
-              <div style={{ fontSize: 11, color: 'var(--sb-ink-2)', marginTop: 3 }}>{v.action}</div>
+              <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{v.idealTitle}</div>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2 }}>{DAY_LABELS[v.day]} · {hourLabel(v.startHour)}–{hourLabel(v.endHour)}</div>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', marginTop: 3 }}>{v.action}</div>
             </div>
-            <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 5, background: v.type === 'missing' ? 'color-mix(in srgb, var(--sb-negative) 12%, var(--sb-card))' : 'color-mix(in srgb, #E67E22 12%, var(--sb-card))', color: v.type === 'missing' ? 'var(--sb-negative)' : '#C56A00', flexShrink: 0 }}>{v.type}</span>
+            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 5, background: v.type === 'missing' ? 'color-mix(in srgb, var(--sb-negative) 12%, var(--sb-card))' : 'color-mix(in srgb, var(--sb-warning) 12%, var(--sb-card))', color: v.type === 'missing' ? 'var(--sb-negative)' : 'var(--sb-warning)', flexShrink: 0 }}>{v.type}</span>
           </div>
         ))}
       </div>
@@ -925,7 +926,7 @@ function VariancePanel({ variance, onApply }: { variance: IdealVariance[]; onApp
         <div style={{ padding: '10px 14px', borderTop: '1px solid var(--sb-hairline)', flexShrink: 0 }}>
           <button
             onClick={() => { checked.forEach(id => onApply(id)); setChecked(new Set()) }}
-            style={{ width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+            style={{ width: '100%', padding: '9px', borderRadius: 10, border: 'none', background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-body)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
           ><Plus size={14} /> Apply {checked.size} selected action{checked.size !== 1 ? 's' : ''}</button>
         </div>
       )}

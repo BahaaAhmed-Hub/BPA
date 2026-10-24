@@ -402,21 +402,16 @@ Every visit records what it looked at; a screen that threw or came up empty is
 named under the count, with the reason. `INK_THEME=<name>` runs one theme, so a
 check costs a minute rather than fifteen.
 
-## What is drawn but not wired
-`components/ComingSoon.tsx`. A control that looks live and does nothing is
-worse than no control. `NotYet` wraps a block — half opacity, `pointer-events:
-none`, `aria-hidden`, a label top-right — and `Soon` is the label on its own.
-Four places carry it, found by sweeping every module for elements with no React
-click handler (that found the eight Billing buttons) and by reading for screens
-built on sample data:
-- **Settings → Billing** — no plan is read, no card stored; all eight buttons
-  were handler-less.
-- **Settings → Integrations** — Notion/Asana/Trello/Apple Notes accounts are
-  illustrative and the switches reach nothing. Google, in the same section, is
-  real and is *not* marked.
-Everything else in all seven modules has a live handler. Settings → Automation
-and Finance → Plan used to be on this list: Automation has an engine now
-(below), and Plan is folded into Goals.
+## What is drawn but not wired — nothing, by rule
+`components/ComingSoon.tsx` (`Soon`, `NotYet`) used to dim a block that was on
+screen for its shape. UI-unification P1.1 removed the last use: a control that
+reaches nothing is **not drawn**, rather than drawn at half opacity with a
+label. Settings → Integrations lost its illustrative Notion/Asana/Trello/Apple
+Notes half; the setup wizard shows Todoist only when the build has its client
+id (and no Trello tile); the dashboard has no Inbox card until it can show a real
+unread count; the plans list has no "coming soon" line. `ui-guard`'s
+`unfinished` rule (a "coming soon" string, or a `VITE_*` name shown to a
+person) keeps it that way.
 
 ## Common Patterns
 ```tsx
@@ -776,3 +771,35 @@ repointing it at the card's words then failed at exactly 100%, which is where
 two of its three assertions sit. The card carries `data-day-pct` now and the
 suite reads the **number**, which is stated in every state. 0 failing pairs
 over 22 screens in four themes.
+
+## The Dashboard is folded into Today (P2.1)
+Today (`modules/morning/TodayPage.tsx`) is the one screen that answers "what is my
+day". The Dashboard repeated it — open tasks, meetings, habit progress — and was
+the module the app opened on.
+- **`TodayGlance`** (`morning/TodayGlance.tsx`, `[data-today-glance]`) is a row of
+  four chips under the brief bar: Do now (the quadrant glyph, `data-quadrant="do"`),
+  Open tasks, Meetings today, Habits today. Each is a door to the module that owns
+  the figure. Counts only; the day itself is the cards below.
+  Rules: **Do now and Open tasks count `isOpenTask`** (a finished task never counts);
+  **Meetings are timed events** (`start.dateTime`), not all-day ones; Habits is
+  `dayTotals(...).pct`.
+- **Dashboard left `NAV_ITEMS`; the app opens on Today** (`uiStore` default `morning`).
+  `RETIRED_MODULES` in `App.tsx` sends a persisted `activeModule: 'dashboard'` to
+  Today — every existing user has one, and without it they land on a page with
+  nothing lit in the rail.
+- **Kept, deliberately unreachable**: `modules/dashboard/`, `morning/MorningBrief`,
+  `morning/DayPlanner`, `planning/PlanningAssistant` (still mounted under module id
+  `planning`, which is in no menu) and `components/layout/Sidebar.tsx`. Nothing
+  imports the first four's UI from a reachable path; they stay in the tree until
+  the new experience is signed off, then they can go in one commit.
+- **Today read the habit logs once, on mount**, so on a first load (a new device)
+  the server's arrived after it and every habit figure read 0%. It now listens to
+  `professor:habitLogsUpdated`, as the Habits page does. Control: without the
+  listener the strip read 0% with a done habit on the server.
+- "Do now is one colour everywhere" (`ui-render`) is now measured on **Today and
+  Tasks**; the Dashboard's matrix card was the other half before.
+- `scripts/today-is-the-day.mjs` — 14 assertions: no Dashboard in the rail, a saved
+  `dashboard` lands on Today, the four figures against a fixture where each wrong
+  rule gives a different number (a finished urgent task, an all-day event), and
+  the doors. `supabase/functions/_shared/appGuide.ts` no longer lists Dashboard
+  (an edge-function file: deploys with the functions workflow).

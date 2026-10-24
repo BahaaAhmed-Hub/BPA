@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button, Card, Pill, Segmented } from '@/components/ui'
 import { CAPS } from '@/lib/type'
 import { SidePanel } from './SidePanel'
-import { BookLookup } from './BookLookup'
+import { BookLookup } from './BookLookupField'
 import { CoverArt } from './CoverArt'
 import { Eyebrow, Field, NumField, Row, TextField } from './fields'
 import { inputStyle } from './fieldStyle'
@@ -65,7 +65,7 @@ export function AddBookPanel({ onClose, onAdded, defaultListIds = [], initialIsb
   return (
     <SidePanel label="Add a book" eyebrow="New book" narrow={narrow} onClose={onClose}
       footer={<>
-        {!d.title.trim() && <span style={{ ...CAPS, color: 'var(--sb-ink-4)', marginRight: 'auto' }}>Title needed</span>}
+        {!d.title.trim() && <span style={{ ...CAPS, color: 'var(--sb-ink-3)', marginRight: 'auto' }}>Title needed</span>}
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
         <Button variant="accent" disabled={!d.title.trim()} onClick={add}>Add to library</Button>
       </>}>

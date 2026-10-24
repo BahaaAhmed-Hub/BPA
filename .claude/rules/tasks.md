@@ -344,3 +344,25 @@ there left it in Do. A task in Delegate/Eliminate stays put; a second date
 change or clearing the date moves nothing. Trade-off: a task deliberately kept
 in Do moves to Schedule if it is first dated afterwards.
 Not browser-measured; build only.
+
+## One switcher for the Tasks views (P2.4)
+Board, Matrix, List and the day planner are four tabs of one `Segmented`
+(`role="tablist"`, label "View") in `TaskCommand.tsx`. The old "Plan my day"
+button and its fixed-position overlay are gone; the older "the planner has a
+door" section above describes that button and is superseded by this one.
+- State is `stayView` (`board | eisenhower | list`, persisted in
+  `localStorage['task-view-mode']`, default board) plus `planning`. `Plan` sets
+  `planning` and **is never persisted**: a reload returns to the last real view.
+  Any other tab clears `planning`. The Matrix's "open planner" calls
+  `switchView('plan')`.
+- `SmartDayPlanner` takes `inline`: a page view rather than a modal. No backdrop,
+  no header ✕, no Cancel, and Escape does not leave it. "Apply Plan" stays and
+  returns to the previous view. The Filters control is hidden on Plan.
+- Its colours are chosen by people (calendar colours), so event text, the left-over
+  label and the priority badge use `useInkOnKeeping` over the tint they sit on;
+  the disabled Apply button is ink-3 on the field colour, not ink-4.
+- `scripts/tasks-views-switcher.mjs` — 16 assertions, fails on the old code.
+  `ink-audit` has a "Tasks · Plan view" visit, so the planner is now measured
+  (48 screens; baselines Evergreen 8, Sunlit 3, Warm 2, Glass 1 are unchanged).
+- `task-lands-on-right-calendar` modes `planner`/`planner-ok` fail
+  "the drag actually planned it" — failing before this change as well.

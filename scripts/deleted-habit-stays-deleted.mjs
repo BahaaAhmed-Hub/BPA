@@ -74,7 +74,7 @@ const pct = () => p.evaluate(() => {
   // summary card a line below it. The card draws the same share, from the same
   // `habitProgress` code, and carries it as `data-day-pct` — read as a number
   // rather than out of the sentence, because that sentence is "All habits
-  // complete! 🎉" at 100 and "Nothing logged yet today" at 0. A text match
+  // done today" at 100 and "Nothing logged yet today" at 0. A text match
   // worked only through the middle of the range, which is not where this
   // suite's assertions sit.
   const el = document.querySelector('[data-day-pct]')

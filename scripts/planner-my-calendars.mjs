@@ -75,7 +75,7 @@ const ok=(n,c,x='')=>{console.log(`${c?'PASS':'*** FAIL ***'}  ${n}${x?'  '+x:''
 // Count only what the PLANNER asks for. The page behind it (Today's own
 // calendar reads, the task auto-schedule) fetches on its own account.
 asked.length = 0
-await p.getByRole('button',{name:/Plan my day/i}).first().click(); await p.waitForTimeout(3000)
+await p.getByRole('tab',{name:/^Plan$/}).first().click(); await p.waitForTimeout(3000)
 const txt = async () => p.evaluate(()=>document.body.innerText)
 
 let t = await txt()

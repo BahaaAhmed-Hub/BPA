@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { CAL_COLORS } from '@/lib/palettes'
 import { useInkOn, useInkOnKeeping } from '@/lib/ink'
-import { Button } from '@/components/ui'
+import { Button, Skeleton } from '@/components/ui'
 import {
   ChevronLeft, ChevronRight, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, Eye, EyeOff,
@@ -79,6 +79,8 @@ import {
 } from '@/lib/blockingRules'
 import IdealWeekModal from './IdealWeekModal'
 import { LOZENGE } from '../../components/SideRail'
+import { askConfirm } from '@/lib/confirm'
+import { useNarrow } from '@/lib/useNarrow'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const HOUR_PX  = 64     // pixels per hour (Calendar 1.6: 64px/hr)
@@ -993,7 +995,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           <span title={displayTitle(event.summary)} style={{
             writingMode: 'vertical-rl' as const,
             textOrientation: 'mixed' as const,
-            fontFamily: SANS, fontSize: 11.5, fontWeight: 600,
+            fontFamily: SANS, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
             color: evInk, lineHeight: 1.2,
             overflow: 'hidden', textOverflow: 'ellipsis',
             whiteSpace: 'nowrap' as const,
@@ -1007,7 +1009,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         // The micro *size*, not the micro level: a card's title is not a capsed
         // caption, and spreading T.micro would put it in capitals.
         fontFamily: SANS,
-        fontSize: 'var(--sb-t-micro)',
+        fontSize: 'var(--sb-t-meta)',
         fontWeight: 700,
         color: evInk,
         lineHeight: 1.25,
@@ -1059,14 +1061,14 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           return host ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, overflow: 'hidden' }}>
               <Video size={ICON.sm} color={evTimeInk} style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {host}
               </span>
             </div>
           ) : null
         })()}
         {showTime && (
-          <div style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: evTimeInk, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
             {fmtShort(event.start.dateTime!)}
             {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
           </div>
@@ -1074,7 +1076,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         {showHost && height >= 74 && event.location && !meetingHost(event) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3, overflow: 'hidden' }}>
             <MapPin size={ICON.sm} color={evTimeInk} style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {event.location}
             </span>
           </div>
@@ -1321,6 +1323,9 @@ export function CalendarIntelligence() {
   const [calView,         setCalView]        = useState<'day' | 'week' | 'month'>(() => {
     try { return (localStorage.getItem('cal-view') as 'day' | 'week' | 'month') ?? 'week' } catch { return 'week' }
   })
+  // Seven columns do not fit a phone: a window that is (or becomes) narrow opens on the day. Not persisted — it is the window's answer, not a choice.
+  const narrowWindow = useNarrow()
+  useEffect(() => { if (narrowWindow) setCalView(v => v === 'week' ? 'day' : v) }, [narrowWindow])
   const firstDow  = useWeekStart()
   const weekStart = useMemo(() => getWeekStart(anchorDate, firstDow), [anchorDate, firstDow])
   // Seven columns need seven columns' worth of room; below that the week is
@@ -2308,7 +2313,7 @@ export function CalendarIntelligence() {
       ev.attendees?.length ? `Its ${ev.attendees.length} guest${ev.attendees.length === 1 ? '' : 's'} come across, but their replies do not.` : '',
       isSeriesPart ? 'This is one occurrence of a repeating event — the copy will be a one-off.' : '',
     ].filter(Boolean).join('\n')
-    if (!window.confirm(warning)) return null
+    if (!await askConfirm({ title: 'Move this event to another account?', body: warning, confirmLabel: 'Move it' })) return null
 
     const payload: GCalEventCreate = {
       summary:     ev.summary ?? '(no title)',
@@ -2861,7 +2866,7 @@ export function CalendarIntelligence() {
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span className="cal-display" style={{
               fontFamily: DISPLAY, fontWeight: 600, letterSpacing: '-0.035em', lineHeight: 1,
-              color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums', fontSize: 44,
+              color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums',
             }}>
               {calView === 'month' ? anchorDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
                 : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
@@ -2878,7 +2883,7 @@ export function CalendarIntelligence() {
                 reported once already. So it draws only while a lens is on, and
                 it is about the lens rather than about the week. */}
             {lensName && (
-              <span style={{ fontSize: 14, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
                 {(() => {
                   const scope = calView === 'month' ? monthCells : weekDays
                   const keys = new Set(scope.map(localDateStr))
@@ -2965,7 +2970,7 @@ export function CalendarIntelligence() {
                       height: 26, padding: '0 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
                       background: on ? 'var(--sb-ink-1)' : 'transparent',
                       color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-                      fontFamily: 'inherit', fontSize: 12.5, fontWeight: on ? 600 : 500,
+                      fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500,
                     }}>{label}</button>
                 )
               })}
@@ -2995,7 +3000,7 @@ export function CalendarIntelligence() {
               style={{
                 height: 34, boxSizing: 'border-box', padding: '0 15px', borderRadius: 999, flexShrink: 0,
                 background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                color: 'var(--sb-ink-1)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+                color: 'var(--sb-ink-1)', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer',
               }}>Today</button>
             <button
               className="cal-ctl"
@@ -3020,7 +3025,7 @@ export function CalendarIntelligence() {
                 height: 'var(--sb-h-pill)', boxSizing: 'border-box', padding: '0 14px', borderRadius: 999,
                 background: 'var(--sb-card)', color: 'var(--sb-ink-1)',
                 border: 'var(--sb-border-width) solid var(--sb-border)',
-                cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               }}>
               <Sparkles size={13} strokeWidth={STROKE.active} /> Ideal Week
             </button>
@@ -3043,7 +3048,7 @@ export function CalendarIntelligence() {
                 background: openHours || showBooking ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                 color: openHours || showBooking ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-1)',
                 border: openHours || showBooking ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
-                cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               }}>
               <CalendarPlus size={13} strokeWidth={STROKE.active} /> Booking
             </button>
@@ -3065,7 +3070,7 @@ export function CalendarIntelligence() {
                 height: 34, boxSizing: 'border-box', padding: '0 16px 0 13px', borderRadius: 999,
                 background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
                 border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: 13, fontWeight: 600,
+                fontSize: 'var(--sb-t-body)', fontWeight: 600,
               }}>
               <Plus size={15} strokeWidth={STROKE.active} /> New event
             </button>
@@ -3150,8 +3155,8 @@ export function CalendarIntelligence() {
                       style={{
                         background: 'none', border: 'none', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 4,
-                        padding: '0 9px 0 2px', fontSize: 12.5, fontFamily: 'inherit',
-                        color: hidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)',
+                        padding: '0 9px 0 2px', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit',
+                        color: hidden ? 'var(--sb-ink-3)' : 'var(--sb-ink-2)',
                       }}
                     >
                       <span style={{ maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -3193,7 +3198,7 @@ export function CalendarIntelligence() {
 
         {/* Fetch error — keep but make subtle */}
         {fetchError && (
-          <div style={{ marginTop: 6, padding: '5px 10px', background: 'color-mix(in srgb, var(--sb-negative) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ marginTop: 6, padding: '5px 10px', background: 'color-mix(in srgb, var(--sb-negative) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <AlertCircle size={ICON.sm} /> {fetchError}
           </div>
         )}
@@ -3265,8 +3270,8 @@ export function CalendarIntelligence() {
                     borderRadius: isToday ? '50%' : 0,
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     background: isToday ? 'var(--sb-ink-1)' : 'transparent',
-                    color: isToday ? 'var(--sb-ink-on-dark)' : outside ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
-                    fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, lineHeight: 1,
+                    color: isToday ? 'var(--sb-ink-on-dark)' : outside ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)',
+                    fontFamily: DISPLAY, fontSize: 'var(--sb-t-h3)', fontWeight: 600, lineHeight: 1,
                     fontVariantNumeric: 'tabular-nums',
                   }}>{day.getDate()}</span>
 
@@ -3290,8 +3295,8 @@ export function CalendarIntelligence() {
                           // colour is the 3px rail and nothing else — a tinted
                           // fill per calendar is what drowned the accent.
                           background: 'var(--sb-field)',
-                          fontSize: 11.5, fontWeight: 600,
-                          color: st === 'cancelled' ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
+                          fontSize: 'var(--sb-t-meta)', fontWeight: 600,
+                          color: st === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                         <span aria-hidden style={{
@@ -3302,7 +3307,7 @@ export function CalendarIntelligence() {
                             competing with four titles; it earns its place only
                             where the cell is quiet enough to read. */}
                         {t && shown.length <= 2 && (
-                          <span style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--sb-ink-4)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: 'var(--sb-ink-3)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                             {String(t.getHours()).padStart(2, '0')}:{String(t.getMinutes()).padStart(2, '0')}
                           </span>
                         )}
@@ -3326,7 +3331,7 @@ export function CalendarIntelligence() {
                       onClick={ev => { ev.stopPropagation(); setPickedDay(ds) }}
                       style={{
                         alignSelf: 'flex-start', padding: 0, border: 'none', background: 'transparent',
-                        cursor: 'pointer', fontFamily: MONO, fontSize: 10.5, fontWeight: 500,
+                        cursor: 'pointer', fontFamily: MONO, fontSize: 'var(--sb-t-meta)', fontWeight: 500,
                         letterSpacing: '.06em', color: 'var(--sb-accent-deep)',
                       }}>+{dayEvents.length - shown.length} more</button>
                   )}
@@ -3351,9 +3356,9 @@ export function CalendarIntelligence() {
               return (
                 <div key={ds} style={{ flex: 1, textAlign: 'center', padding: '16px 0 12px', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   <span style={{
-                    fontFamily: MONO, fontSize: 10.5, fontWeight: 500,
+                    fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500,
                     letterSpacing: '0.14em', textTransform: 'uppercase' as const,
-                    color: isToday ? 'var(--sb-accent-deep)' : 'var(--sb-ink-4)',
+                    color: isToday ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)',
                   }}>{DAY_LABELS[day.getDay()]}</span>
                   <div style={{
                     fontFamily: DISPLAY, fontSize: isToday ? 18 : 22, fontWeight: 600,
@@ -3393,7 +3398,7 @@ export function CalendarIntelligence() {
           {/* All-day events strip — only shown when the week has at least one all-day event */}
           {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
             <div style={{ display: 'flex', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0, minHeight: 22 }}>
-              <div style={{ width: 84, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 12, paddingTop: 8, fontFamily: MONO, fontSize: 9.5, fontWeight: 500, color: 'var(--sb-ink-4)', letterSpacing: '0.14em', textTransform: 'uppercase' as const }}>
+              <div style={{ width: 84, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 12, paddingTop: 8, fontFamily: MONO, fontSize: 'var(--sb-t-micro)', fontWeight: 500, color: 'var(--sb-ink-3)', letterSpacing: '0.14em', textTransform: 'uppercase' as const }}>
                 All Day
               </div>
               {weekDays.map(day => {
@@ -3410,7 +3415,7 @@ export function CalendarIntelligence() {
                             style={{
                               alignSelf: 'flex-start', height: 20, padding: '0 9px',
                               background: 'var(--sb-accent-tint2)', color: 'var(--sb-accent-deep)',
-                              fontFamily: MONO, fontSize: 10.5, fontWeight: 500,
+                              fontFamily: MONO, fontSize: 'var(--sb-t-meta)', fontWeight: 500,
                               borderRadius: 999, border: 'none', cursor: 'pointer',
                               whiteSpace: 'nowrap' as const,
                             }}
@@ -3442,7 +3447,7 @@ export function CalendarIntelligence() {
                             }} />
                             {evStatus === 'done' && <Check size={ICON.sm} strokeWidth={STROKE.active} style={{ flexShrink: 0, color: 'var(--sb-positive-deep)' }} />}
                             <span style={{
-                              fontSize: 11.5, fontWeight: 500,
+                              fontSize: 'var(--sb-t-meta)', fontWeight: 500,
                               color: 'var(--sb-ink-1)',
                               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
                               textDecoration: evStatus === 'cancelled' ? 'line-through' : 'none',
@@ -3502,7 +3507,7 @@ export function CalendarIntelligence() {
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
                     whiteSpace: 'nowrap',
                   }}>
-                    <span style={{ fontFamily: MONO, fontSize: 10.5, color: 'var(--sb-ink-3)', fontWeight: 500, letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontWeight: 500, letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums' }}>
                       {fmtHourLabel(h)}
                     </span>
                     {w && (
@@ -3510,9 +3515,9 @@ export function CalendarIntelligence() {
                         title={`${w.temp}°C`}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 1,
-                          fontSize: 11.5, color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums',
+                          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums',
                         }}>
-                        <span style={{ fontSize: 11, lineHeight: 1 }}>{weatherGlyph(w.code)}</span>
+                        <span style={{ fontSize: 'var(--sb-t-meta)', lineHeight: 1 }}>{weatherGlyph(w.code)}</span>
                         {w.temp}°
                       </span>
                     )}
@@ -3596,7 +3601,7 @@ export function CalendarIntelligence() {
                           }}>
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
-                            fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-positive-deep)',
+                            fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-positive-deep)',
                             fontVariantNumeric: 'tabular-nums',
                           }}>
                             <CalendarPlus size={10} strokeWidth={STROKE.active} aria-hidden />
@@ -3604,12 +3609,12 @@ export function CalendarIntelligence() {
                             {repeats && <Repeat size={9} strokeWidth={STROKE.active} />}
                           </span>
                           {h >= 40 && (
-                            <span style={{ display: 'block', marginTop: 1, fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '.04em', color: 'var(--sb-positive-deep)' }}>
+                            <span style={{ display: 'block', marginTop: 1, fontSize: 'var(--sb-t-meta)', fontWeight: 600, letterSpacing: '.04em', color: 'var(--sb-positive-deep)' }}>
                               Open to book
                             </span>
                           )}
                           {h >= 64 && (
-                            <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 500, color: 'var(--sb-positive-deep)' }}>
+                            <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: 'var(--sb-positive-deep)' }}>
                               Calls &amp; meetings
                             </span>
                           )}
@@ -3635,11 +3640,11 @@ export function CalendarIntelligence() {
                           borderRadius: 14, pointerEvents: 'none', boxSizing: 'border-box',
                           padding: '3px 8px', overflow: 'hidden',
                         }}>
-                          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                             {fmtShort(minToIso(ds, sMin))} – {fmtShort(minToIso(ds, eMin))}
                           </div>
                           {h >= 34 && (
-                            <div style={{ fontSize: 10.5, color: 'var(--sb-accent-deep)', fontVariantNumeric: 'tabular-nums' }}>
+                            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-deep)', fontVariantNumeric: 'tabular-nums' }}>
                               {(() => {
                                 const m = eMin - sMin
                                 return m < 60 ? `${m} min`
@@ -3710,9 +3715,8 @@ export function CalendarIntelligence() {
 
       {/* Loading spinner overlay */}
       {loadingEvents && (
-        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', pointerEvents: 'none' }}>
-          <div style={{ width: 14, height: 14, border: 'var(--sb-border-emphasis) solid var(--sb-border)', borderTopColor: 'var(--sb-ink-1)', borderRadius: 'var(--sb-r-pill)', animation: 'spin 0.7s linear infinite' }} />
-          Loading…
+        <div style={{ position: 'absolute', bottom: 18, right: 22, width: 112, pointerEvents: 'none' }}>
+          <Skeleton h={14} label="Loading events" />
         </div>
       )}
 
@@ -3722,7 +3726,7 @@ export function CalendarIntelligence() {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--sb-accent-tint) 93.0%, transparent)', opacity: 0.9, pointerEvents: 'none' }}>
           <div style={{ textAlign: 'center' }}>
             <Calendar size={36} color="var(--sb-border)" />
-            <p style={{ margin: '12px 0 0', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)' }}>Connect Google Calendar to see your events</p>
+            <p style={{ margin: '12px 0 0', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)' }}>Connect Google Calendar to see your events</p>
           </div>
         </div>
       )}
@@ -3863,7 +3867,7 @@ export function CalendarIntelligence() {
               )}
               {(prep?.talkingPoints ?? []).map((pt, i) => (
                 <span key={i} style={{ display: 'flex', gap: 7, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>
-                  <span style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }}>·</span>{pt}
+                  <span style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }}>·</span>{pt}
                 </span>
               ))}
               {ev.htmlLink && (
@@ -3889,7 +3893,7 @@ export function CalendarIntelligence() {
                         onClick={() => focusOn({ module: 'tasks', id: t.id })}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 7,
-                          fontSize: 'var(--sb-t-meta)', color: t.completed || t.status === 'done' ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)',
+                          fontSize: 'var(--sb-t-meta)', color: t.completed || t.status === 'done' ? 'var(--sb-ink-3)' : 'var(--sb-ink-2)',
                           textDecoration: t.completed || t.status === 'done' ? 'line-through' : 'none',
                           background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
                         }}
@@ -4034,7 +4038,7 @@ export function CalendarIntelligence() {
                 <input type="time" defaultValue={hhmmOf(w.start_min)} aria-label="Open from"
                   onChange={e => { const v = minOf(e.target.value); if (v !== null && v < w.end_min) void patchWindow(w.id, { start_min: v }) }}
                   style={{ ...fld, flex: 1, minWidth: 84 }} />
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>to</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>to</span>
                 <input type="time" defaultValue={hhmmOf(w.end_min)} aria-label="Open until"
                   onChange={e => { const v = minOf(e.target.value); if (v !== null && v > w.start_min) void patchWindow(w.id, { end_min: v }) }}
                   style={{ ...fld, flex: 1, minWidth: 84 }} />
@@ -4063,7 +4067,7 @@ export function CalendarIntelligence() {
               {kind === 'weekly' && (
                 <>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>every</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>every</span>
                     <select value={w.repeat?.interval ?? 1}
                       onChange={e => void patchWindow(w.id, { repeat: { ...w.repeat, kind: 'weekly', interval: Number(e.target.value) } })}
                       aria-label="How often it comes round" style={{ ...fld, cursor: 'pointer' }}>
@@ -4071,7 +4075,7 @@ export function CalendarIntelligence() {
                     </select>
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>until</span>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>until</span>
                     <input type="date" value={w.repeat?.until ?? ''}
                       onChange={e => void patchWindow(w.id, { repeat: { ...w.repeat, kind: 'weekly', until: e.target.value || null } })}
                       aria-label="The last week it applies" style={{ ...fld, flex: 1 }} />

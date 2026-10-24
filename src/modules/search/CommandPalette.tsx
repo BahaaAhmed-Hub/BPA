@@ -38,7 +38,7 @@ interface Hit {
 const CHIP: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 4, height: 22, padding: '0 8px',
   borderRadius: 'var(--sb-r-chip)', background: FIELD, border: 'var(--sb-border-width) solid var(--sb-border)',
-  fontSize: 'var(--sb-t-micro)', color: MUTED, fontFamily: 'inherit', flexShrink: 0,
+  fontSize: 'var(--sb-t-meta)', color: MUTED, fontFamily: 'inherit', flexShrink: 0,
 }
 
 /** Every settings page the palette can jump to, by the words you'd search for. */

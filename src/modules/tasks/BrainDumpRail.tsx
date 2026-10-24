@@ -139,19 +139,19 @@ function DumpCard({ task, onOpen, onDelete }: {
         opacity: isDragging ? 0.4 : 1,
       }}
     >
-      <span data-nm {...listeners} {...attributes} title="Drag into a quadrant"
-        style={{ cursor: 'grab', touchAction: 'none', color: 'var(--sb-ink-4)', display: 'flex', paddingTop: 2, flexShrink: 0 }}>
+      <span className="sb-hit" data-nm {...listeners} {...attributes} title="Drag into a quadrant"
+        style={{ cursor: 'grab', touchAction: 'none', color: 'var(--sb-ink-3)', display: 'flex', paddingTop: 2, flexShrink: 0 }}>
         <GripVertical size={ICON.sm} strokeWidth={STROKE.rest} />
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, minWidth: 0 }}>
           <p style={{
             flex: 1, margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, lineHeight: 1.3,
-            color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
+            color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
             fontStyle: task.title.trim() ? 'normal' : 'italic',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{task.title.trim() || 'Untitled'}</p>
-          <button
+          <button className="sb-hit"
             data-nm
             onClick={e => { e.stopPropagation(); onDelete() }}
             title="Delete task"
@@ -163,7 +163,7 @@ function DumpCard({ task, onOpen, onDelete }: {
             <Trash2 size={ICON.sm} strokeWidth={STROKE.rest} />
           </button>
         </div>
-        <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.3 }}>
+        <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.3 }}>
           {relativeCapture(task)}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', marginTop: 7, minWidth: 0 }}>
@@ -172,7 +172,7 @@ function DumpCard({ task, onOpen, onDelete }: {
             padding: '3px 8px', borderRadius: 'var(--sb-r-pill)',
             background: s.inferred ? 'var(--sb-accent-tint)' : 'var(--sb-page)',
             border: `var(--sb-border-width) solid ${s.inferred ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
-            fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)',
+            fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
           }}>
             {s.inferred
               ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Sparkles size={ICON.sm} strokeWidth={STROKE.rest} />AI</span>
@@ -264,7 +264,7 @@ export function BrainDumpRail({ tasks, onOpen }: {
         }}><ChevronRight size={ICON.md} /></button>
         <CountBadge value={tasks.length} />
         <span style={{
-          writingMode: 'vertical-rl', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-4)',
+          writingMode: 'vertical-rl', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
           letterSpacing: '0.08em', textTransform: 'uppercase', userSelect: 'none',
         }}>Brain dump</span>
       </div>
@@ -288,10 +288,10 @@ export function BrainDumpRail({ tasks, onOpen }: {
           <button onClick={toggleCollapsed} title="Hide the brain dump" style={{
             width: 24, height: 24, borderRadius: 'var(--sb-r-chip)', padding: 0, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'none', border: 'none', color: 'var(--sb-ink-4)', cursor: 'pointer',
+            background: 'none', border: 'none', color: 'var(--sb-ink-3)', cursor: 'pointer',
           }}><ChevronLeft size={ICON.md} /></button>
         </div>
-        <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>
+        <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.35 }}>
           Uncategorised — drag into a quadrant
         </p>
         <div style={{ display: 'flex', gap: 6, marginTop: 11 }}>
@@ -311,7 +311,7 @@ export function BrainDumpRail({ tasks, onOpen }: {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
               height: 32, padding: '0 12px', borderRadius: 'var(--sb-r-sm)',
               background: 'rgba(245,209,78,0.12)', border: '1px solid rgba(245,209,78,0.4)',
-              color: '#D4A827', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
+              color: 'var(--sb-accent-deep)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
               cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
             }}
           >
@@ -341,7 +341,7 @@ export function BrainDumpRail({ tasks, onOpen }: {
       {/* Cards */}
       <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 9 }}>
         {tasks.length === 0 && (
-          <p style={{ margin: 0, padding: '18px 0', textAlign: 'center', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
+          <p style={{ margin: 0, padding: '18px 0', textAlign: 'center', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
             Nothing uncategorised.
           </p>
         )}
@@ -363,7 +363,7 @@ export function BrainDumpRail({ tasks, onOpen }: {
         }}>
           <Sparkles size={ICON.sm} strokeWidth={STROKE.rest} /> Auto-distribute
         </p>
-        <p style={{ margin: '7px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
+        <p style={{ margin: '7px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
           Reads each task's own fields and places it in a quadrant <b style={{ color: 'var(--sb-ink-3)' }}>and</b> a board column in one pass.
         </p>
 
@@ -378,7 +378,7 @@ export function BrainDumpRail({ tasks, onOpen }: {
               padding: '6px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-accent-tint)', fontSize: 'var(--sb-t-meta)',
             }}>
               <span style={{ color: 'var(--sb-ink-3)', flex: 1, minWidth: 0 }}>{from}</span>
-              <span style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }}>→ {to}</span>
+              <span style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }}>→ {to}</span>
             </div>
           ))}
         </div>
@@ -395,7 +395,7 @@ export function BrainDumpRail({ tasks, onOpen }: {
         <button onClick={distributeAll} disabled={tasks.length === 0} style={{
           width: '100%', marginTop: 12, height: 38, borderRadius: 'var(--sb-r-nav)', border: 'none',
           background: tasks.length === 0 ? 'var(--sb-border)' : 'var(--sb-ink-1)',
-          color: tasks.length === 0 ? 'var(--sb-ink-4)' : 'var(--sb-ink-on-dark)',
+          color: tasks.length === 0 ? 'var(--sb-ink-4)' : 'var(--sb-ink-on-dark)', // ui-guard: ink-ok
           fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',
           cursor: tasks.length === 0 ? 'default' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,

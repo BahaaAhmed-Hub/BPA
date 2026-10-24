@@ -24,7 +24,7 @@ export const APP_GUIDE: Record<string, GuideEntry> = {
   overview: {
     title: 'The app at a glance',
     where: 'The round buttons down the left edge; the avatar at the top right; the assistant button at the bottom right',
-    summary: 'Modules in the left rail: Today, Calendar, Mail, Tasks, Habits, Finance, Library and Dashboard (Library can be switched off, by plan or in Settings). Settings is in the menu under the avatar. The search box at the top opens the command palette. The circles under the modules are your companies: press one and everything that is not that company\'s goes quiet on every screen, press it again to clear.',
+    summary: 'Modules in the left rail: Today, Calendar, Mail, Tasks, Habits, Finance and Library (Library can be switched off, by plan or in Settings). Settings is in the menu under the avatar. The search box at the top opens the command palette. The circles under the modules are your companies: press one and everything that is not that company\'s goes quiet on every screen, press it again to clear.',
     can: ['Move between modules with the left rail', 'Search from the box at the top', 'Open Settings from the avatar menu', 'Filter by company with the company circles'],
     assistant: ['Answer questions about any module', 'Read and change your own tasks, calendar, mail, habits, finances, shopping and books', 'Ask for your OK before anything that other people see, cannot be undone, or moves money'],
   },
@@ -66,13 +66,13 @@ export const APP_GUIDE: Record<string, GuideEntry> = {
   finance: {
     title: 'Finance',
     where: 'Left rail → Finance (it may ask you to unlock it first)',
-    summary: 'The ledger and what it says: Today, Balance, Budget, Reports, Financials and Goals, and Shopping when it is on. Every figure is shown in your base currency; an entry keeps its own currency. An entry with no payment date is owed, not paid. A credit card is borrowed money, never cash; reward points are never money.',
+    summary: 'The ledger and what it says, in three groups: Money (Today, Balance, Budget), Plan (Goals, with the forecast inside it) and Review (Financials, Reports). Shopping is separate, in the left rail, when it is on. Every figure is shown in your base currency; an entry keeps its own currency. An entry with no payment date is owed, not paid. A credit card is borrowed money, never cash; reward points are never money.',
     can: ['Add, edit and delete entries (Bulk entry and a duplicate review exist too)', 'Budget envelopes and their spend', 'Goals with a plan for reaching them', 'Settings → Finance sets envelope style, figures, dates and alerts'],
     assistant: ['Answer money questions from the ledger (balances, spending by category, budgets, goals, price history)', 'Record, change and delete entries, change goals, rates and envelopes — each only after your OK'],
   },
   shopping: {
     title: 'Shopping',
-    where: 'Finance → Shopping (when it is switched on)',
+    where: 'Left rail → Shopping (when Settings → Finance switches it on; it asks you to unlock it like Finance does)',
     summary: 'Shopping lists grouped by store, with each item checked at the stores you choose and a price history.',
     can: ['Add and edit items where they are', 'Mark items purchased', 'See price history'],
     assistant: ['List items and groups, add an item, mark purchased, show price history'],

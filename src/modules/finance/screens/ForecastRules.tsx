@@ -31,7 +31,7 @@ const SUMMARY: React.CSSProperties = {
 }
 const WHY: React.CSSProperties = {
   marginLeft: 'auto', flexBasis: '100%', fontFamily: 'system-ui', fontWeight: 400,
-  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', letterSpacing: 0,
+  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', letterSpacing: 0,
   lineHeight: 1.45,
 }
 const INNER: React.CSSProperties = {
@@ -44,7 +44,7 @@ const FIELD: React.CSSProperties = {
 }
 const EB: React.CSSProperties = {
   fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
-  textTransform: 'uppercase', color: 'var(--sb-ink-4)',
+  textTransform: 'uppercase', color: 'var(--sb-ink-3)',
 }
 
 const SOURCE: Record<Rule['source'], string> = {
@@ -100,7 +100,7 @@ export function ForecastRulesCard({ rules, state, onChange, currency }: {
   return (
     <details style={CARD}>
       <summary style={SUMMARY}>
-        <span style={{ color: 'var(--sb-ink-4)', fontSize: 12 }}>▸</span>
+        <span style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)' }}>▸</span>
         What the forecast assumes
         <span style={WHY}>
           {applied} of {rules.length} applied
@@ -152,11 +152,11 @@ function RuleRow({ rule, currency, onToggle, onValue }: {
           </div>
         </div>
         <span style={{
-          marginLeft: 'auto', fontSize: 'var(--sb-t-micro)', fontWeight: 600, whiteSpace: 'nowrap',
+          marginLeft: 'auto', fontSize: 'var(--sb-t-meta)', fontWeight: 600, whiteSpace: 'nowrap',
           padding: '2px 9px', borderRadius: 'var(--sb-r-pill)',
           background: rule.yours ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
           border: 'var(--sb-border-width) solid var(--sb-border)',
-          color: rule.yours ? 'var(--sb-accent-deep)' : 'var(--sb-ink-4)',
+          color: rule.yours ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)',
         }}>{rule.yours ? 'your figure' : SOURCE[rule.source]}</span>
       </div>
 
@@ -166,7 +166,7 @@ function RuleRow({ rule, currency, onToggle, onValue }: {
       {rule.dormant && (
         <div style={{
           marginTop: 10, paddingTop: 10, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
-          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.5,
+          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5,
         }}>
           Nothing to read yet — {rule.dormant}. It guesses nothing; give it a figure below and it is yours.
         </div>
@@ -177,7 +177,7 @@ function RuleRow({ rule, currency, onToggle, onValue }: {
           paddingTop: 10,
           borderTop: rule.dormant ? undefined : 'var(--sb-border-width) solid var(--sb-hairline)',
         }}>
-          <label style={{ ...EB, fontSize: 'var(--sb-t-micro)' }}>It uses</label>
+          <label style={{ ...EB, fontSize: 'var(--sb-t-meta)' }}>It uses</label>
           {isMoney
             ? <MoneyInput value={rule.value ?? 0} min={0} onChange={v => onValue(v)}
                 style={{ ...FIELD, width: 130, fontFamily: 'var(--sb-font-num)', fontWeight: 600 }} />
@@ -190,7 +190,7 @@ function RuleRow({ rule, currency, onToggle, onValue }: {
               style={{
                 height: 28, padding: '0 11px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
                 background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                color: 'var(--sb-ink-3)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                color: 'var(--sb-ink-3)', fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
               }}>Put the read figure back</button>
           )}
           <button onClick={() => setOpen(o => !o)}
@@ -260,7 +260,7 @@ export function OwnRulesCard({ state, onChange, currency }: {
   return (
     <details style={CARD}>
       <summary style={SUMMARY}>
-        <span style={{ color: 'var(--sb-ink-4)', fontSize: 12 }}>▸</span>
+        <span style={{ color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)' }}>▸</span>
         Your own rules
         <span style={WHY}>
           {state.own.length === 0
@@ -308,7 +308,7 @@ export function OwnRulesCard({ state, onChange, currency }: {
               alignItems: 'center', gap: 6, cursor: canAdd ? 'pointer' : 'default',
               background: canAdd ? 'var(--sb-ink-1)' : 'var(--sb-field)',
               border: `var(--sb-border-width) solid ${canAdd ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-              color: canAdd ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+              color: canAdd ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
               fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
             }}>
             <Plus size={ICON.sm} /> Add rule
@@ -317,7 +317,7 @@ export function OwnRulesCard({ state, onChange, currency }: {
 
         <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {state.own.length === 0 && (
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.55 }}>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.55 }}>
               None yet. Anything added here is marked as yours everywhere it lands — it is a thing you told the
               plan, not a thing the plan read.
             </div>
@@ -331,7 +331,7 @@ export function OwnRulesCard({ state, onChange, currency }: {
               <Switch on={r.on} onChange={v => patch(r.id, { on: v })} label={r.what} />
               <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600 }}>
                 {r.what}
-                <span style={{ display: 'block', fontWeight: 400, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
+                <span style={{ display: 'block', fontWeight: 400, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                   {phrase(r)}
                 </span>
               </span>
@@ -347,7 +347,7 @@ export function OwnRulesCard({ state, onChange, currency }: {
                   width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', padding: 0, flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                   background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                  color: 'var(--sb-ink-4)',
+                  color: 'var(--sb-ink-3)',
                 }}><Trash2 size={ICON.sm} /></button>
             </div>
           ))}

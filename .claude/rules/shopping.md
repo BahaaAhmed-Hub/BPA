@@ -115,3 +115,8 @@ lists…* while `loading` is true **and** there is nothing yet; once there is
 something on screen a reload is silent, because flashing a spinner over data you
 are already reading is worse than the wait. An account that is genuinely empty
 still gets its empty state — verified both ways.
+
+## Shopping — where it lives now
+It is a rail module (`ShoppingModule`, id `shopping`), no longer a tab inside
+Finance; see "Finance — navigation is three groups" in `finance.md` for why it
+still answers to the finance lock. `ink-audit.mjs` reaches it through the rail.

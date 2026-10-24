@@ -79,7 +79,7 @@ Every claim in those files was measured, and the method is the point:
 | Hairline | `#F0EBDC` |
 | Primary ink | `#191712` |
 | Muted ink | `#6C6553` |
-| Ghost ink | `#9B9180` |
+| Ghost ink (`--sb-ink-4`) | `#7C7565` — placeholders, disabled states and dividers only; readable text is `--sb-ink-3` |
 | Amber accent | `#F5D14E` |
 | Positive (green) | `#0C8140` — `POSITIVE` in `src/lib/moneyColors.ts` |
 | Negative (red) | `#C62828` — `NEGATIVE` in `src/lib/moneyColors.ts` |
@@ -105,7 +105,7 @@ Two tokens carried every failure:
 ## Key Files
 | File | What it does |
 |---|---|
-| `src/modules/settings/Settings.tsx` | All settings — nav groups, section components |
+| `src/modules/settings/Settings.tsx` | Settings **shell** — page routing and the section cards. Each section is `settings/sections/<Name>.tsx`; shared state/persistence is `model.ts`, nav data `nav.ts`, primitives `ui.tsx` |
 | `src/modules/tasks/TaskCard.tsx` | 3-row task card (9A design) |
 | `src/modules/habits/HabitsModule.tsx` | Habits table + 10B side detail panel |
 | `src/modules/finance/screens/BudgetScreen.tsx` | Budget + 20E envelope drill-down overlay |

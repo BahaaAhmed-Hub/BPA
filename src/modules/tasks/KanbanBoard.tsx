@@ -226,12 +226,12 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         <CountBadge value={column.tasks.length} />
         <span style={{ flex: 1 }} />
         <button onClick={() => setAdding(true)} title="Add a task here"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: 'var(--sb-ink-4)' }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: 'var(--sb-ink-3)' }}>
           <Plus size={ICON.md} strokeWidth={STROKE.rest} />
         </button>
         <div style={{ position: 'relative', display: 'flex' }} ref={menuRef}>
           <button onClick={() => setMenuOpen(o => !o)} title="Column options"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: 'var(--sb-ink-4)' }}>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: 'var(--sb-ink-3)' }}>
             <MoreHorizontal size={ICON.md} strokeWidth={STROKE.rest} />
           </button>
           {menuOpen && (
@@ -240,7 +240,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
               boxShadow: 'var(--sb-shadow-frame)',
             }}>
-              <p style={{ margin: 0, padding: '7px 9px 5px', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-4)' }}>BOARD COLUMNS</p>
+              <p style={{ margin: 0, padding: '7px 9px 5px', fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)' }}>BOARD COLUMNS</p>
               {BOARD_TYPE_OPTIONS.map(opt => (
                 <button key={opt.id} onClick={() => { onBoardType(opt.id); setMenuOpen(false) }} style={{
                   width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
@@ -266,7 +266,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         }}
       >
         {column.tasks.length === 0 && !adding ? (
-          <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
+          <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
             No tasks
           </div>
         ) : (
@@ -323,7 +323,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         style={{
           marginTop: 10, width: '100%', padding: '13px 0', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
           background: 'transparent', border: '1px dashed var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
-          color: 'var(--sb-ink-4)', cursor: 'pointer', fontFamily: 'inherit',
+          color: 'var(--sb-ink-3)', cursor: 'pointer', fontFamily: 'inherit',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           transition: 'all 0.12s',
         }}
@@ -488,7 +488,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
       cols.push({
         id:    'personal',
         label: 'Personal',
-        color: 'var(--sb-ink-4)',
+        color: 'var(--sb-ink-3)',
         tasks: sortUrgentFirst(tasks.filter(t => !assigned.has(t.id))),
       })
       return cols
@@ -514,7 +514,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     if (boardType === 'type') {
       return (Object.keys(TASK_TYPE_META) as TaskType[]).map(type => ({
         id:    type,
-        label: `${TASK_TYPE_META[type].emoji} ${TASK_TYPE_META[type].label}`,
+        label: TASK_TYPE_META[type].label,
         color: TASK_TYPE_META[type].color,
         tasks: sortUrgentFirst(tasks.filter(t => (t.taskType ?? inferTaskType(t.title)) === type)),
       }))
@@ -525,9 +525,9 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         { id: 'overdue',     label: 'Overdue',    color: 'var(--sb-negative)' },
         { id: 'today',       label: 'Today',      color: 'var(--sb-accent)' },
         { id: 'this-week',   label: 'This Week',  color: 'var(--sb-info)' },
-        { id: 'next-week',   label: 'Next Week',  color: 'var(--sb-ink-4)' },
+        { id: 'next-week',   label: 'Next Week',  color: 'var(--sb-ink-3)' },
         { id: 'later',       label: 'Later',      color: 'var(--sb-ink-3)' },
-        { id: 'unscheduled', label: 'Unscheduled',color: 'var(--sb-ink-4)' },
+        { id: 'unscheduled', label: 'Unscheduled',color: 'var(--sb-ink-3)' },
       ]
       return buckets.map(b => ({
         id:    b.id,

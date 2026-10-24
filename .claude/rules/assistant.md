@@ -280,3 +280,47 @@ Tests: `assistant-approval` (19), `assistant-library` (23), `assistant-calendar-
 
 ## Telegram and Siri use the same policy
 The consent policy (`approvalFor`, `DECLINED`) now lives in `supabase/functions/_shared/assistantGate.ts` and the guide in `_shared/appGuide.ts`; `src/lib/assistantPolicy.ts` and `src/lib/appGuide.ts` re-export them, so the panel, the Telegram bot and Siri gate the same acts and answer from the same text. How the bots park and approve an act is in `server.md` ("Telegram and Siri are the app's assistant too").
+
+## The conversation lives on the server, and the answer is written there
+`20260042/43` (tables), `functions/assistant-chat` + `_shared/assistantChat.ts` (the model call),
+`lib/assistantChatView.ts` (pure rules) + `assistantChatApi.ts` (Supabase calls), and the block in `AssistantPanel`
+headed "The conversation on the server". It used to be React state only, so iPad Safari reloading a dimmed tab lost
+the thread, and the browser's own request to Anthropic died with the page.
+- **The server is the source of truth.** `assistant_conversations` / `assistant_messages`: plain text per message, a
+  `status` (`streaming`|`complete`|`error`), tool chips as `role = 'tool'` rows, attachments as name+kind only. Order by
+  `id`, never `created_at`. `client_id` makes a retried insert one row. The address carries `?c=<uuid>`; with none, the
+  newest live conversation under 24h old is adopted (that is how a second device finds the thread). ✕ **archives**
+  (`archived_at`), it does not delete.
+- **One model step per invocation of `assistant-chat`**, answered 202 at once, finished in `EdgeRuntime.waitUntil`, so
+  it carries on when the page is gone. It writes the answer into one `streaming` row (every ~700ms), then `complete`.
+  The page supplies the **system prompt, tool list, model and key** because it owns them; the key falls back to the one
+  saved under Settings → AI (`shared_prefs`), then `ANTHROPIC_API_KEY`. Anthropic streams (SSE); Groq is one reply.
+  Deployed with the gateway's JWT check ON, and it checks the conversation is the caller's.
+- **Tools still run in the browser** (they read/write the app's stores and wait on the approval card). The function
+  parks each call as a `running` tool row and stops; **the page that claims it runs it** (a conditional update is the
+  claim, so two open devices cannot both run `delete_task`; a claim older than 2 minutes, or this device's own after a
+  reload, may be retaken; a heartbeat keeps it alive under an approval card), writes `tool_result`, and any page that
+  sees every tool of the step back asks for the next step (`mode: 'continue'`). The in-flight turn's exact provider
+  messages sit in `conversations.turn` and are cleared when the turn ends. A tool only runs on a page that is visible.
+- **The lock is an index**: one `streaming` row per conversation, so a double Send or two devices both continuing get
+  a 23505 → "busy", not two answers. A streaming row untouched for ~100s (`STALE_ANSWER_MS`) is **interrupted** on
+  screen and marked `error` on the server; the function sweeps the same on its next step.
+- **Coming back**: `visibilitychange`, `pageshow` (bfcache restore), `online`, `focus` refetch (a trailing refresh —
+  a 1s debounce that *dropped* the later event lost a message); while busy a 2.5s poll backs up Realtime, which does
+  not survive a dimmed iPad. A half-typed message is kept per device (`assistant-draft`). Loading shows "Still
+  reconnecting…" after 6s.
+- **The old in-browser loop remains** for a message with a file (the bytes are not sent through the function), and when
+  the function or tables are unavailable (404 → `serverMode = 'no'` for that page's life, the user row it wrote is
+  deleted). Those turns are written to the thread afterwards (`persistBubbles`) so they still survive a reload — just
+  not mid-flight. The browser path is also handed the thread's plain text so it remembers.
+- **Known limits**: the stale-answer test compares the device clock with the server's `updated_at` (a clock minutes
+  fast would call live answers interrupted); a turn whose tool needs a browser stalls until a device is in front of
+  the person; Realtime was not exercised (the stand-in has no websocket) — the poll is what the harness proves.
+Tests: `assistant-conversations-sql.sh <socket-dir> [port]` (60 assertions, throwaway Postgres 16; needs a non-root user
+to run the server; cross-user update/delete counts have no RLS-off control of their own), `assistant-chat-server.mjs`
+(56: the real `_shared/assistantChat.ts` transpiled, a fake DB that enforces the lock and a fake model that can refuse;
+control: lock removed → both requests call the model; also typechecks `index.ts` strictly against stub Deno types),
+`assistant-chat-view.mjs` (33), `assistant-persists.mjs` (a stateful stand-in project whose function writes from Node
+on a timer: page killed mid-answer then reopened, second device, bfcache, interrupted answer, drafts, tool run once
+across two devices, approval card across a reload, 404 fallback, file stays in the browser, ✕ archives),
+`auth-survives-dim.mjs` (12). **Not exercised: the real Deno function, a real Anthropic/Groq stream, Realtime, a real iPad.**

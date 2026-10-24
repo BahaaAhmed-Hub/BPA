@@ -183,5 +183,5 @@ export function tagOfMail(m: MailLike, mailboxIsBusiness: boolean): MailTag | nu
   const co = companyOfMail(m)
   if (co) return { label: co.name, color: co.color, isCompany: true }
   if (mailboxIsBusiness) return null
-  return { label: PERSONAL, color: 'var(--sb-ink-4)', isCompany: false }
+  return { label: PERSONAL, color: 'var(--sb-ink-3)', isCompany: false }
 }

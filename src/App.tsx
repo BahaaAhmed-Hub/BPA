@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { AssistantPanel, AssistantToggle } from './modules/assistant/AssistantPanel'
 import { SideRail } from './components/SideRail'
-import { ExecutiveDashboard } from './modules/dashboard/ExecutiveDashboard'
 import { TaskCommand } from './modules/tasks/TaskCommand'
 import { CalendarModule } from './modules/calendar/CalendarModule'
 import { InboxModule } from './modules/inbox/InboxModule'
@@ -50,6 +49,7 @@ import { runBudgetEntries } from './modules/finance/budgetEntries'
 import { loadRules } from './modules/finance/modals/BudgetRuleModal'
 import { SyncGapBanner } from './modules/shell/SyncGapBanner'
 import { UndoBar } from './components/UndoBar'
+import { ConfirmHost } from './components/ui/ConfirmDialog'
 import { BeLogo } from './components/BeLogo'
 import { useTaskCalendarPush } from './lib/taskAutoSchedule'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
@@ -57,6 +57,8 @@ import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
 import { Search, Settings, LogOut, ShieldCheck } from 'lucide-react'
 import { ICON } from '@/lib/type'
+import { shoppingIsOff, useShoppingOff } from './modules/finance/shopping/shoppingPrefs'
+import { ShoppingModule } from './modules/finance/ShoppingModule'
 
 // ─── Sunlit Bento — Login screen (1A) ────────────────────────────────────────
 
@@ -141,7 +143,7 @@ function LoginScreen() {
                     fontWeight: 700, fontSize: 'var(--sb-t-h1)', color: 'var(--sb-ink-1)', letterSpacing: '-.02em',
                     fontVariantNumeric: 'tabular-nums',
                   }}>{s.value}</div>
-                  <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 2 }}>{s.label}</div>
+                  <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2 }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -202,7 +204,7 @@ function LoginScreen() {
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0' }}>
             <div style={{ flex: 1, height: 1, background: 'var(--sb-border)' }} />
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>or</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>or</span>
             <div style={{ flex: 1, height: 1, background: 'var(--sb-border)' }} />
           </div>
 
@@ -218,7 +220,7 @@ function LoginScreen() {
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 'var(--sb-r-sm)',
                 background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)',
+                color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)',
                 outline: 'none', cursor: 'not-allowed',
                 fontFamily: 'inherit', boxSizing: 'border-box',
               }}
@@ -235,7 +237,7 @@ function LoginScreen() {
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 'var(--sb-r-sm)',
                 background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-                color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)',
+                color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)',
                 outline: 'none', cursor: 'not-allowed',
                 fontFamily: 'inherit', boxSizing: 'border-box',
               }}
@@ -248,14 +250,14 @@ function LoginScreen() {
               width: '100%', padding: '12px',
               borderRadius: 'var(--sb-r-nav)',
               background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-              color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 600,
+              color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', fontWeight: 600,
               cursor: 'not-allowed', fontFamily: 'inherit',
             }}
           >
             Log in
           </button>
 
-          <p style={{ margin: '24px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', textAlign: 'center', lineHeight: 1.65 }}>
+          <p style={{ margin: '24px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textAlign: 'center', lineHeight: 1.65 }}>
             By continuing, you agree to our{' '}
             <span style={{ color: 'var(--sb-ink-2)', textDecoration: 'underline', cursor: 'pointer' }}>Terms</span>
             {' '}and{' '}
@@ -270,6 +272,11 @@ function LoginScreen() {
 // ─── Loading screen ────────────────────────────────────────────────────────────
 
 function LoadingScreen() {
+  // Waking a dimmed iPad often finds the network a second or two behind the page. The session is kept and refreshing
+  // retries on its own (measured: signed in again as soon as the connection returns), but a splash that says nothing
+  // for 15–30 seconds reads as a hang, so say what is happening.
+  const [slow, setSlow] = useState(false)
+  useEffect(() => { const t = setTimeout(() => setSlow(true), 6000); return () => clearTimeout(t) }, [])
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -291,6 +298,17 @@ function LoadingScreen() {
         </svg>
       </div>
       <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>Loading your system…</span>
+      {slow && (
+        <div role="status" data-loading-slow style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, maxWidth: 300, textAlign: 'center' }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
+            Still reconnecting. You are signed in; this carries on as soon as the connection is back.
+          </span>
+          <button type="button" onClick={() => location.reload()} style={{
+            fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-1)', background: 'var(--sb-card)',
+            border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-pill)', padding: '6px 14px', cursor: 'pointer',
+          }}>Reload</button>
+        </div>
+      )}
       <style>{`
         @keyframes sbPulse {
           0%, 100% { opacity: 1; transform: scale(1); }
@@ -336,6 +354,12 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
       <rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/>
     </svg>
   ),
+  // A basket: Shopping's own place in the menu, beside the ledger it used to be a tab of.
+  shopping: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 8h18l-1.8 10.2a2 2 0 0 1-2 1.8H6.8a2 2 0 0 1-2-1.8L3 8z"/><path d="M8 8l3-4M16 8l-3-4"/>
+    </svg>
+  ),
   // Three books standing, the middle one leaning — a shelf, which is what the
   // screen is. Collapsed, a missing glyph draws an empty pill.
   library: (
@@ -374,7 +398,11 @@ export const NAV_H = 'var(--sb-h-header)'
 
 /** The gate for a nav id. Library has a second switch of its own; every other
  *  module answers to the server alone. */
-const offHere = (id: string) => (id === 'library' ? libraryIsOff() : moduleIsOff(id))
+const offHere = (id: string) => (id === 'library' ? libraryIsOff() : id === 'shopping' ? shoppingIsOff() : moduleIsOff(id))
+
+// The Dashboard left the rail (UI-unification P2.1): Today carries its figures as a
+// one-line summary. `modules/dashboard/` is kept, unmounted, until the new experience is signed off.
+const RETIRED_MODULES = ['dashboard']
 
 const NAV_ITEMS = [
   { id: 'morning',   label: 'Today'    },
@@ -386,14 +414,11 @@ const NAV_ITEMS = [
   { id: 'projects',  label: 'Projects' },
   { id: 'habits',    label: 'Habits'   },
   { id: 'finance',   label: 'Finance'  },
+  // Shopping used to be a tab inside Finance. It is its own place now — shown when Settings → Finance turns it on.
+  { id: 'shopping',  label: 'Shopping' },
   // Off for two reasons — the plan (`my_modules()`) or the person (Settings →
   // Library) — and either one hides it, so it is asked through `offHere`.
   { id: 'library',   label: 'Library'  },
-  // The dashboard was the module the app opened on and the one place with no
-  // way back to it — Today's pill lit up for it instead, which named the wrong
-  // screen. Settings left the row for the avatar menu, where the things about
-  // *you* rather than about your work belong.
-  { id: 'dashboard', label: 'Dashboard' },
 ] as const
 
 
@@ -475,7 +500,7 @@ function NotificationBell() {
           <span style={{
             position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, padding: '0 4px',
             borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-negative)', color: 'var(--sb-ink-on-fill)',
-            fontSize: 'var(--sb-t-micro)', fontWeight: 700, lineHeight: '17px', textAlign: 'center',
+            fontSize: 'var(--sb-t-meta)', fontWeight: 700, lineHeight: '17px', textAlign: 'center',
             boxShadow: '0 0 0 2px var(--sb-header)',
           }}>{count > 9 ? '9+' : count}</span>
         )}
@@ -517,13 +542,13 @@ function NotificationBell() {
                   display: 'block', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', lineHeight: 1.35,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{n.title}</span>
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{n.detail}</span>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.35 }}>{n.detail}</span>
               </span>
             </button>
           ))}
 
           {count === 0 && (
-            <p style={{ margin: 0, padding: '18px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', lineHeight: 1.5, textAlign: 'center' }}>
+            <p style={{ margin: 0, padding: '18px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5, textAlign: 'center' }}>
               Nothing is waiting for you.
             </p>
           )}
@@ -537,7 +562,7 @@ function NotificationBell() {
           {/* A kind that is on and cannot speak yet says what it is waiting
               on. An empty bell for a reason is not the same as a quiet day. */}
           {dormant.map(d => (
-            <p key={d.setting.id} style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
+            <p key={d.setting.id} style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
               {d.setting.label} — {d.why}.
             </p>
           ))}
@@ -662,7 +687,7 @@ function YouCluster() {
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{user?.name ?? 'Your account'}</p>
                   <p style={{
-                    margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+                    margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{user?.email}</p>
                 </div>
@@ -716,11 +741,13 @@ function TopNav() {
   // reading it. RLS is what actually answers.
   useModules()
   useLibraryOff()
+  useShoppingOff()
   const navItems = NAV_ITEMS.filter(item => !offHere(item.id))
   // `activeModule` is persisted, so a plan that changed under a shut laptop
   // reopens on a tab that is no longer there. Land on the first one that is
   // rather than on a blank page.
   useEffect(() => {
+    if (RETIRED_MODULES.includes(activeModule)) { useUIStore.setState({ activeModule: 'morning' }); return }
     if (offHere(activeModule) && navItems.length) setActiveModule(navItems[0].id)
   }, [activeModule, navItems, setActiveModule])
 
@@ -745,6 +772,7 @@ function ActiveModule() {
   const everMounted  = useRef<Set<string>>(new Set([activeModule]))
   useModules()
   useLibraryOff()
+  useShoppingOff()
 
   // Track which modules have ever been active so we only mount them once.
   everMounted.current.add(activeModule)
@@ -756,7 +784,6 @@ function ActiveModule() {
 
   return (
     <>
-      {everMounted.current.has('dashboard') && !moduleIsOff('dashboard')  && <div style={show('dashboard')}><ExecutiveDashboard /></div>}
       {everMounted.current.has('tasks') && !moduleIsOff('tasks')      && <div style={show('tasks')}><TaskCommand /></div>}
       {everMounted.current.has('calendar') && !moduleIsOff('calendar')   && <div style={show('calendar')}><CalendarModule /></div>}
       {everMounted.current.has('inbox') && !moduleIsOff('inbox')      && <div style={show('inbox')}><InboxModule /></div>}
@@ -769,6 +796,7 @@ function ActiveModule() {
       {everMounted.current.has('behavioral') && <div style={show('behavioral')}><BehavioralOS /></div>}
       {everMounted.current.has('planning')   && <div style={show('planning')}><PlanningAssistant /></div>}
       {everMounted.current.has('finance') && !moduleIsOff('finance')    && <div style={show('finance')}><FinanceModule /></div>}
+      {everMounted.current.has('shopping') && !shoppingIsOff()           && <div style={show('shopping')}><ShoppingModule /></div>}
       {everMounted.current.has('library') && !libraryIsOff()            && <div style={show('library')}><LibraryModule /></div>}
     </>
   )
@@ -1408,7 +1436,7 @@ function App() {
       {/* The rail is a column beside the page, not a bar above it, so the
           shell is a row. It keeps its own height and only the module scrolls
           — the same contract the header had, turned ninety degrees. */}
-      <div style={{
+      <div className="app-shell" style={{
         width: '100%',
         maxWidth: 1560,
         display: 'flex',
@@ -1423,7 +1451,7 @@ function App() {
             the content column, which left it floating off both the rail and
             the cards, over neither. Decoration beside controls that do
             things, so no `title`. `amber` is the sign-in screen's colourway. */}
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+        <div className="app-rail-col" style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           <div data-be-mark aria-hidden style={{ height: MARK_ROW, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <BeLogo variant="amber" size={52} />
           </div>
@@ -1434,18 +1462,20 @@ function App() {
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           <YouCluster />
           <SyncGapBanner />
-          <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', background: 'var(--sb-page)' }}>
+          <main className="app-main" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', background: 'var(--sb-page)' }}>
             <ActiveModule />
           </main>
         </div>
       </div>
       <UndoBar />
+      <ConfirmHost />
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
       <NameListener />
       <AssistantPanel
         open={assistantOpen}
         minimised={assistantAside}
         onMinimise={() => setAssistantAside(true)}
+        onOpenRequest={() => { setAssistantOpen(true); setAssistantAside(false) }}
         onClose={() => { setAssistantOpen(false); setAssistantAside(false) }} />
       {/* While it is put aside the button is back in its "open me" state, so
           either the tab or the button brings it back. */}

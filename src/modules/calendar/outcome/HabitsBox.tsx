@@ -41,6 +41,7 @@ import {
   addOutcomeLink, removeOutcomeLink, loadOutcomeLinks, linksForEvent, subscribeOutcomeLinks,
 } from '@/lib/meetingOutcomes'
 import { OutcomeBox, EYEBROW, FIELD, chip, ymd, fromYmd, type OutcomeEvent } from './shared'
+import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
 
 const TINT = 'var(--sb-warning)'
 /** The Habits page reads its logs once on mount and listens for this. */
@@ -115,7 +116,7 @@ function HabitRow({ habit, day, done, qty, linkedHere, usual, changed, madeHere,
             {qty.toLocaleString()} / {habit.goal!.toLocaleString()}{habit.unit ? ` ${habit.unit}` : ''}
           </span>
           <button onClick={() => onStep(-step)} aria-label={`Remove ${step} ${habit.unit ?? ''} from ${habit.name}`}
-            style={{ ...chip(), width: 36, padding: 0, justifyContent: 'center', fontSize: 18 }}>−</button>
+            style={{ ...chip(), width: 36, padding: 0, justifyContent: 'center', fontSize: 'var(--sb-t-h2)' }}>−</button>
           <button onClick={() => onStep(step)} aria-label={`Add ${step} ${habit.unit ?? ''} to ${habit.name}`} style={chip()}>
             + {step.toLocaleString()}
           </button>
@@ -124,13 +125,13 @@ function HabitRow({ habit, day, done, qty, linkedHere, usual, changed, madeHere,
 
       {usual && !linkedHere && (
         <span title="You have logged this from a meeting before" style={{
-          fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)',
+          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)',
           borderRadius: 'var(--sb-r-pill)', padding: '3px 9px', whiteSpace: 'nowrap',
         }}>from meetings</span>
       )}
       {linkedHere && (
         <span title="Linked to this meeting" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+          display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
           color: 'var(--sb-ink-1)', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-pill)', padding: '3px 9px', whiteSpace: 'nowrap',
         }}><LinkIcon size={12} />this meeting</span>
       )}
@@ -270,7 +271,7 @@ function HabitsInner({ event, open, onToggle }: { event: OutcomeEvent; open: boo
     if (!n || (measured && !(g > 0))) return
     const colors = getHabitColors()
     const id = addHabit({
-      name: n, emoji: '🎯', color: colors[habits.length % colors.length]!, frequency: freq, isActive: true,
+      name: n, emoji: DEFAULT_HABIT_EMOJI, color: colors[habits.length % colors.length]!, frequency: freq, isActive: true,
       type: measured ? 'quantity' : 'boolean',
       ...(measured ? { goal: g, ...(unit.trim() ? { unit: unit.trim() } : {}) } : {}),
     })

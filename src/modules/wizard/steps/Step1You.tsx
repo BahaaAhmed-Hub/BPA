@@ -1,9 +1,13 @@
 import { THEMES, applyAppearance } from '@/lib/themes'
 import type { WizardData } from '../SetupWizard'
+import { Brain, Sun, Flame } from 'lucide-react'
+import { ICON, STROKE } from '@/lib/type'
 
 interface Props {
   data: WizardData
   onChange: (p: Partial<WizardData>) => void
+  /** Folded into one step with the accounts: no hero or feature cards, just the two questions. */
+  compact?: boolean
 }
 
 // Hero SVG illustration — warm landscape with sunrise, trees and a person
@@ -115,12 +119,12 @@ function HeroIllustration() {
 }
 
 const FEATURES = [
-  { emoji: '🧠', title: 'AI Prioritization', desc: 'Eisenhower matrix for ruthless focus' },
-  { emoji: '☀️', title: 'Morning Brief',     desc: 'Start each day with AI-powered clarity' },
-  { emoji: '🔥', title: 'Habit Tracking',   desc: 'Build systems that compound over time' },
+  { Icon: Brain, title: 'AI Prioritization', desc: 'Eisenhower matrix for ruthless focus' },
+  { Icon: Sun, title: 'Morning Brief',     desc: 'Start each day with AI-powered clarity' },
+  { Icon: Flame, title: 'Habit Tracking',   desc: 'Build systems that compound over time' },
 ]
 
-export function Step1Welcome({ data, onChange }: Props) {
+export function Step1You({ data, onChange, compact = false }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <style>{`
@@ -131,34 +135,34 @@ export function Step1Welcome({ data, onChange }: Props) {
       `}</style>
 
       {/* Hero illustration */}
-      <div style={{ borderRadius: 'var(--sb-r-card)', overflow: 'hidden', boxShadow: 'var(--sb-shadow-hover)' }}>
+      {!compact && <div style={{ borderRadius: 'var(--sb-r-card)', overflow: 'hidden', boxShadow: 'var(--sb-shadow-hover)' }}>
         <HeroIllustration />
-      </div>
+      </div>}
 
       {/* Heading */}
       <div style={{ textAlign: 'center' }}>
         <h1 style={{ margin: '0 0 8px', fontSize: 'var(--sb-t-h1)', fontWeight: 800, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>
-          Welcome to The Professor 👋
+          Welcome to The Professor
         </h1>
         <p style={{ margin: 0, fontSize: 'var(--sb-t-h3)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
-          Let's set up your AI executive OS in just a few minutes.
+          {compact ? 'Three quick steps and you are in.' : "Let's set up your AI executive OS in just a few minutes."}
         </p>
       </div>
 
       {/* Feature cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+      {!compact && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
         {FEATURES.map(f => (
           <div key={f.title} className="wz-feature-card" style={{
             padding: '14px 12px', borderRadius: 'var(--sb-r-nav)', textAlign: 'center',
             background: 'var(--sb-info-tint)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20%, transparent)',
             boxShadow: 'var(--sb-shadow-control)',
           }}>
-            <div style={{ fontSize: 'var(--sb-t-h1)', marginBottom: 8 }}>{f.emoji}</div>
+            <div style={{ marginBottom: 8, color: 'var(--sb-ink-2)' }}><f.Icon size={ICON.lg} strokeWidth={STROKE.rest} aria-hidden /></div>
             <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)', marginBottom: 4 }}>{f.title}</div>
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>{f.desc}</div>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>{f.desc}</div>
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* Name field */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -234,9 +238,9 @@ export function Step1Welcome({ data, onChange }: Props) {
         </div>
       </div>
 
-      <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', textAlign: 'center', fontStyle: 'italic' }}>
+      {!compact && <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', textAlign: 'center', fontStyle: 'italic' }}>
         This will only take about 2 minutes. Let's get started!
-      </p>
+      </p>}
     </div>
   )
 }

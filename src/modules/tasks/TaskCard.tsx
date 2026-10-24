@@ -20,7 +20,7 @@ import { SchedulePopover } from './SchedulePopover'
 import { ICON, STROKE } from '@/lib/type'
 
 const MEETING_KEYWORDS = ['meeting', 'call', 'sync', 'standup', 'stand-up', '1:1', 'interview', 'check-in', 'debrief', 'catchup', 'catch-up']
-const MEETING_EMOJIS   = ['📞', '💬', '🤝', '📅']
+const MEETING_EMOJIS   = ['📞', '💬', '🤝', '📅'] // ui-guard: emoji-ok — matched against what a person typed
 
 function isMeetingTask(title: string): boolean {
   const lower = title.toLowerCase()
@@ -134,7 +134,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
           {/* The tick and the bin, stacked: they are both about the card as a
               whole, and side by side they pushed the title into two lines. */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0, paddingTop: 1 }}>
-            <button
+            <button className="sb-hit"
               data-nm
               onClick={() => {
                 if (!task.completed && isMeetingTask(task.title)) setShowMeetingPopup(true)
@@ -152,7 +152,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               {task.completed && <Check size={ICON.sm} color="var(--sb-ink-on-fill)" strokeWidth={STROKE.active} />}
             </button>
 
-            <button data-nm
+            <button className="sb-hit" data-nm
               onClick={() => deleteTask(task.id)}
               title="Delete task"
               style={{
@@ -167,7 +167,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               flex: 1, margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               // An unnamed task reads as unnamed, not as a task called Untitled.
-              color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
+              color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
               fontStyle: task.title.trim() ? 'normal' : 'italic',
               lineHeight: 1.3, minWidth: 0,
               textDecoration: task.completed ? 'line-through' : 'none',
@@ -175,14 +175,14 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             }}
           >{task.title.trim() || 'Untitled'}</p>
 
-          <button data-nm onClick={() => toggleUrgent(task.id)}
+          <button className="sb-hit" data-nm onClick={() => toggleUrgent(task.id)}
             title={flaming ? 'On fire — click to clear'
               : task.urgent ? 'Was on fire — this task is no longer open'
               : 'Mark as on fire'}
             style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
               flexShrink: 0, marginTop: 2,
-              color: flaming ? 'var(--sb-negative)' : hovered ? 'var(--sb-ink-4)' : 'var(--sb-border)',
+              color: flaming ? 'var(--sb-negative)' : hovered ? 'var(--sb-ink-3)' : 'var(--sb-border)',
             }}>
             <Flame size={ICON.sm} strokeWidth={STROKE.rest} fill={flaming ? 'var(--sb-negative)' : 'none'} />
           </button>
@@ -192,7 +192,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         <div data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', margin: '3px 0 0 22px' }}>
           <p style={{
             margin: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
-            color: v.companyName ? v.companyColor : 'var(--sb-ink-4)', lineHeight: 1.3,
+            color: v.companyName ? v.companyColor : 'var(--sb-ink-3)', lineHeight: 1.3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             cursor: 'pointer',
           }}>{v.companyName || 'No company'}</p>
@@ -214,7 +214,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         {/* Meta line */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 9, margin: '3px 0 0 22px',
-          fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', minWidth: 0,
+          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', minWidth: 0,
           // a narrow column (panel open) clips the trailing meta rather than
           // letting it run under the attribute rail
           overflow: 'hidden', whiteSpace: 'nowrap',
@@ -296,7 +296,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               ...(v.ownerInitials ? slotFilled : slotEmpty),
               borderRadius: 'var(--sb-r-pill)',
-              fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.02em',
+              fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.02em',
             }}
           >{v.ownerInitials ?? <User size={ICON.sm} strokeWidth={STROKE.rest} />}</div>
           <SlotSelect value={task.owner ?? ''} onChange={val => updateTask(task.id, { owner: val || undefined })}>

@@ -17,7 +17,7 @@ export function Eyebrow({ children }: { children: ReactNode }) {
 export function Field({ label, children, grow = 1 }: { label: string; children: ReactNode; grow?: number }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: `${grow} 1 0`, minWidth: 0 }}>
-      <span style={{ ...CAPS, color: 'var(--sb-ink-4)' }}>{label}</span>
+      <span style={{ ...CAPS, color: 'var(--sb-ink-3)' }}>{label}</span>
       {children}
     </label>
   )

@@ -225,7 +225,7 @@ export function SideRail({ items, activeModule, onPick }: {
                 width: 40, height: 24, flexShrink: 0, marginTop: 1, cursor: 'pointer',
                 borderRadius: 'var(--sb-r-pill)', border: 'none',
                 background: 'color-mix(in srgb, var(--sb-ink-1) 8%, transparent)', color: 'var(--sb-ink-2)',
-                fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+                fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
                 letterSpacing: '0.06em',
               }}>
               ALL

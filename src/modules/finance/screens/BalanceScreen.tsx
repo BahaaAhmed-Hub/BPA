@@ -30,6 +30,7 @@ import { OPEN_ACCOUNT, takePendingAccount, accountIdOf } from '../openAccount'
 import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
 import { ICON } from '@/lib/type'
 import { TxRow, txDate as fmtTxDate } from '../components/TxRow'
+import { GLYPH, FALLBACK_INCOME_ICON, FALLBACK_EXPENSE_ICON } from '@/lib/glyphs'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -134,7 +135,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
           flexShrink: 0, width: 18, height: 30, padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'none', border: 'none', borderRadius: 'var(--sb-r-chip)',
-          color: hovered || isDragging ? 'var(--sb-ink-4)' : 'var(--sb-border)',
+          color: hovered || isDragging ? 'var(--sb-ink-3)' : 'var(--sb-border)',
           cursor: isDragging ? 'grabbing' : 'grab',
           touchAction: 'none',
         }}>
@@ -158,7 +159,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
       />
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
-        <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {account.bank ?? account.accountType}{account.last4 ? ` · ···· ${account.last4}` : ''}
         </span>
       </div>
@@ -171,7 +172,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
               background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? 'var(--sb-warning)' : 'var(--sb-ink-3)',
             }} />
           </div>
-          <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 3, whiteSpace: 'nowrap' }}>
+          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 3, whiteSpace: 'nowrap' }}>
             {account.currency} {Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of {Math.round(limit).toLocaleString('en-US')}
           </span>
         </div>
@@ -184,7 +185,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
         {unconverted.length > 0 ? (
           <span
             title={`Entries here in ${unconverted.join(', ')} with no rate set, so they are not in this balance. Settings → Finance.`}
-            style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-warning)' }}>
+            style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-warning)' }}>
             {unconverted.join(' ')} not counted
           </span>
         ) : pending !== 0 ? (
@@ -202,7 +203,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
               : `Due by today and not paid. The money has not moved, so it is not in the balance.${
                   ahead !== 0 ? ` A further ${formatBalance(ahead, account.currency)} is dated later and not yet owed.` : ''}`}
             style={{
-              fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+              fontSize: 'var(--sb-t-meta)', fontWeight: 700,
               color: pending > 0 ? 'var(--sb-positive)' : 'var(--sb-negative)',
             }}>
             {formatBalance(pending, account.currency)} {pending > 0 ? 'due to you' : 'not paid yet'}
@@ -212,11 +213,11 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
           // the negative one — it is a fact about the diary, not a debt.
           <span
             title="Entries filed here with no payment date, all of them dated later. Nothing is overdue."
-            style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>
+            style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
             {formatBalance(ahead, account.currency)} {ahead > 0 ? 'due to you, dated ahead' : 'dated ahead'}
           </span>
         ) : account.last4 ? (
-          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>cleared</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>cleared</span>
         ) : null}
 
         {/* What the card has earned. Under the balance and in the muted ink,
@@ -231,8 +232,8 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
               points.cashUse > 0 ? `${acct(points.cashUse, { currency: account.currency })} taken as cash — cash earns nothing` : null,
               'Never counted as cash, in any balance, goal or plan.',
             ].filter(Boolean).join(' · ')}
-            style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' }}>
-            ★ {Math.round(points.total).toLocaleString('en-US')} pts
+            style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' }}>
+            {GLYPH.star} {Math.round(points.total).toLocaleString('en-US')} pts
             {showPointsMoney && points.worth !== null && <> · ≈{acct(points.worth, { currency: account.currency, decimals: 0 })}</>}
           </span>
         )}
@@ -495,7 +496,7 @@ export function BalanceScreen() {
       {/* Dark net position hero card */}
       <div style={{ flexShrink: 0, margin: '14px 26px 0', background: 'var(--sb-ink-1)', borderRadius: 'var(--sb-r-card)', padding: '16px 20px', display: 'flex', gap: 22, alignItems: 'center', color: 'var(--sb-ink-on-dark)' }}>
         <div style={{ flexShrink: 0, width: 240 }}>
-          <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6, display: 'block', marginBottom: 4 }}>NET POSITION</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6, display: 'block', marginBottom: 4 }}>NET POSITION</span>
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums', display: 'block' }}>
             {acct(netPos, { currency: base })}
           </span>
@@ -505,21 +506,21 @@ export function BalanceScreen() {
         </div>
         {/* Held/Owed bar */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--sb-t-micro)', opacity: 0.55, marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--sb-t-meta)', opacity: 0.55, marginBottom: 8 }}>
             <span>HELD</span><span style={{ marginLeft: 'auto' }}>OWED</span>
           </div>
           <div style={{ height: 14, borderRadius: 'var(--sb-r-pill)', overflow: 'hidden', display: 'flex', background: 'color-mix(in srgb, var(--sb-ink-on-dark) 12%, transparent)' }}>
             <span style={{ width: `${heldPct}%`, background: 'var(--sb-accent)', display: 'block' }} />
             <span style={{ flex: 1, background: 'var(--sb-negative)', display: 'block' }} />
           </div>
-          <div style={{ display: 'flex', gap: 16, fontSize: 'var(--sb-t-micro)', opacity: 0.62, marginTop: 6 }}>
+          <div style={{ display: 'flex', gap: 16, fontSize: 'var(--sb-t-meta)', opacity: 0.62, marginTop: 6 }}>
             <span>Payment {heldPct}%</span>
             <span>Cards {100 - heldPct}%</span>
           </div>
         </div>
         {/* Safe to spend */}
         <div style={{ width: 160, flexShrink: 0 }}>
-          <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55, display: 'block', marginBottom: 4 }}>SAFE TO SPEND</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55, display: 'block', marginBottom: 4 }}>SAFE TO SPEND</span>
           <span
             title={[
               `${group(Math.round(cap.held))} in current accounts and wallets`,
@@ -534,7 +535,7 @@ export function BalanceScreen() {
             style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', display: 'block', cursor: 'help' }}>
             {acct(cap.spendable, { currency: base })}
           </span>
-          <span style={{ fontSize: 'var(--sb-t-micro)', opacity: 0.6, display: 'block', marginTop: 2 }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', opacity: 0.6, display: 'block', marginTop: 2 }}>
             {cap.assets > 0 ? 'Cash only, after unpaid bills' : 'After unpaid bills'}
           </span>
         </div>
@@ -558,7 +559,7 @@ export function BalanceScreen() {
           ].map(group => group.accounts.length > 0 && (
             <div key={group.label} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', marginBottom: 7, boxSizing: 'border-box' as const }}>
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{group.label}</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{group.label}</span>
                 <span style={{ marginLeft: 'auto', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 600, color: group.totalColor, fontVariantNumeric: 'tabular-nums' }}>
                   {acct(group.owed ? -Math.abs(group.total) : group.total, { currency: base })}
                 </span>
@@ -644,7 +645,7 @@ export function BalanceScreen() {
               <input type="date" value={rangeFrom} max={rangeTo || undefined}
                 onChange={e => setRangeFrom(e.target.value)}
                 style={RANGE_FIELD} />
-              <span style={{ color: 'var(--sb-ink-4)' }}>›</span>
+              <span style={{ color: 'var(--sb-ink-3)' }}>›</span>
               <input type="date" value={rangeTo} min={rangeFrom || undefined}
                 onChange={e => setRangeTo(e.target.value)}
                 style={RANGE_FIELD} />
@@ -714,7 +715,7 @@ export function BalanceScreen() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {sorted.map(tx => {
               const cat    = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
-              const glyph  = cat?.icon ?? (tx.type === 'income' ? '💼' : '💳')
+              const glyph  = cat?.icon ?? (tx.type === 'income' ? FALLBACK_INCOME_ICON : FALLBACK_EXPENSE_ICON)
               // A transfer has two ends. Left nameless it read as a stray
               // "Transaction", which beside the entry that put the money on the
               // card looked like the same thing recorded twice.

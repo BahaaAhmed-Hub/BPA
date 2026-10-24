@@ -172,7 +172,7 @@ export function FollowingView({ onOpenBook }: { onOpenBook: (id: string) => void
             {c?.s === 'failed' && <div role="alert" style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)' }}>Could not check {f.name} just now — Open Library did not answer.</div>}
             {c?.s === 'ok' && fresh.length === 0 && <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Nothing new since you followed.</div>}
             {settled && f.lastCheckedAt && (
-              <div style={{ fontSize: 'var(--sb-t-meta)', color: f.lastCheckOk === false ? 'var(--sb-accent-deep)' : 'var(--sb-ink-4)' }}>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: f.lastCheckOk === false ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)' }}>
                 {f.lastCheckOk === false ? `The overnight check could not reach Open Library (${checkedAgo(f.lastCheckedAt)}).` : `Also checked overnight, ${checkedAgo(f.lastCheckedAt)}.`}
               </div>
             )}

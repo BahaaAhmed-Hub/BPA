@@ -30,7 +30,7 @@ const SUMMARY: React.CSSProperties = {
 }
 const WHY: React.CSSProperties = {
   marginLeft: 'auto', fontFamily: 'system-ui', fontWeight: 400,
-  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', letterSpacing: 0,
+  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', letterSpacing: 0,
 }
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 11px',
@@ -61,7 +61,7 @@ export function CategoryReviewCard({ input, onOpenCategory }: {
 
   if (review.readFrom < 3) {
     return (
-      <div style={{ ...CARD, padding: '13px 18px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+      <div style={{ ...CARD, padding: '13px 18px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
         <b style={{ color: 'var(--sb-ink-3)', fontWeight: 600 }}>How your categories are holding up</b>
         {' — '}
         {review.readFrom === 0
@@ -103,7 +103,7 @@ export function CategoryReviewCard({ input, onOpenCategory }: {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
             marginTop: 14, paddingTop: 12, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
-            fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
+            fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
           }}>
             <span>
               {hidden} {hidden === 1 ? 'thing is' : 'things are'} how you want {hidden === 1 ? 'it' : 'them'}.
@@ -144,7 +144,7 @@ function Row({ f, money, onKeep, onOpen }: {
           fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em',
           textTransform: 'uppercase', padding: '2px 8px', borderRadius: 'var(--sb-r-pill)',
           background: hot ? 'var(--sb-accent-tint2)' : 'var(--sb-field)',
-          color: hot ? 'var(--sb-accent-deep)' : 'var(--sb-ink-4)',
+          color: hot ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)',
         }}>{hot ? 'Worth a look' : 'Noted'}</span>
         <span style={{
           flex: 1, minWidth: 0, fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-body-s)',
@@ -167,8 +167,8 @@ function Row({ f, money, onKeep, onOpen }: {
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {f.evidence.map((e, i) => (
             <span key={i} style={{
-              fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-micro)',
-              color: 'var(--sb-ink-4)', background: 'var(--sb-field)',
+              fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)',
+              color: 'var(--sb-ink-3)', background: 'var(--sb-field)',
               border: 'var(--sb-border-width) solid var(--sb-hairline)',
               borderRadius: 'var(--sb-r-chip)', padding: '2px 7px',
             }}>{e}</span>

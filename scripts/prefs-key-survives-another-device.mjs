@@ -10,6 +10,7 @@
 //    5-minute tick at the earliest — the bot answered with the old one.
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
+import { settingsSource } from './settings-source.mjs'
 
 const TMP = '/tmp/prefsync-check'
 rmSync(TMP, { recursive: true, force: true }); mkdirSync(TMP, { recursive: true })
@@ -139,7 +140,7 @@ ok('a refused push is retried rather than forgotten', keyOnServer() === 'sk-ant-
 // that field, so it writes on every change event and a 93-character key was
 // 93 concurrent pushes. "Immediately" was the right claim against a
 // five-minute timer and the wrong word for a text field.
-const settings = readFileSync('src/modules/settings/Settings.tsx', 'utf8')
+const settings = settingsSource()
 const save = settings.slice(settings.indexOf('function saveAIConfig'), settings.indexOf('let onAIPush'))
 ok('saving the AI key pushes on its own', /pushSharedPrefs\(\)/.test(save), save.replace(/\s+/g, ' ').slice(0, 60))
 ok('and holds a moment rather than pushing per keystroke',

@@ -37,8 +37,8 @@ const CO_NAME: Record<string, string> = {
 
 const ENERGY_META = [
   null,
-  { label: 'Depleted', color: 'var(--sb-ink-4)' },
-  { label: 'Low',      color: 'var(--sb-ink-4)' },
+  { label: 'Depleted', color: 'var(--sb-ink-3)' },
+  { label: 'Low',      color: 'var(--sb-ink-3)' },
   { label: 'Steady',   color: 'var(--sb-info)' },
   { label: 'Energized',color: 'var(--sb-positive)' },
   { label: 'Peak',     color: 'var(--sb-info)' },
@@ -183,7 +183,7 @@ function StatusBadge({ status }: { status: ReturnType<typeof getEventStatus> }) 
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
-      fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '0.5px',
+      fontSize: 'var(--sb-t-meta)', fontWeight: 600, letterSpacing: '0.5px',
       padding: '2px 7px', borderRadius: 'var(--sb-r-chip)',
       background: cfg.bg, border: `var(--sb-border-width) solid ${cfg.border}`, color: cfg.color,
     }}>
@@ -394,7 +394,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               <div style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: accentColor, flexShrink: 0 }} />
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{event.calendarName}</span>
               {event.accountEmail && (
-                <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>· {event.accountEmail}</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>· {event.accountEmail}</span>
               )}
             </div>
           )}
@@ -471,23 +471,23 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                         width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
                         background: alpha(accentColor, 13.3), border: `var(--sb-border-width) solid ${alpha(accentColor, 25.1)}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: accentColor,
+                        fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: accentColor,
                       }}>
                         {initials}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {att.displayName ?? att.email}
-                          {att.self && <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', marginLeft: 5 }}>(you)</span>}
+                          {att.self && <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginLeft: 5 }}>(you)</span>}
                         </p>
                         {att.displayName && (
-                          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {att.email}
                           </p>
                         )}
                       </div>
                       <span style={{
-                        fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: rc,
+                        fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: rc,
                         width: 16, textAlign: 'center', flexShrink: 0,
                       }} title={att.responseStatus ?? 'No response'}>
                         {rs}
@@ -787,7 +787,7 @@ export function MorningBrief() {
                     {level}
                   </span>
                   <span style={{
-                    fontSize: 'var(--sb-t-micro)', color: selected ? meta.color : 'var(--sb-ink-3)',
+                    fontSize: 'var(--sb-t-meta)', color: selected ? meta.color : 'var(--sb-ink-3)',
                     fontWeight: selected ? 600 : 400, transition: 'color 0.15s',
                     whiteSpace: 'nowrap',
                   }}>
@@ -878,7 +878,7 @@ export function MorningBrief() {
 
                         {co && (
                           <span style={{
-                            fontSize: 'var(--sb-t-micro)', padding: '2px 8px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
+                            fontSize: 'var(--sb-t-meta)', padding: '2px 8px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
                             color, background: alpha(color, 9.4), fontWeight: 500,
                           }}>
                             {CO_NAME[co]}
@@ -962,7 +962,7 @@ export function MorningBrief() {
                           <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-1)', fontWeight: 500 }}>
                             {fmtTime(event.start_time)}
                           </p>
-                          <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>
+                          <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                             {fmtTime(event.end_time)}
                           </p>
                         </div>
@@ -984,7 +984,7 @@ export function MorningBrief() {
                             <MeetingTypeIcon type={event.meeting_type} />
                             {event.calendarName && (
                               <span style={{
-                                fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
+                                fontSize: 'var(--sb-t-meta)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
                                 background: alpha(accentClr, 8.2), border: `var(--sb-border-width) solid ${alpha(accentClr, 18.8)}`,
                                 color: accentClr, fontWeight: 500,
                               }}>
@@ -992,7 +992,7 @@ export function MorningBrief() {
                               </span>
                             )}
                             {event.attendees && event.attendees.length > 0 && (
-                              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>
+                              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                                 {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
                               </span>
                             )}

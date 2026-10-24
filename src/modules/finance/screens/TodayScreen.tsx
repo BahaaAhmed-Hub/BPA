@@ -12,21 +12,14 @@ import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { isoDate } from '../dates'
 import { TxRow, txDate } from '../components/TxRow'
+import { C } from '@/lib/palette'
+import { FALLBACK_EXPENSE_ICON, FALLBACK_INCOME_ICON } from '@/lib/glyphs'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
 const RED   = NEGATIVE
 const GREEN = POSITIVE
 
-const C = {
-  bg:      'var(--sb-page)',
-  surface: 'var(--sb-card)',
-  border:  'var(--sb-border)',
-  textPri: 'var(--sb-ink-1)',
-  textDim: 'var(--sb-ink-2)',
-  textMuted: 'var(--sb-ink-3)',
-  accent:  'var(--sb-ink-1)',
-}
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -146,7 +139,7 @@ function MoneyCalendar({
         <button onClick={onPrevMonth} style={ROUND_BTN} title="Previous month">‹</button>
         <button onClick={onNextMonth} style={ROUND_BTN} title="Next month">›</button>
         <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.03em' }}>
-          {MONTH_NAMES[month]} <span style={{ color: 'var(--sb-ink-4)' }}>{year}</span>
+          {MONTH_NAMES[month]} <span style={{ color: 'var(--sb-ink-3)' }}>{year}</span>
         </span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           {chip('Out', monthOut > 0 ? acct(-monthOut) : '–', NEGATIVE_DEEP, NEGATIVE_TINT)}
@@ -156,7 +149,7 @@ function MoneyCalendar({
               style={{
                 display: 'inline-flex', alignItems: 'center', borderRadius: 'var(--sb-r-pill)',
                 padding: '4px 10px', background: 'var(--sb-accent-tint)', color: 'var(--sb-accent-deep)',
-                fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.04em',
+                fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.04em',
               }}>{unrated.join(' ')} ?</span>
           )}
         </span>
@@ -168,16 +161,16 @@ function MoneyCalendar({
         padding: 14, boxShadow: 'var(--sb-shadow-control)',
       }}>
         {/* Day headers */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 6, marginBottom: 6 }}>
           {['SAT','SUN','MON','TUE','WED','THU','FRI'].map(d => (
             <div key={d} style={{
-              textAlign: 'center' as const, fontSize: 'var(--sb-t-micro)', fontWeight: 700,
-              letterSpacing: '0.1em', color: 'var(--sb-ink-4)', padding: '2px 0 6px',
+              textAlign: 'center' as const, fontSize: 'var(--sb-t-meta)', fontWeight: 700,
+              letterSpacing: '0.1em', color: 'var(--sb-ink-3)', padding: '2px 0 6px',
             }}>{d}</div>
           ))}
         </div>
         {/* Cells grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 6 }}>
           {cells.map((day, i) => {
             if (!day) return <div key={i} style={{ minHeight: 78 }} />
             const dateStr = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
@@ -217,7 +210,7 @@ function MoneyCalendar({
                   </span>
                 )}
                 {payees.slice(0, 2).map((p, pi) => (
-                  <span key={pi} style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
+                  <span key={pi} style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
                 ))}
               </div>
             )
@@ -280,7 +273,7 @@ export function TodayScreen() {
     return (
       <TxRow
         key={tx.id}
-        icon={cat?.icon ?? acct?.emoji ?? (isExp ? '💳' : '💼')}
+        icon={cat?.icon ?? acct?.emoji ?? (isExp ? FALLBACK_EXPENSE_ICON : FALLBACK_INCOME_ICON)}
         tone={acct ? acct.color : isExp ? RED : GREEN}
         title={tx.payee?.trim() || cat?.name || 'Transaction'}
         marks={<>
@@ -326,7 +319,7 @@ export function TodayScreen() {
   const todayInc = todayTx.filter(t => t.type === 'income').reduce((s, t) => s + conv(t), 0)
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: C.bg, flexDirection: 'column' }}>
+    <div style={{ display: 'flex', height: '100%', background: C.page, flexDirection: 'column' }}>
 
       {/* Header bar */}
       <div style={{ flexShrink: 0, borderBottom: `var(--sb-border-width) solid ${C.border}`, padding: '12px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
@@ -367,16 +360,17 @@ export function TodayScreen() {
 
           {/* Which day the calendar is pointing at. A day from another month
               stops applying the moment the calendar is paged away from it. */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, textTransform: 'uppercase', color: C.ink3, letterSpacing: '0.8px' }}>
               {showingDay ? dayLabel(selectedDay) : MONTH_NAMES[viewMonth]}
             </span>
             {showingDay && (
               <button
+                className="sb-hit"
                 onClick={() => setSelectedDay('')}
                 style={{
                   marginLeft: 'auto', background: 'none', border: 'none', padding: 0,
-                  fontSize: 'var(--sb-t-meta)', color: C.textMuted, cursor: 'pointer', textDecoration: 'underline',
+                  fontSize: 'var(--sb-t-meta)', color: C.ink3, cursor: 'pointer', textDecoration: 'underline',
                 }}>
                 All of {MONTH_NAMES[viewMonth]}
               </button>
@@ -388,7 +382,7 @@ export function TodayScreen() {
               {feed.map(tx => renderTxRow(tx))}
             </div>
           ) : (
-            <div style={{ fontSize: 'var(--sb-t-body)', color: C.textMuted, textAlign: 'center', padding: '32px 0' }}>
+            <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink3, textAlign: 'center', padding: '32px 0' }}>
               {showingDay
                 ? `Nothing on ${dayLabel(selectedDay)}`
                 : `No transactions in ${MONTH_NAMES[viewMonth]}`}
@@ -412,7 +406,7 @@ export function TodayScreen() {
               }}>
                 <span style={{
                   fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
-                  textTransform: 'uppercase' as const, color: C.textMuted,
+                  textTransform: 'uppercase' as const, color: C.ink3,
                 }}>{label}</span>
                 <span style={{
                   marginLeft: 'auto', fontFamily: 'var(--sb-font-num)',
@@ -427,7 +421,7 @@ export function TodayScreen() {
                 {line('Out', acct(-exp, { currency: base }), RED)}
                 {line('Net', acct(net, { currency: base }), net >= 0 ? GREEN : RED, true)}
                 {waiting > 0 && (
-                  <div style={{ fontSize: 'var(--sb-t-micro)', color: RED, marginTop: 7, textAlign: 'right' }}>
+                  <div style={{ fontSize: 'var(--sb-t-meta)', color: RED, marginTop: 7, textAlign: 'right' }}>
                     {waiting} not paid yet, so not counted
                   </div>
                 )}
