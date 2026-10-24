@@ -5,9 +5,12 @@
 import { Check, Paperclip, CalendarDays, Flame, Trash2, User } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
 import type { Task, TaskType, Priority } from '@/types'
+import { companyIdOfTask } from '@/types'
+import { useFocusClass } from '@/lib/companyFocus'
 import { PRIORITY_META, TASK_TYPE_META } from '@/types'
 import { getVisibleUsers, loadVisibleCompanies, isOnFire } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { useProjectFocusClass } from '@/modules/projects/useProjectFocusClass'
 import { useDeliverableGate } from './DeliverablePrompt'
 import { openLabel, resolveTaskVisuals, TASK_TYPE_ORDER } from './taskVisuals'
 import { ControlSlot, OverlaySelect, OverlayTime } from './controls'
@@ -24,6 +27,8 @@ export function TaskRow({ task, onOpen, dense }: {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
   const { updateTask, toggleUrgent, deleteTask } = useTaskStore()
   const { requestComplete, prompt: deliverablePrompt } = useDeliverableGate()
+  const projectFocus = useProjectFocusClass()
+  const focusClass = useFocusClass()
   const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
   const owners = getVisibleUsers().filter(u => (task.companyId ? u.companyId === task.companyId : true))
   const companies = loadVisibleCompanies()
@@ -44,6 +49,7 @@ export function TaskRow({ task, onOpen, dense }: {
     <>
     <div
       data-task-node
+      className={focusClass(companyIdOfTask(task)) || projectFocus.task(task.projectId)}
       ref={setNodeRef}
       {...listeners}
       {...attributes}

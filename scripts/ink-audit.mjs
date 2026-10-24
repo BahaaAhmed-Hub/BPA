@@ -89,6 +89,89 @@ const BOOKING_SLOTS = (() => {
 // and a screen that has no account to file against is a screen that never
 // draws a draft.
 let outcomeFixture = false
+
+// Projects: a card in every state it has — overdue and late, personal and
+// work, idea / paused / done — and the tasks that give two of them progress.
+// Served only inside the Projects visits (`projectsFixture`) and torn out again
+// after, because the task store keeps what it was given when the server is
+// later empty, and the screens after this one should not inherit a project.
+let projectsFixture = false
+const PROJECTS = (() => {
+  const now = new Date().toISOString()
+  const day = n => new Date(Date.now() + n * 864e5).toLocaleDateString('en-CA')
+  const P = (id, name, o) => ({ id, user_id: session.user.id, name, kind: 'work', color: '#2F63A8', status: 'active',
+    company_id: null, start_date: null, target_date: null, notes: null, archived: false, created_at: now, updated_at: now, ...o })
+  const T = (n, title, o) => ({ id: `11111111-0000-4000-8000-0000000001${String(n).padStart(2, '0')}`, user_id: session.user.id,
+    company_id: null, title, description: null, quadrant: 'schedule', effort_minutes: null, due_date: null, status: 'todo',
+    delegated_to: null, done_looks_like: null, created_at: now, completed_at: null, planned_time: null, owner_id: null,
+    company_tag: null, completed: false, task_type: null, priority: null, board_status: null, calendar_id: null,
+    gcal_event_id: null, parent_task_id: null, captured_via: null, urgent: false, checklist: [], attachments: [], links: [],
+    project_id: null, milestone_id: null, ...o })
+  const a = 'aaaaaaaa-0000-4000-8000-0000000001', id = n => a + String(n).padStart(2, '0')
+  return {
+    projects: [
+      P(id(1), 'Launch the new website', { start_date: day(-40), target_date: day(-6), color: '#2F63A8' }),
+      P(id(2), 'Kitchen renovation', { kind: 'personal', status: 'paused', color: '#1D8A6A', target_date: day(40), budget_amount: 1000, budget_currency: 'EGP' }),   // under what its entry cost: the over state
+      P(id(3), 'Learn calligraphy', { kind: 'personal', status: 'idea', color: '#B03A73' }),
+      P(id(4), 'Annual report', { status: 'done', color: '#C2622B', target_date: day(-30) }),
+      // Named for the audit's own mail ("Message number 1"…), so Mail offers it.
+      P(id(5), 'Message number', { status: 'idea', color: '#7B84E8' }),
+    ],
+    project_milestones: [
+      { id: 'bbbbbbbb-0000-4000-8000-000000000101', project_id: id(1), user_id: session.user.id, title: 'Beta goes live', due_date: day(9), done: false, sort_order: 1 },
+      { id: 'bbbbbbbb-0000-4000-8000-000000000102', project_id: id(1), user_id: session.user.id, title: 'Design review', due_date: day(-4), done: true, sort_order: 0 },
+      { id: 'bbbbbbbb-0000-4000-8000-000000000103', project_id: id(1), user_id: session.user.id, title: 'Content freeze', due_date: day(0), done: false, sort_order: 2 },
+      { id: 'bbbbbbbb-0000-4000-8000-000000000104', project_id: id(1), user_id: session.user.id, title: 'Public launch', due_date: day(30), done: false, sort_order: 3 },
+      { id: 'bbbbbbbb-0000-4000-8000-000000000105', project_id: id(1), user_id: session.user.id, title: 'Press kit', due_date: null, done: false, sort_order: 4 },
+    ],
+    tasks: [
+      T(1, 'Design signed off', { project_id: id(1), completed: true, status: 'done', completed_at: now }),
+      T(2, 'Write the copy', { project_id: id(1), due_date: day(-2) }),
+      T(3, 'Ship it', { project_id: id(1), due_date: day(5) }),
+      T(4, 'Pick the tiles', { project_id: id(2) }),
+      // A task whose time block is on the calendar — the "Task block" row.
+      T(5, 'Prepare the review', { project_id: id(1), gcal_event_id: 'evt-block', due_date: day(0), planned_time: '11:00', effort_minutes: 45 }),
+    ],
+    // The audit's own calendar event (e1) linked to the project, and two more that
+    // are only known by their snapshot — upcoming and earlier.
+    // Habits the personal project serves, with a week of logs: five days ticked, and
+    // a part-day of a measured one.
+    habits: [
+      { id: 'hh000001', user_id: session.user.id, name: 'Write 30 min', emoji: '✍️', color: '#7F77DD', frequency: 'daily', is_active: true, created_at: now, type: 'boolean' },
+      { id: 'hh000002', user_id: session.user.id, name: 'Water', emoji: '💧', color: '#60A5FA', frequency: 'daily', is_active: true, created_at: now, type: 'quantity', goal: 8, unit: 'glasses' },
+    ],
+    habit_logs: [
+      ...[0, 1, 2, 3, 4].map(n => ({ habit_id: 'hh000001', user_id: session.user.id, date: day(-n), completed: true })),
+      { habit_id: 'hh000002', user_id: session.user.id, date: day(0), completed: false, quantity: 5 },
+    ],
+    project_links: [
+      // The personal project's money (snapshots: Finance is not served here, so an entry
+      // of this year reads as gone — which draws that state too), habits and books.
+      { id: 'cccccccc-0000-4000-8000-000000000301', project_id: id(2), user_id: session.user.id, kind: 'entry', ref_id: 'tx-a', meta: { payee: 'Tile shop', amount: 1200, currency: 'EGP', date: day(-3), paidAt: day(-3), type: 'expense' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000302', project_id: id(2), user_id: session.user.id, kind: 'entry', ref_id: 'tx-b', meta: { payee: 'Cabinet deposit', amount: 500, currency: 'EGP', date: day(-1), type: 'expense' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000303', project_id: id(2), user_id: session.user.id, kind: 'entry', ref_id: 'tx-c', meta: { payee: 'Refund', amount: 100, currency: 'EGP', date: day(-2), paidAt: day(-2), type: 'income' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000304', project_id: id(2), user_id: session.user.id, kind: 'entry', ref_id: 'tx-d', meta: { payee: 'Dubai fittings', amount: 100, currency: 'AED', date: day(-4), paidAt: day(-4), type: 'expense' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000305', project_id: id(2), user_id: session.user.id, kind: 'entry', ref_id: 'tx-old', meta: { payee: 'Old boiler', amount: 300, currency: 'EGP', date: '2023-03-01', paidAt: '2023-03-01', type: 'expense' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000311', project_id: id(2), user_id: session.user.id, kind: 'habit', ref_id: 'hh000001', meta: null, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000312', project_id: id(2), user_id: session.user.id, kind: 'habit', ref_id: 'hh000002', meta: null, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000313', project_id: id(2), user_id: session.user.id, kind: 'habit', ref_id: 'hh-gone', meta: null, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000321', project_id: id(2), user_id: session.user.id, kind: 'book', ref_id: '00000000-0000-4000-8000-000000000000', meta: null, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000322', project_id: id(2), user_id: session.user.id, kind: 'book', ref_id: '00000000-0000-4000-8000-000000000001', meta: null, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000323', project_id: id(2), user_id: session.user.id, kind: 'book', ref_id: 'b-gone', meta: null, created_at: now },
+      // Two of the audit's own threads: one filed, drawn on its row and listed under Mail.
+      { id: 'cccccccc-0000-4000-8000-000000000201', project_id: id(1), user_id: session.user.id, kind: 'thread', ref_id: `${ME}|m3`,
+        meta: { subject: 'Message number 3', fromName: 'Person 3', fromEmail: 'p3@teradix.com', at: Date.now() - 3600000, accountEmail: ME }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000202', project_id: id(1), user_id: session.user.id, kind: 'thread', ref_id: `${ME}|gone`,
+        meta: null, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000101', project_id: id(1), user_id: session.user.id, kind: 'event', ref_id: 'e1',
+        meta: { title: 'OWI Actions Review', start: new Date(new Date().setHours(13, 0, 0, 0)).toISOString(), end: new Date(new Date().setHours(14, 0, 0, 0)).toISOString(), allDay: false, calendarId: 'primary' }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000102', project_id: id(1), user_id: session.user.id, kind: 'event', ref_id: 'evt-future',
+        meta: { title: 'Launch party', start: day(7) + 'T18:00:00Z', end: day(7) + 'T20:00:00Z', allDay: false }, created_at: now },
+      { id: 'cccccccc-0000-4000-8000-000000000103', project_id: id(1), user_id: session.user.id, kind: 'event', ref_id: 'evt-old',
+        meta: { title: 'Planning session', start: day(-5) + 'T09:00:00Z', end: day(-5) + 'T10:00:00Z', allDay: false }, created_at: now },
+    ],
+  }
+})()
 const OUTCOME = (() => {
   const pad = n => String(n).padStart(2, '0')
   const now = new Date()
@@ -393,6 +476,7 @@ for (const theme of THEMES) {
     const t = /\/rest\/v1\/([a-z_]+)/.exec(u)?.[1]
     const GET = r.request().method() === 'GET'
     if (outcomeFixture && t && OUTCOME[t] && GET) return r.fulfill({ json: OUTCOME[t] })
+    if (projectsFixture && t && PROJECTS[t] && GET) return r.fulfill({ json: PROJECTS[t] })
     if (t && SHOPPING[t] && GET) return r.fulfill({ json: SHOPPING[t] })
     if (t && LIBRARY[t] && GET) return r.fulfill({ json: LIBRARY[t] })
     if (t === 'rpc' || u.includes('/rpc/has_module')) {
@@ -606,6 +690,128 @@ for (const theme of THEMES) {
     await page.waitForTimeout(800)
     if (await page.locator('[data-meeting-backlink="task"]').count() !== 1) throw new Error('the task shows no meeting chip')
   })
+  // Projects: the grid with a card in every state, the new-project dialog, and
+  // an existing one with its delete confirmation open (a danger-ink sentence).
+  if (!process.env.INK_ONLY || process.env.INK_ONLY.includes('Projects')) {
+    projectsFixture = true
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(2500)
+    const projectsTab = async () => {
+      await page.locator('[data-side-rail] button[aria-label="Projects"]').click()
+      await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 6000 })
+    }
+    await visit('Projects · grid', projectsTab)
+    await visit('Projects · a project, overview', async () => {
+      await page.locator('[data-project-card]').first().click()
+      await page.locator('[data-project-overview]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    // The lens: Focus pressed on the page, and the rail's chip that is the way out.
+    await visit('Projects · lens on, rail chip', async () => {
+      await page.locator('[data-project-focus]').click()
+      await page.locator('[data-project-lens]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await page.locator('[data-project-lens] button').click()
+    await visit('Projects · a project, tasks', async () => {
+      await page.getByRole('tab', { name: /^Tasks/ }).click()
+      await page.locator('[data-project-tasks]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await visit('Projects · a project, timeline', async () => {
+      await page.getByRole('tab', { name: 'Timeline' }).click()
+      await page.locator('[data-timeline-axis]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await visit('Projects · a project, calendar', async () => {
+      await page.getByRole('tab', { name: /^Calendar/ }).click()
+      await page.locator('[data-project-calendar]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await visit('Projects · a project, mail', async () => {
+      await page.getByRole('tab', { name: /^Mail/ }).click()
+      await page.locator('[data-project-mail]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await visit('Projects · back to the grid', async () => {
+      await page.getByRole('button', { name: 'Back to all projects' }).click()
+      await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 5000 })
+    })
+    // The personal-life tabs, on the personal project: money, habits, books.
+    const openPersonal = async tab => {
+      await page.locator('[data-project-card]', { hasText: 'Kitchen renovation' }).first().click()
+      await page.locator('[data-project-overview]').waitFor({ state: 'visible', timeout: 5000 })
+      await page.getByRole('tab', { name: tab }).click()
+    }
+    await visit('Projects · money', async () => { await openPersonal(/^Money/); await page.locator('[data-project-money]').waitFor({ state: 'visible', timeout: 6000 }) })
+    await visit('Projects · habits', async () => { await page.getByRole('tab', { name: /^Habits/ }).click(); await page.locator('[data-habit-week]').first().waitFor({ state: 'visible', timeout: 6000 }) })
+    await visit('Projects · books', async () => { await page.getByRole('tab', { name: /^Books/ }).click(); await page.locator('[data-book-progress]').first().waitFor({ state: 'visible', timeout: 6000 }) })
+    await page.getByRole('button', { name: 'Back to all projects' }).click()
+    await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 5000 })
+    await visit('Projects · new project', async () => {
+      await page.getByRole('button', { name: /New project/ }).click()
+      await page.locator('[data-project-dialog]').waitFor({ state: 'visible' })
+      await page.getByLabel('Start date').fill('2026-11-10')
+      await page.getByLabel('Target date').fill('2026-11-01')   // opens the date-problem line
+    }, 20)
+    await visit('Projects · edit, delete confirmation', async () => {
+      await page.keyboard.press('Escape')
+      await page.locator('[data-project-card]').first().click()
+      await page.locator('[data-project-overview]').waitFor({ state: 'visible', timeout: 5000 })
+      await page.getByRole('button', { name: /Edit/ }).click()
+      await page.locator('[data-project-dialog]').waitFor({ state: 'visible' })
+      await page.getByRole('button', { name: 'Delete' }).click()
+    }, 20)
+    await page.keyboard.press('Escape')
+    // The planner: the choices (no key in the audit, so the AI's own note shows), a template's
+    // reviewable draft, and the dating tab on a project with one undated task.
+    await visit('Projects · planner, choices', async () => {
+      await page.getByRole('button', { name: 'Back to all projects' }).click()   // the edit dialog left project 1's page open
+      await page.locator('[data-project-card]', { hasText: 'Kitchen renovation' }).first().click()
+      await page.locator('[data-project-overview]').waitFor({ state: 'visible', timeout: 5000 })
+      await page.getByRole('button', { name: /^Plan$|Plan$/ }).first().click()
+      await page.locator('[data-planner-nokey]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await visit('Projects · planner, a template draft', async () => {
+      await page.locator('[data-template="renovation"]').click()
+      await page.locator('[data-planner-preview]').waitFor({ state: 'visible', timeout: 5000 })
+    })
+    await visit('Projects · planner, dating tab', async () => {
+      await page.locator('[data-project-planner]').getByRole('button', { name: 'Back', exact: true }).click()
+      await page.getByRole('tab', { name: /Date my open tasks/ }).click()
+    })
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Back to all projects' }).click().catch(() => {})
+    await page.locator('[data-project-card]').first().waitFor({ state: 'visible', timeout: 5000 })
+    // The calendar's side of the link: the Project row in an event's own panel.
+    await visit('Calendar · an event\'s project row', async () => {
+      await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
+      await page.locator('.event-card').first().click()
+      await page.locator('[data-event-project]').first().waitFor({ state: 'visible', timeout: 8000 })
+    })
+    await page.keyboard.press('Escape')
+    // The same row while the event is still being composed.
+    await visit('Calendar · composer, project row', async () => {
+      await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
+      await page.getByRole('button', { name: /New event/i }).first().click()
+      await page.locator('[data-composer-project]').waitFor({ state: 'visible', timeout: 8000 })
+    })
+    await page.keyboard.press('Escape')
+    // The mail side: a filed row's chip, and the reader with its Project row and a suggestion.
+    await visit('Mail · reader, project row and suggestion', async () => {
+      await page.locator('[data-side-rail] button[aria-label="Mail"]').click()
+      await page.getByRole('button', { name: 'Message number 1', exact: true }).first().click()
+      await page.locator('[data-project-suggestion]').waitFor({ state: 'visible', timeout: 10000 })
+    })
+    // The same milestones on the calendar: a strip in the week, chips in the month.
+    await visit('Calendar · milestone markers, week', async () => {
+      await page.locator('[data-side-rail] button[aria-label="Calendar"]').click()
+      await page.locator('[data-cal-milestones]').waitFor({ state: 'visible', timeout: 8000 })
+    })
+    await visit('Calendar · milestone markers, month', async () => {
+      await page.getByRole('tab', { name: 'Month', exact: true }).click()
+      await page.locator('.cal-cell [data-milestone-marker]').first().waitFor({ state: 'visible', timeout: 8000 })
+    })
+    await page.getByRole('tab', { name: 'Week', exact: true }).click().catch(() => {})
+    projectsFixture = false
+    await page.evaluate(() => { for (const k of ['professor-tasks', 'professor-projects', 'professor-ui']) if (k !== 'professor-ui') localStorage.removeItem(k) })
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(2500)
+  }
   // INK_ONLY stops here: everything below depends on the screens before it, so
   // a filter on `visit` alone would leave later steps clicking in a page that
   // never got where they expect.

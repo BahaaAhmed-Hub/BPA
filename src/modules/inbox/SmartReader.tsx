@@ -32,6 +32,9 @@ import {
 //  - **Nothing here sends.** Reply, reply-all and forward hand over to the
 //    composer, which is the one place in the module that puts mail on the wire.
 
+import { ThreadProjectBar } from '@/modules/projects/ThreadProjectBar'
+import type { ThreadLike } from '@/modules/projects/threadLinks'
+
 export interface ReaderTarget {
   threadId: string
   account: MailAccount
@@ -175,9 +178,12 @@ function Field({ label, value }: { label: string; value: string }) {
 }
 
 export function SmartReader({
-  target, width, className, actions,
+  target, width, className, actions, thread,
 }: {
   target: ReaderTarget
+  /** What the thread is, for the project link. Absent when the reader was opened
+   *  on something the list does not hold. */
+  thread?: ThreadLike
   /** The panel's width, so the list beside it keeps a sensible one too. It is
    *  an inline style because it is a number this component is given — the
    *  class beside it is what a media query needs to override it, since an
@@ -313,6 +319,8 @@ export function SmartReader({
           <ExternalLink size={ICON.sm} strokeWidth={STROKE.rest} />
         </a>
       </div>
+
+      {thread && <ThreadProjectBar thread={thread} />}
 
       {/* ── What to do about it ──────────────────────────────────────────────
           The row's own decisions, on the thread you are actually reading.

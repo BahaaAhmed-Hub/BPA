@@ -9,7 +9,10 @@ import type { SmartThread, PassResult } from '@/lib/mailSmartSync'
 import type { SmartSection } from '@/lib/mailSmart'
 import { canNeedAction, type MailKind } from '@/lib/mailKinds'
 import { tagOfMail, companyOfMail } from '@/lib/mailCompany'
+import { useProjectStore } from '@/store/projectStore'
+import { dismissSuggestion, loadDismissed, suggestProject, threadMeta, threadRef } from '@/modules/projects/threadLinks'
 import { useFocusClass } from '@/lib/companyFocus'
+import { useProjectFocusClass } from '@/modules/projects/useProjectFocusClass'
 import { isBusinessAccount } from '@/lib/businessAccounts'
 import { useRailOverflow } from '@/lib/railOverflow'
 import { LOZENGE } from '../../components/SideRail'
@@ -94,9 +97,9 @@ function when(ms: number): string {
 /** The reply state as a word and a mark. Colour is never the only signal. */
 function ReplyChip({ t }: { t: SmartThread }) {
   const [Mark, word, ink] =
-    t.replyState === 'replied' ? [Check, 'Replied', 'var(--sb-positive)'] as const :
+    t.replyState === 'replied' ? [Check, 'Replied', 'var(--sb-positive-deep)'] as const :
     t.replyState === 'pending' ? [Clock, 'Pending', 'var(--sb-warning)'] as const :
-    [CircleAlert, 'No reply', 'var(--sb-negative)'] as const
+    [CircleAlert, 'No reply', 'var(--sb-negative-deep)'] as const
   return (
     <span title={
       t.replyState === 'replied' ? 'You wrote the most recent message in this thread.'
@@ -530,6 +533,7 @@ function Row({
   // counterparty-first resolver the chip beside the sender already uses — the
   // chip wants a label, the lens wants an id, and both come from one answer.
   const focusClass = useFocusClass()
+  const projectFocus = useProjectFocusClass()
   const lensCompany = useMemo(
     () => companyOfMail({ fromEmail: t.fromEmail, accountEmail: t.accountEmail })?.id,
     [t.fromEmail, t.accountEmail])
@@ -554,8 +558,23 @@ function Row({
     const label = accountLabel(t.accountEmail)
     return label === company?.label ? '' : label
   }, [manyAccounts, t.accountEmail, company?.label])
+  // The project it is filed under, if any — drawn on the row so a thread you have
+  // filed is visibly filed, without opening it.
+  const projectLinks = useProjectStore(s => s.links)
+  const allProjects = useProjectStore(s => s.projects)
+  const project = useMemo(() => {
+    const l = projectLinks.find(x => x.kind === 'thread' && x.refId === threadRef(t.accountEmail, t.threadId))
+    return l ? allProjects.find(p => p.id === l.projectId) : undefined
+  }, [projectLinks, allProjects, t.accountEmail, t.threadId])
+  // A thread with no project that clearly looks like one: offered, never filed unasked. The same
+  // deterministic rule as the reader's, so the two can never disagree about the same row.
+  const addProjectLink = useProjectStore(s => s.addLink)
+  const [dismissedSuggestions, setDismissedSuggestions] = useState(loadDismissed)
+  const suggestion = useMemo(
+    () => project ? null : suggestProject(t, threadRef(t.accountEmail, t.threadId), allProjects, projectLinks, dismissedSuggestions),
+    [project, t, allProjects, projectLinks, dismissedSuggestions])
   return (
-    <div className={focusClass(lensCompany)} style={{
+    <div className={focusClass(lensCompany) || projectFocus.thread(t.accountEmail, t.threadId)} style={{
       // `flex-start`, not the default stretch: a stretched checkbox centres its
       // own glyph against the whole row and drifts away from the title it
       // selects.
@@ -595,6 +614,38 @@ function Row({
               letterSpacing: '-0.015em', color: 'var(--sb-ink-1)', textAlign: 'left',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{t.subject}</button>
+          {project && (
+            <span data-thread-project-chip={project.id} title={`In the project ${project.name}`} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
+              fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 8px',
+              borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-2)', background: 'var(--sb-field)',
+              maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              <span aria-hidden style={{ width: 6, height: 6, transform: 'rotate(45deg)', background: project.color ?? 'var(--sb-ink-4)', flexShrink: 0 }} />
+              {project.name}
+            </span>
+          )}
+          {suggestion && (
+            <span data-thread-suggestion={suggestion.project.id} style={{
+              display: 'inline-flex', alignItems: 'center', flexShrink: 0, maxWidth: 170,
+              fontSize: 'var(--sb-t-micro)', fontWeight: 600, borderRadius: 'var(--sb-r-chip)',
+              color: 'var(--sb-ink-2)', border: 'var(--sb-border-width) dashed var(--sb-border)',
+            }}>
+              <button type="button" title={`Looks like ${suggestion.project.name} — ${suggestion.reason}. Press to file it there.`}
+                aria-label={`File under ${suggestion.project.name}: ${suggestion.reason}`}
+                onClick={e => { e.stopPropagation(); addProjectLink(suggestion.project.id, 'thread', threadRef(t.accountEmail, t.threadId), threadMeta(t)) }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, minWidth: 0, padding: '1px 4px 1px 8px', border: 'none',
+                  background: 'transparent', cursor: 'pointer', font: 'inherit', color: 'inherit',
+                }}>
+                <span aria-hidden style={{ width: 6, height: 6, transform: 'rotate(45deg)', flexShrink: 0, border: `1.5px solid ${suggestion.project.color ?? 'var(--sb-ink-4)'}` }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggestion.project.name}?</span>
+              </button>
+              <button type="button" title="Not this one" aria-label={`Not ${suggestion.project.name}`}
+                onClick={e => { e.stopPropagation(); dismissSuggestion(threadRef(t.accountEmail, t.threadId), suggestion.project.id); setDismissedSuggestions(loadDismissed()) }}
+                style={{ padding: '1px 6px 1px 2px', border: 'none', background: 'transparent', cursor: 'pointer', font: 'inherit', color: 'var(--sb-ink-3)' }}>×</button>
+            </span>
+          )}
           {company && (
             <span title={`${company.label}${boxLabel ? ` · ${boxLabel}` : ''}`} style={{
               display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,

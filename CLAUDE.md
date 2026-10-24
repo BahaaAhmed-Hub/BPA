@@ -19,6 +19,7 @@ rather than 4,392.
 | the assistant panel, its face, name and voice | `.claude/rules/assistant.md` |
 | the Library — shelf, quotes, reader, discover, tracker, releases | `.claude/rules/library.md` |
 | the rail, one ground, ink, overlays, companies, the lens, link previews | `.claude/rules/shell.md` |
+| projects — milestones, links across modules, project page | `.claude/rules/projects.md` |
 
 **If you are about to work in one of those areas and its file is not already in
 context, read it first.** The glob should load it; a pointer you can act on is
