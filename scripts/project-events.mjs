@@ -267,6 +267,8 @@ if (MODE === 'delete') {
   await openEvent('Kickoff meeting')
   ok('the event starts linked to Launch the site', (await sel().inputValue()) === P_A)
   await p.getByTitle('Delete this event').click()
+  // The app asks in its own dialog now (askConfirm), not the browser's confirm().
+  await p.getByRole('button', { name: 'Delete event', exact: true }).click()
   await p.waitForTimeout(2800)
   ok('Google was asked to delete it (and only that)', googleWrites.length === 1 && /DELETE .*evt-kickoff/.test(googleWrites[0]), JSON.stringify(googleWrites))
   ok('its link is gone from the store and the server', (await linksNow()).filter(l => l.kind === 'event').length === 0 && db.project_links.length === 0, JSON.stringify(db.project_links))
