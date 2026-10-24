@@ -134,7 +134,7 @@ const colour = async p => line(p).evaluate(el => getComputedStyle(el).color)
   const w = makeWorld(); w.fnStatus = 404
   const { p, ctx } = await launch(w, { config: groqC(), groq: { status: 429, expose: true, headers: groqHeaders(0, 14370, { 'retry-after': '23', 'x-ratelimit-reset-tokens': '23s' }) } })
   await say(p, 'hi')
-  ok('a 429 is explained: used up for now, opens again in 23s, and the limit is the account\'s', await until(async () => /used up its allowance for now — it opens again in 23s/.test(await win(p).innerText()) && /whole account, not this app/.test(await win(p).innerText()), 15000), (await win(p).innerText()).slice(-260))
+  ok('a 429 is explained: used up for now, opens again in 23s, and the limit is the account\'s', await until(async () => /used up its allowance for now — it opens again in 23s/.test(await win(p).innerText()) && /whole organisation, not just this app/.test(await win(p).innerText()), 15000), (await win(p).innerText()).slice(-260))
   ok('the header shows the limit as reached', await until(async () => (await line(p).count()) === 1 && (await line(p).getAttribute('data-limits-level')) === 'out', 6000))
   ok('CONTROL: nothing was spent by a refused request', Number(await counter(p).getAttribute('data-usage-tokens')) === 0)
   await ctx.close()

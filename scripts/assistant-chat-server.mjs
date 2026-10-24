@@ -291,11 +291,28 @@ for (const [status, message, want] of [[401, 'invalid x-api-key', /refused the k
   const db = makeDb(); user(db, 'hi')
   const out = await M.runStep(deps(db, fakeFetch([{ status: 429, message: 'Rate limit reached for model in organization on tokens per minute', headers: { 'retry-after': '23', 'x-ratelimit-limit-tokens': '6000', 'x-ratelimit-remaining-tokens': '0', 'x-ratelimit-reset-tokens': '23s' } }])), P(db, { provider: 'groq', model: 'm', key: 'gsk_1', tools: [] }))
   const a = db.s.rows.find(r => r.role === 'assistant')
-  ok(out === 'error' && /used up its allowance for now — it opens again in 23s/.test(a.content) && /whole account, not this app/.test(a.content), 'a 429 says how long to wait, from the provider\'s retry-after, and that the limit is the account\'s', a.content)
+  ok(out === 'error' && /used up its allowance for now — it opens again in 23s/.test(a.content) && /whole organisation, not just this app/.test(a.content), 'a 429 says how long to wait, from the provider\'s retry-after, and that the limit is the account\'s', a.content)
   ok(a.usage?.limits?.tokens?.remaining === 0 && a.usage.limits.retryAfter === 23 && a.usage.input === 0 && a.usage.output === 0, 'and the empty bucket is kept on the refused row, with ZERO tokens (nothing was spent)', JSON.stringify(a.usage))
   const db2 = makeDb(); user(db2, 'hi')
   await M.runStep(deps(db2, fakeFetch([{ status: 429, message: 'slow down' }])), P(db2))
   ok(/wait a moment and ask again/.test(db2.s.rows.find(r => r.role === 'assistant').content) && db2.s.rows.find(r => r.role === 'assistant').usage === undefined, 'CONTROL: a 429 with no headers falls back to "wait a moment", and records no reading')
+}
+
+// 6d ── THE REPORT: a Groq rate limit must not be called "out of credit"
+{
+  const REPORT = 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kmxnv3tbfj7v6xwq55m11kb5` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 1939, Requested 7776. Please try again in 3.567s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing'
+  const db = makeDb(); user(db, 'hi')
+  const out = await M.runStep(deps(db, fakeFetch([{ status: 429, message: REPORT }])), P(db, { provider: 'groq', model: 'openai/gpt-oss-120b', key: 'gsk_1', tools: [] }))
+  const a = db.s.rows.find(r => r.role === 'assistant')
+  ok(out === 'error' && !/out of credit|billing date/.test(a.content), 'a rate limit whose message ends in a "billing" link is not reported as out of credit', a.content)
+  ok(/allows 8,000, 1,939 were already used and this message needs about 7,776/.test(a.content) && /opens again in 4s/.test(a.content) && /nearly fills the whole allowance/.test(a.content), 'it gives the provider\'s numbers and the real remedy', a.content)
+  const db2 = makeDb(); user(db2, 'hi')
+  await M.runStep(deps(db2, fakeFetch([{ status: 400, message: 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.' }])), P(db2))
+  ok(/out of credit or past its billing date/.test(db2.s.rows.find(r => r.role === 'assistant').content), 'CONTROL: a genuine credit message is still reported as out of credit')
+  const db3 = makeDb(); user(db3, 'hi')
+  const f3 = fakeFetch([{ groq: { choices: [{ finish_reason: 'stop', message: { content: 'ok' } }] } }])
+  await M.runStep(deps(db3, f3), P(db3, { provider: 'groq', key: 'gsk_1', tools: [], maxTokens: 2048 }))
+  ok(f3.calls[0].body.max_tokens === 2048, 'the reply room the page asks for (2,048 on Groq) is what is sent — Groq counts it against the per-minute allowance')
 }
 
 // 7b ── the other two ways the chosen model stops working, each with its own sentence

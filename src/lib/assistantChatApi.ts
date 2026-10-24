@@ -87,7 +87,7 @@ export async function markInterrupted(rowId: number) {
 /** Ask the server for the next model step. Resolves once it has been ACCEPTED (not answered). */
 export async function requestStep(body: {
   conversationId: string; mode: 'turn' | 'continue'; provider: 'anthropic' | 'groq'
-  model: string; system: string; tools: unknown[]; key?: string
+  model: string; system: string; tools: unknown[]; key?: string; maxTokens?: number
 }): Promise<StepResult> {
   try {
     const { data, error } = await supabase.functions.invoke('assistant-chat', { body })
