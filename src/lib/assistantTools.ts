@@ -4,6 +4,7 @@ import { archiveMessage, extractBody, getThread, type GmailMessage } from './gma
 import { archiveThread, answerInvitation } from './mailActions'
 import { readInvite } from './invitations'
 import { readNeeds } from './mailNeeds'
+import { parseGuests } from '../../supabase/functions/_shared/guests.ts'
 import { APP_GUIDE, findGuide } from './appGuide'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { type ConnectedAccount } from './multiAccount'
@@ -282,6 +283,7 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
         description:    { type: 'string', description: 'Event description (optional)' },
         location:       { type: 'string', description: 'Location (optional)' },
         timezone:       { type: 'string', description: 'IANA timezone e.g. America/New_York (optional, default UTC)' },
+        guests:         { type: 'array', items: { type: 'string' }, description: 'Email addresses to invite (optional). Google emails each an invitation, so the app asks the user to approve first. Only real addresses the user gave — if you only have a name, ask for the address; never guess one.' },
         ...ACCT,
       },
       required: ['title', 'start_datetime', 'end_datetime'],
@@ -301,6 +303,7 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
         location:       { type: 'string' },
         timezone:       { type: 'string', description: 'IANA timezone (optional; the event\'s own is kept)' },
         confirm_notify_guests: { type: 'boolean', description: 'Only after the tool said the event has guests' },
+        add_guests:     { type: 'array', items: { type: 'string' }, description: 'Email addresses to ADD to the guest list (existing guests are kept). Google emails each an invitation, so the app asks the user to approve first. Only real addresses the user gave — never guess one.' },
         ...ACCT,
       },
       required: ['event_id'],
@@ -675,10 +678,15 @@ export async function executeTool(
     case 'create_calendar_event': {
       const token = await tokenForEmail(acctEmail, ctx)
       const tz    = (input.timezone as string) ?? 'UTC'
+      const { emails: invitees, rejected } = parseGuests(input.guests)
+      if (input.guests !== undefined && !invitees.length && rejected.length) {
+        throw new Error(`Not an email address: ${rejected.join(', ')}. Ask the user for their email; nothing was created.`)
+      }
       const event = await calPost<{ id: string; htmlLink: string }>(
         token,
-        '/calendars/primary/events',
+        `/calendars/primary/events${invitees.length ? '?sendUpdates=all' : ''}`,
         {
+          ...(invitees.length ? { attendees: invitees.map(email => ({ email })) } : {}),
           summary:     input.title       as string,
           description: input.description as string | undefined,
           location:    input.location    as string | undefined,
@@ -686,7 +694,8 @@ export async function executeTool(
           end:   { dateTime: input.end_datetime   as string, timeZone: tz },
         },
       )
-      return { success: true, event_id: event.id, link: event.htmlLink, message: `Event "${input.title as string}" created` }
+      const note = (invitees.length ? ` and ${invitees.join(', ')} invited` : '') + (rejected.length ? `. Not invited (not an email address): ${rejected.join(', ')} — ask for their email` : '')
+      return { success: true, event_id: event.id, link: event.htmlLink, message: `Event "${input.title as string}" created${note}` }
     }
 
     case 'update_calendar_event': {
@@ -694,9 +703,10 @@ export async function executeTool(
       const id = encodeURIComponent(input.event_id as string)
       const cur = await calGet<{ summary?: string; attendees?: { email: string; self?: boolean; organizer?: boolean }[]; start?: { dateTime?: string; date?: string; timeZone?: string }; end?: { dateTime?: string; date?: string; timeZone?: string } }>(token, `/calendars/primary/events/${id}`)
       const guests = (cur.attendees ?? []).filter(a => !a.self && !a.organizer)
+      const { emails: addGuests, rejected: badGuests } = parseGuests(input.add_guests)
       // Changing an event with guests tells them. That is somebody else's calendar and inbox, so it needs
       // the person's approval (the panel asks when `confirm_notify_guests` is set) — never a quiet side effect.
-      if (guests.length && input.confirm_notify_guests !== true) {
+      if (guests.length && input.confirm_notify_guests !== true && !addGuests.length) {
         return { needs_confirmation: true, message: `“${cur.summary ?? 'This event'}” has ${guests.length} other guest${guests.length === 1 ? '' : 's'}, and changing it tells them. If the user wants that, call update_calendar_event again with the same changes and confirm_notify_guests: true — the app will ask them to approve.` }
       }
       const patch: Record<string, unknown> = {}
@@ -718,9 +728,18 @@ export async function executeTool(
       } else if (typeof input.end_datetime === 'string') {
         patch.end = { dateTime: input.end_datetime, timeZone: tz }
       }
-      if (!Object.keys(patch).length) throw new Error('Nothing to change: give a title, time, description or location.')
-      await calPost(token, `/calendars/primary/events/${id}?sendUpdates=${guests.length ? 'all' : 'none'}`, patch, 'PATCH')
-      return { success: true, message: `Event updated${guests.length ? ` and ${guests.length} guest${guests.length === 1 ? '' : 's'} told` : ''}` }
+      if (addGuests.length) {
+        // A PATCH replaces the attendee list: keep who is on it (replies included) and add the new addresses.
+        const have = cur.attendees ?? []
+        const known = new Set(have.map(a => a.email.toLowerCase()))
+        patch.attendees = [...have, ...addGuests.filter(e => !known.has(e.toLowerCase())).map(email => ({ email }))]
+      }
+      if (!Object.keys(patch).length) {
+        throw new Error(badGuests.length ? `Not an email address: ${badGuests.join(', ')}. Ask the user for their email.` : 'Nothing to change: give a title, time, description, location or guests to add.')
+      }
+      const tell = guests.length > 0 || addGuests.length > 0
+      await calPost(token, `/calendars/primary/events/${id}?sendUpdates=${tell ? 'all' : 'none'}`, patch, 'PATCH')
+      return { success: true, message: `Event updated${guests.length ? ` and ${guests.length} guest${guests.length === 1 ? '' : 's'} told` : ''}${addGuests.length ? `; invited ${addGuests.join(', ')}` : ''}${badGuests.length ? `. Not invited (not an email address): ${badGuests.join(', ')} — ask for their email` : ''}` }
     }
 
     case 'delete_calendar_event': {

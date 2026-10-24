@@ -348,6 +348,8 @@ export class CalendarHub {
   }
 }
 
+export { parseGuests } from './guests.ts'
+
 function startKey(s: { dateTime?: string; date?: string }): string {
   return s.dateTime ?? (s.date ? `${s.date}T00:00` : '9999')
 }
