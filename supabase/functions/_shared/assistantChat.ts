@@ -18,7 +18,7 @@
 // History across turns is plain text (see 20260042): tool_use/tool_result pairs
 // from old turns are stale and the API wants them adjacent.
 
-import { parseLimits, waitText, type Limits } from './providerLimits.ts'
+import { isBillingMessage, isRateLimitMessage, parseLimits, rateLimitSentence, type Limits } from './providerLimits.ts'
 
 export type Provider = 'anthropic' | 'groq'
 
@@ -329,10 +329,17 @@ export function friendlyError(provider: Provider, e: unknown, key: string, model
   const msg = e instanceof Error ? e.message : String(e)
   const name = provider === 'groq' ? 'Groq' : 'Anthropic'
   const status = e instanceof ModelError ? e.status : 0
-  // Out of credit is a 400 (Anthropic) or a 402/429 (others), and "the model is gone" is a 404 or a 400 with words in it.
-  // Neither is the key's fault and neither is cured by asking again; both are cured in Settings → AI.
-  if (/credit balance|billing|payment required|insufficient[_ ]quota|quota (exceeded|has been)/i.test(msg) || status === 402) {
+  // Four different "no"s, four different cures — so the order matters and each test is specific:
+  //   out of credit      → top up, or use another provider (only on the provider's explicit words, or a 402)
+  //   a rate limit       → wait, or a model/plan with a higher limit (a 429; Groq's message even contains the word "billing")
+  //   a model not yours  → pick another in Settings → AI
+  //   a refused key      → fix the key
+  if (isBillingMessage(msg) || status === 402) {
     return `${name} says the account is out of credit or past its billing date. Top it up with ${name}, or choose another provider or model in Settings → AI. It said: ${msg.slice(0, 200)}`
+  }
+  if (isRateLimitMessage(msg, status)) {
+    const wait = e instanceof ModelError ? e.limits?.retryAfter : undefined
+    return rateLimitSentence(name, msg, wait)
   }
   if (status === 404 || /does not exist|do not have access|don.t have access|model_not_found|decommission|deprecated|no longer (available|supported)/i.test(msg)) {
     return `${name} says your key cannot use the model${model ? ` “${model}”` : ''}. Pick another in Settings → AI — the list there is what your key can use. It said: ${msg.slice(0, 200)}`
@@ -340,10 +347,6 @@ export function friendlyError(provider: Provider, e: unknown, key: string, model
   if (status === 401 || status === 403 || /invalid.api.key|authentication/i.test(msg)) {
     const tail = key ? `…${key.slice(-4)}` : '(none)'
     return `${name} refused the key that was sent (${tail}). Check Settings → AI. It said: ${msg.slice(0, 200)}`
-  }
-  if (status === 429) {
-    const wait = e instanceof ModelError ? e.limits?.retryAfter : undefined
-    return `${name} has used up its allowance for now${wait !== undefined ? ` — it opens again in ${waitText(wait)}` : ' — wait a moment and ask again'}. If this keeps happening the limit is for the whole account, not this app. It said: ${msg.slice(0, 200)}`
   }
   if (status >= 500) return `${name} had a problem on its side (${status}). Ask again in a moment.`
   return `Error: ${msg.slice(0, 300)}`

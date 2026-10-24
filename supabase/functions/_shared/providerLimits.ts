@@ -167,6 +167,70 @@ export function viewLimits(l: Limits, now = Date.now()): LimitsView | null {
   }
 }
 
+// ── What kind of "no" was it? ─────────────────────────────────────────────────────────────────────────────────────────
+//
+// Three different problems all end as "it did not answer", and the fix for each is different, so a wrong label sends the
+// person to the wrong place. This once called a Groq rate limit "out of credit": Groq's rate-limit message ends with an
+// upgrade link to `console.groq.com/settings/billing`, and the word "billing" was taken as proof of an unpaid account.
+// A word in a URL is not evidence. Credit is the problem only when the provider says so in terms.
+
+/** The account is out of credit (or the provider says payment is needed). Explicit phrases only — NOT the bare word "billing". */
+export const isBillingMessage = (msg: string): boolean =>
+  /credit balance|insufficient[_ ]quota|payment required|exceeded your current quota|out of credits?|billing_hard_limit/i.test(msg)
+
+/** A speed / volume limit that opens again by itself — per minute or per day. */
+export const isRateLimitMessage = (msg: string, status = 0): boolean =>
+  status === 429 || /rate.?limit|(tokens|requests) per (second|minute|hour|day)|\b(TPM|TPD|RPM|RPD)\b/i.test(msg)
+
+export interface RateLimitFacts {
+  what: 'tokens' | 'requests'
+  per: string
+  limit: number
+  used: number
+  requested: number
+  /** how long until it opens again, from "Please try again in 3.567s" */
+  retryMs: number | null
+  model: string | null
+}
+
+/** Groq: "Rate limit reached for model `x` in organization `org_…` service tier `on_demand` on tokens per minute (TPM):
+ *  Limit 8000, Used 1939, Requested 7776. Please try again in 3.567s." Null when it does not look like that. */
+export function parseRateLimitMessage(msg: string): RateLimitFacts | null {
+  const m = /on (tokens|requests) per (second|minute|hour|day)[^:]*:\s*Limit\s+(\d+),\s*Used\s+(\d+),\s*Requested\s+(\d+)/i.exec(msg)
+  if (!m) return null
+  const retry = /try again in\s+((?:\d+(?:\.\d+)?(?:ms|h|m|s))+)/i.exec(msg)
+  const model = /for model\s+`([^`]+)`/i.exec(msg)
+  return {
+    what: m[1].toLowerCase() as 'tokens' | 'requests', per: m[2].toLowerCase(),
+    limit: Number(m[3]), used: Number(m[4]), requested: Number(m[5]),
+    retryMs: retry ? parseDuration(retry[1]) : null, model: model ? model[1] : null,
+  }
+}
+
+/**
+ * The sentence for a rate limit. With the provider's own numbers it says what was hit, how much was already used, what this
+ * message needed, when it opens again — and whether the message alone nearly fills the allowance (then waiting will not
+ * help and a model with a higher limit will).
+ */
+export function rateLimitSentence(name: string, msg: string, retryAfterSeconds?: number): string {
+  const f = parseRateLimitMessage(msg)
+  const waitMs = retryAfterSeconds !== undefined ? retryAfterSeconds * 1000 : f?.retryMs ?? null
+  const opens = waitMs !== null ? ` It opens again in ${waitText(waitMs / 1000)}.` : ''
+  const account = ' The limit is for the whole organisation, not just this app.'
+  if (!f) return `${name} has used up its allowance for now${waitMs !== null ? ` — it opens again in ${waitText(waitMs / 1000)}` : ' — wait a moment and ask again'}.${account} It said: ${msg.slice(0, 200)}`
+  const n = (x: number) => x.toLocaleString('en-US')
+  const where = f.model ? ` for ${f.model}` : ''
+  if (f.what === 'requests') {
+    return `${name}’s per-${f.per} request limit${where} is used up: ${n(f.used)} of ${n(f.limit)}.${opens} Wait for it to open, choose another model in Settings → AI, or upgrade the plan with ${name}.${account}`
+  }
+  const nearlyFull = f.requested >= f.limit * 0.9
+  return `${name} hit its per-${f.per} limit on tokens${where}: it allows ${n(f.limit)}, ${n(f.used)} were already used and this message needs about ${n(f.requested)} (that includes the room kept for the reply).${opens} `
+    + (nearlyFull
+      ? `A single message this size nearly fills the whole allowance, so it will keep failing on this model and plan — choose a model with a higher limit in Settings → AI, or upgrade the plan with ${name}.`
+      : `Wait for it to open, choose a model with a higher limit in Settings → AI, or upgrade the plan with ${name}.`)
+    + account
+}
+
 /** "just now", "42s ago", "3m ago" — how old the provider's word is. */
 export function ageWords(ms: number): string {
   if (ms < 5000) return 'just now'

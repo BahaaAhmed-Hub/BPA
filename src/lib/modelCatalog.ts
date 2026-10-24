@@ -21,9 +21,12 @@ export type Probe =
 export const isModelMissingMessage = (msg: string): boolean =>
   /does not exist|do not have access|don.t have access|model_not_found|not found|decommission|deprecated|no longer (available|supported)|has been (retired|removed)/i.test(msg)
 
-/** Credit / billing — the other way "the model I chose" stops working, and the fix is different. */
-export const isBillingMessage = (msg: string): boolean =>
-  /credit balance|billing|payment required|insufficient[_ ]quota|quota (exceeded|has been)|plans? & billing/i.test(msg)
+/** How much room to leave for a Groq reply. Groq counts the room a request RESERVES for its answer (`max_tokens`) against the
+ *  per-minute token allowance up front — measured in a real message: "Limit 8000, Used 1939, Requested 7776" with 4,096
+ *  reserved — so reserving more than answers need turns a small plan's allowance into a wall. Answers here are a table and a
+ *  few lines; an answer that does hit this is marked as cut off, not passed off as whole. Claude has no such per-reply
+ *  accounting, so it keeps 4,096. */
+export const GROQ_MAX_REPLY_TOKENS = 2048
 
 /** Groq lists speech, guard and embedding models beside the chat ones; none of those can answer a message. */
 const NOT_CHAT = /whisper|tts|speech|guard|safeguard|playai|orpheus|embed|moderation|transcri|rerank/i

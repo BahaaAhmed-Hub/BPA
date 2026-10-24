@@ -76,6 +76,28 @@ const get = h => name => h[name.toLowerCase()] ?? null
   ok(back.tokens.remaining === 10 && back.tokens.resetAt === NOW + 5000 && back.provider === 'groq', 'a reading survives being stored as JSON and read back')
   ok(L.limitsFromRow({ provider: 'groq', at: 1, tokens: { limit: 0, remaining: 5 } }) === null && L.limitsFromRow({ provider: 'groq', at: 1, tokens: { limit: 10, remaining: -1 } }) === null, 'a stored bucket that makes no sense is dropped')
 }
+// ── what kind of "no" was it? (the report: a Groq rate limit labelled "out of credit") ──
+{
+  const REPORT = 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kmxnv3tbfj7v6xwq55m11kb5` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 1939, Requested 7776. Please try again in 3.567s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing'
+  ok(!L.isBillingMessage(REPORT), 'THE REPORT: Groq\'s rate-limit message is NOT "out of credit", although its closing link says "billing"')
+  ok(L.isRateLimitMessage(REPORT) && L.isRateLimitMessage('anything', 429) && L.isRateLimitMessage('Rate limit reached'), 'it IS a rate limit (by its words, and by a 429)')
+  ok(/old/.test('old') && /credit balance|billing|payment required|insufficient[_ ]quota|quota (exceeded|has been)|plans? & billing/i.test(REPORT), 'CONTROL: the old test (any "billing") DID call it that — so this test can fail')
+  for (const m of ['Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.', 'You exceeded your current quota, please check your plan and billing details.', 'insufficient_quota', 'Payment required', 'billing_hard_limit_reached']) ok(L.isBillingMessage(m), `a genuine credit problem is still recognised: "${m.slice(0, 48)}"`)
+  ok(!L.isBillingMessage('Invalid API Key') && !L.isBillingMessage('The model `x` does not exist or you do not have access to it.') && !L.isRateLimitMessage('Invalid API Key', 401), 'a bad key and a missing model are neither')
+  const f = L.parseRateLimitMessage(REPORT)
+  ok(f.what === 'tokens' && f.per === 'minute' && f.limit === 8000 && f.used === 1939 && f.requested === 7776 && f.retryMs === 3567 && f.model === 'openai/gpt-oss-120b', 'the facts are read out of the message: limit, used, requested, when it opens, which model', JSON.stringify(f))
+  ok(L.parseRateLimitMessage('Rate limit reached for model `m` on requests per day (RPD): Limit 14400, Used 14400, Requested 1. Please try again in 2h3m10s.').what === 'requests' && L.parseRateLimitMessage('Rate limit reached for model `m` on requests per day (RPD): Limit 14400, Used 14400, Requested 1. Please try again in 2h3m10s.').retryMs === 7390000, 'the daily request form, and a long wait, read too')
+  ok(L.parseRateLimitMessage('Rate limit reached. Slow down.') === null && L.parseRateLimitMessage('') === null, 'a rate-limit message with no numbers is not parsed (and nothing is invented)')
+  const s = L.rateLimitSentence('Groq', REPORT)
+  ok(/per-minute limit on tokens for openai\/gpt-oss-120b/.test(s) && /allows 8,000, 1,939 were already used and this message needs about 7,776/.test(s) && /opens again in 4s/.test(s), 'the sentence says what was hit and the numbers, in words', s)
+  ok(/nearly fills the whole allowance, so it will keep failing/.test(s) && /choose a model with a higher limit in Settings → AI/.test(s) && /whole organisation, not just this app/.test(s), '…and, because this message alone is 97% of the allowance, that waiting will not fix it and a bigger model will')
+  ok(!/out of credit|billing date/.test(s), 'and it never says "out of credit"')
+  const small = L.rateLimitSentence('Groq', REPORT.replace('Requested 7776', 'Requested 900'))
+  ok(!/nearly fills/.test(small) && /Wait for it to open/.test(small), 'CONTROL: a small message that merely landed in a busy minute is told to wait, not that it can never work')
+  ok(/per-day request limit for m is used up: 14,400 of 14,400/.test(L.rateLimitSentence('Groq', 'Rate limit reached for model `m` on requests per day (RPD): Limit 14400, Used 14400, Requested 1. Please try again in 2h3m10s.')), 'the daily request limit has its own wording')
+  ok(/opens again in 23s/.test(L.rateLimitSentence('Groq', REPORT, 23)) && !/opens again in 4s/.test(L.rateLimitSentence('Groq', REPORT, 23)), 'a retry-after header, when there is one, wins over the message\'s own estimate')
+  ok(/wait a moment and ask again/.test(L.rateLimitSentence('Groq', 'slow down')) && /whole organisation/.test(L.rateLimitSentence('Groq', 'slow down')), 'with nothing to parse it falls back to a plain sentence')
+}
 ok(L.waitText(30) === '30s' && L.waitText(90) === '1m 30s' && L.waitText(3600) === '1h' && L.waitText(0) === 'under a second', 'wait times in words')
 ok(L.waitText(179.56) === '3m' && L.waitText(119.4) === '2m' && L.waitText(59.2) === '1m' && L.waitText(3599.2) === '1h' && L.waitText(5400) === '1h 30m', 'a duration never reads "2m 60s": whole seconds first, then split into units', [179.56, 119.4, 59.2, 3599.2, 5400].map(L.waitText).join())
 console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0)

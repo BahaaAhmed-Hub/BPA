@@ -69,7 +69,7 @@ const KEY = 'gsk_abcdefghij'
 {
   ok(C.isModelMissingMessage('The model `x` does not exist or you do not have access to it.') && C.isModelMissingMessage('model_not_found') && C.isModelMissingMessage('This model has been decommissioned'), 'missing-model wording is recognised')
   ok(!C.isModelMissingMessage('Invalid API Key') && !C.isModelMissingMessage('Rate limit reached for model x'), 'CONTROL: a bad key and a rate limit are not "missing model"')
-  ok(C.isBillingMessage('Your credit balance is too low to access the Anthropic API') && C.isBillingMessage('You exceeded your current quota, please check your plan and billing details') && !C.isBillingMessage('Invalid API Key'), 'billing wording is recognised, a bad key is not')
+  // (billing / rate-limit wording moved to the shared module and is tested in assistant-limits.mjs)
 }
 
 // fallback ordering

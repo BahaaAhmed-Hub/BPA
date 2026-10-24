@@ -22,7 +22,7 @@ const anthropicText = t => ev('message_start', { type: 'message_start', message:
 
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] })
 
-async function launch({ config, module = 'morning', usable = ['openai/gpt-oss-120b', 'llama-3.1-8b-instant', LONG], billing = false, width = 1280 } = {}) {
+async function launch({ config, module = 'morning', usable = ['openai/gpt-oss-120b', 'llama-3.1-8b-instant', LONG], billing = false, limitMsg = '', width = 1280 } = {}) {
   const seen = { groqChat: [], groqList: 0, anthropic: [], anthropicList: 0 }
   const ctx = await b.newContext({ viewport: { width, height: 1000 } })
   await ctx.route('**://placeholder.supabase.co/**', r => {
@@ -39,6 +39,7 @@ async function launch({ config, module = 'morning', usable = ['openai/gpt-oss-12
     const j = (x, status = 200) => r.fulfill({ status, contentType: 'application/json', headers: CORS, body: JSON.stringify(x) })
     if (u.pathname.endsWith('/models')) { seen.groqList++; return j({ data: [DEAD, 'openai/gpt-oss-120b', 'llama-3.1-8b-instant', LONG, 'whisper-large-v3', 'llama-guard-4-12b', 'playai-tts'].map(id => ({ id, active: true })) }) }
     const body = JSON.parse(q.postData() || '{}'); seen.groqChat.push(body)
+    if (limitMsg && body.max_tokens !== 1) return j({ error: { message: limitMsg } }, 429)
     if (billing) return j({ error: { message: 'You exceeded your current quota, please check your plan and billing details.' } }, 429)
     if (!usable.includes(body.model)) return j({ error: { message: `The model \`${body.model}\` does not exist or you do not have access to it.` } }, 404)
     return j({ choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: `Hello from ${body.model}` } }] })
@@ -128,6 +129,20 @@ const openAI = async p => { await p.locator('main button').filter({ hasText: /^A
   await ctx.close()
 }
 
+// ═══ 3b ── THE REPORT: a Groq rate limit (whose message ends in a "billing" link) is a rate limit ═══
+{
+  const REPORT = 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kmxnv3tbfj7v6xwq55m11kb5` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 1939, Requested 7776. Please try again in 3.567s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing'
+  const { p, ctx, seen } = await launch({ config: groqCfg('openai/gpt-oss-120b'), usable: ['openai/gpt-oss-120b'], limitMsg: REPORT })
+  await say(p, 'hello')
+  ok('it is explained as a rate limit, with the provider\'s numbers and the real remedy', await until(async () => /per-minute limit on tokens for openai\/gpt-oss-120b: it allows 8,000, 1,939 were already used and this message needs about 7,776/.test(await win(p).innerText()) && /opens again in 4s/.test(await win(p).innerText()) && /nearly fills the whole allowance/.test(await win(p).innerText()), 15000), (await win(p).innerText()).slice(-420))
+  ok('and it does NOT say "out of credit" (the bug in the report)', !/out of credit|billing date/.test(await win(p).innerText()))
+  // (the control — a genuine quota/credit refusal still reads "out of credit" — is scenario 3 directly above)
+  ok('the model was left alone (a rate limit says nothing about whether the model is yours)', (await saved(p)).groqModel === 'openai/gpt-oss-120b' && seen.groqList === 0)
+  const real = seen.groqChat.filter(c => c.max_tokens !== 1)
+  ok('the room reserved for the reply is 2,048, not 4,096 — Groq counts it against the per-minute allowance (this was 7,776 "requested")', real.length >= 1 && real.every(c => c.max_tokens === 2048), JSON.stringify(real.map(c => c.max_tokens)))
+  await ctx.close()
+}
+
 // ═══ 4 — the chat window names the model, and a long one is cut with an ellipsis ═══
 {
   const { p, ctx } = await launch({ config: groqCfg(LONG) })
@@ -170,6 +185,7 @@ const openAI = async p => { await p.locator('main button').filter({ hasText: /^A
   // the app asks Claude things of its own too (Today); the assistant's request is the one that carries its tools
   await until(async () => seen.anthropic.some(r => r.tools?.length), 12000)
   const chat = seen.anthropic.filter(r => r.tools?.length)
+  ok('Claude keeps its full 4,096-token reply room (only Groq is capped)', seen.anthropic.filter(r => r.tools?.length).every(r => r.max_tokens === 4096), JSON.stringify(seen.anthropic.map(r => r.max_tokens)))
   ok('and the assistant\'s request went to the chosen model, not the default', chat.length >= 1 && chat.every(r => r.model === 'claude-haiku-5-5'), JSON.stringify(chat.map(r => r.model)))
   ok('the app\'s other Claude calls follow the choice too', seen.anthropic.filter(r => !r.tools?.length).every(r => r.model === 'claude-haiku-5-5'), JSON.stringify(seen.anthropic.map(r => r.model)))
   // back to the default

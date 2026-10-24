@@ -415,3 +415,29 @@ ok/low/out colours, headers hidden by CORS → no line and the tokens still coun
 shown on another device, wrong provider hidden, refilled bucket, layout beside a long model name, the Settings row).
 **Not exercised: a real Groq/Anthropic reply (the stand-ins send the documented names).**
 
+## A rate limit is not "out of credit" — a word in a URL is not evidence
+"Groq says the account is out of credit or past its billing date … It said: Rate limit reached for model `openai/gpt-oss-120b` …
+tokens per minute (TPM): Limit 8000, Used 1939, Requested 7776." The classifier looked for the bare word **billing**, and Groq's
+rate-limit message ends *"Upgrade to Dev Tier today at …/settings/billing"* — so every Groq rate limit read as an unpaid account,
+sending the person to top up an account that was fine. Measured, not assumed: the old regex does **not** match the visible text and
+**does** match it with that closing line.
+- **One shared classifier** (`_shared/providerLimits.ts`, used by the function *and* the page): `isBillingMessage` is explicit
+  phrases only (`credit balance`, `insufficient_quota`, `payment required`, `exceeded your current quota`, `out of credit(s)`,
+  `billing_hard_limit`); `isRateLimitMessage` is a 429 or the words (`rate limit`, `tokens/requests per minute/day`, TPM/TPD/RPM/RPD).
+  **Order matters**: credit first (on its own words or a 402), then the rate limit, then a model the key cannot use, then a refused key.
+- **The rate-limit sentence uses the provider's numbers** (`parseRateLimitMessage`, `rateLimitSentence`): what was hit and for which
+  model, the allowance, how much was already used, what *this message* needs, when it opens again — and if the message alone is ≥ 90% of
+  the allowance it says waiting will not fix it and a model with a higher limit will. A `retry-after` header beats the message's own
+  estimate; with nothing to parse it falls back to a plain sentence. It always says the limit is the organisation's, not this app's.
+- **Groq counts the room a request RESERVES for its answer (`max_tokens`) against the per-minute allowance up front** — inferred from
+  the report (7,776 requested with 4,096 reserved leaves ~3.7k of input), not confirmed in Groq's docs from here. Groq requests now
+  reserve `GROQ_MAX_REPLY_TOKENS = 2048` (page and function; Claude keeps 4,096). An answer that still hits it is marked as cut off.
+  The remaining weight is the request itself: ~60 tool definitions plus the system prompt are most of the ~3.7k input tokens, so a
+  small plan (8,000 TPM) still has little headroom for a second message in the same minute — pruning the tool list per message is the
+  next lever if that bites.
+Tests: `assistant-limits.mjs` (the exact reported message — not billing, is a rate limit, facts parsed, sentence with the numbers,
+the nearly-full vs busy-minute cases; **control: the old regex does classify it as billing**; genuine credit messages still do),
+`assistant-chat-server.mjs` (the same through `runStep`; a credit message still reads as credit; the requested reply room reaches the
+request), `assistant-model-choice.mjs` (in the real panel: the explanation, not "out of credit", the model left alone, 2,048 on Groq
+and 4,096 on Claude).
+

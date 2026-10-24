@@ -22,10 +22,10 @@ import { cleanName, labelOf, loadPersona as loadPersonaNow, NAME_MAX, savePerson
 import { AssistantAvatar } from './AssistantAvatar'
 import { ModelBadge, type BadgeUsage } from './ModelBadge'
 import { LimitsLine } from './LimitsLine'
-import { ageWords, limitsFromRow, parseLimits, viewLimits, waitText, type Limits } from '@/lib/providerLimits'
+import { ageWords, isBillingMessage, isRateLimitMessage, limitsFromRow, parseLimits, rateLimitSentence, viewLimits, type Limits } from '@/lib/providerLimits'
 import { counterText, estimateOutputTokens, groupByModel, summarise, usageFromRow, type ModelUsage } from '@/lib/aiUsage'
 import { AI_CONFIG_EVENT, claudeModelOf, saveAIConfig } from '@/modules/settings/model'
-import { ensureWorkingGroqModel, isBillingMessage, isModelMissingMessage } from '@/lib/modelCatalog'
+import { ensureWorkingGroqModel, GROQ_MAX_REPLY_TOKENS, isModelMissingMessage } from '@/lib/modelCatalog'
 import { notify } from '@/lib/undo'
 import { clampWidth, loadChosenWidth, rightGap, saveWidth, widthFromDrag, DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH } from '@/lib/assistantWindow'
 import { ASK_EVENT, takePendingAsk } from '@/lib/assistantBridge'
@@ -698,6 +698,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     return {
       conversationId, mode, provider: groq ? 'groq' as const : 'anthropic' as const,
       model: groq ? cfg.groqModel : claudeModelOf(cfg),
+      maxTokens: groq ? GROQ_MAX_REPLY_TOKENS : undefined,
       system: buildSystemPrompt(userName, today, samuraiActive, persona.name),
       tools: (groq ? toGroqTools(ASSISTANT_TOOLS) : ASSISTANT_TOOLS) as unknown[],
       key: (groq ? cfg.groqKey : cfg.anthropicKey) || undefined,
@@ -911,7 +912,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.groqKey}` },
         body: JSON.stringify({
-          model: cfg.groqModel, max_tokens: 4096,
+          model: cfg.groqModel, max_tokens: GROQ_MAX_REPLY_TOKENS,
           messages: [{ role: 'system', content: system }, ...msgs],
           tools: toGroqTools(ASSISTANT_TOOLS),
           tool_choice: 'auto',
@@ -1050,8 +1051,8 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
         ? `${label} refused the key that was sent: ${maskKey(sent)}. Check Settings → AI. It said: ${msg.slice(0, 200)}`
         : isBillingMessage(msg)
           ? `${label} says the account is out of credit or past its billing date. Top it up with ${label}, or choose another provider or model in Settings → AI. It said: ${msg.slice(0, 200)}`
-          : /\b429\b|rate.?limit/i.test(msg)
-            ? `${label} has used up its allowance for now${legacyLimitsRef.current?.retryAfter !== undefined ? ` — it opens again in ${waitText(legacyLimitsRef.current.retryAfter)}` : ' — wait a moment and ask again'}. If this keeps happening the limit is for the whole account, not this app. It said: ${msg.slice(0, 200)}`
+          : isRateLimitMessage(msg)
+            ? rateLimitSentence(label, msg, legacyLimitsRef.current?.retryAfter)
           : isModelMissingMessage(msg)
             ? `${label} says your key cannot use the model “${model}”. Pick another in Settings → AI — the list there is what your key can use. It said: ${msg.slice(0, 200)}`
             : `Error: ${msg}`
