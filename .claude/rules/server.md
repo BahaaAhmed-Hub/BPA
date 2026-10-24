@@ -353,3 +353,17 @@ key). `_shared/assistantChat.ts` is pure and dependency-injected so Node tests i
 checks the conversation is the caller's, resolves the key and backs `ChatDb` with Supabase. Full behaviour and tests:
 `assistant.md` ("The conversation lives on the server").
 
+
+## Bots — inviting people to an event, and why that asks first
+Neither bot could invite anyone: `add_calendar_event` / `update_calendar_event` had no guest field at all, so the model
+had nowhere to put an address and either dropped the request or claimed it was done.
+- **`guests` on create, `add_guests` on update** (both bots). `parseGuests` in `_shared/googleCalendars.ts` keeps real
+  addresses, de-dupes case-insensitively, strips `mailto:`, and returns what it refused. A **name is never sent to Google**
+  as an attendee, and the reply says "Not invited … ask for their email"; the prompt says to ask rather than guess.
+- **Google sends the invitation** (`sendUpdates=all`, only when there are guests). Update **reads the current attendees
+  and appends** — a PATCH replaces the list, so sending just the new address would uninvite everyone already on it.
+- **It is an outward act, so it is gated** (`assistantGate.ts`): `add_calendar_event` with guests, or
+  `update_calendar_event` with `add_guests`, parks for ✅ Approve (Telegram) / "say yes" (Siri) showing the real addresses.
+  Without guests neither is asked about, as before. The app's own `create_calendar_event` is a separate tool and unchanged.
+`scripts/bots-invite-guests.mjs` — 29 assertions on the real functions lifted from both files against a fake Google that
+can refuse. **Not exercised: a live Telegram tap, a live Siri Shortcut, or the model choosing the argument.**

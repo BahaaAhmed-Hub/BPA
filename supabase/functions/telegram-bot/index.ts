@@ -19,7 +19,7 @@
  */
 
 import { calledLine, personaName } from '../_shared/persona.ts'
-import { CalendarHub, eventLine } from '../_shared/googleCalendars.ts'
+import { CalendarHub, eventLine, parseGuests } from '../_shared/googleCalendars.ts'
 import { approvalText, gateCall, KIT_RULES, KIT_TOOLS, runKitTool, takeAction, type GateCtx, type Parked } from '../_shared/botKit.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -587,8 +587,14 @@ async function toolAddCalendarEvent(userId: string, args: Record<string, unknown
   if (args.description) event.description = args.description
   if (args.location)    event.location    = args.location
 
+  // Guests: Google emails the invitation itself (sendUpdates=all). The gate has
+  // already put these addresses in front of the person before this runs.
+  const { emails: guests, rejected } = parseGuests(args.guests)
+  if (guests.length) event.attendees = guests.map(email => ({ email }))
+  const notify = guests.length ? '?sendUpdates=all' : ''
+
   const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(target.calendarId)}/events`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(target.calendarId)}/events${notify}`,
     {
       method:  'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -608,7 +614,9 @@ async function toolAddCalendarEvent(userId: string, args: Record<string, unknown
     : (created.start?.date ?? start)
   // Say which calendar it landed on — with several in play, "created" alone
   // does not tell you whether it went where you meant.
-  return `Created "${created.summary ?? title}" on ${when} in ${target.name}.`
+  const invited = guests.length ? ` Invited ${guests.join(', ')}.` : ''
+  const skipped = rejected.length ? ` Not invited (not an email address): ${rejected.join(', ')} — ask for their email.` : ''
+  return `Created "${created.summary ?? title}" on ${when} in ${target.name}.${invited}${skipped}`
 }
 
 async function toolUpdateCalendarEvent(userId: string, args: Record<string, unknown>): Promise<string> {
@@ -630,7 +638,10 @@ async function toolUpdateCalendarEvent(userId: string, args: Record<string, unkn
     const e = args.end as string
     patch.end = e.includes('T') ? { dateTime: e } : { date: e }
   }
-  if (!Object.keys(patch).length) return 'Nothing to update.'
+  const { emails: addGuests, rejected: badGuests } = parseGuests(args.add_guests)
+  if (!Object.keys(patch).length && !addGuests.length) {
+    return badGuests.length ? `Not an email address: ${badGuests.join(', ')} — ask for their email.` : 'Nothing to update.'
+  }
 
   // An event id means nothing without its calendar, and the id may come back
   // bare — so it is looked up rather than assumed to be on the default one.
@@ -638,8 +649,21 @@ async function toolUpdateCalendarEvent(userId: string, args: Record<string, unkn
   if (!found) return "Couldn't find that event on any of your calendars. Ask for the calendar again and use the id it gives."
   if (!found.calendar.writable) return `"${found.calendar.name}" is read-only for you, so that event can't be edited.`
 
+  // A PATCH replaces the attendee list, so the current one is read and added to
+  // — sending only the new address would uninvite everyone already on it.
+  if (addGuests.length) {
+    const cur = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(found.calendar.calendarId)}/events/${encodeURIComponent(found.eventId)}`,
+      { headers: { Authorization: `Bearer ${found.token}` } },
+    )
+    if (!cur.ok) return "Couldn't read that event's guest list, so nobody was invited."
+    const have = ((await cur.json()) as { attendees?: Record<string, unknown>[] }).attendees ?? []
+    const known = new Set(have.map(a => String(a.email ?? '').toLowerCase()))
+    patch.attendees = [...have, ...addGuests.filter(e => !known.has(e.toLowerCase())).map(email => ({ email }))]
+  }
+
   const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(found.calendar.calendarId)}/events/${encodeURIComponent(found.eventId)}`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(found.calendar.calendarId)}/events/${encodeURIComponent(found.eventId)}${addGuests.length ? '?sendUpdates=all' : ''}`,
     {
       method:  'PATCH',
       headers: { Authorization: `Bearer ${found.token}`, 'Content-Type': 'application/json' },
@@ -654,7 +678,9 @@ async function toolUpdateCalendarEvent(userId: string, args: Record<string, unkn
   }
 
   const updated = await res.json() as { summary?: string }
-  return `Updated "${updated.summary ?? args.title}" in ${found.calendar.name}.`
+  const invited = addGuests.length ? ` Invited ${addGuests.join(', ')}.` : ''
+  const skipped = badGuests.length ? ` Not invited (not an email address): ${badGuests.join(', ')} — ask for their email.` : ''
+  return `Updated "${updated.summary ?? args.title}" in ${found.calendar.name}.${invited}${skipped}`
 }
 
 // ── Shopping tools ────────────────────────────────────────────────────────────
@@ -1070,6 +1096,7 @@ const CLAUDE_TOOLS = [
         description: { type: 'string' },
         location:    { type: 'string' },
         calendar:    { type: 'string', description: 'Which calendar to put it on, by name (e.g. "Teradix", "DX"). Defaults to the main one.' },
+        guests:      { type: 'array', items: { type: 'string' }, description: 'Email addresses to invite. Google emails each an invitation, so the user is asked to approve first. Only real addresses the user gave — never guess one from a name; ask for it.' },
       },
     },
   },
@@ -1084,6 +1111,7 @@ const CLAUDE_TOOLS = [
         title:       { type: 'string', description: 'New event title' },
         start:       { type: 'string', description: 'New start — ISO datetime or date' },
         end:         { type: 'string', description: 'New end — ISO datetime or date' },
+        add_guests:  { type: 'array', items: { type: 'string' }, description: 'Email addresses to ADD to the guest list (existing guests are kept). Google emails each an invitation, so the user is asked to approve first. Only real addresses the user gave — ask if you do not have one.' },
         description: { type: 'string' },
         location:    { type: 'string' },
       },
@@ -1275,6 +1303,7 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "what's on the Teradix calendar" / "إيه اللي في تقويم Teradix" → get_calendar_events(calendar="Teradix")
 - "add it to the DX calendar" / "حطها في تقويم DX" → add_calendar_event(..., calendar="DX")
 - "add a meeting tomorrow at 3pm" / "حجز اجتماع بكرا الساعة 3" → add_calendar_event(title="meeting", start="${tomorrow}T15:00:00")
+- "invite ahmed@x.com to it" / "ادعي ahmed@x.com" → add_calendar_event(..., guests=["ahmed@x.com"]) when creating, or update_calendar_event(event_id=..., add_guests=["ahmed@x.com"]) for an existing event (get_calendar_events first). Guests need a real email address: if the user only gave a name, ASK for the address — never invent one. Inviting emails them, so the user is asked to approve first; do not say anyone was invited until it is approved.
 - "rename the meeting to X" / "غير اسم الاجتماع" → get_calendar_events, then update_calendar_event(event_id=..., title="X")
 - "move the meeting to 4pm" / "حول الاجتماع الساعة 4" → get_calendar_events, then update_calendar_event(event_id=..., start="...T16:00:00")
 - "rename task X to Y" / "غير اسم المهمة" → get_tasks, then update_task(task_id=..., title="Y")

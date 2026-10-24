@@ -37,7 +37,11 @@ const TITLES: Record<string, string> = {
   reply_email: 'Send a reply',
   rsvp_invitation: 'Answer an invitation — the organiser is told',
   update_calendar_event: 'Change an event — its guests are told',
+  add_calendar_event: 'Create an event and invite guests — they are emailed',
 }
+
+/** Naming guests on a bot's `add_calendar_event` / `add_guests` on its update is an email to someone else. */
+const hasGuests = (v: unknown) => Array.isArray(v) ? v.length > 0 : typeof v === 'string' && v.trim() !== ''
 
 const words = (s: string) => s.replace(/_/g, ' ')
 const clip = (s: string, n = 220) => (s.length > n ? `${s.slice(0, n)}…` : s)
@@ -50,7 +54,11 @@ const show = (v: unknown): string => {
 /** `null` when the call needs no approval. */
 export function approvalFor(name: string, input: Record<string, unknown>): Approval | null {
   let kind: ApprovalKind | null = null
-  if (OUTWARD.has(name) || (name === 'update_calendar_event' && input.confirm_notify_guests === true)) kind = 'outward'
+  if (
+    OUTWARD.has(name) ||
+    (name === 'update_calendar_event' && (input.confirm_notify_guests === true || hasGuests(input.add_guests))) ||
+    (name === 'add_calendar_event' && hasGuests(input.guests))
+  ) kind = 'outward'
   else if (/(^|_)(delete|remove)_/.test(name)) kind = 'destructive'
   else if (MONEY.has(name)) kind = 'money'
   if (!kind) return null
