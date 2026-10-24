@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { cleanKey } from '@/lib/apiKey'
 import { ASSISTANT_CLAUDE_MODEL } from './modelInfo'
 import type { DbUser, DbCompany, DbTask, DbCalendarEvent, DbWeeklyReview } from '@/types/database'
 import type { AIConfig } from '@/modules/settings/Settings'
@@ -53,8 +54,8 @@ function getAIConfig(): AIConfig {
     const saved = raw ? JSON.parse(raw) as Partial<AIConfig> : {}
     return {
       provider: saved.provider ?? 'anthropic',
-      anthropicKey: (saved.anthropicKey ?? '').replace(/\s+/g, ''),
-      groqKey: (saved.groqKey ?? '').replace(/\s+/g, ''),
+      anthropicKey: cleanKey(saved.anthropicKey),
+      groqKey: cleanKey(saved.groqKey),
       groqModel: saved.groqModel ?? 'llama-3.3-70b-versatile',
       claudeModel: saved.claudeModel ?? '',
       prices: saved.prices ?? {},

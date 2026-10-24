@@ -5,6 +5,7 @@
 // conversation history, and returns structured actions alongside natural language.
 
 import { ProfessorError } from './professor'
+import { cleanKey } from './apiKey'
 import type { IdealBlock, IdealGoal, IdealRule, IdealWeekAction, IdealChatMsg } from './idealWeekStore'
 import { DAY_LABELS } from './idealWeekStore'
 
@@ -44,12 +45,12 @@ function getAIConfig() {
     const s = raw ? JSON.parse(raw) as Partial<{provider:string;anthropicKey:string;groqKey:string;groqModel:string}> : {}
     return {
       provider:     s.provider ?? 'anthropic',
-      anthropicKey: (s.anthropicKey ?? '').replace(/\s+/g, '') || ((import.meta.env.VITE_ANTHROPIC_API_KEY as string) ?? ''),
+      anthropicKey: cleanKey(s.anthropicKey) || cleanKey(import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined),
       groqKey:      s.groqKey ?? '',
       groqModel:    s.groqModel ?? 'llama-3.3-70b-versatile',
     }
   } catch {
-    return { provider:'anthropic', anthropicKey:(import.meta.env.VITE_ANTHROPIC_API_KEY as string)??'', groqKey:'', groqModel:'llama-3.3-70b-versatile' }
+    return { provider:'anthropic', anthropicKey:cleanKey(import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined), groqKey:'', groqModel:'llama-3.3-70b-versatile' }
   }
 }
 

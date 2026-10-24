@@ -26,6 +26,7 @@
  * Auth: the caller's Supabase JWT (verify_jwt stays ON); the conversation must be theirs.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { cleanKey } from '../_shared/apiKey.ts'
 import { runStep, type ChatDb, type Provider, type Row, type ToolCall, type Turn, type Usage } from '../_shared/assistantChat.ts'
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined
@@ -33,7 +34,7 @@ declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined
 const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false, autoRefreshToken: false },
 })
-const ANTHROPIC_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
+const ANTHROPIC_KEY = cleanKey(Deno.env.get('ANTHROPIC_API_KEY'))
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -51,7 +52,7 @@ async function savedKeys(userId: string): Promise<{ anthropic: string; groq: str
     const raw = bag?.['professor-ai-config']
     if (typeof raw === 'string') {
       const c = JSON.parse(raw) as { anthropicKey?: string; groqKey?: string }
-      return { anthropic: (c.anthropicKey ?? '').replace(/\s+/g, ''), groq: (c.groqKey ?? '').replace(/\s+/g, '') }
+      return { anthropic: cleanKey(c.anthropicKey), groq: cleanKey(c.groqKey) }
     }
   } catch (e) {
     console.error('could not read the saved AI key:', e)
@@ -144,7 +145,7 @@ Deno.serve(async (req: Request) => {
   if (own.error || !own.data) return reply({ error: 'No such conversation' }, 404)
 
   const saved = await savedKeys(userId)
-  const given = typeof b.key === 'string' ? b.key.replace(/\s+/g, '') : ''
+  const given = typeof b.key === 'string' ? cleanKey(b.key) : ''
   const key = given || (provider === 'groq' ? saved.groq : saved.anthropic || ANTHROPIC_KEY)
 
   const db = dbFor(userId)

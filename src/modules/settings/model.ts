@@ -82,10 +82,9 @@ export function misplacedAnthropicKey(c: AIConfig): string {
   return stray.startsWith('sk-ant-') ? stray : ''
 }
 
-/** An API key never contains whitespace, and a paste very often carries some —
- *  a trailing newline from a terminal, a space from a chat. It saved fine and
- *  then went out as an invalid header, so the key "saved" and was "rejected". */
-export const cleanKey = (k: string | undefined): string => (k ?? '').replace(/\s+/g, '')
+/** Keeps only what a key can contain — see `src/lib/apiKey.ts` for why whitespace alone was not enough. */
+export { cleanKey } from '@/lib/apiKey'
+import { cleanKey } from '@/lib/apiKey'
 
 /** What was actually presented, without printing it: first 11, last 4, length. */
 export function maskKey(k: string): string {
