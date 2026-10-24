@@ -14,9 +14,11 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const SRC = new URL('../supabase/functions/_shared/assistantChat.ts', import.meta.url)
-const js = ts.transpileModule(fs.readFileSync(SRC, 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } })
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ac-'))
-fs.writeFileSync(path.join(dir, 'ac.mjs'), js.outputText)
+const tr = src => ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
+// the module imports its sibling by its Deno name (`./providerLimits.ts`); give both a .mjs name in the scratch folder
+fs.writeFileSync(path.join(dir, 'providerLimits.mjs'), tr(fs.readFileSync(new URL('../supabase/functions/_shared/providerLimits.ts', import.meta.url), 'utf8')))
+fs.writeFileSync(path.join(dir, 'ac.mjs'), tr(fs.readFileSync(SRC, 'utf8')).replace("./providerLimits.ts", "./providerLimits.mjs"))
 const M = await import(path.join(dir, 'ac.mjs'))
 
 let pass = 0, fail = 0
@@ -36,7 +38,7 @@ function makeDb({ lock = true } = {}) {
       s.rows.push(r); s.log.push('startAnswer'); return r.id
     },
     async updateAnswer(id, content) { const r = s.rows.find(x => x.id === id); r.content = content; r.writes = (r.writes ?? 0) + 1 },
-    async finishAnswer(id, status, content) { const r = s.rows.find(x => x.id === id); r.status = status; r.content = content; s.log.push('finish:' + status) },
+    async finishAnswer(id, status, content, usage) { const r = s.rows.find(x => x.id === id); r.status = status; r.content = content; if (usage) r.usage = usage; s.log.push('finish:' + status) },
     async deleteRow(id) { s.rows = s.rows.filter(x => x.id !== id); s.log.push('deleteRow') },
     async addToolRows(_c, calls) { for (const c of calls) s.rows.push({ id: s.nextId++, role: 'tool', content: c.name, status: 'complete', tool: c.name, tool_state: 'running', tool_use_id: c.id, tool_input: c.input }); s.log.push('toolRows') },
     async toolRows(_c, ids) { return s.rows.filter(r => r.tool_use_id && ids.includes(r.tool_use_id)).map(r => ({ ...r })) },
@@ -54,6 +56,10 @@ const textStream = (...chunks) => [
   ...chunks.map(t => ({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: t } })),
   { type: 'content_block_stop', index: 0 }, { type: 'message_delta', delta: { stop_reason: 'end_turn' } },
 ]
+/** Put the numbers a provider reports into a stream: input at message_start, the running output total at message_delta. */
+const withUsage = (events, u) => events.map(e => e.type === 'message_start'
+  ? { ...e, message: { ...(e.message ?? {}), usage: { input_tokens: u.input, output_tokens: 1, cache_read_input_tokens: u.cacheRead ?? 0, cache_creation_input_tokens: u.cacheWrite ?? 0 } } }
+  : e.type === 'message_delta' ? { ...e, usage: { output_tokens: u.output } } : e)
 const toolStream = (lead, id, name, jsonParts) => [
   { type: 'message_start' },
   ...(lead ? [{ type: 'content_block_start', index: 0, content_block: { type: 'text' } }, { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: lead } }, { type: 'content_block_stop', index: 0 }] : []),
@@ -67,9 +73,9 @@ function fakeFetch(replies) {
     calls.push({ url, body: JSON.parse(init.body), headers: init.headers })
     const r = replies.shift()
     if (!r) throw new Error('the fake model was asked more than it was told to answer')
-    if (r.status) return new Response(JSON.stringify({ error: { message: r.message } }), { status: r.status })
-    if (r.groq) return new Response(JSON.stringify(r.groq), { status: 200 })
-    return new Response(sse(r.events), { status: 200 })
+    if (r.status) return new Response(JSON.stringify({ error: { message: r.message } }), { status: r.status, headers: r.headers ?? {} })
+    if (r.groq) return new Response(JSON.stringify(r.groq), { status: 200, headers: r.headers ?? {} })
+    return new Response(sse(r.events), { status: 200, headers: r.headers ?? {} })
   }
   f.calls = calls
   return f
@@ -141,7 +147,9 @@ const deps = (db, fetchFn) => ({ db, fetchFn, now: () => (clock += 1000) })
 {
   const db = makeDb(); user(db, 'q')
   await M.runStep(deps(db, fakeFetch([{ events: toolStream('', 'toolu_9', 'delete_task', ['{}']) }])), P(db))
-  ok(db.s.rows.some(r => r.role === 'assistant') === false, 'a step with no text leaves no empty answer row')
+  const kept = db.s.rows.find(r => r.role === 'assistant')
+  ok(kept && kept.status === 'complete' && kept.content === '', 'a step with no words keeps its (empty) answer row — it is where the tokens are counted')
+  ok(M.turnStart([...db.s.rows, { id: 99, role: 'user', content: 'next', status: 'complete' }]).every(m => m.content.trim()), 'and an empty answer is never sent back to the model as history')
   const t = db.s.rows.find(r => r.role === 'tool'); t.tool_state = 'failed'; t.tool_result = 'DECLINED by the person'
   const f = fakeFetch([{ events: textStream('Okay, left it.') }])
   await M.runStep(deps(db, f), P(db, { mode: 'continue' }))
@@ -193,7 +201,7 @@ const deps = (db, fetchFn) => ({ db, fetchFn, now: () => (clock += 1000) })
 }
 
 // 7 ── the model refuses: the reason is on the screen, the lock is released
-for (const [status, message, want] of [[401, 'invalid x-api-key', /refused the key.*1234.*Settings → AI/], [429, 'slow down', /rate-limiting/], [529, 'overloaded', /problem on its side/]]) {
+for (const [status, message, want] of [[401, 'invalid x-api-key', /refused the key.*1234.*Settings → AI/], [429, 'slow down', /used up its allowance for now/], [529, 'overloaded', /problem on its side/]]) {
   const db = makeDb(); user(db, 'hello')
   const out = await M.runStep(deps(db, fakeFetch([{ status, message }])), P(db))
   const a = db.s.rows.find(r => r.role === 'assistant')
@@ -219,6 +227,86 @@ for (const [status, message, want] of [[401, 'invalid x-api-key', /refused the k
   db.s.rows.push({ id: 90, role: 'tool', content: 't', status: 'complete', tool: 't', tool_state: 'done', tool_use_id: 'x', tool_result: '1' })
   const out = await M.runStep(deps(db, fakeFetch([])), P(db, { mode: 'continue' }))
   ok(out === 'error' && /more steps than I will chain/.test(db.s.rows.find(r => r.role === 'assistant').content), 'a runaway tool loop is stopped with a sentence')
+}
+
+// 6b ── what it cost: the provider's own numbers, kept on the answer
+{
+  const db = makeDb(); user(db, 'hello')
+  const f = fakeFetch([{ events: withUsage(textStream('Hi'), { input: 1234, output: 56, cacheRead: 1000, cacheWrite: 200 }) }])
+  await M.runStep(deps(db, f), P(db))
+  const a = db.s.rows.find(r => r.role === 'assistant')
+  ok(a.usage && a.usage.input === 1234 && a.usage.output === 56 && a.usage.cacheRead === 1000 && a.usage.cacheWrite === 200, 'Anthropic: input from message_start, output from the running total in message_delta, cache tokens too', JSON.stringify(a.usage))
+  ok(a.usage.model === 'claude-x' && a.usage.provider === 'anthropic', '…tagged with the model and provider that produced them (a conversation can change both)')
+}
+{
+  const db = makeDb(); user(db, 'q')
+  const f = fakeFetch([{ events: withUsage(toolStream('', 'toolu_u', 'list_habits', ['{}']), { input: 900, output: 30 }) }, { events: withUsage(textStream('done'), { input: 1000, output: 12 }) }])
+  await M.runStep(deps(db, f), P(db))
+  const t = db.s.rows.find(r => r.role === 'tool'); t.tool_state = 'done'; t.tool_result = '[]'
+  await M.runStep(deps(db, f), P(db, { mode: 'continue' }))
+  const rows = db.s.rows.filter(r => r.role === 'assistant')
+  ok(rows.length === 2 && rows[0].usage.input === 900 && rows[1].usage.input === 1000, 'a tool loop is two requests and both are counted, each on its own row', JSON.stringify(rows.map(r => r.usage)))
+  ok(rows.reduce((n, r) => n + r.usage.input + r.usage.output, 0) === 900 + 30 + 1000 + 12, 'the sum of the rows is exactly what the provider reported')
+}
+{
+  const db = makeDb(); user(db, 'hi')
+  const f = fakeFetch([{ groq: { choices: [{ finish_reason: 'stop', message: { content: 'yo' } }], usage: { prompt_tokens: 321, completion_tokens: 9, total_tokens: 330 } } }])
+  await M.runStep(deps(db, f), P(db, { provider: 'groq', model: 'openai/gpt-oss-120b', key: 'gsk_1', tools: [] }))
+  const a = db.s.rows.find(r => r.role === 'assistant')
+  ok(a.usage?.input === 321 && a.usage.output === 9 && a.usage.provider === 'groq' && a.usage.model === 'openai/gpt-oss-120b', 'Groq: prompt_tokens and completion_tokens, tagged', JSON.stringify(a.usage))
+}
+{
+  const db = makeDb(); user(db, 'hi')
+  await M.runStep(deps(db, fakeFetch([{ status: 401, message: 'bad' }])), P(db))
+  ok(db.s.rows.find(r => r.role === 'assistant').usage === undefined, 'CONTROL: a request that failed has no usage to record (nothing is invented)')
+  const db2 = makeDb(); user(db2, 'hi')
+  await M.runStep(deps(db2, fakeFetch([{ events: textStream('no numbers') }])), P(db2))
+  const u = db2.s.rows.find(r => r.role === 'assistant').usage
+  ok(u && u.input === 0 && u.output === 0, 'a provider that said nothing records zeros, not a guess', JSON.stringify(u))
+}
+
+// 6c ── the provider's own word on how much room is left, read off the reply
+{
+  const iso = new Date(Date.now() + 41_000).toISOString()
+  const db = makeDb(); user(db, 'hello')
+  const f = fakeFetch([{ events: withUsage(textStream('Hi'), { input: 10, output: 5 }), headers: { 'anthropic-ratelimit-requests-limit': '50', 'anthropic-ratelimit-requests-remaining': '49', 'anthropic-ratelimit-requests-reset': iso, 'anthropic-ratelimit-tokens-limit': '40000', 'anthropic-ratelimit-tokens-remaining': '39000', 'anthropic-ratelimit-tokens-reset': iso } }])
+  await M.runStep(deps(db, f), P(db))
+  const l = db.s.rows.find(r => r.role === 'assistant').usage?.limits
+  ok(l && l.provider === 'anthropic' && l.requests.remaining === 49 && l.tokens.limit === 40000 && l.tokens.remaining === 39000 && l.tokens.resetAt === Date.parse(iso), 'Anthropic: the limit headers are kept on the answer beside the tokens', JSON.stringify(l))
+}
+{
+  const db = makeDb(); user(db, 'hi')
+  const f = fakeFetch([{ groq: { choices: [{ finish_reason: 'stop', message: { content: 'yo' } }], usage: { prompt_tokens: 3, completion_tokens: 1 } }, headers: { 'x-ratelimit-limit-requests': '14400', 'x-ratelimit-remaining-requests': '14399', 'x-ratelimit-limit-tokens': '6000', 'x-ratelimit-remaining-tokens': '5990', 'x-ratelimit-reset-tokens': '7.66s' } }])
+  await M.runStep(deps(db, f), P(db, { provider: 'groq', model: 'm', key: 'gsk_1', tools: [] }))
+  const l = db.s.rows.find(r => r.role === 'assistant').usage?.limits
+  ok(l && l.provider === 'groq' && l.requests.limit === 14400 && l.requests.remaining === 14399 && l.tokens.remaining === 5990, 'Groq: requests (a day) and tokens (a minute), as the provider said them', JSON.stringify(l))
+  ok(l.tokens.resetAt > Date.now() && l.tokens.resetAt < Date.now() + 9000, 'with the moment the minute bucket refills')
+}
+{
+  const db = makeDb(); user(db, 'hi')
+  await M.runStep(deps(db, fakeFetch([{ events: textStream('plain') }])), P(db))
+  ok(db.s.rows.find(r => r.role === 'assistant').usage.limits === undefined, 'CONTROL: a provider that sent no limit headers leaves none — nothing is invented')
+}
+{
+  const db = makeDb(); user(db, 'hi')
+  const out = await M.runStep(deps(db, fakeFetch([{ status: 429, message: 'Rate limit reached for model in organization on tokens per minute', headers: { 'retry-after': '23', 'x-ratelimit-limit-tokens': '6000', 'x-ratelimit-remaining-tokens': '0', 'x-ratelimit-reset-tokens': '23s' } }])), P(db, { provider: 'groq', model: 'm', key: 'gsk_1', tools: [] }))
+  const a = db.s.rows.find(r => r.role === 'assistant')
+  ok(out === 'error' && /used up its allowance for now — it opens again in 23s/.test(a.content) && /whole account, not this app/.test(a.content), 'a 429 says how long to wait, from the provider\'s retry-after, and that the limit is the account\'s', a.content)
+  ok(a.usage?.limits?.tokens?.remaining === 0 && a.usage.limits.retryAfter === 23 && a.usage.input === 0 && a.usage.output === 0, 'and the empty bucket is kept on the refused row, with ZERO tokens (nothing was spent)', JSON.stringify(a.usage))
+  const db2 = makeDb(); user(db2, 'hi')
+  await M.runStep(deps(db2, fakeFetch([{ status: 429, message: 'slow down' }])), P(db2))
+  ok(/wait a moment and ask again/.test(db2.s.rows.find(r => r.role === 'assistant').content) && db2.s.rows.find(r => r.role === 'assistant').usage === undefined, 'CONTROL: a 429 with no headers falls back to "wait a moment", and records no reading')
+}
+
+// 7b ── the other two ways the chosen model stops working, each with its own sentence
+for (const [status, message, want, label] of [
+  [404, 'The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.', /cannot use the model “claude-x”.*Settings → AI/, 'a model the key cannot use'],
+  [400, 'Your credit balance is too low to access the Anthropic API.', /out of credit or past its billing date.*Settings → AI/, 'an account out of credit'],
+]) {
+  const db = makeDb(); user(db, 'hello')
+  const out = await M.runStep(deps(db, fakeFetch([{ status, message }])), P(db))
+  const a = db.s.rows.find(r => r.role === 'assistant')
+  ok(out === 'error' && want.test(a.content) && !/refused the key/.test(a.content), `${label} reads as that, not as a bad key`, a?.content)
 }
 
 // 8 ── Groq

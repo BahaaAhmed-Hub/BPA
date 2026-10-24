@@ -20,6 +20,7 @@ DIR="${1:?socket directory of a running postgres}"
 PORT="${2:-5598}"
 SQL="$(cd "$(dirname "$0")/.." && pwd)/supabase/migrations/20260042_assistant_conversations.sql"
 SQL2="$(cd "$(dirname "$0")/.." && pwd)/supabase/migrations/20260043_assistant_tool_calls.sql"
+SQL3="$(cd "$(dirname "$0")/.." && pwd)/supabase/migrations/20260044_assistant_usage.sql"
 
 q() { psql -h "$DIR" -p "$PORT" -U bpa -d postgres -v ON_ERROR_STOP=1 -qtA "$@"; }
 
@@ -198,6 +199,20 @@ is "…but can once the claim is three minutes old" 1 \
 is "B cannot read A's turn state or tool input" 0 "$AS_B select count(*) from public.assistant_messages where tool_use_id='toolu_1'"
 allowed "the conversation can hold the in-flight turn, and clear it" \
   "$AS_A update public.assistant_conversations set turn='{\"msgs\":[]}' where id='$D1'; update public.assistant_conversations set turn=null where id='$D1'"
+
+# ─── 20260044: what an answer cost ──────────────────────────────────────────
+q -f "$SQL3" >/dev/null 2>&1 && ok "20260044 applies" 1 || ok "20260044 applies" 0
+q -f "$SQL3" >/dev/null 2>&1 && ok "20260044 second apply exits 0" 1 || ok "20260044 second apply exits 0" 0
+q >/dev/null -c "insert into public.assistant_conversations(id,user_id) values ('eeeeeeee-0000-0000-0000-000000000001','$A') on conflict do nothing"
+E1=eeeeeeee-0000-0000-0000-000000000001
+allowed "A records what an answer cost, on the answer" "$AS_A insert into public.assistant_messages(conversation_id,user_id,role,usage) values ('$E1','$A','assistant','{\"input\":1200,\"output\":300,\"model\":\"m\",\"provider\":\"groq\"}'), ('$E1','$A','assistant','{\"input\":800,\"output\":100,\"model\":\"m\",\"provider\":\"groq\"}')"
+allowed "a row with no usage is still fine (old rows, the user's own messages)" "$AS_A insert into public.assistant_messages(conversation_id,user_id,role,content) values ('$E1','$A','user','q')"
+is "the month's tokens are one sum over the rows that have a usage" 2400 \
+  "$AS_A select sum((usage->>'input')::bigint + (usage->>'output')::bigint) from public.assistant_messages where user_id='$A' and usage is not null and created_at >= date_trunc('month', now())"
+is "B cannot see A's usage" 0 "$AS_B select count(*) from public.assistant_messages where usage is not null and user_id='$A'"
+is "the partial index for that query exists" 1 "select count(*) from pg_indexes where indexname='assistant_messages_usage_idx' and indexdef ilike '%where%usage is not null%'"
+is "CONTROL: last month's usage is outside that range" 0 \
+  "select count(*) from (select 1 from public.assistant_messages where usage is not null and created_at >= date_trunc('month', now() + interval '1 month')) x"
 
 # ─── Archive, then forget ───────────────────────────────────────────────────
 allowed "A archives their conversation" "$AS_A update public.assistant_conversations set archived_at = now() where id='$CA'"

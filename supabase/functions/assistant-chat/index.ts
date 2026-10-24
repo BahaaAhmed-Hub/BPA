@@ -26,7 +26,7 @@
  * Auth: the caller's Supabase JWT (verify_jwt stays ON); the conversation must be theirs.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { runStep, type ChatDb, type Provider, type Row, type ToolCall, type Turn } from '../_shared/assistantChat.ts'
+import { runStep, type ChatDb, type Provider, type Row, type ToolCall, type Turn, type Usage } from '../_shared/assistantChat.ts'
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined
 
@@ -91,8 +91,8 @@ function dbFor(userId: string): ChatDb {
     async updateAnswer(id, content) {
       must(await sb.from('assistant_messages').update({ content }).eq('id', id).select('id'), 'stream answer')
     },
-    async finishAnswer(id, status, content) {
-      must(await sb.from('assistant_messages').update({ status, content }).eq('id', id).select('id'), 'finish answer')
+    async finishAnswer(id, status, content, usage?: Usage) {
+      must(await sb.from('assistant_messages').update({ status, content, ...(usage ? { usage } : {}) }).eq('id', id).select('id'), 'finish answer')
     },
     async deleteRow(id) {
       must(await sb.from('assistant_messages').delete().eq('id', id).select('id'), 'drop empty answer')

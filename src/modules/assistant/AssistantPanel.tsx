@@ -20,8 +20,13 @@ import { addressedTo } from '@/lib/callName'
 import { recognitionLang, speak, speechSupported, startListening, stopSpeaking, unlockSpeech, type Listening, type ListenError } from '@/lib/speech'
 import { cleanName, labelOf, loadPersona as loadPersonaNow, NAME_MAX, savePersona, usePersona } from '@/lib/assistantPersona'
 import { AssistantAvatar } from './AssistantAvatar'
-import { ModelBadge } from './ModelBadge'
-import { ASSISTANT_CLAUDE_MODEL } from '@/lib/modelInfo'
+import { ModelBadge, type BadgeUsage } from './ModelBadge'
+import { LimitsLine } from './LimitsLine'
+import { ageWords, limitsFromRow, parseLimits, viewLimits, waitText, type Limits } from '@/lib/providerLimits'
+import { counterText, estimateOutputTokens, groupByModel, summarise, usageFromRow, type ModelUsage } from '@/lib/aiUsage'
+import { AI_CONFIG_EVENT, claudeModelOf, saveAIConfig } from '@/modules/settings/model'
+import { ensureWorkingGroqModel, isBillingMessage, isModelMissingMessage } from '@/lib/modelCatalog'
+import { notify } from '@/lib/undo'
 import { clampWidth, loadChosenWidth, rightGap, saveWidth, widthFromDrag, DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH } from '@/lib/assistantWindow'
 import { ASK_EVENT, takePendingAsk } from '@/lib/assistantBridge'
 import {
@@ -52,6 +57,7 @@ interface GroqResponse {
     message: { role: 'assistant'; content: string | null; tool_calls?: GroqToolCall[] }
     finish_reason: string
   }>
+  usage?: { prompt_tokens?: number; completion_tokens?: number }
   error?: { message?: string }
 }
 
@@ -474,6 +480,22 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
   const interrupted = useRef<Set<number>>(new Set())
   const continueAsked = useRef<{ sig: string; at: number; n: number } | null>(null)
   const serverBusy = busyOf(rows, Date.now())
+  /** What the in-browser path has used that is not yet on a row: shown at once, handed to `persistBubbles` with the turn,
+   *  and dropped the moment the rows that now carry it are read back (so it is never counted twice). */
+  const [legacyUsage, setLegacyUsage] = useState<Array<{ u: ModelUsage; persisted: boolean }>>([])
+  const legacyUsageRef = useRef<Array<{ u: ModelUsage; persisted: boolean }>>([])
+  /** The provider's own reading of the room left, from the last reply THIS page made itself (the server path's arrive on the rows).
+   *  A browser can read a response header only if the provider's CORS rules expose it, so this may stay empty. */
+  const [legacyLimits, setLegacyLimits] = useState<Limits | null>(null)
+  const legacyLimitsRef = useRef<Limits | null>(null)
+  const limitsPersistedAt = useRef(0)
+  const noteLimits = (provider: 'anthropic' | 'groq', res: Response) => {
+    const l = parseLimits(provider, n => res.headers.get(n))
+    if (l) { legacyLimitsRef.current = l; setLegacyLimits(l) }
+  }
+  /** Characters of the in-browser answer being written, for the counter's live estimate. */
+  const [liveChars, setLiveChars] = useState(0)
+  const recordUsage = (u: ModelUsage) => { legacyUsageRef.current = [...legacyUsageRef.current, { u, persisted: false }]; setLegacyUsage(legacyUsageRef.current) }
   const thinking = localThinking || serverBusy
   // A screenshot of an invoice or a PDF statement is the fastest way to tell
   // the assistant something. Three ways in: the clip, a paste, a drop.
@@ -675,7 +697,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     const groq = cfg.provider === 'groq'
     return {
       conversationId, mode, provider: groq ? 'groq' as const : 'anthropic' as const,
-      model: groq ? cfg.groqModel : ASSISTANT_CLAUDE_MODEL,
+      model: groq ? cfg.groqModel : claudeModelOf(cfg),
       system: buildSystemPrompt(userName, today, samuraiActive, persona.name),
       tools: (groq ? toGroqTools(ASSISTANT_TOOLS) : ASSISTANT_TOOLS) as unknown[],
       key: (groq ? cfg.groqKey : cfg.anthropicKey) || undefined,
@@ -758,6 +780,16 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     const uid = user?.id
     const fresh = displayMessages.filter(m => !legacyStart.current.has(m.id))
     if (!uid || !fresh.length) return
+    // What this turn used, per model, to be written ONCE on the rows it produced.
+    const mine = legacyUsageRef.current.filter(e => !e.persisted)
+    let byModel = groupByModel(mine.map(e => e.u))
+    // The newest reading rides on the first usage — or on a zero-token one of its own when the turn spent nothing (a refusal),
+    // because "you are out" is exactly what the next device needs to know.
+    const lim = legacyLimitsRef.current
+    if (lim && lim.at > limitsPersistedAt.current) {
+      if (byModel.length) byModel = [{ ...byModel[0], limits: lim }, ...byModel.slice(1)]
+      else byModel = [{ provider: lim.provider, model: lim.provider === 'groq' ? loadAIConfig().groqModel : claudeModelOf(loadAIConfig()), input: 0, output: 0, cacheRead: 0, cacheWrite: 0, limits: lim }]
+    }
     void (async () => {
       let id = convRef.current
       const isNew = !id
@@ -765,15 +797,29 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
         id = crypto.randomUUID()
         if (!(await createConversation(id, uid, loadAIConfig().provider === 'groq' ? 'groq' : 'anthropic'))) return
       }
-      const ok = await persistBubbles(id, uid, fresh.map(m => ({
+      const toWrite = fresh.map(m => ({
         clientId: m.role === 'tool' ? null : m.id, role: m.role, content: m.content,
         ...(m.role === 'tool' ? { tool: m.tool ?? m.content, toolUseId: m.id.replace(/^tool-/, ''), toolState: m.state } : {}),
         ...(m.files?.length ? { files: m.files } : {}),
-      })))
+      })) as Parameters<typeof persistBubbles>[2]
+      // The first model's tokens ride on the turn's last answer; any further model, or a turn with no answer at all (an
+      // error), gets an empty answer row of its own — the tokens were spent either way.
+      const lastAnswer = toWrite.map(r => r.role).lastIndexOf('assistant')
+      byModel.forEach((u, i) => {
+        if (i === 0 && lastAnswer >= 0) toWrite[lastAnswer] = { ...toWrite[lastAnswer], usage: u }
+        else toWrite.push({ clientId: null, role: 'assistant', content: '', usage: u })
+      })
+      const ok = await persistBubbles(id, uid, toWrite)
       if (!ok) return
+      if (lim) limitsPersistedAt.current = Math.max(limitsPersistedAt.current, lim.at)
+      // Written: never write them again, but keep showing them until the rows that now hold them are read back.
+      legacyUsageRef.current = legacyUsageRef.current.map(e => mine.includes(e) ? { ...e, persisted: true } : e)
+      setLegacyUsage(legacyUsageRef.current)
       const got = await fetchMessages(id)
       // Rows that did not come back mean the tables are not really there: keep drawing from state.
       if (!got || got.length < fresh.length) return
+      legacyUsageRef.current = legacyUsageRef.current.filter(e => !e.persisted)
+      setLegacyUsage(legacyUsageRef.current)
       if (isNew) attach(id, got); else applyRows(got)
     })()
   }, [localThinking]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -791,7 +837,9 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
   // ── Anthropic agentic loop (streaming) ─────────────────────────────────────
 
   async function runAnthropic(trimmed: string, cfg: AIConfig, system: string, history: Anthropic.MessageParam[], atts: Attachment[] = []) {
-    const client = new Anthropic({ apiKey: cfg.anthropicKey, dangerouslyAllowBrowser: true })
+    // The SDK's own fetch, with a look at the headers on the way past (the provider's word on the room left).
+    const tap = (async (input: RequestInfo | URL, init?: RequestInit) => { const r = await fetch(input, init); noteLimits('anthropic', r); return r }) as typeof fetch
+    const client = new Anthropic({ apiKey: cfg.anthropicKey, dangerouslyAllowBrowser: true, fetch: tap })
     // A message with nothing attached stays a plain string — the block form is
     // only needed when there is something to put beside the words.
     const content = atts.length
@@ -805,12 +853,13 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
       let   accumText  = ''
 
       const stream = client.messages.stream({
-        model: ASSISTANT_CLAUDE_MODEL, max_tokens: 4096,
+        model: claudeModelOf(cfg), max_tokens: 4096,
         system, tools: ASSISTANT_TOOLS, messages: msgs,
       })
 
       stream.on('text', chunk => {
         accumText += chunk
+        setLiveChars(accumText.length)
         setDisplayMessages(prev => {
           const exists = prev.some(m => m.id === streamId)
           return exists
@@ -820,6 +869,10 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
       })
 
       const response = await stream.finalMessage()
+      // What the provider says this request used — the only exact number there is.
+      const ru = response.usage as { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null } | undefined
+      setLiveChars(0)
+      if (ru) recordUsage({ provider: 'anthropic', model: claudeModelOf(cfg), input: ru.input_tokens ?? 0, output: ru.output_tokens ?? 0, cacheRead: ru.cache_read_input_tokens ?? 0, cacheWrite: ru.cache_creation_input_tokens ?? 0 })
       msgs = [...msgs, { role: 'assistant', content: response.content }]
 
       if (response.stop_reason !== 'tool_use') {
@@ -865,12 +918,14 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
         }),
       })
 
+      noteLimits('groq', res)
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as GroqResponse
         throw new Error(err.error?.message ?? `Groq ${res.status}`)
       }
 
       const data  = await res.json() as GroqResponse
+      if (data.usage) recordUsage({ provider: 'groq', model: cfg.groqModel, input: data.usage.prompt_tokens ?? 0, output: data.usage.completion_tokens ?? 0, cacheRead: 0, cacheWrite: 0 })
       const choice = data.choices[0]
       const msg    = choice.message
 
@@ -909,7 +964,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     // A file on its own is a message: "what is this?" is implied by dropping it.
     if ((!trimmed && attachments.length === 0) || thinking) return
 
-    const cfg = loadAIConfig()
+    let cfg = loadAIConfig()
     stopSpeaking()
 
     // What this provider cannot take is said before the request, not after it
@@ -925,6 +980,19 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     if (cfg.provider === 'groq' && !cfg.groqKey) {
       setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'error', content: 'No Groq API key set. Go to Settings → AI.' }])
       return
+    }
+
+    // A Groq model the key cannot use ("does not exist or you do not have access to it") is found out here, once per
+    // model, with a one-token request — and replaced by one that works, with the person told. Only a definite "that
+    // model is not available" changes anything; being offline or rate-limited leaves the choice alone.
+    if (cfg.provider === 'groq') {
+      const healed = await ensureWorkingGroqModel(cfg.groqKey, cfg.groqModel)
+      if (healed.switched) {
+        const from = cfg.groqModel
+        cfg = { ...cfg, groqModel: healed.model }
+        saveAIConfig(cfg)
+        notify(`Groq cannot use ${from} with your key, so I switched to ${healed.model}. Change it any time in Settings → AI.`)
+      }
     }
 
     // If provider switched since last message, reset that provider's history
@@ -975,9 +1043,18 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
       const msg     = err instanceof Error ? err.message : String(err)
       const is401   = msg.includes('401') || msg.includes('authentication') || msg.includes('invalid_api_key')
       const sent = cfg.provider === 'groq' ? cfg.groqKey : cfg.anthropicKey
+      const label    = cfg.provider === 'groq' ? 'Groq' : 'Anthropic'
+      const model    = cfg.provider === 'groq' ? cfg.groqModel : claudeModelOf(cfg)
+      // Three different problems that all end in "it did not answer", with three different fixes — so three sentences.
       const friendly = is401
-        ? `${cfg.provider === 'groq' ? 'Groq' : 'Anthropic'} refused the key that was sent: ${maskKey(sent)}. Check Settings → AI. It said: ${msg.slice(0, 200)}`
-        : `Error: ${msg}`
+        ? `${label} refused the key that was sent: ${maskKey(sent)}. Check Settings → AI. It said: ${msg.slice(0, 200)}`
+        : isBillingMessage(msg)
+          ? `${label} says the account is out of credit or past its billing date. Top it up with ${label}, or choose another provider or model in Settings → AI. It said: ${msg.slice(0, 200)}`
+          : /\b429\b|rate.?limit/i.test(msg)
+            ? `${label} has used up its allowance for now${legacyLimitsRef.current?.retryAfter !== undefined ? ` — it opens again in ${waitText(legacyLimitsRef.current.retryAfter)}` : ' — wait a moment and ask again'}. If this keeps happening the limit is for the whole account, not this app. It said: ${msg.slice(0, 200)}`
+          : isModelMissingMessage(msg)
+            ? `${label} says your key cannot use the model “${model}”. Pick another in Settings → AI — the list there is what your key can use. It said: ${msg.slice(0, 200)}`
+            : `Error: ${msg}`
       setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'error', content: friendly }])
     } finally {
       setThinking(false)
@@ -1052,6 +1129,23 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
   useEffect(() => { if (!open) { micRef.current?.stop(); stopSpeaking() } }, [open])
   useEffect(() => () => { micRef.current?.stop(); stopSpeaking() }, [])
 
+  // A limit reading is a moment: the minute bucket refills by itself and the reading grows old. Keep it honest on screen.
+  const anyReading = legacyLimits !== null || rows.some(r => r.usage != null)
+  useEffect(() => {
+    if (!anyReading || !shown) return
+    const t = setInterval(() => setTick(n => n + 1), 10_000)
+    return () => clearInterval(t)
+  }, [anyReading, shown])
+
+  // Settings → AI can change the model while this window is open (the same page, or another tab): redraw the header.
+  const [, setCfgTick] = useState(0)
+  useEffect(() => {
+    const on = () => setCfgTick(n => n + 1)
+    window.addEventListener(AI_CONFIG_EVENT, on)
+    window.addEventListener('storage', on)
+    return () => { window.removeEventListener(AI_CONFIG_EVENT, on); window.removeEventListener('storage', on) }
+  }, [])
+
   useEffect(() => {
     const t = setTimeout(() => saveDraft(input), 250)
     return () => clearTimeout(t)
@@ -1072,10 +1166,31 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     const id = convRef.current
     if (id) void archiveConversation(id)
     awaiting.current = null
+    legacyUsageRef.current = []; setLegacyUsage([]); setLiveChars(0)
+    legacyLimitsRef.current = null; setLegacyLimits(null)
     detach()
   }
 
   const cfg   = loadAIConfig()
+  // ── The usage counter beside the model name: what this conversation has used, exact where the provider said so ──
+  const shownModel = cfg.provider === 'groq' ? cfg.groqModel : claudeModelOf(cfg)
+  const spent: ModelUsage[] = [
+    ...rows.map(r => usageFromRow(r.usage)).filter((u): u is ModelUsage => !!u),
+    ...legacyUsage.map(e => e.u),
+  ]
+  // An answer still being written has no count yet (the provider reports it when the reply ends); estimate it from what
+  // is on screen so the counter moves while it works, and mark the figure "~" until the real one replaces it.
+  const writing = rows.find(r => r.status === 'streaming' && !isStaleStreaming(r, Date.now()))
+  const liveOut = estimateOutputTokens(writing ? writing.content.length : liveChars)
+  if (liveOut > 0) spent.push({ provider: cfg.provider === 'groq' ? 'groq' : 'anthropic', model: shownModel, input: 0, output: liveOut, cacheRead: 0, cacheWrite: 0 })
+  const usageSummary = summarise(spent, cfg.prices)
+  const counter: BadgeUsage = { ...counterText(usageSummary, liveOut > 0), live: liveOut > 0, tokens: usageSummary.total, usd: usageSummary.usd }
+  // ── The provider's own word on the room left: the newest reading, from a row (any device) or this page's own reply ──
+  const nowMs = Date.now()
+  let rowLimits: Limits | null = null
+  for (let i = rows.length - 1; i >= 0 && !rowLimits; i--) rowLimits = limitsFromRow((rows[i].usage as { limits?: unknown } | null | undefined)?.limits)
+  const best = legacyLimits && (!rowLimits || legacyLimits.at > rowLimits.at) ? legacyLimits : rowLimits
+  const limitsView = best && best.provider === (cfg.provider === 'groq' ? 'groq' : 'anthropic') ? viewLimits(best, nowMs) : null
   const isEmpty = displayMessages.length === 0
 
   return (
@@ -1122,9 +1237,11 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
           padding: '14px 16px', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0,
         }}>
           <AssistantAvatar size={38} radius="50%" name={persona.name} />
-          <div style={{ flex: 1 }}>
+          {/* minWidth 0: a flex child will not shrink below its content otherwise, and a long model id would push the buttons out. */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{labelOf(persona)}</p>
-            <ModelBadge provider={cfg.provider === 'groq' ? 'groq' : 'anthropic'} model={cfg.provider === 'groq' ? cfg.groqModel : ASSISTANT_CLAUDE_MODEL} />
+            <ModelBadge provider={cfg.provider === 'groq' ? 'groq' : 'anthropic'} model={shownModel} usage={counter} />
+            {limitsView && best && <LimitsLine view={limitsView} ageText={ageWords(nowMs - best.at)} />}
           </div>
           {!isEmpty && (
             <button onClick={clearConversation}

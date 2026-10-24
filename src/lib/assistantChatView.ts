@@ -21,6 +21,8 @@ export interface ChatRow extends Row {
   updated_at?: string
   claimed_by?: string | null
   claimed_at?: string | null
+  /** what the request that wrote this answer used, as the provider reported it (20260044); read with `usageFromRow` */
+  usage?: unknown
 }
 
 export interface Bubble {
@@ -62,6 +64,8 @@ export function rowsToBubbles(rows: ChatRow[], now: number): Bubble[] {
       out.push({ id: `row-${r.id}`, role: 'error', content: (r.content ? r.content + '\n\n' : '') + 'This answer was interrupted before it finished. Ask again.' })
     } else if (r.status === 'streaming' && !r.content) {
       continue // the thinking dot stands in for it
+    } else if (r.status === 'complete' && !r.content.trim()) {
+      continue // a step that only asked for tools: no words, but its tokens are counted on this row
     } else {
       out.push({ id: `row-${r.id}`, role: 'assistant', content: r.content })
     }

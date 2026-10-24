@@ -12,14 +12,9 @@ import { inputStyle, selectStyle } from '@/lib/fields'
 import { type AIConfig, type AppSettings, cleanKey, loadAIConfig, misplacedAnthropicKey, saveAIConfig, setAIPushListener } from '../model'
 import { FieldRow, Toggle } from '../ui'
 import { PILL_BASE, pillSelectStyle } from '../pillStyles'
+import { ModelPicker } from './ModelPicker'
 
 // ─── CHUNK 6: Professor AI + Notifications + Appearance sections ──────────────
-
-export const GROQ_MODELS = [
-  { value: 'llama-3.3-70b-versatile',  label: 'LLaMA 3.3 70B (best quality)' },
-  { value: 'llama-3.1-8b-instant',     label: 'LLaMA 3.1 8B (fastest)'       },
-  { value: 'mixtral-8x7b-32768',       label: 'Mixtral 8x7B'                  },
-]
 
 /** What the person calls the assistant. Saved as they type (held briefly), and shared with every device and bot. */
 function AssistantNameRow() {
@@ -192,6 +187,8 @@ export function ProfessorSection() {
           {keySync === 'failed'  && `Saved here, but it could not reach your account${lastPushError ? ` (${lastPushError})` : ''} — it will not follow you to another device or the bots yet`}
         </p>
       )}
+
+      <ModelPicker ai={ai} setAI={setAI} />
 
       <div style={{ height: 6, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', marginTop: 12, marginBottom: 12 }} />
 

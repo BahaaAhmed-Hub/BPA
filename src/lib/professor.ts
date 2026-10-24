@@ -41,7 +41,8 @@ export function anthropic(): Anthropic {
   return new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
 }
 
-const MODEL = ASSISTANT_CLAUDE_MODEL
+/** The Claude model chosen in Settings → AI, read at call time (the person can change it while the app is open). */
+const modelNow = (): string => getAIConfig().claudeModel.trim() || ASSISTANT_CLAUDE_MODEL
 const MAX_TOKENS = 4000
 
 // ─── AI config helpers ────────────────────────────────────────────────────────
@@ -55,9 +56,11 @@ function getAIConfig(): AIConfig {
       anthropicKey: (saved.anthropicKey ?? '').replace(/\s+/g, ''),
       groqKey: (saved.groqKey ?? '').replace(/\s+/g, ''),
       groqModel: saved.groqModel ?? 'llama-3.3-70b-versatile',
+      claudeModel: saved.claudeModel ?? '',
+      prices: saved.prices ?? {},
     }
   } catch {
-    return { provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile' }
+    return { provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile', claudeModel: '', prices: {} }
   }
 }
 
@@ -244,7 +247,7 @@ export async function call(system: string, userMessage: string): Promise<string>
   try {
     const freshClient = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
     const msg = await freshClient.messages.create({
-      model: MODEL, max_tokens: MAX_TOKENS, system,
+      model: modelNow(), max_tokens: MAX_TOKENS, system,
       messages: [{ role: 'user', content: userMessage }],
     })
     const block = msg.content.find(b => b.type === 'text')
@@ -702,7 +705,7 @@ ${systemContext ?? ''}`
 
   try {
     const msg = await anthropic().messages.create({
-      model: MODEL,
+      model: modelNow(),
       max_tokens: MAX_TOKENS,
       system,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
