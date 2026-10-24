@@ -7,8 +7,12 @@
 // their real rate can set it in Settings → AI and that wins. A model with no known price shows tokens and NO amount —
 // an invented figure on something that looks like billing would be worse than none.
 
+import type { Limits } from '../../supabase/functions/_shared/providerLimits.ts'
+
 export interface TokenUsage { input: number; output: number; cacheRead: number; cacheWrite: number }
-export interface ModelUsage extends TokenUsage { model: string; provider: 'anthropic' | 'groq' }
+export interface ModelUsage extends TokenUsage { model: string; provider: 'anthropic' | 'groq'
+  /** the provider's own reading of the room left, when this request's reply carried one (see providerLimits.ts) */
+  limits?: Limits }
 
 /** US dollars per million tokens. */
 export interface Price { in: number; out: number }

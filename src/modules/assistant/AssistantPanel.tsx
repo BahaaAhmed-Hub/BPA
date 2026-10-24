@@ -21,6 +21,8 @@ import { recognitionLang, speak, speechSupported, startListening, stopSpeaking, 
 import { cleanName, labelOf, loadPersona as loadPersonaNow, NAME_MAX, savePersona, usePersona } from '@/lib/assistantPersona'
 import { AssistantAvatar } from './AssistantAvatar'
 import { ModelBadge, type BadgeUsage } from './ModelBadge'
+import { LimitsLine } from './LimitsLine'
+import { ageWords, limitsFromRow, parseLimits, viewLimits, waitText, type Limits } from '@/lib/providerLimits'
 import { counterText, estimateOutputTokens, groupByModel, summarise, usageFromRow, type ModelUsage } from '@/lib/aiUsage'
 import { AI_CONFIG_EVENT, claudeModelOf, saveAIConfig } from '@/modules/settings/model'
 import { ensureWorkingGroqModel, isBillingMessage, isModelMissingMessage } from '@/lib/modelCatalog'
@@ -482,6 +484,15 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
    *  and dropped the moment the rows that now carry it are read back (so it is never counted twice). */
   const [legacyUsage, setLegacyUsage] = useState<Array<{ u: ModelUsage; persisted: boolean }>>([])
   const legacyUsageRef = useRef<Array<{ u: ModelUsage; persisted: boolean }>>([])
+  /** The provider's own reading of the room left, from the last reply THIS page made itself (the server path's arrive on the rows).
+   *  A browser can read a response header only if the provider's CORS rules expose it, so this may stay empty. */
+  const [legacyLimits, setLegacyLimits] = useState<Limits | null>(null)
+  const legacyLimitsRef = useRef<Limits | null>(null)
+  const limitsPersistedAt = useRef(0)
+  const noteLimits = (provider: 'anthropic' | 'groq', res: Response) => {
+    const l = parseLimits(provider, n => res.headers.get(n))
+    if (l) { legacyLimitsRef.current = l; setLegacyLimits(l) }
+  }
   /** Characters of the in-browser answer being written, for the counter's live estimate. */
   const [liveChars, setLiveChars] = useState(0)
   const recordUsage = (u: ModelUsage) => { legacyUsageRef.current = [...legacyUsageRef.current, { u, persisted: false }]; setLegacyUsage(legacyUsageRef.current) }
@@ -771,7 +782,14 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     if (!uid || !fresh.length) return
     // What this turn used, per model, to be written ONCE on the rows it produced.
     const mine = legacyUsageRef.current.filter(e => !e.persisted)
-    const byModel = groupByModel(mine.map(e => e.u))
+    let byModel = groupByModel(mine.map(e => e.u))
+    // The newest reading rides on the first usage — or on a zero-token one of its own when the turn spent nothing (a refusal),
+    // because "you are out" is exactly what the next device needs to know.
+    const lim = legacyLimitsRef.current
+    if (lim && lim.at > limitsPersistedAt.current) {
+      if (byModel.length) byModel = [{ ...byModel[0], limits: lim }, ...byModel.slice(1)]
+      else byModel = [{ provider: lim.provider, model: lim.provider === 'groq' ? loadAIConfig().groqModel : claudeModelOf(loadAIConfig()), input: 0, output: 0, cacheRead: 0, cacheWrite: 0, limits: lim }]
+    }
     void (async () => {
       let id = convRef.current
       const isNew = !id
@@ -793,6 +811,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
       })
       const ok = await persistBubbles(id, uid, toWrite)
       if (!ok) return
+      if (lim) limitsPersistedAt.current = Math.max(limitsPersistedAt.current, lim.at)
       // Written: never write them again, but keep showing them until the rows that now hold them are read back.
       legacyUsageRef.current = legacyUsageRef.current.map(e => mine.includes(e) ? { ...e, persisted: true } : e)
       setLegacyUsage(legacyUsageRef.current)
@@ -818,7 +837,9 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
   // ── Anthropic agentic loop (streaming) ─────────────────────────────────────
 
   async function runAnthropic(trimmed: string, cfg: AIConfig, system: string, history: Anthropic.MessageParam[], atts: Attachment[] = []) {
-    const client = new Anthropic({ apiKey: cfg.anthropicKey, dangerouslyAllowBrowser: true })
+    // The SDK's own fetch, with a look at the headers on the way past (the provider's word on the room left).
+    const tap = (async (input: RequestInfo | URL, init?: RequestInit) => { const r = await fetch(input, init); noteLimits('anthropic', r); return r }) as typeof fetch
+    const client = new Anthropic({ apiKey: cfg.anthropicKey, dangerouslyAllowBrowser: true, fetch: tap })
     // A message with nothing attached stays a plain string — the block form is
     // only needed when there is something to put beside the words.
     const content = atts.length
@@ -897,6 +918,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
         }),
       })
 
+      noteLimits('groq', res)
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as GroqResponse
         throw new Error(err.error?.message ?? `Groq ${res.status}`)
@@ -1028,6 +1050,8 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
         ? `${label} refused the key that was sent: ${maskKey(sent)}. Check Settings → AI. It said: ${msg.slice(0, 200)}`
         : isBillingMessage(msg)
           ? `${label} says the account is out of credit or past its billing date. Top it up with ${label}, or choose another provider or model in Settings → AI. It said: ${msg.slice(0, 200)}`
+          : /\b429\b|rate.?limit/i.test(msg)
+            ? `${label} has used up its allowance for now${legacyLimitsRef.current?.retryAfter !== undefined ? ` — it opens again in ${waitText(legacyLimitsRef.current.retryAfter)}` : ' — wait a moment and ask again'}. If this keeps happening the limit is for the whole account, not this app. It said: ${msg.slice(0, 200)}`
           : isModelMissingMessage(msg)
             ? `${label} says your key cannot use the model “${model}”. Pick another in Settings → AI — the list there is what your key can use. It said: ${msg.slice(0, 200)}`
             : `Error: ${msg}`
@@ -1105,6 +1129,14 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
   useEffect(() => { if (!open) { micRef.current?.stop(); stopSpeaking() } }, [open])
   useEffect(() => () => { micRef.current?.stop(); stopSpeaking() }, [])
 
+  // A limit reading is a moment: the minute bucket refills by itself and the reading grows old. Keep it honest on screen.
+  const anyReading = legacyLimits !== null || rows.some(r => r.usage != null)
+  useEffect(() => {
+    if (!anyReading || !shown) return
+    const t = setInterval(() => setTick(n => n + 1), 10_000)
+    return () => clearInterval(t)
+  }, [anyReading, shown])
+
   // Settings → AI can change the model while this window is open (the same page, or another tab): redraw the header.
   const [, setCfgTick] = useState(0)
   useEffect(() => {
@@ -1135,6 +1167,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
     if (id) void archiveConversation(id)
     awaiting.current = null
     legacyUsageRef.current = []; setLegacyUsage([]); setLiveChars(0)
+    legacyLimitsRef.current = null; setLegacyLimits(null)
     detach()
   }
 
@@ -1152,6 +1185,12 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
   if (liveOut > 0) spent.push({ provider: cfg.provider === 'groq' ? 'groq' : 'anthropic', model: shownModel, input: 0, output: liveOut, cacheRead: 0, cacheWrite: 0 })
   const usageSummary = summarise(spent, cfg.prices)
   const counter: BadgeUsage = { ...counterText(usageSummary, liveOut > 0), live: liveOut > 0, tokens: usageSummary.total, usd: usageSummary.usd }
+  // ── The provider's own word on the room left: the newest reading, from a row (any device) or this page's own reply ──
+  const nowMs = Date.now()
+  let rowLimits: Limits | null = null
+  for (let i = rows.length - 1; i >= 0 && !rowLimits; i--) rowLimits = limitsFromRow((rows[i].usage as { limits?: unknown } | null | undefined)?.limits)
+  const best = legacyLimits && (!rowLimits || legacyLimits.at > rowLimits.at) ? legacyLimits : rowLimits
+  const limitsView = best && best.provider === (cfg.provider === 'groq' ? 'groq' : 'anthropic') ? viewLimits(best, nowMs) : null
   const isEmpty = displayMessages.length === 0
 
   return (
@@ -1202,6 +1241,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{labelOf(persona)}</p>
             <ModelBadge provider={cfg.provider === 'groq' ? 'groq' : 'anthropic'} model={shownModel} usage={counter} />
+            {limitsView && best && <LimitsLine view={limitsView} ageText={ageWords(nowMs - best.at)} />}
           </div>
           {!isEmpty && (
             <button onClick={clearConversation}

@@ -384,3 +384,34 @@ layout with a very long model name, month total excluding last month, the price 
 **Not exercised: a real provider's usage fields (the stand-ins send the documented shapes), or the built-in prices being
 right.**
 
+## Live limits — the provider's own word on how much room is left (not a balance)
+`supabase/functions/_shared/providerLimits.ts` (re-exported by `src/lib/providerLimits.ts`), `LimitsLine.tsx`, `LiveLimitsRow` in
+`ModelPicker.tsx`, `usage.limits` on the answer row. The usage counter says what **this app** spent; a limit says what the
+**provider** will still allow the **account** — everything using that key or organisation — which is what decides whether the
+next message works. "Reflect live usage … so the user can take the right actions."
+- **No ordinary key can read a balance or an invoice from either provider.** Anthropic's account usage/cost needs an *Admin* key
+  on an organisation account (not built — a more powerful credential, deliberately left out). What both send on every reply,
+  free, are rate-limit headers: Groq `x-ratelimit-{limit,remaining,reset}-{requests,tokens}` (**requests are per DAY, tokens per
+  MINUTE**, reset as a duration like `2m59.56s`, `retry-after` only on a 429); Anthropic `anthropic-ratelimit-{requests,tokens,
+  input-tokens,output-tokens}-{limit,remaining,reset}` (per minute, reset an RFC 3339 time). **The Anthropic names are from
+  memory of its docs; a search could not confirm them and the doc hosts are unreachable from here — check on the first real reply.**
+- **Only what a header said is shown.** A missing/zero/negative/non-numeric header is an absent bucket, never a guess; `remaining`
+  is clamped to the limit; a bucket whose reset time has passed is shown **refilled** (with the reading's age) instead of the old
+  shortfall. Level: ok ≥ 20%, low < 20%, out < 5%, decided by the tightest bucket. Anthropic's combined `tokens` bucket is the
+  headline; input/output are listed only when it is absent.
+- **A browser can read a response header only if the provider's CORS rules expose it** (`access-control-expose-headers`).
+  The server path's function always can, and stores the reading on the answer row (`usage.limits`) so every device and a reload
+  see it; the page's own in-browser requests read them through a tapped `fetch` (Anthropic SDK `fetch` option; Groq `res.headers`)
+  and show nothing when they are hidden. Measured in Chromium with the same reply sent with and without exposure.
+  A refusal keeps its reading too, on a **zero-token** usage (nothing was spent), so the next device knows the account is out.
+- **Shown** under the model name (`data-limits-line`, quiet at ok; "Running low · …" and "Limit reached · … opens again in 23s"
+  in different colours, with what to do in the tooltip), for the provider in use only, redrawn every 10s so a refilled minute
+  bucket stops looking empty; and in Settings → AI → **Live limits** with each bucket in full and its age. A 429 is explained
+  ("used up its allowance for now — it opens again in 23s … the limit is the account's, not this app") on both paths.
+- **Duration formatting rounds whole seconds first** (`2m60s` was a bug found by the browser harness).
+Tests: `assistant-limits.mjs` (26, the parser and wording against honest and dishonest headers), `assistant-chat-server.mjs`
+(headers captured on both providers; a 429 with `retry-after` keeps a zero-token reading), `assistant-limits-live.mjs` (browser:
+ok/low/out colours, headers hidden by CORS → no line and the tokens still counted, Anthropic, a 429, a reading stored on a row
+shown on another device, wrong provider hidden, refilled bucket, layout beside a long model name, the Settings row).
+**Not exercised: a real Groq/Anthropic reply (the stand-ins send the documented names).**
+

@@ -14,9 +14,11 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const SRC = new URL('../supabase/functions/_shared/assistantChat.ts', import.meta.url)
-const js = ts.transpileModule(fs.readFileSync(SRC, 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } })
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ac-'))
-fs.writeFileSync(path.join(dir, 'ac.mjs'), js.outputText)
+const tr = src => ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
+// the module imports its sibling by its Deno name (`./providerLimits.ts`); give both a .mjs name in the scratch folder
+fs.writeFileSync(path.join(dir, 'providerLimits.mjs'), tr(fs.readFileSync(new URL('../supabase/functions/_shared/providerLimits.ts', import.meta.url), 'utf8')))
+fs.writeFileSync(path.join(dir, 'ac.mjs'), tr(fs.readFileSync(SRC, 'utf8')).replace("./providerLimits.ts", "./providerLimits.mjs"))
 const M = await import(path.join(dir, 'ac.mjs'))
 
 let pass = 0, fail = 0
@@ -71,9 +73,9 @@ function fakeFetch(replies) {
     calls.push({ url, body: JSON.parse(init.body), headers: init.headers })
     const r = replies.shift()
     if (!r) throw new Error('the fake model was asked more than it was told to answer')
-    if (r.status) return new Response(JSON.stringify({ error: { message: r.message } }), { status: r.status })
-    if (r.groq) return new Response(JSON.stringify(r.groq), { status: 200 })
-    return new Response(sse(r.events), { status: 200 })
+    if (r.status) return new Response(JSON.stringify({ error: { message: r.message } }), { status: r.status, headers: r.headers ?? {} })
+    if (r.groq) return new Response(JSON.stringify(r.groq), { status: 200, headers: r.headers ?? {} })
+    return new Response(sse(r.events), { status: 200, headers: r.headers ?? {} })
   }
   f.calls = calls
   return f
@@ -199,7 +201,7 @@ const deps = (db, fetchFn) => ({ db, fetchFn, now: () => (clock += 1000) })
 }
 
 // 7 ── the model refuses: the reason is on the screen, the lock is released
-for (const [status, message, want] of [[401, 'invalid x-api-key', /refused the key.*1234.*Settings → AI/], [429, 'slow down', /rate-limiting/], [529, 'overloaded', /problem on its side/]]) {
+for (const [status, message, want] of [[401, 'invalid x-api-key', /refused the key.*1234.*Settings → AI/], [429, 'slow down', /used up its allowance for now/], [529, 'overloaded', /problem on its side/]]) {
   const db = makeDb(); user(db, 'hello')
   const out = await M.runStep(deps(db, fakeFetch([{ status, message }])), P(db))
   const a = db.s.rows.find(r => r.role === 'assistant')
@@ -261,6 +263,39 @@ for (const [status, message, want] of [[401, 'invalid x-api-key', /refused the k
   await M.runStep(deps(db2, fakeFetch([{ events: textStream('no numbers') }])), P(db2))
   const u = db2.s.rows.find(r => r.role === 'assistant').usage
   ok(u && u.input === 0 && u.output === 0, 'a provider that said nothing records zeros, not a guess', JSON.stringify(u))
+}
+
+// 6c ── the provider's own word on how much room is left, read off the reply
+{
+  const iso = new Date(Date.now() + 41_000).toISOString()
+  const db = makeDb(); user(db, 'hello')
+  const f = fakeFetch([{ events: withUsage(textStream('Hi'), { input: 10, output: 5 }), headers: { 'anthropic-ratelimit-requests-limit': '50', 'anthropic-ratelimit-requests-remaining': '49', 'anthropic-ratelimit-requests-reset': iso, 'anthropic-ratelimit-tokens-limit': '40000', 'anthropic-ratelimit-tokens-remaining': '39000', 'anthropic-ratelimit-tokens-reset': iso } }])
+  await M.runStep(deps(db, f), P(db))
+  const l = db.s.rows.find(r => r.role === 'assistant').usage?.limits
+  ok(l && l.provider === 'anthropic' && l.requests.remaining === 49 && l.tokens.limit === 40000 && l.tokens.remaining === 39000 && l.tokens.resetAt === Date.parse(iso), 'Anthropic: the limit headers are kept on the answer beside the tokens', JSON.stringify(l))
+}
+{
+  const db = makeDb(); user(db, 'hi')
+  const f = fakeFetch([{ groq: { choices: [{ finish_reason: 'stop', message: { content: 'yo' } }], usage: { prompt_tokens: 3, completion_tokens: 1 } }, headers: { 'x-ratelimit-limit-requests': '14400', 'x-ratelimit-remaining-requests': '14399', 'x-ratelimit-limit-tokens': '6000', 'x-ratelimit-remaining-tokens': '5990', 'x-ratelimit-reset-tokens': '7.66s' } }])
+  await M.runStep(deps(db, f), P(db, { provider: 'groq', model: 'm', key: 'gsk_1', tools: [] }))
+  const l = db.s.rows.find(r => r.role === 'assistant').usage?.limits
+  ok(l && l.provider === 'groq' && l.requests.limit === 14400 && l.requests.remaining === 14399 && l.tokens.remaining === 5990, 'Groq: requests (a day) and tokens (a minute), as the provider said them', JSON.stringify(l))
+  ok(l.tokens.resetAt > Date.now() && l.tokens.resetAt < Date.now() + 9000, 'with the moment the minute bucket refills')
+}
+{
+  const db = makeDb(); user(db, 'hi')
+  await M.runStep(deps(db, fakeFetch([{ events: textStream('plain') }])), P(db))
+  ok(db.s.rows.find(r => r.role === 'assistant').usage.limits === undefined, 'CONTROL: a provider that sent no limit headers leaves none — nothing is invented')
+}
+{
+  const db = makeDb(); user(db, 'hi')
+  const out = await M.runStep(deps(db, fakeFetch([{ status: 429, message: 'Rate limit reached for model in organization on tokens per minute', headers: { 'retry-after': '23', 'x-ratelimit-limit-tokens': '6000', 'x-ratelimit-remaining-tokens': '0', 'x-ratelimit-reset-tokens': '23s' } }])), P(db, { provider: 'groq', model: 'm', key: 'gsk_1', tools: [] }))
+  const a = db.s.rows.find(r => r.role === 'assistant')
+  ok(out === 'error' && /used up its allowance for now — it opens again in 23s/.test(a.content) && /whole account, not this app/.test(a.content), 'a 429 says how long to wait, from the provider\'s retry-after, and that the limit is the account\'s', a.content)
+  ok(a.usage?.limits?.tokens?.remaining === 0 && a.usage.limits.retryAfter === 23 && a.usage.input === 0 && a.usage.output === 0, 'and the empty bucket is kept on the refused row, with ZERO tokens (nothing was spent)', JSON.stringify(a.usage))
+  const db2 = makeDb(); user(db2, 'hi')
+  await M.runStep(deps(db2, fakeFetch([{ status: 429, message: 'slow down' }])), P(db2))
+  ok(/wait a moment and ask again/.test(db2.s.rows.find(r => r.role === 'assistant').content) && db2.s.rows.find(r => r.role === 'assistant').usage === undefined, 'CONTROL: a 429 with no headers falls back to "wait a moment", and records no reading')
 }
 
 // 7b ── the other two ways the chosen model stops working, each with its own sentence

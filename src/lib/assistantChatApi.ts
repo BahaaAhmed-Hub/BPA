@@ -7,6 +7,7 @@
 import { supabase } from './supabase'
 import { CLAIM_MS, ADOPT_WITHIN_MS, mergeRows, type ChatRow } from './assistantChatView'
 import { usageFromRow, type ModelUsage } from './aiUsage'
+import { limitsFromRow, type Limits } from './providerLimits'
 
 export type StepResult = 'accepted' | 'unavailable' | 'offline'
 
@@ -126,6 +127,18 @@ export async function persistBubbles(conversationId: string, userId: string, row
     ...(r.usage ? { usage: r.usage } : {}),
   })))
   return !error || missing(error)
+}
+
+/** The newest limit reading this person's replies carried for this provider — what Settings shows, from any device. */
+export async function fetchLatestLimits(userId: string, provider: 'anthropic' | 'groq'): Promise<Limits | null> {
+  const { data, error } = await supabase.from('assistant_messages').select('usage')
+    .eq('user_id', userId).not('usage', 'is', null).order('id', { ascending: false }).limit(40)
+  if (error || !Array.isArray(data)) return null
+  for (const r of data as Array<{ usage: { limits?: unknown } | null }>) {
+    const l = limitsFromRow(r.usage?.limits)
+    if (l && l.provider === provider) return l
+  }
+  return null
 }
 
 /** Everything the assistant used since the first of this month, as the rows record it. Null when it could not be read. */

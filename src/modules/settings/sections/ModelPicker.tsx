@@ -5,7 +5,8 @@ import { inputStyle } from '@/lib/fields'
 import { ASSISTANT_CLAUDE_MODEL, describeModel } from '@/lib/modelInfo'
 import { fallbackOrder, listModels, probeGroq, type ModelOption } from '@/lib/modelCatalog'
 import { useAuthStore } from '@/store/authStore'
-import { fetchMonthUsage } from '@/lib/assistantChatApi'
+import { fetchLatestLimits, fetchMonthUsage } from '@/lib/assistantChatApi'
+import { ageWords, viewLimits, waitText, type Limits } from '@/lib/providerLimits'
 import { amountText, formatTokens, groupByModel, priceFor, summarise, type ModelUsage } from '@/lib/aiUsage'
 import { type AIConfig } from '../model'
 import { FieldRow } from '../ui'
@@ -124,6 +125,7 @@ export function ModelPicker({ ai, setAI }: { ai: AIConfig; setAI: (p: Partial<AI
       </FieldRow>
 
       <PriceRow ai={ai} setAI={setAI} model={effective} />
+      <LiveLimitsRow ai={ai} />
       <MonthUsageRow ai={ai} />
     </>
   )
@@ -163,6 +165,49 @@ function PriceRow({ ai, setAI, model }: { ai: AIConfig; setAI: (p: Partial<AICon
             : known ? 'Showing a list-price estimate. Enter the rate on your billing page to make the amount yours.'
             : 'No price is known for this model, so only tokens are counted. Enter its rate to see an amount.'}
         </p>
+      </div>
+    </FieldRow>
+  )
+}
+
+/** The provider's own word on how much room is left, off the headers of the last reply — for the whole account, which is what
+ *  decides whether the next message works. It is a reading, not a balance: neither provider lets an app read credit. */
+function LiveLimitsRow({ ai }: { ai: AIConfig }) {
+  const uid = useAuthStore(s => s.user?.id)
+  const [l, setL] = useState<Limits | null | undefined>(undefined)
+  const [again, setAgain] = useState(0)
+  const [, setClock] = useState(0)
+  useEffect(() => {
+    if (!uid) { setL(null); return }
+    let dead = false
+    setL(undefined)
+    void fetchLatestLimits(uid, ai.provider).then(x => { if (!dead) setL(x) })
+    return () => { dead = true }
+  }, [uid, ai.provider, again])
+  useEffect(() => { const t = setInterval(() => setClock(n => n + 1), 10_000); return () => clearInterval(t) }, [])
+  const view = l ? viewLimits(l, Date.now()) : null
+  const tone = view?.level === 'out' ? 'var(--sb-negative)' : view?.level === 'low' ? 'var(--sb-accent-deep)' : 'var(--sb-ink-1)'
+  const name = ai.provider === 'groq' ? 'Groq' : 'Anthropic'
+  return (
+    <FieldRow label="Live limits" sub={`${name}’s own count of what is left`}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span data-live-limits={view ? view.level : l === null ? 'none' : 'loading'} style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: tone, fontVariantNumeric: 'tabular-nums' }}>
+            {l === undefined ? 'Reading…'
+              : !view ? 'No reading yet — it appears with your next reply.'
+              : view.level === 'out' ? `Limit reached${view.retryAfter !== undefined ? ` · opens again in ${waitText(view.retryAfter)}` : ''}`
+              : view.level === 'low' ? 'Running low' : 'Plenty left'}
+          </span>
+          <button type="button" onClick={() => setAgain(n => n + 1)} aria-label="Refresh the live limits" title="Refresh"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
+            <RefreshCw size={ICON.sm} />
+          </button>
+        </div>
+        {view?.lines.map(t => <span key={t} data-live-limit-line style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>{t}</span>)}
+        {l && <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>As of {ageWords(Date.now() - l.at)}.</span>}
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
+          This is the provider’s count for your whole account — everything using this key or organisation, not only this app — and it is what decides whether the next message works. It is a limit on speed and volume, not your credit balance; neither provider shows an app that. {ai.provider === 'groq' ? 'Groq’s requests are counted per day and tokens per minute.' : 'Anthropic’s are counted per minute.'} A reading appears only if the reply carried one.
+        </span>
       </div>
     </FieldRow>
   )
