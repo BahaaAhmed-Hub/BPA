@@ -376,5 +376,14 @@ can refuse. **Not exercised: a live Telegram tap, a live Siri Shortcut, or the m
   already has one, patches nothing and quotes it.
 - **The link is not invented.** Google can answer before the link exists; the reply then says it was requested and has not
   come back yet (and that the calendar may not support Meet) instead of claiming it was added.
+- **The calendar's own provider decides, and it is read, not assumed.** `CalendarHub` keeps each calendar's
+  `conferenceProperties.allowedConferenceSolutionTypes` (`meetTypes`); the app's tool reads
+  `/users/me/calendarList/primary`. `supportsMeet()` is false only when the list is present and leaves out
+  `hangoutsMeet` (Meet switched off, or only a third-party `addOn` such as Zoom). Then **no conference is requested** and
+  the reply says which provider the calendar allows and that an add-on has to be added from Google Calendar; any guests or
+  other edits in the same call still go through. An absent list is unknown and is tried. The first cut sent
+  `hangoutsMeet` to every account regardless.
+- **Not covered:** a Zoom/Teams link cannot be minted through the Calendar API, and the bots only read Google accounts, so
+  `NewEventPanel`'s `provider: 'teams'` option (never passed by any caller) has no counterpart here.
 - **No extra approval**: a link emails nobody. Guests on the same call are still gated by the guests rule above.
 `scripts/bots-invite-guests.mjs` (now covers both bots and the app, Meet included).

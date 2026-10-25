@@ -5,7 +5,7 @@ import { archiveThread, answerInvitation } from './mailActions'
 import { readInvite } from './invitations'
 import { readNeeds } from './mailNeeds'
 import { parseGuests } from '../../supabase/functions/_shared/guests.ts'
-import { meetRequest, meetLinkOf, meetSentence } from '../../supabase/functions/_shared/meet.ts'
+import { meetRequest, meetLinkOf, meetSentence, supportsMeet, noMeetSentence } from '../../supabase/functions/_shared/meet.ts'
 import { APP_GUIDE, findGuide } from './appGuide'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { type ConnectedAccount } from './multiAccount'
@@ -88,6 +88,14 @@ async function calGet<T>(token: string, path: string): Promise<T> {
     throw new Error(b?.error?.message ?? `Calendar ${res.status}`)
   }
   return res.json() as Promise<T>
+}
+
+/** Which video providers the account's main calendar can mint (Google's own word, per calendar). */
+async function meetTypesOf(token: string): Promise<string[] | undefined> {
+  try {
+    const c = await calGet<{ conferenceProperties?: { allowedConferenceSolutionTypes?: string[] } }>(token, '/users/me/calendarList/primary')
+    return c.conferenceProperties?.allowedConferenceSolutionTypes
+  } catch { return undefined }
 }
 
 async function calPost<T>(token: string, path: string, body: unknown, method = 'POST'): Promise<T> {
@@ -682,15 +690,18 @@ export async function executeTool(
       const token = await tokenForEmail(acctEmail, ctx)
       const tz    = (input.timezone as string) ?? 'UTC'
       const { emails: invitees, rejected } = parseGuests(input.guests)
+      const askedMeet = input.add_meet === true
+      const meetTypes = askedMeet ? await meetTypesOf(token) : undefined
+      const wantMeet = askedMeet && supportsMeet(meetTypes)
       if (input.guests !== undefined && !invitees.length && rejected.length) {
         throw new Error(`Not an email address: ${rejected.join(', ')}. Ask the user for their email; nothing was created.`)
       }
       const event = await calPost<{ id: string; htmlLink: string; hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] } }>(
         token,
-        `/calendars/primary/events${[invitees.length ? 'sendUpdates=all' : '', input.add_meet === true ? 'conferenceDataVersion=1' : ''].filter(Boolean).map((x, n) => (n ? '&' : '?') + x).join('')}`,
+        `/calendars/primary/events${[invitees.length ? 'sendUpdates=all' : '', wantMeet ? 'conferenceDataVersion=1' : ''].filter(Boolean).map((x, n) => (n ? '&' : '?') + x).join('')}`,
         {
           ...(invitees.length ? { attendees: invitees.map(email => ({ email })) } : {}),
-          ...(input.add_meet === true ? meetRequest() : {}),
+          ...(wantMeet ? meetRequest() : {}),
           summary:     input.title       as string,
           description: input.description as string | undefined,
           location:    input.location    as string | undefined,
@@ -699,7 +710,7 @@ export async function executeTool(
         },
       )
       const note = (invitees.length ? ` and ${invitees.join(', ')} invited` : '') + (rejected.length ? `. Not invited (not an email address): ${rejected.join(', ')} — ask for their email` : '')
-      return { success: true, event_id: event.id, link: event.htmlLink, message: `Event "${input.title as string}" created${note}${input.add_meet === true ? meetSentence(event) : ''}` }
+      return { success: true, event_id: event.id, link: event.htmlLink, message: `Event "${input.title as string}" created${note}${wantMeet ? meetSentence(event) : askedMeet ? noMeetSentence('your main calendar', meetTypes) : ''}` }
     }
 
     case 'update_calendar_event': {
@@ -739,14 +750,17 @@ export async function executeTool(
         patch.attendees = [...have, ...addGuests.filter(e => !known.has(e.toLowerCase())).map(email => ({ email }))]
       }
       const existingMeet = meetLinkOf(cur)
-      if (input.add_meet === true && !existingMeet) Object.assign(patch, meetRequest())
+      const meetTypes = input.add_meet === true ? await meetTypesOf(token) : undefined
+      const meetOk = input.add_meet === true && supportsMeet(meetTypes)
+      if (meetOk && !existingMeet) Object.assign(patch, meetRequest())
       if (!Object.keys(patch).length) {
+        if (input.add_meet === true && !meetOk) return { success: true, message: noMeetSentence('your main calendar', meetTypes).trim() }
         if (input.add_meet === true && existingMeet) return { success: true, message: `That event already has a Meet link: ${existingMeet}` }
         throw new Error(badGuests.length ? `Not an email address: ${badGuests.join(', ')}. Ask the user for their email.` : 'Nothing to change: give a title, time, description, location or guests to add.')
       }
       const tell = guests.length > 0 || addGuests.length > 0
       const saved = await calPost<{ hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] } }>(token, `/calendars/primary/events/${id}?sendUpdates=${tell ? 'all' : 'none'}${patch.conferenceData ? '&conferenceDataVersion=1' : ''}`, patch, 'PATCH')
-      return { success: true, message: `Event updated${guests.length ? ` and ${guests.length} guest${guests.length === 1 ? '' : 's'} told` : ''}${addGuests.length ? `; invited ${addGuests.join(', ')}` : ''}${badGuests.length ? `. Not invited (not an email address): ${badGuests.join(', ')} — ask for their email` : ''}${patch.conferenceData ? meetSentence(saved) : existingMeet && input.add_meet === true ? ` It already had a Meet link: ${existingMeet}` : ''}` }
+      return { success: true, message: `Event updated${guests.length ? ` and ${guests.length} guest${guests.length === 1 ? '' : 's'} told` : ''}${addGuests.length ? `; invited ${addGuests.join(', ')}` : ''}${badGuests.length ? `. Not invited (not an email address): ${badGuests.join(', ')} — ask for their email` : ''}${patch.conferenceData ? meetSentence(saved) : existingMeet && input.add_meet === true ? ` It already had a Meet link: ${existingMeet}` : input.add_meet === true && !meetOk ? noMeetSentence('your main calendar', meetTypes) : ''}` }
     }
 
     case 'delete_calendar_event': {

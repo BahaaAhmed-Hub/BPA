@@ -14,6 +14,21 @@ interface EventWithMeet {
   conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] }
 }
 
+/** Can this calendar mint a Google Meet link? Google reports what each calendar allows in
+ *  `conferenceProperties.allowedConferenceSolutionTypes` (`hangoutsMeet`, `eventHangout`, `eventNamedHangout`,
+ *  `addOn`). A calendar whose list leaves Meet out — a Workspace that switched it off, or one that only offers a
+ *  third-party add-on — would be sent a request it cannot honour. An absent list is unknown, and is tried. */
+export function supportsMeet(allowed: string[] | undefined | null): boolean {
+  return !Array.isArray(allowed) || allowed.includes('hangoutsMeet')
+}
+
+/** Said instead of a link, when the calendar's own settings rule Meet out. */
+export function noMeetSentence(calendarName: string, allowed: string[] | undefined | null): string {
+  const has = (allowed ?? []).filter(Boolean)
+  return ` No video link was added: "${calendarName}" does not allow Google Meet${has.length ? ` (it allows: ${has.join(', ')})` : ''}. ` +
+    'Its video provider is set on the account itself (a Zoom or Teams add-on has to be added from the event in Google Calendar), so I left the event as it is.'
+}
+
 /** The video link an event already carries, if any. */
 export function meetLinkOf(ev: EventWithMeet | null | undefined): string | null {
   if (!ev) return null

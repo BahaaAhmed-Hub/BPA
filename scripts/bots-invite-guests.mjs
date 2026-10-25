@@ -31,7 +31,7 @@ for (const bot of ['telegram-bot', 'professor-siri']) {
   const file = path.join(dir, 'h.ts')
   fs.writeFileSync(file, `
 import { parseGuests } from ${JSON.stringify(path.resolve('supabase/functions/_shared/googleCalendars.ts'))}
-import { meetRequest, meetLinkOf, meetSentence } from ${JSON.stringify(path.resolve('supabase/functions/_shared/meet.ts'))}
+import { meetRequest, meetLinkOf, meetSentence, supportsMeet, noMeetSentence } from ${JSON.stringify(path.resolve('supabase/functions/_shared/meet.ts'))}
 const calls: { method: string; url: string; body: any }[] = []
 let existing: any[] = [{ email: 'me@x.com', self: true, organizer: true }, { email: 'old@x.com' }]
 let refuse = false
@@ -45,7 +45,7 @@ globalThis.fetch = (async (url: string, init: any = {}) => {
   const wants = init.body && JSON.parse(init.body).conferenceData
   return new Response(JSON.stringify({ summary: 'Sync', start: { dateTime: '2030-05-10T15:00:00' }, ...(wants && !pending ? { hangoutLink: 'https://meet.google.com/new-new-new' } : {}) }), { status: 200 })
 }) as any
-const cal = { calendarId: 'primary', accountId: 'a', accountEmail: 'me@x.com', name: 'Main', primary: true, writable: true }
+const cal: any = { calendarId: 'primary', accountId: 'a', accountEmail: 'me@x.com', name: 'Main', primary: true, writable: true, meetTypes: ['hangoutsMeet', 'eventHangout'] }
 const hub = {
   configured: true, unreachable: [] as string[],
   pickWritable: async () => cal, token: async () => 't',
@@ -73,6 +73,17 @@ out.meetHaveCalls = calls.splice(0)
 hasMeet = false; pending = true
 out.meetPending = await toolAddCalendarEvent('u', { title: 'Call', start: '2030-05-10T15:00:00', add_meet: true })
 calls.splice(0); pending = false
+cal.meetTypes = ['addOn']
+out.noMeetNew = await toolAddCalendarEvent('u', { title: 'Call', start: '2030-05-10T15:00:00', add_meet: true })
+out.noMeetNewCall = calls.splice(0)[0]
+out.noMeetUpd = await toolUpdateCalendarEvent('u', { event_id: 'ev1', add_meet: true })
+out.noMeetUpdCalls = calls.splice(0)
+out.noMeetWithGuest = await toolUpdateCalendarEvent('u', { event_id: 'ev1', add_meet: true, add_guests: ['g@x.com'] })
+out.noMeetGuestCalls = calls.splice(0)
+cal.meetTypes = undefined
+out.unknownNew = await toolAddCalendarEvent('u', { title: 'Call', start: '2030-05-10T15:00:00', add_meet: true })
+out.unknownCall = calls.splice(0)[0]
+cal.meetTypes = ['hangoutsMeet']
 refuse = true
 out.refused = await toolUpdateCalendarEvent('u', { event_id: 'ev1', add_guests: ['new@x.com'] })
 out.refusedCalls = calls.splice(0)
@@ -98,6 +109,12 @@ console.log(JSON.stringify(out))
   ok(`${bot}: Meet — update adds it to an event without one`, !!mp && !!mp.body.conferenceData && /conferenceDataVersion=1/.test(mp.url) && !/sendUpdates/.test(mp.url), JSON.stringify(mp))
   ok(`${bot}: Meet — an event that already has one is left alone and the link is quoted`, !o.meetHaveCalls.some(c => c.method === 'PATCH') && /old-old-old/.test(o.meetHave), o.meetHave)
   ok(`${bot}: Meet — a link Google has not returned is not invented`, /not returned it yet/.test(o.meetPending) && !/meet\.google\.com/.test(o.meetPending), o.meetPending)
+  ok(`${bot}: Meet — a calendar whose provider is not Meet is never asked for one, and the reply says why`, o.noMeetNewCall.body.conferenceData === undefined && !/conferenceDataVersion/.test(o.noMeetNewCall.url) && /does not allow Google Meet/.test(o.noMeetNew) && /addOn/.test(o.noMeetNew) && /Created/.test(o.noMeetNew), o.noMeetNew)
+  ok(`${bot}: Meet — update on such a calendar writes nothing and says why`, !o.noMeetUpdCalls.some(c => c.method === 'PATCH') && /does not allow Google Meet/.test(o.noMeetUpd), o.noMeetUpd)
+  const ng = o.noMeetGuestCalls.find(c => c.method === 'PATCH')
+  ok(`${bot}: Meet — guests are still added when Meet is not possible, without a conference`, !!ng && ng.body.conferenceData === undefined && /Invited g@x.com/.test(o.noMeetWithGuest) && /does not allow/.test(o.noMeetWithGuest), o.noMeetWithGuest)
+  ok(`${bot}: Meet — control: a calendar that does not say is tried`, !!o.unknownCall.body.conferenceData)
+  ok(`${bot}: Meet — the hub reads the provider from Google's calendar list`, /allowedConferenceSolutionTypes/.test(fs.readFileSync('supabase/functions/_shared/googleCalendars.ts', 'utf8')))
   ok(`${bot}: Meet — control: no add_meet sends no conferenceData`, o.plainCalls[0].body.conferenceData === undefined && !/conferenceDataVersion/.test(o.plainCalls[0].url))
   ok(`${bot}: Meet — the schema and prompt offer it`, /add_meet:\s+\{ type: 'boolean'/.test(src) && /add a Meet link/.test(src))
   ok(`${bot}: a refusal is not reported as an invitation`, !/Invited/.test(o.refused) && !o.refusedCalls.some(c => c.method === 'PATCH'), o.refused)
@@ -118,17 +135,21 @@ console.log(JSON.stringify(out))
   if (c && u) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'appinv-'))
     const file = path.join(dir, 'a.ts')
+    const lifted = (src.match(/async function meetTypesOf[\s\S]*?\n}\n/) ?? [''])[0]
+    ok('app: meetTypesOf found', lifted !== '')
     const fix = t => t.replace(/\n    \}\n$/, '\n    },')
     fs.writeFileSync(file, `
 import { parseGuests } from ${JSON.stringify(path.resolve('supabase/functions/_shared/guests.ts'))}
-import { meetRequest, meetLinkOf, meetSentence } from ${JSON.stringify(path.resolve('supabase/functions/_shared/meet.ts'))}
+import { meetRequest, meetLinkOf, meetSentence, supportsMeet, noMeetSentence } from ${JSON.stringify(path.resolve('supabase/functions/_shared/meet.ts'))}
 const calls: any[] = []
 let cur: any = { summary: 'Sync', attendees: [{ email: 'me@x.com', self: true, organizer: true }, { email: 'old@x.com', responseStatus: 'accepted' }], start: { dateTime: '2030-05-10T15:00:00Z' }, end: { dateTime: '2030-05-10T16:00:00Z' } }
 const tokenForEmail = async (_: any, __: any) => 't'
-const calGet = async (_t: string, p: string) => { calls.push({ method: 'GET', path: p }); return cur }
+let appTypes: string[] | undefined = ['hangoutsMeet']
+const calGet = async (_t: string, p: string) => { calls.push({ method: 'GET', path: p }); if (p.includes('calendarList')) return { conferenceProperties: appTypes ? { allowedConferenceSolutionTypes: appTypes } : undefined }; return cur }
 const setMeet = (on: boolean) => { cur = { ...cur, hangoutLink: on ? 'https://meet.google.com/old-old-old' : undefined } }
 const calPost = async (_t: string, p: string, body: any, method = 'POST') => { calls.push({ method, path: p, body }); return { id: 'n1', htmlLink: 'l', ...(body.conferenceData ? { hangoutLink: 'https://meet.google.com/new-new-new' } : {}) } }
 const meetOn: any = { v: false }
+${lifted}
 const T: any = {
 ${fix(c)}
 ${fix(u)}
@@ -145,10 +166,16 @@ out.updCalls = calls.splice(0)
 out.plain = await T.update_calendar_event({ event_id: 'ev1', title: 'Renamed' }, undefined, {})
 out.plainCalls = calls.splice(0)
 out.meetNew = await T.create_calendar_event({ title: 'C', start_datetime: 'a', end_datetime: 'b', add_meet: true }, undefined, {})
-out.meetNewCall = calls.splice(0)[0]
+out.meetNewCall = calls.splice(0).find((x: any) => x.method === 'POST')
 cur = { ...cur, attendees: [{ email: 'me@x.com', self: true, organizer: true }] }
 out.meetUpd = await T.update_calendar_event({ event_id: 'ev1', add_meet: true }, undefined, {})
 out.meetUpdCalls = calls.splice(0)
+appTypes = ['addOn']
+out.noMeetNew = await T.create_calendar_event({ title: 'C', start_datetime: 'a', end_datetime: 'b', add_meet: true }, undefined, {})
+out.noMeetNewCall = calls.splice(0).find((x: any) => x.method === 'POST')
+out.noMeetUpd = await T.update_calendar_event({ event_id: 'ev1', add_meet: true }, undefined, {})
+out.noMeetUpdCalls = calls.splice(0)
+appTypes = ['hangoutsMeet']
 setMeet(true)
 out.meetHave = await T.update_calendar_event({ event_id: 'ev1', add_meet: true }, undefined, {})
 out.meetHaveCalls = calls.splice(0)
@@ -166,6 +193,8 @@ console.log(JSON.stringify(out))`)
     const ap = o.meetUpdCalls.find(x => x.method === 'PATCH')
     ok('app: Meet — update adds one to an event without', !!ap?.body.conferenceData && /conferenceDataVersion=1/.test(ap.path) && /new-new-new/.test(o.meetUpd.message), JSON.stringify(o.meetUpd))
     ok('app: Meet — an event that has one is left alone', !o.meetHaveCalls.some(x => x.method === 'PATCH') && /old-old-old/.test(o.meetHave.message), JSON.stringify(o.meetHave))
+    ok('app: Meet — a main calendar that does not allow Meet is never asked for one', o.noMeetNewCall.body.conferenceData === undefined && !/conferenceDataVersion/.test(o.noMeetNewCall.path) && /does not allow Google Meet/.test(o.noMeetNew.message) && o.noMeetNew.success === true, JSON.stringify(o.noMeetNew))
+    ok('app: Meet — update on such a calendar writes nothing and says why', !o.noMeetUpdCalls.some(x => x.method === 'PATCH') && /does not allow Google Meet/.test(o.noMeetUpd.message), JSON.stringify(o.noMeetUpd))
     ok('app: Meet — the schema offers it', /add_meet:\s+\{ type: 'boolean'/.test(src))
     ok('app: control — a plain edit of an event with guests still asks first', o.plain.needs_confirmation === true && !o.plainCalls.some(x => x.method === 'PATCH'), JSON.stringify(o.plain))
   }

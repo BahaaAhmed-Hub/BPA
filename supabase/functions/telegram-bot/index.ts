@@ -20,7 +20,7 @@
 
 import { calledLine, personaName } from '../_shared/persona.ts'
 import { CalendarHub, eventLine, parseGuests } from '../_shared/googleCalendars.ts'
-import { meetRequest, meetLinkOf, meetSentence } from '../_shared/meet.ts'
+import { meetRequest, meetLinkOf, meetSentence, supportsMeet, noMeetSentence } from '../_shared/meet.ts'
 import { approvalText, gateCall, KIT_RULES, KIT_TOOLS, runKitTool, takeAction, type GateCtx, type Parked } from '../_shared/botKit.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -593,7 +593,9 @@ async function toolAddCalendarEvent(userId: string, args: Record<string, unknown
   const { emails: guests, rejected } = parseGuests(args.guests)
   if (guests.length) event.attendees = guests.map(email => ({ email }))
   // A Meet link is minted by Google when asked for; it emails nobody by itself.
-  const wantMeet = args.add_meet === true
+  const askedMeet = args.add_meet === true
+  // Only a calendar that allows Meet is asked for one — its provider is its own setting, read from Google.
+  const wantMeet = askedMeet && supportsMeet(target.meetTypes)
   if (wantMeet) Object.assign(event, meetRequest())
   const qs = new URLSearchParams()
   if (guests.length) qs.set('sendUpdates', 'all')
@@ -623,7 +625,7 @@ async function toolAddCalendarEvent(userId: string, args: Record<string, unknown
   // does not tell you whether it went where you meant.
   const invited = guests.length ? ` Invited ${guests.join(', ')}.` : ''
   const skipped = rejected.length ? ` Not invited (not an email address): ${rejected.join(', ')} — ask for their email.` : ''
-  const meet = wantMeet ? meetSentence(created) : ''
+  const meet = wantMeet ? meetSentence(created) : askedMeet ? noMeetSentence(target.name, target.meetTypes) : ''
   return `Created "${created.summary ?? title}" on ${when} in ${target.name}.${invited}${skipped}${meet}`
 }
 
@@ -662,8 +664,9 @@ async function toolUpdateCalendarEvent(userId: string, args: Record<string, unkn
   // — sending only the new address would uninvite everyone already on it. The
   // same read tells us whether the event already has a Meet link, which is
   // never replaced.
+  const meetOk = wantMeet && supportsMeet(found.calendar.meetTypes)
   let existingMeet: string | null = null
-  if (addGuests.length || wantMeet) {
+  if (addGuests.length || meetOk) {
     const cur = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(found.calendar.calendarId)}/events/${encodeURIComponent(found.eventId)}`,
       { headers: { Authorization: `Bearer ${found.token}` } },
@@ -675,12 +678,13 @@ async function toolUpdateCalendarEvent(userId: string, args: Record<string, unkn
       const known = new Set(have.map(a => String(a.email ?? '').toLowerCase()))
       patch.attendees = [...have, ...addGuests.filter(e => !known.has(e.toLowerCase())).map(email => ({ email }))]
     }
-    if (wantMeet) {
+    if (meetOk) {
       existingMeet = meetLinkOf(body)
       if (!existingMeet) Object.assign(patch, meetRequest())
     }
   }
   if (!Object.keys(patch).length) {
+    if (wantMeet && !meetOk) return noMeetSentence(found.calendar.name, found.calendar.meetTypes).trim()
     return existingMeet ? `That event already has a Meet link: ${existingMeet}` : 'Nothing to update.'
   }
 
@@ -702,7 +706,7 @@ async function toolUpdateCalendarEvent(userId: string, args: Record<string, unkn
   const updated = await res.json() as { summary?: string; hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] } }
   const invited = addGuests.length ? ` Invited ${addGuests.join(', ')}.` : ''
   const skipped = badGuests.length ? ` Not invited (not an email address): ${badGuests.join(', ')} — ask for their email.` : ''
-  const meet = patch.conferenceData ? meetSentence(updated) : existingMeet ? ` It already had a Meet link: ${existingMeet}` : ''
+  const meet = patch.conferenceData ? meetSentence(updated) : existingMeet ? ` It already had a Meet link: ${existingMeet}` : wantMeet && !meetOk ? noMeetSentence(found.calendar.name, found.calendar.meetTypes) : ''
   return `Updated "${updated.summary ?? args.title}" in ${found.calendar.name}.${invited}${skipped}${meet}`
 }
 
