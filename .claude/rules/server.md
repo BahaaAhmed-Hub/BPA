@@ -387,3 +387,5 @@ can refuse. **Not exercised: a live Telegram tap, a live Siri Shortcut, or the m
   `NewEventPanel`'s `provider: 'teams'` option (never passed by any caller) has no counterpart here.
 - **No extra approval**: a link emails nobody. Guests on the same call are still gated by the guests rule above.
 `scripts/bots-invite-guests.mjs` (now covers both bots and the app, Meet included).
+- **Same account, asserted.** The bots' create uses the target calendar's token and edit uses the located calendar's; the
+  harness now has a company calendar on a second account whose token is distinguishable, and a plain id as the control.
