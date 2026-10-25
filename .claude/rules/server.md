@@ -367,3 +367,14 @@ had nowhere to put an address and either dropped the request or claimed it was d
   Without guests neither is asked about, as before. The in-app assistant has the same two arguments on `create_calendar_event` / `update_calendar_event` (`src/lib/assistantTools.ts`), gated by the same file; `parseGuests` lives in `_shared/guests.ts` for all three.
 `scripts/bots-invite-guests.mjs` — 45 assertions on the real functions lifted from both bots and the app's two cases against a fake Google that
 can refuse. **Not exercised: a live Telegram tap, a live Siri Shortcut, or the model choosing the argument.**
+
+## Bots — a video link (Google Meet) on an event, in all three assistants
+`add_meet: true` on `add_calendar_event` / `create_calendar_event`, and on `update_calendar_event`; `_shared/meet.ts`
+(`meetRequest`, `meetLinkOf`, `meetSentence`) is the one definition. Google mints the link from
+`conferenceData.createRequest` (`hangoutsMeet`) and only when `conferenceDataVersion=1` is on the request.
+- **An existing link is never replaced.** Update reads the event first (the same read that merges guests) and, if it
+  already has one, patches nothing and quotes it.
+- **The link is not invented.** Google can answer before the link exists; the reply then says it was requested and has not
+  come back yet (and that the calendar may not support Meet) instead of claiming it was added.
+- **No extra approval**: a link emails nobody. Guests on the same call are still gated by the guests rule above.
+`scripts/bots-invite-guests.mjs` (now covers both bots and the app, Meet included).

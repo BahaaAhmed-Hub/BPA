@@ -5,6 +5,7 @@ import { archiveThread, answerInvitation } from './mailActions'
 import { readInvite } from './invitations'
 import { readNeeds } from './mailNeeds'
 import { parseGuests } from '../../supabase/functions/_shared/guests.ts'
+import { meetRequest, meetLinkOf, meetSentence } from '../../supabase/functions/_shared/meet.ts'
 import { APP_GUIDE, findGuide } from './appGuide'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { type ConnectedAccount } from './multiAccount'
@@ -283,6 +284,7 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
         description:    { type: 'string', description: 'Event description (optional)' },
         location:       { type: 'string', description: 'Location (optional)' },
         timezone:       { type: 'string', description: 'IANA timezone e.g. America/New_York (optional, default UTC)' },
+        add_meet:       { type: 'boolean', description: 'true to attach a Google Meet video link (optional).' },
         guests:         { type: 'array', items: { type: 'string' }, description: 'Email addresses to invite (optional). Google emails each an invitation, so the app asks the user to approve first. Only real addresses the user gave — if you only have a name, ask for the address; never guess one.' },
         ...ACCT,
       },
@@ -303,6 +305,7 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
         location:       { type: 'string' },
         timezone:       { type: 'string', description: 'IANA timezone (optional; the event\'s own is kept)' },
         confirm_notify_guests: { type: 'boolean', description: 'Only after the tool said the event has guests' },
+        add_meet:       { type: 'boolean', description: 'true to add a Google Meet video link to this event (an existing link is kept, never replaced).' },
         add_guests:     { type: 'array', items: { type: 'string' }, description: 'Email addresses to ADD to the guest list (existing guests are kept). Google emails each an invitation, so the app asks the user to approve first. Only real addresses the user gave — never guess one.' },
         ...ACCT,
       },
@@ -682,11 +685,12 @@ export async function executeTool(
       if (input.guests !== undefined && !invitees.length && rejected.length) {
         throw new Error(`Not an email address: ${rejected.join(', ')}. Ask the user for their email; nothing was created.`)
       }
-      const event = await calPost<{ id: string; htmlLink: string }>(
+      const event = await calPost<{ id: string; htmlLink: string; hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] } }>(
         token,
-        `/calendars/primary/events${invitees.length ? '?sendUpdates=all' : ''}`,
+        `/calendars/primary/events${[invitees.length ? 'sendUpdates=all' : '', input.add_meet === true ? 'conferenceDataVersion=1' : ''].filter(Boolean).map((x, n) => (n ? '&' : '?') + x).join('')}`,
         {
           ...(invitees.length ? { attendees: invitees.map(email => ({ email })) } : {}),
+          ...(input.add_meet === true ? meetRequest() : {}),
           summary:     input.title       as string,
           description: input.description as string | undefined,
           location:    input.location    as string | undefined,
@@ -695,13 +699,13 @@ export async function executeTool(
         },
       )
       const note = (invitees.length ? ` and ${invitees.join(', ')} invited` : '') + (rejected.length ? `. Not invited (not an email address): ${rejected.join(', ')} — ask for their email` : '')
-      return { success: true, event_id: event.id, link: event.htmlLink, message: `Event "${input.title as string}" created${note}` }
+      return { success: true, event_id: event.id, link: event.htmlLink, message: `Event "${input.title as string}" created${note}${input.add_meet === true ? meetSentence(event) : ''}` }
     }
 
     case 'update_calendar_event': {
       const token = await tokenForEmail(acctEmail, ctx)
       const id = encodeURIComponent(input.event_id as string)
-      const cur = await calGet<{ summary?: string; attendees?: { email: string; self?: boolean; organizer?: boolean }[]; start?: { dateTime?: string; date?: string; timeZone?: string }; end?: { dateTime?: string; date?: string; timeZone?: string } }>(token, `/calendars/primary/events/${id}`)
+      const cur = await calGet<{ summary?: string; hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] }; attendees?: { email: string; self?: boolean; organizer?: boolean }[]; start?: { dateTime?: string; date?: string; timeZone?: string }; end?: { dateTime?: string; date?: string; timeZone?: string } }>(token, `/calendars/primary/events/${id}`)
       const guests = (cur.attendees ?? []).filter(a => !a.self && !a.organizer)
       const { emails: addGuests, rejected: badGuests } = parseGuests(input.add_guests)
       // Changing an event with guests tells them. That is somebody else's calendar and inbox, so it needs
@@ -734,12 +738,15 @@ export async function executeTool(
         const known = new Set(have.map(a => a.email.toLowerCase()))
         patch.attendees = [...have, ...addGuests.filter(e => !known.has(e.toLowerCase())).map(email => ({ email }))]
       }
+      const existingMeet = meetLinkOf(cur)
+      if (input.add_meet === true && !existingMeet) Object.assign(patch, meetRequest())
       if (!Object.keys(patch).length) {
+        if (input.add_meet === true && existingMeet) return { success: true, message: `That event already has a Meet link: ${existingMeet}` }
         throw new Error(badGuests.length ? `Not an email address: ${badGuests.join(', ')}. Ask the user for their email.` : 'Nothing to change: give a title, time, description, location or guests to add.')
       }
       const tell = guests.length > 0 || addGuests.length > 0
-      await calPost(token, `/calendars/primary/events/${id}?sendUpdates=${tell ? 'all' : 'none'}`, patch, 'PATCH')
-      return { success: true, message: `Event updated${guests.length ? ` and ${guests.length} guest${guests.length === 1 ? '' : 's'} told` : ''}${addGuests.length ? `; invited ${addGuests.join(', ')}` : ''}${badGuests.length ? `. Not invited (not an email address): ${badGuests.join(', ')} — ask for their email` : ''}` }
+      const saved = await calPost<{ hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] } }>(token, `/calendars/primary/events/${id}?sendUpdates=${tell ? 'all' : 'none'}${patch.conferenceData ? '&conferenceDataVersion=1' : ''}`, patch, 'PATCH')
+      return { success: true, message: `Event updated${guests.length ? ` and ${guests.length} guest${guests.length === 1 ? '' : 's'} told` : ''}${addGuests.length ? `; invited ${addGuests.join(', ')}` : ''}${badGuests.length ? `. Not invited (not an email address): ${badGuests.join(', ')} — ask for their email` : ''}${patch.conferenceData ? meetSentence(saved) : existingMeet && input.add_meet === true ? ` It already had a Meet link: ${existingMeet}` : ''}` }
     }
 
     case 'delete_calendar_event': {

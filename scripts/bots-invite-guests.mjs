@@ -31,15 +31,19 @@ for (const bot of ['telegram-bot', 'professor-siri']) {
   const file = path.join(dir, 'h.ts')
   fs.writeFileSync(file, `
 import { parseGuests } from ${JSON.stringify(path.resolve('supabase/functions/_shared/googleCalendars.ts'))}
+import { meetRequest, meetLinkOf, meetSentence } from ${JSON.stringify(path.resolve('supabase/functions/_shared/meet.ts'))}
 const calls: { method: string; url: string; body: any }[] = []
 let existing: any[] = [{ email: 'me@x.com', self: true, organizer: true }, { email: 'old@x.com' }]
 let refuse = false
+let hasMeet = false
+let pending = false
 globalThis.fetch = (async (url: string, init: any = {}) => {
   const method = init.method ?? 'GET'
   calls.push({ method, url, body: init.body ? JSON.parse(init.body) : null })
   if (refuse) return new Response(JSON.stringify({ error: { message: 'Forbidden' } }), { status: 403 })
-  if (method === 'GET') return new Response(JSON.stringify({ attendees: existing }), { status: 200 })
-  return new Response(JSON.stringify({ summary: 'Sync', start: { dateTime: '2030-05-10T15:00:00' } }), { status: 200 })
+  if (method === 'GET') return new Response(JSON.stringify({ attendees: existing, ...(hasMeet ? { hangoutLink: 'https://meet.google.com/old-old-old' } : {}) }), { status: 200 })
+  const wants = init.body && JSON.parse(init.body).conferenceData
+  return new Response(JSON.stringify({ summary: 'Sync', start: { dateTime: '2030-05-10T15:00:00' }, ...(wants && !pending ? { hangoutLink: 'https://meet.google.com/new-new-new' } : {}) }), { status: 200 })
 }) as any
 const cal = { calendarId: 'primary', accountId: 'a', accountEmail: 'me@x.com', name: 'Main', primary: true, writable: true }
 const hub = {
@@ -59,6 +63,16 @@ out.updated = await toolUpdateCalendarEvent('u', { event_id: 'ev1::primary', add
 out.updateCalls = calls.splice(0)
 out.badOnly = await toolUpdateCalendarEvent('u', { event_id: 'ev1', add_guests: ['Sara'] })
 out.badCalls = calls.splice(0)
+out.meetNew = await toolAddCalendarEvent('u', { title: 'Call', start: '2030-05-10T15:00:00', add_meet: true })
+out.meetNewCall = calls.splice(0)[0]
+out.meetUpd = await toolUpdateCalendarEvent('u', { event_id: 'ev1', add_meet: true })
+out.meetUpdCalls = calls.splice(0)
+hasMeet = true
+out.meetHave = await toolUpdateCalendarEvent('u', { event_id: 'ev1', add_meet: true })
+out.meetHaveCalls = calls.splice(0)
+hasMeet = false; pending = true
+out.meetPending = await toolAddCalendarEvent('u', { title: 'Call', start: '2030-05-10T15:00:00', add_meet: true })
+calls.splice(0); pending = false
 refuse = true
 out.refused = await toolUpdateCalendarEvent('u', { event_id: 'ev1', add_guests: ['new@x.com'] })
 out.refusedCalls = calls.splice(0)
@@ -78,6 +92,14 @@ console.log(JSON.stringify(out))
   ok(`${bot}: update keeps the existing guests, adds the new one once`, JSON.stringify(patch.body.attendees.map(a => a.email)) === '["me@x.com","old@x.com","new@x.com"]', JSON.stringify(patch.body.attendees))
   ok(`${bot}: update tells the guests`, /sendUpdates=all/.test(patch.url))
   ok(`${bot}: only a name is refused without touching Google`, o.badCalls.length === 0 && /Not an email address/.test(o.badOnly), o.badOnly)
+  ok(`${bot}: Meet — create asks Google for a Meet link`, o.meetNewCall.body.conferenceData?.createRequest?.conferenceSolutionKey?.type === 'hangoutsMeet' && /conferenceDataVersion=1/.test(o.meetNewCall.url) && !/sendUpdates/.test(o.meetNewCall.url), o.meetNewCall.url)
+  ok(`${bot}: Meet — the reply carries the link Google returned`, /meet\.google\.com\/new-new-new/.test(o.meetNew), o.meetNew)
+  const mp = o.meetUpdCalls.find(c => c.method === 'PATCH')
+  ok(`${bot}: Meet — update adds it to an event without one`, !!mp && !!mp.body.conferenceData && /conferenceDataVersion=1/.test(mp.url) && !/sendUpdates/.test(mp.url), JSON.stringify(mp))
+  ok(`${bot}: Meet — an event that already has one is left alone and the link is quoted`, !o.meetHaveCalls.some(c => c.method === 'PATCH') && /old-old-old/.test(o.meetHave), o.meetHave)
+  ok(`${bot}: Meet — a link Google has not returned is not invented`, /not returned it yet/.test(o.meetPending) && !/meet\.google\.com/.test(o.meetPending), o.meetPending)
+  ok(`${bot}: Meet — control: no add_meet sends no conferenceData`, o.plainCalls[0].body.conferenceData === undefined && !/conferenceDataVersion/.test(o.plainCalls[0].url))
+  ok(`${bot}: Meet — the schema and prompt offer it`, /add_meet:\s+\{ type: 'boolean'/.test(src) && /add a Meet link/.test(src))
   ok(`${bot}: a refusal is not reported as an invitation`, !/Invited/.test(o.refused) && !o.refusedCalls.some(c => c.method === 'PATCH'), o.refused)
 }
 
@@ -99,11 +121,14 @@ console.log(JSON.stringify(out))
     const fix = t => t.replace(/\n    \}\n$/, '\n    },')
     fs.writeFileSync(file, `
 import { parseGuests } from ${JSON.stringify(path.resolve('supabase/functions/_shared/guests.ts'))}
+import { meetRequest, meetLinkOf, meetSentence } from ${JSON.stringify(path.resolve('supabase/functions/_shared/meet.ts'))}
 const calls: any[] = []
 let cur: any = { summary: 'Sync', attendees: [{ email: 'me@x.com', self: true, organizer: true }, { email: 'old@x.com', responseStatus: 'accepted' }], start: { dateTime: '2030-05-10T15:00:00Z' }, end: { dateTime: '2030-05-10T16:00:00Z' } }
 const tokenForEmail = async (_: any, __: any) => 't'
 const calGet = async (_t: string, p: string) => { calls.push({ method: 'GET', path: p }); return cur }
-const calPost = async (_t: string, p: string, body: any, method = 'POST') => { calls.push({ method, path: p, body }); return { id: 'n1', htmlLink: 'l' } }
+const setMeet = (on: boolean) => { cur = { ...cur, hangoutLink: on ? 'https://meet.google.com/old-old-old' : undefined } }
+const calPost = async (_t: string, p: string, body: any, method = 'POST') => { calls.push({ method, path: p, body }); return { id: 'n1', htmlLink: 'l', ...(body.conferenceData ? { hangoutLink: 'https://meet.google.com/new-new-new' } : {}) } }
+const meetOn: any = { v: false }
 const T: any = {
 ${fix(c)}
 ${fix(u)}
@@ -119,6 +144,14 @@ out.upd = await T.update_calendar_event({ event_id: 'ev1', add_guests: ['new@x.c
 out.updCalls = calls.splice(0)
 out.plain = await T.update_calendar_event({ event_id: 'ev1', title: 'Renamed' }, undefined, {})
 out.plainCalls = calls.splice(0)
+out.meetNew = await T.create_calendar_event({ title: 'C', start_datetime: 'a', end_datetime: 'b', add_meet: true }, undefined, {})
+out.meetNewCall = calls.splice(0)[0]
+cur = { ...cur, attendees: [{ email: 'me@x.com', self: true, organizer: true }] }
+out.meetUpd = await T.update_calendar_event({ event_id: 'ev1', add_meet: true }, undefined, {})
+out.meetUpdCalls = calls.splice(0)
+setMeet(true)
+out.meetHave = await T.update_calendar_event({ event_id: 'ev1', add_meet: true }, undefined, {})
+out.meetHaveCalls = calls.splice(0)
 console.log(JSON.stringify(out))`)
     const o = JSON.parse(execFileSync('node', ['--experimental-strip-types', '--no-warnings', file], { encoding: 'utf8' }).trim().split('\n').pop())
     ok('app: create sends the invitations', /sendUpdates=all/.test(o.createCall.path), o.createCall.path)
@@ -129,6 +162,11 @@ console.log(JSON.stringify(out))`)
     const pat = o.updCalls.find(x => x.method === 'PATCH')
     ok('app: update keeps the old guest and their reply, adds the new one once', JSON.stringify(pat.body.attendees.map(a => a.email)) === '["me@x.com","old@x.com","new@x.com"]' && pat.body.attendees[1].responseStatus === 'accepted', JSON.stringify(pat.body.attendees))
     ok('app: update with add_guests tells them without asking twice', /sendUpdates=all/.test(pat.path) && o.upd.success === true, JSON.stringify(o.upd))
+    ok('app: Meet — create asks for a Meet link and returns the real one', o.meetNewCall.body.conferenceData?.createRequest?.conferenceSolutionKey?.type === 'hangoutsMeet' && /conferenceDataVersion=1/.test(o.meetNewCall.path) && /new-new-new/.test(o.meetNew.message), o.meetNew.message)
+    const ap = o.meetUpdCalls.find(x => x.method === 'PATCH')
+    ok('app: Meet — update adds one to an event without', !!ap?.body.conferenceData && /conferenceDataVersion=1/.test(ap.path) && /new-new-new/.test(o.meetUpd.message), JSON.stringify(o.meetUpd))
+    ok('app: Meet — an event that has one is left alone', !o.meetHaveCalls.some(x => x.method === 'PATCH') && /old-old-old/.test(o.meetHave.message), JSON.stringify(o.meetHave))
+    ok('app: Meet — the schema offers it', /add_meet:\s+\{ type: 'boolean'/.test(src))
     ok('app: control — a plain edit of an event with guests still asks first', o.plain.needs_confirmation === true && !o.plainCalls.some(x => x.method === 'PATCH'), JSON.stringify(o.plain))
   }
 }
