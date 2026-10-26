@@ -5,6 +5,7 @@ import { archiveThread, answerInvitation } from './mailActions'
 import { readInvite } from './invitations'
 import { readNeeds } from './mailNeeds'
 import { parseGuests } from '../../supabase/functions/_shared/guests.ts'
+import { meetRequest, meetLinkOf, meetSentence, supportsMeet, noMeetSentence } from '../../supabase/functions/_shared/meet.ts'
 import { APP_GUIDE, findGuide } from './appGuide'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { type ConnectedAccount } from './multiAccount'
@@ -89,6 +90,66 @@ async function calGet<T>(token: string, path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// ─── Which calendar, on which account ─────────────────────────────────────────
+// A company's calendar lives on a connected account, so an event on it must be read and written with *that*
+// account's token — never the signed-in account's, and never `primary` of whichever account is the default.
+// `cal-intel-cals-cache` (written by the calendar) is the only place a calendar id is tied to an account.
+
+interface CachedCal { id: string; summary: string; accountEmail: string; accessRole?: string; primary?: boolean }
+export interface CalTarget { token: string; calendarId: string; accountEmail: string; name: string }
+
+function cachedCals(): CachedCal[] {
+  try { return JSON.parse(localStorage.getItem('cal-intel-cals-cache') ?? '[]') as CachedCal[] } catch { return [] }
+}
+function hiddenCals(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem('cal-intel-hidden') ?? '[]') as string[]) } catch { return new Set() }
+}
+const isWritable = (c: CachedCal) => c.accessRole === 'owner' || c.accessRole === 'writer'
+
+/** `eventId::calendarId` is what listing hands back, so an edit knows where to go; a bare id still works. */
+export function splitEventRef(ref: unknown): { eventId: string; calendarId?: string } {
+  const raw = String(ref ?? '').trim()
+  const i = raw.indexOf('::')
+  return i < 0 ? { eventId: raw } : { eventId: raw.slice(0, i), calendarId: raw.slice(i + 2) || undefined }
+}
+
+/** A calendar named loosely ("teradix") — id, then name, then the account's address. */
+function matchCal(cals: CachedCal[], want: string): CachedCal | undefined {
+  const q = want.trim().toLowerCase()
+  return cals.find(c => c.id.toLowerCase() === q)
+    ?? cals.find(c => c.summary.toLowerCase() === q)
+    ?? cals.find(c => c.summary.toLowerCase().includes(q))
+    ?? cals.find(c => c.accountEmail.toLowerCase().includes(q))
+}
+
+export async function resolveCal(input: Record<string, unknown>, ctx: ToolContext, forWrite: boolean): Promise<CalTarget> {
+  const { calendarId: fromRef } = splitEventRef(input.event_id)
+  const want = fromRef ?? (typeof input.calendar === 'string' && input.calendar.trim() ? input.calendar : undefined)
+  const acct = input.account_email as string | undefined
+  if (want) {
+    const pool = cachedCals().filter(c => !forWrite || isWritable(c))
+    const hit = matchCal(pool, want)
+    if (hit) return { token: await tokenForEmail(hit.accountEmail || undefined, ctx), calendarId: hit.id, accountEmail: hit.accountEmail, name: hit.summary }
+    // An id that came from a listing but is not in the cache: trust the id on the named (else default) account.
+    if (fromRef) return { token: await tokenForEmail(acct, ctx), calendarId: fromRef, accountEmail: acct ?? ctx.primaryEmail, name: fromRef }
+    const names = cachedCals().filter(c => !forWrite || isWritable(c)).map(c => c.summary).join(', ')
+    throw new Error(`No ${forWrite ? 'writable ' : ''}calendar matches "${want}"${names ? ` (you have: ${names})` : ''}. Nothing was changed — do not fall back to another calendar.`)
+  }
+  const email = acct ?? ctx.primaryEmail
+  return { token: await tokenForEmail(acct, ctx), calendarId: 'primary', accountEmail: email, name: `${email} (main calendar)` }
+}
+
+/** What to hand back as an event's id: the calendar rides along unless it is the default one. */
+const refOf = (eventId: string, calendarId: string) => calendarId === 'primary' ? eventId : `${eventId}::${calendarId}`
+
+/** Which video providers a calendar can mint (Google's own word, per calendar). */
+async function meetTypesOf(token: string, calendarId = 'primary'): Promise<string[] | undefined> {
+  try {
+    const c = await calGet<{ conferenceProperties?: { allowedConferenceSolutionTypes?: string[] } }>(token, `/users/me/calendarList/${encodeURIComponent(calendarId)}`)
+    return c.conferenceProperties?.allowedConferenceSolutionTypes
+  } catch { return undefined }
+}
+
 async function calPost<T>(token: string, path: string, body: unknown, method = 'POST'): Promise<T> {
   const res = await fetch(`https://www.googleapis.com/calendar/v3${path}`, {
     method,
@@ -154,6 +215,7 @@ async function fetchEmailSummaries(token: string, query: string, max = 8) {
 // ─── Tool schemas ─────────────────────────────────────────────────────────────
 
 const ACCT = { account_email: { type: 'string', description: 'Connected account email (omit for primary)' } }
+const CAL = { calendar: { type: 'string', description: 'Which calendar, by name, id or its account address (e.g. "Teradix"). The event is read or written with THAT calendar\'s own account. Omit for the main calendar. A name that matches nothing is an error — it never falls back to another calendar.' } }
 
 export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
   // ── The app itself ─────────────────────────────────────────────────────────
@@ -267,6 +329,7 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
         date_from: { type: 'string', description: 'Start date YYYY-MM-DD' },
         date_to:   { type: 'string', description: 'End date YYYY-MM-DD' },
         ...ACCT,
+        ...CAL,
       },
       required: ['date_from', 'date_to'],
     },
@@ -283,8 +346,10 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
         description:    { type: 'string', description: 'Event description (optional)' },
         location:       { type: 'string', description: 'Location (optional)' },
         timezone:       { type: 'string', description: 'IANA timezone e.g. America/New_York (optional, default UTC)' },
+        add_meet:       { type: 'boolean', description: 'true to attach a Google Meet video link (optional).' },
         guests:         { type: 'array', items: { type: 'string' }, description: 'Email addresses to invite (optional). Google emails each an invitation, so the app asks the user to approve first. Only real addresses the user gave — if you only have a name, ask for the address; never guess one.' },
         ...ACCT,
+        ...CAL,
       },
       required: ['title', 'start_datetime', 'end_datetime'],
     },
@@ -303,8 +368,10 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
         location:       { type: 'string' },
         timezone:       { type: 'string', description: 'IANA timezone (optional; the event\'s own is kept)' },
         confirm_notify_guests: { type: 'boolean', description: 'Only after the tool said the event has guests' },
+        add_meet:       { type: 'boolean', description: 'true to add a Google Meet video link to this event (an existing link is kept, never replaced).' },
         add_guests:     { type: 'array', items: { type: 'string' }, description: 'Email addresses to ADD to the guest list (existing guests are kept). Google emails each an invitation, so the app asks the user to approve first. Only real addresses the user gave — never guess one.' },
         ...ACCT,
+        ...CAL,
       },
       required: ['event_id'],
     },
@@ -314,7 +381,7 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
     description: 'Delete (cancel) a calendar event by its ID.',
     input_schema: {
       type: 'object' as const,
-      properties: { event_id: { type: 'string', description: 'Google Calendar event ID' }, ...ACCT },
+      properties: { event_id: { type: 'string', description: 'The id from list_calendar_events, exactly as given (it may end ::calendar).' }, ...ACCT, ...CAL },
       required: ['event_id'],
     },
   },
@@ -655,38 +722,56 @@ export async function executeTool(
     // ── Calendar ──────────────────────────────────────────────────────────────
 
     case 'list_calendar_events': {
-      const token = await tokenForEmail(acctEmail, ctx)
       const from  = input.date_from as string
       const to    = input.date_to   as string
-      const data  = await calGet<{
-        items?: Array<{
-          id: string; summary: string
-          start: { dateTime?: string; date?: string }
-          end:   { dateTime?: string; date?: string }
-          location?: string
-        }>
-      }>(token, `/calendars/primary/events?timeMin=${from}T00:00:00Z&timeMax=${to}T23:59:59Z&singleEvents=true&orderBy=startTime&maxResults=50`)
-      return (data.items ?? []).map(e => ({
-        id:       e.id,
-        title:    e.summary,
-        start:    e.start.dateTime ?? e.start.date,
-        end:      e.end.dateTime   ?? e.end.date,
-        location: e.location,
+      type Ev = { id: string; summary: string; start: { dateTime?: string; date?: string }; end: { dateTime?: string; date?: string }; location?: string }
+      // One named calendar (or account) answers for itself; otherwise every calendar you can see, each read with its
+      // own account — a company's diary is not on the account you signed in with.
+      const named = (typeof input.calendar === 'string' && input.calendar.trim()) || acctEmail
+      const hidden = hiddenCals()
+      const cached = cachedCals().filter(c => !hidden.has(c.id))
+      const targets: { calendarId: string; name: string; accountEmail: string }[] = named || !cached.length
+        ? [await resolveCal(input, ctx, false)]
+        : cached.slice(0, 12).map(c => ({ calendarId: c.id, name: c.summary, accountEmail: c.accountEmail }))
+      const out: Record<string, unknown>[] = []
+      const failed: string[] = []
+      await Promise.all(targets.map(async t => {
+        try {
+          const token = 'token' in t ? (t as CalTarget).token : await tokenForEmail(t.accountEmail || undefined, ctx)
+          const data = await calGet<{ items?: Ev[] }>(token, `/calendars/${encodeURIComponent(t.calendarId)}/events?timeMin=${from}T00:00:00Z&timeMax=${to}T23:59:59Z&singleEvents=true&orderBy=startTime&maxResults=50`)
+          for (const e of data.items ?? []) out.push({
+            id:       refOf(e.id, t.calendarId),
+            title:    e.summary,
+            start:    e.start.dateTime ?? e.start.date,
+            end:      e.end.dateTime   ?? e.end.date,
+            location: e.location,
+            ...(targets.length > 1 ? { calendar: t.name } : {}),
+          })
+        } catch { failed.push(t.name) }
       }))
+      if (targets.length === 1 && failed.length) throw new Error(`Could not read ${failed[0]}. Its account may need reconnecting in Settings → Connected Accounts.`)
+      out.sort((x, y) => String(x.start).localeCompare(String(y.start)))
+      // An unreadable calendar is said, never silently an empty day.
+      return failed.length ? { events: out, could_not_read: failed } : out
     }
 
     case 'create_calendar_event': {
-      const token = await tokenForEmail(acctEmail, ctx)
+      const target = await resolveCal(input, ctx, true)
+      const token = target.token
       const tz    = (input.timezone as string) ?? 'UTC'
       const { emails: invitees, rejected } = parseGuests(input.guests)
+      const askedMeet = input.add_meet === true
+      const meetTypes = askedMeet ? await meetTypesOf(token, target.calendarId) : undefined
+      const wantMeet = askedMeet && supportsMeet(meetTypes)
       if (input.guests !== undefined && !invitees.length && rejected.length) {
         throw new Error(`Not an email address: ${rejected.join(', ')}. Ask the user for their email; nothing was created.`)
       }
-      const event = await calPost<{ id: string; htmlLink: string }>(
+      const event = await calPost<{ id: string; htmlLink: string; hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] } }>(
         token,
-        `/calendars/primary/events${invitees.length ? '?sendUpdates=all' : ''}`,
+        `/calendars/${encodeURIComponent(target.calendarId)}/events${[invitees.length ? 'sendUpdates=all' : '', wantMeet ? 'conferenceDataVersion=1' : ''].filter(Boolean).map((x, n) => (n ? '&' : '?') + x).join('')}`,
         {
           ...(invitees.length ? { attendees: invitees.map(email => ({ email })) } : {}),
+          ...(wantMeet ? meetRequest() : {}),
           summary:     input.title       as string,
           description: input.description as string | undefined,
           location:    input.location    as string | undefined,
@@ -695,13 +780,15 @@ export async function executeTool(
         },
       )
       const note = (invitees.length ? ` and ${invitees.join(', ')} invited` : '') + (rejected.length ? `. Not invited (not an email address): ${rejected.join(', ')} — ask for their email` : '')
-      return { success: true, event_id: event.id, link: event.htmlLink, message: `Event "${input.title as string}" created${note}` }
+      return { success: true, event_id: refOf(event.id, target.calendarId), link: event.htmlLink, message: `Event "${input.title as string}" created on ${target.name}${note}${wantMeet ? meetSentence(event) : askedMeet ? noMeetSentence(target.name, meetTypes) : ''}` }
     }
 
     case 'update_calendar_event': {
-      const token = await tokenForEmail(acctEmail, ctx)
-      const id = encodeURIComponent(input.event_id as string)
-      const cur = await calGet<{ summary?: string; attendees?: { email: string; self?: boolean; organizer?: boolean }[]; start?: { dateTime?: string; date?: string; timeZone?: string }; end?: { dateTime?: string; date?: string; timeZone?: string } }>(token, `/calendars/primary/events/${id}`)
+      const target = await resolveCal(input, ctx, true)
+      const token = target.token
+      const calPath = `/calendars/${encodeURIComponent(target.calendarId)}/events`
+      const id = encodeURIComponent(splitEventRef(input.event_id).eventId)
+      const cur = await calGet<{ summary?: string; hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] }; attendees?: { email: string; self?: boolean; organizer?: boolean }[]; start?: { dateTime?: string; date?: string; timeZone?: string }; end?: { dateTime?: string; date?: string; timeZone?: string } }>(token, `${calPath}/${id}`)
       const guests = (cur.attendees ?? []).filter(a => !a.self && !a.organizer)
       const { emails: addGuests, rejected: badGuests } = parseGuests(input.add_guests)
       // Changing an event with guests tells them. That is somebody else's calendar and inbox, so it needs
@@ -734,25 +821,31 @@ export async function executeTool(
         const known = new Set(have.map(a => a.email.toLowerCase()))
         patch.attendees = [...have, ...addGuests.filter(e => !known.has(e.toLowerCase())).map(email => ({ email }))]
       }
+      const existingMeet = meetLinkOf(cur)
+      const meetTypes = input.add_meet === true ? await meetTypesOf(token, target.calendarId) : undefined
+      const meetOk = input.add_meet === true && supportsMeet(meetTypes)
+      if (meetOk && !existingMeet) Object.assign(patch, meetRequest())
       if (!Object.keys(patch).length) {
+        if (input.add_meet === true && !meetOk) return { success: true, message: noMeetSentence(target.name, meetTypes).trim() }
+        if (input.add_meet === true && existingMeet) return { success: true, message: `That event already has a Meet link: ${existingMeet}` }
         throw new Error(badGuests.length ? `Not an email address: ${badGuests.join(', ')}. Ask the user for their email.` : 'Nothing to change: give a title, time, description, location or guests to add.')
       }
       const tell = guests.length > 0 || addGuests.length > 0
-      await calPost(token, `/calendars/primary/events/${id}?sendUpdates=${tell ? 'all' : 'none'}`, patch, 'PATCH')
-      return { success: true, message: `Event updated${guests.length ? ` and ${guests.length} guest${guests.length === 1 ? '' : 's'} told` : ''}${addGuests.length ? `; invited ${addGuests.join(', ')}` : ''}${badGuests.length ? `. Not invited (not an email address): ${badGuests.join(', ')} — ask for their email` : ''}` }
+      const saved = await calPost<{ hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] } }>(token, `${calPath}/${id}?sendUpdates=${tell ? 'all' : 'none'}${patch.conferenceData ? '&conferenceDataVersion=1' : ''}`, patch, 'PATCH')
+      return { success: true, message: `Event updated${guests.length ? ` and ${guests.length} guest${guests.length === 1 ? '' : 's'} told` : ''}${addGuests.length ? `; invited ${addGuests.join(', ')}` : ''}${badGuests.length ? `. Not invited (not an email address): ${badGuests.join(', ')} — ask for their email` : ''}${patch.conferenceData ? meetSentence(saved) : existingMeet && input.add_meet === true ? ` It already had a Meet link: ${existingMeet}` : input.add_meet === true && !meetOk ? noMeetSentence(target.name, meetTypes) : ''}` }
     }
 
     case 'delete_calendar_event': {
-      const token = await tokenForEmail(acctEmail, ctx)
+      const target = await resolveCal(input, ctx, true)
       const res   = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${input.event_id as string}`,
-        { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } },
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(target.calendarId)}/events/${encodeURIComponent(splitEventRef(input.event_id).eventId)}`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${target.token}` } },
       )
       if (!res.ok && res.status !== 204 && res.status !== 410) {
         const b = await res.json().catch(() => ({})) as { error?: { message?: string } }
         throw new Error(b?.error?.message ?? `Calendar ${res.status}`)
       }
-      return { success: true, message: 'Event deleted' }
+      return { success: true, message: `Event deleted from ${target.name}` }
     }
 
     // ── Tasks ─────────────────────────────────────────────────────────────────

@@ -36,6 +36,8 @@ export interface GCalendar {
   /** Google's own "this is the account's default calendar". */
   primary: boolean
   writable: boolean
+  /** `conferenceProperties.allowedConferenceSolutionTypes` — which video providers this calendar can mint. */
+  meetTypes?: string[]
 }
 
 export interface GEvent {
@@ -162,7 +164,7 @@ export class CalendarHub {
         )
         if (!res.ok) { this.unreachable.push(acc.email); continue }
         const body = await res.json() as {
-          items?: { id: string; summary?: string; summaryOverride?: string; primary?: boolean; accessRole?: string }[]
+          items?: { id: string; summary?: string; summaryOverride?: string; primary?: boolean; accessRole?: string; conferenceProperties?: { allowedConferenceSolutionTypes?: string[] } }[]
         }
         for (const c of body.items ?? []) {
           if (hidden.has(c.id)) continue
@@ -190,6 +192,7 @@ export class CalendarHub {
             name: renamed.get(c.id) ?? c.summaryOverride ?? c.summary ?? c.id,
             primary: !!c.primary,
             writable: c.accessRole === 'owner' || c.accessRole === 'writer',
+            meetTypes: c.conferenceProperties?.allowedConferenceSolutionTypes,
           })
         }
       } catch { this.unreachable.push(acc.email) }

@@ -441,3 +441,20 @@ the nearly-full vs busy-minute cases; **control: the old regex does classify it 
 request), `assistant-model-choice.mjs` (in the real panel: the explanation, not "out of credit", the model left alone, 2,048 on Groq
 and 4,096 on Claude).
 
+
+## The in-app assistant reads and writes the calendar it is asked about, with that calendar's own account
+`resolveCal` / `splitEventRef` / `refOf` in `assistantTools.ts`. The calendar tools were wired to `/calendars/primary` of one
+account, so an event on a company calendar (Teradix, DX) could not be seen, edited, deleted or given a video link by the
+app's assistant — only by the bots, which already read every calendar through `CalendarHub`.
+- **`calendar` on list / create / update / delete** (name, id or the account's address, matched loosely against
+  `cal-intel-cals-cache`). The token is the one of the **account that calendar lives on**; a write only matches a writable
+  calendar. **A name that matches nothing is an error, never a fall-back** to the default diary (the `taskCalendar.ts` rule).
+- **Listing with no calendar reads every visible calendar** (not the ones hidden in `cal-intel-hidden`, 12 at most), each with
+  its own account, and says which calendar each event is on. A calendar that could not be read is **named in
+  `could_not_read`**, not an empty day. Ids come back as `eventId::calendarId` (plain for the main calendar); an edit takes it
+  as given, a bare id still means the default calendar.
+- **The Meet link is minted on the calendar the event is on**, and `allowedConferenceSolutionTypes` is read from *that*
+  calendar's list entry. The reply names the calendar.
+`scripts/bots-invite-guests.mjs` has a personal account and a Teradix account (tokens that say which they are): the company
+write carries `tok:ceo@teradix.com`, the control carries the default, an unknown or read-only calendar sends nothing.
+**Not exercised: the browser panel.**

@@ -367,3 +367,25 @@ had nowhere to put an address and either dropped the request or claimed it was d
   Without guests neither is asked about, as before. The in-app assistant has the same two arguments on `create_calendar_event` / `update_calendar_event` (`src/lib/assistantTools.ts`), gated by the same file; `parseGuests` lives in `_shared/guests.ts` for all three.
 `scripts/bots-invite-guests.mjs` — 45 assertions on the real functions lifted from both bots and the app's two cases against a fake Google that
 can refuse. **Not exercised: a live Telegram tap, a live Siri Shortcut, or the model choosing the argument.**
+
+## Bots — a video link (Google Meet) on an event, in all three assistants
+`add_meet: true` on `add_calendar_event` / `create_calendar_event`, and on `update_calendar_event`; `_shared/meet.ts`
+(`meetRequest`, `meetLinkOf`, `meetSentence`) is the one definition. Google mints the link from
+`conferenceData.createRequest` (`hangoutsMeet`) and only when `conferenceDataVersion=1` is on the request.
+- **An existing link is never replaced.** Update reads the event first (the same read that merges guests) and, if it
+  already has one, patches nothing and quotes it.
+- **The link is not invented.** Google can answer before the link exists; the reply then says it was requested and has not
+  come back yet (and that the calendar may not support Meet) instead of claiming it was added.
+- **The calendar's own provider decides, and it is read, not assumed.** `CalendarHub` keeps each calendar's
+  `conferenceProperties.allowedConferenceSolutionTypes` (`meetTypes`); the app's tool reads
+  `/users/me/calendarList/primary`. `supportsMeet()` is false only when the list is present and leaves out
+  `hangoutsMeet` (Meet switched off, or only a third-party `addOn` such as Zoom). Then **no conference is requested** and
+  the reply says which provider the calendar allows and that an add-on has to be added from Google Calendar; any guests or
+  other edits in the same call still go through. An absent list is unknown and is tried. The first cut sent
+  `hangoutsMeet` to every account regardless.
+- **Not covered:** a Zoom/Teams link cannot be minted through the Calendar API, and the bots only read Google accounts, so
+  `NewEventPanel`'s `provider: 'teams'` option (never passed by any caller) has no counterpart here.
+- **No extra approval**: a link emails nobody. Guests on the same call are still gated by the guests rule above.
+`scripts/bots-invite-guests.mjs` (now covers both bots and the app, Meet included).
+- **Same account, asserted.** The bots' create uses the target calendar's token and edit uses the located calendar's; the
+  harness now has a company calendar on a second account whose token is distinguishable, and a plain id as the control.
