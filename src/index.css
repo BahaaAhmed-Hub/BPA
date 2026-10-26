@@ -278,6 +278,23 @@ textarea:focus,
 [contenteditable]:focus {
   box-shadow: none;
 }
+/* Text you type into draws no ring at all. A browser matches :focus-visible on
+   a text field for a mouse click too, so every amount box, search box and note
+   area wore a black rectangle the moment it was touched — inside a field that
+   already sits in its own tinted container, which made it a box in a box. The
+   caret is the indicator for a field you are typing in; a button, link, select,
+   checkbox or any other Tab stop keeps the ink ring. `!important` because 72
+   controls carry an inline `outline: none` that the rule above re-asserts. */
+textarea:focus-visible,
+[contenteditable=""]:focus-visible,
+[contenteditable="true"]:focus-visible,
+input:not([type]):focus-visible,
+input:is([type="text"], [type="search"], [type="number"], [type="email"], [type="password"],
+         [type="tel"], [type="url"], [type="date"], [type="time"], [type="datetime-local"],
+         [type="month"], [type="week"]):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
 
 /* ── What data-theme is for ───────────────────────────────────────────────────
    applyThemeVars sets data-theme on <html>, and until now nothing read it —
