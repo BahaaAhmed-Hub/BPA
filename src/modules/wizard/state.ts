@@ -3,7 +3,7 @@ import { loadAutomationRules } from '@/lib/automation'
 import { loadNotifSettings, loadQuietHours } from '@/lib/notifications'
 import { loadLock } from '@/modules/finance/lock'
 import { loadAccounts } from '@/lib/multiAccount'
-import { ASSISTANT_CLAUDE_MODEL } from '@/lib/modelInfo'
+import { claudeModelOf } from '@/lib/modelInfo'
 import type { StepId } from './steps'
 
 export interface CompanyDraft {
@@ -25,6 +25,8 @@ export interface WizardState {
     anthropicKey: string; groqKey: string
     anthropicModel: string; groqModel: string
     check: KeyCheck
+    /** Why the last check failed, in words. */
+    note: string
   }
   /** Hours on a 24h clock, in halves: 9, 17.5, 22.5. */
   rhythm: { start: number; stop: number; quiet: number }
@@ -73,8 +75,8 @@ export function initialState(userName: string, themeId: string, primaryEmail: st
       .map(c => ({ id: c.id, name: c.name, color: c.color, emailDomain: c.emailDomain ?? '', accountId: c.accountId ?? '' })),
     ai: {
       provider: ai.provider, anthropicKey: ai.anthropicKey, groqKey: ai.groqKey,
-      anthropicModel: ai.anthropicModel ?? ASSISTANT_CLAUDE_MODEL, groqModel: ai.groqModel,
-      check: 'idle',
+      anthropicModel: claudeModelOf(ai), groqModel: ai.groqModel,
+      check: 'idle', note: '',
     },
     rhythm: { start: toHours(s.focusStart, 9), stop: toHours(s.endOfDay, 17), quiet: toHours(q.start, 22.5) },
     rules: Object.fromEntries(loadAutomationRules().map(r => [r.id, r.enabled])),

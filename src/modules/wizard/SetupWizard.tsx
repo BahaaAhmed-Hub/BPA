@@ -77,8 +77,10 @@ export function SetupWizard({ onClose, testMode = false }: Props) {
   }
 
   function closeAll() {
-    if (testMode) applyAppearance({ themeId: startTheme.current })
-    else markWizardDone()
+    // Whatever look was being tried goes back to the one that is SAVED: the person's own,
+    // or the one chosen when the first step was left.
+    applyAppearance({ themeId: testMode ? startTheme.current : useUIStore.getState().themeId })
+    if (!testMode) markWizardDone()
     onClose()
   }
 

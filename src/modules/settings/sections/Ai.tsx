@@ -9,17 +9,13 @@ import { AssistantAvatar } from '@/modules/assistant/AssistantAvatar'
 import { notify } from '@/lib/undo'
 import { ICON } from '@/lib/type'
 import { inputStyle, selectStyle } from '@/lib/fields'
+import { CLAUDE_MODELS, GROQ_MODELS, claudeModelOf } from '@/lib/modelInfo'
 import { type AIConfig, type AppSettings, cleanKey, loadAIConfig, misplacedAnthropicKey, saveAIConfig, setAIPushListener } from '../model'
 import { FieldRow, Toggle } from '../ui'
 import { PILL_BASE, pillSelectStyle } from '../pillStyles'
 
 // ─── CHUNK 6: Professor AI + Notifications + Appearance sections ──────────────
 
-export const GROQ_MODELS = [
-  { value: 'llama-3.3-70b-versatile',  label: 'LLaMA 3.3 70B (best quality)' },
-  { value: 'llama-3.1-8b-instant',     label: 'LLaMA 3.1 8B (fastest)'       },
-  { value: 'mixtral-8x7b-32768',       label: 'Mixtral 8x7B'                  },
-]
 
 /** What the person calls the assistant. Saved as they type (held briefly), and shared with every device and bot. */
 function AssistantNameRow() {
@@ -132,6 +128,16 @@ export function ProfessorSection() {
             { value: 'groq',      label: 'Groq' },
           ]}
         />
+      </FieldRow>
+
+      {/* ── Which model, within the provider ── */}
+      <FieldRow label={ai.provider === 'groq' ? 'Groq model' : 'Claude model'} sub="Which one answers. The default is a good place to stay.">
+        <select aria-label={ai.provider === 'groq' ? 'Groq model' : 'Claude model'}
+          value={ai.provider === 'groq' ? ai.groqModel : claudeModelOf(ai)}
+          onChange={e => setAI(ai.provider === 'groq' ? { groqModel: e.target.value } : { anthropicModel: e.target.value })}
+          style={{ ...selectStyle, minWidth: 220 }}>
+          {(ai.provider === 'groq' ? GROQ_MODELS : CLAUDE_MODELS).map(m => <option key={m.id} value={m.id}>{m.label} · {m.note}</option>)}
+        </select>
       </FieldRow>
 
       {/* An Anthropic key typed into the Groq box reaches nothing — say so

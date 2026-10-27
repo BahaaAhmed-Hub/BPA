@@ -6,7 +6,7 @@ import { describeModel, type ModelMarkKind } from '@/lib/modelInfo'
  * particular. Colour comes from theme tokens, never a brand hex: the marks have
  * to read on every one of the four grounds.
  */
-function Mark({ kind, size }: { kind: ModelMarkKind; size: number }) {
+export function ModelMark({ kind, size }: { kind: ModelMarkKind; size: number }) {
   if (kind === 'claude') {
     // Eight rays, long and short alternating — a burst, not a star.
     const rays = [0, 45, 90, 135, 180, 225, 270, 315]
@@ -42,7 +42,7 @@ export function ModelBadge({ provider, model }: { provider: 'anthropic' | 'groq'
   return (
     <span data-model-badge data-model-id={m.id} title={`${m.id} · ${m.vendor}`} aria-label={`Model: ${m.vendor} ${m.label}`}
       style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
-      <Mark kind={m.mark} size={14} />
+      <ModelMark kind={m.mark} size={14} />
       <span>{m.label}</span>
     </span>
   )

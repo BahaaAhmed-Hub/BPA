@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { Quadrant, TaskType } from '@/types'
 import { anthropicKey } from './professor'
+import { activeClaudeModel } from './modelInfo'
 
 /** The person's own key, read when it is used rather than at import time —
  *  see `professor.ts`. Nothing about the key is baked into the bundle. */
@@ -90,7 +91,7 @@ Extract EVERY task visible. Keep titles concise but complete.`
         }
 
   const message = await anthropic().messages.create({
-    model: 'claude-sonnet-4-6',
+    model: activeClaudeModel(),
     max_tokens: 4096,
     system: systemPrompt,
     messages: [{

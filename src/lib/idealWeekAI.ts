@@ -7,6 +7,7 @@
 import { ProfessorError } from './professor'
 import type { IdealBlock, IdealGoal, IdealRule, IdealWeekAction, IdealChatMsg } from './idealWeekStore'
 import { DAY_LABELS } from './idealWeekStore'
+import { activeClaudeModel } from './modelInfo'
 
 const SYSTEM = `You are The Professor — a premium AI executive productivity assistant embedded in a productivity platform. You are now acting as the user's personal calendar planning assistant, helping them design their ideal week template.
 
@@ -108,7 +109,7 @@ export async function chatIdealWeek(
   if (!cfg.anthropicKey) throw new ProfessorError('No API key — go to Settings → AI', 'config_error')
   const { default: Anthropic } = await import('@anthropic-ai/sdk')
   const client = new Anthropic({ apiKey: cfg.anthropicKey, dangerouslyAllowBrowser: true })
-  const resp = await client.messages.create({ model:'claude-sonnet-4-6', max_tokens:1200, system, messages: msgs })
+  const resp = await client.messages.create({ model:activeClaudeModel(), max_tokens:1200, system, messages: msgs })
   const raw = resp.content[0]?.type === 'text' ? resp.content[0].text : ''
   return parseResponse(raw)
 }

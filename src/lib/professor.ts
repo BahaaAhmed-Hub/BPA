@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { ASSISTANT_CLAUDE_MODEL } from './modelInfo'
+import { activeClaudeModel, claudeModelOf } from './modelInfo'
 import type { DbUser, DbCompany, DbTask, DbCalendarEvent, DbWeeklyReview } from '@/types/database'
 import type { AIConfig } from '@/modules/settings/Settings'
 
@@ -41,7 +41,6 @@ export function anthropic(): Anthropic {
   return new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
 }
 
-const MODEL = ASSISTANT_CLAUDE_MODEL
 const MAX_TOKENS = 4000
 
 // ─── AI config helpers ────────────────────────────────────────────────────────
@@ -55,6 +54,7 @@ function getAIConfig(): AIConfig {
       anthropicKey: (saved.anthropicKey ?? '').replace(/\s+/g, ''),
       groqKey: (saved.groqKey ?? '').replace(/\s+/g, ''),
       groqModel: saved.groqModel ?? 'llama-3.3-70b-versatile',
+      anthropicModel: saved.anthropicModel,
     }
   } catch {
     return { provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile' }
@@ -244,7 +244,7 @@ export async function call(system: string, userMessage: string): Promise<string>
   try {
     const freshClient = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
     const msg = await freshClient.messages.create({
-      model: MODEL, max_tokens: MAX_TOKENS, system,
+      model: claudeModelOf(aiCfg), max_tokens: MAX_TOKENS, system,
       messages: [{ role: 'user', content: userMessage }],
     })
     const block = msg.content.find(b => b.type === 'text')
@@ -694,7 +694,7 @@ ${systemContext ?? ''}`
 
   try {
     const msg = await anthropic().messages.create({
-      model: MODEL,
+      model: activeClaudeModel(),
       max_tokens: MAX_TOKENS,
       system,
       messages: messages.map(m => ({ role: m.role, content: m.content })),

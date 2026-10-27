@@ -11,6 +11,7 @@
 import { anthropic, anthropicKey } from '@/lib/professor'
 import { AiFailure, describeAiFailure } from './aiFailure'
 import type { Tile } from './shelfTiles'
+import { activeClaudeModel } from '@/lib/modelInfo'
 
 export type Sureness = 'high' | 'medium' | 'low'
 
@@ -98,7 +99,7 @@ export const ShelfError = AiFailure
 
 async function readTile(tile: Tile, categories: string[]): Promise<{ books: Spine[]; unreadable: number }> {
   const msg = await anthropic().messages.create({
-    model: 'claude-sonnet-4-6',
+    model: activeClaudeModel(),
     max_tokens: 6000,
     system: systemFor(categories),
     messages: [{

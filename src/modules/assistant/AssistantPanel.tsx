@@ -21,7 +21,7 @@ import { recognitionLang, speak, speechSupported, startListening, stopSpeaking, 
 import { cleanName, labelOf, loadPersona as loadPersonaNow, NAME_MAX, savePersona, usePersona } from '@/lib/assistantPersona'
 import { AssistantAvatar } from './AssistantAvatar'
 import { ModelBadge } from './ModelBadge'
-import { ASSISTANT_CLAUDE_MODEL } from '@/lib/modelInfo'
+import { claudeModelOf } from '@/lib/modelInfo'
 import { clampWidth, loadChosenWidth, rightGap, saveWidth, widthFromDrag, DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH } from '@/lib/assistantWindow'
 import { ASK_EVENT, takePendingAsk } from '@/lib/assistantBridge'
 
@@ -530,7 +530,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
       let   accumText  = ''
 
       const stream = client.messages.stream({
-        model: ASSISTANT_CLAUDE_MODEL, max_tokens: 4096,
+        model: claudeModelOf(cfg), max_tokens: 4096,
         system, tools: ASSISTANT_TOOLS, messages: msgs,
       })
 
@@ -822,7 +822,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise }:
           <AssistantAvatar size={38} radius="50%" name={persona.name} />
           <div style={{ flex: 1 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{labelOf(persona)}</p>
-            <ModelBadge provider={cfg.provider === 'groq' ? 'groq' : 'anthropic'} model={cfg.provider === 'groq' ? cfg.groqModel : ASSISTANT_CLAUDE_MODEL} />
+            <ModelBadge provider={cfg.provider === 'groq' ? 'groq' : 'anthropic'} model={cfg.provider === 'groq' ? cfg.groqModel : claudeModelOf(cfg)} />
           </div>
           {!isEmpty && (
             <button onClick={clearConversation}
