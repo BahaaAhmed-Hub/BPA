@@ -930,11 +930,17 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                         position: 'relative', overflow: 'hidden',
                         display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: 104,
                         height: 24, padding: '0 9px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-                        background: selectedId === sub.id ? 'rgba(var(--sb-accent-rgb),0.28)' : subBudgeted ? 'var(--sb-accent-tint)' : 'transparent',
+                        // Past its limit the whole pill is red, as the envelope
+                        // above it is — a 22% wash over beige read as beige.
+                        // Selection then shows as the ring, not by giving the
+                        // red up.
+                        background: subOver ? 'var(--sb-negative-tint)' : selectedId === sub.id ? 'rgba(var(--sb-accent-rgb),0.28)' : subBudgeted ? 'var(--sb-accent-tint)' : 'transparent',
                         // Same idea as the rings above: solid means a budget,
                         // broken means nothing has been set.
-                        border: subBudgeted ? 'var(--sb-border-width) solid var(--sb-border)' : '1px dashed var(--sb-border)',
-                        color: subBudgeted || spent ? 'var(--sb-ink-2)' : 'var(--sb-ink-3)',
+                        border: subOver ? 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative-deep) 55.0%, transparent)'
+                          : subBudgeted ? 'var(--sb-border-width) solid var(--sb-border)' : '1px dashed var(--sb-border)',
+                        outline: subOver && selectedId === sub.id ? '2px solid var(--sb-accent)' : 'none', outlineOffset: -1,
+                        color: subOver ? 'var(--sb-negative-deep)' : subBudgeted || spent ? 'var(--sb-ink-2)' : 'var(--sb-ink-3)',
                         fontSize: 'var(--sb-t-meta)', boxSizing: 'border-box', fontFamily: 'inherit',
                       }}>
                       {/* Behind the label, never over it. */}
@@ -942,7 +948,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                         <span aria-hidden style={{
                           position: 'absolute', left: 0, top: 0, bottom: 0,
                           width: `${filled * 100}%`, borderRadius: 'var(--sb-r-pill)',
-                          background: subOver ? 'color-mix(in srgb, var(--sb-negative) 22.0%, transparent)' : 'rgba(var(--sb-accent-rgb),0.42)',
+                          background: subOver ? 'color-mix(in srgb, var(--sb-negative-deep) 30.0%, transparent)' : 'rgba(var(--sb-accent-rgb),0.42)',
                           pointerEvents: 'none',
                         }} />
                       )}
