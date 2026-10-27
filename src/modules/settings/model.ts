@@ -55,6 +55,8 @@ export interface AIConfig {
   anthropicKey: string
   groqKey: string
   groqModel: string
+  /** Which Claude model answers. Absent means the app's own default (`ASSISTANT_CLAUDE_MODEL`). */
+  anthropicModel?: string
 }
 const AI_CONFIG_DEFAULTS: AIConfig = {
   provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile',
