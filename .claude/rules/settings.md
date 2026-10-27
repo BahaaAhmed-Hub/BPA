@@ -553,7 +553,7 @@ The rules (`professor-automation-rules`, a prefSync key):
 `Segmented`, `pillSelectStyle`, `VisaBadge`. Prefer these over `FieldRow`/`inputStyle`
 when bringing a section up to the artboards.
 
-Layout: the page header (eyebrow + title + `Setup wizard`/`Export`) spans full width
+Layout: the page header (eyebrow + title + `Export`) spans full width
 **above** the rail. The rail is a floating 250px card; the active nav item is a solid
 black pill (`#191712` bg, white text). Cards use `alignSelf: 'start'` so they size to
 content — the content column scrolls, not each card.
@@ -624,31 +624,49 @@ they are byte-identical.
   split; `ai-key-field-is-the-right-one` had to be re-anchored to the `AIConfig`
   interface because the concatenation has more than one `provider:`.
 
-## The setup wizard is three steps (P2.5)
-`modules/wizard/` — `SetupWizard.tsx` plus `steps/Step1You`, `Step1Accounts`,
-`Step2Companies`, `Step3Done`. It was six (Welcome, Accounts, Companies, Habits,
-Import, Done).
-- **Step 1 is name + theme + accounts**: `Step1You compact` (no hero, no feature
-  cards) over `Step1Accounts`. Step 2 is companies, step 3 is Done.
-- **`WizardData` is `{ displayName, themeId, companies }`** now. Habits and
-  tasks are not collected here, so `handleFinish` no longer writes either.
-  The OAuth-resume payload in `sessionStorage['bpa-wizard-resume']` keeps the
-  same key but reads only those three fields.
-- **Habits and tasks moved to where they live, as first-run prompts**:
-  - `habits/HabitStarter.tsx` replaces the three "No habits yet" lines in
-    `HabitsModule`; the 12 presets are one list in `lib/habitTemplates.ts`
-    (the wizard used to carry two copies). Gone as soon as one habit exists.
-  - `tasks/TodoistImport.tsx` sits above the Tasks content: drawn only when the
-    build has `TODOIST_CONFIGURED`, only while the board is empty, until
-    "Not now" (`localStorage['tasks-todoist-prompt-dismissed']`) or an import.
-- **Done offers "Pick your habits" / "Add your tasks"**: `onGo` finishes the
-  wizard, then `setActiveModule('habits' | 'tasks')`.
-- **In dev the first-login wizard never opens.** The 2.5s timer in `App.tsx` is
-  cleared by StrictMode's first unmount and a ref stops it re-arming; production
-  is unaffected. Harnesses open it with `professor:openWizard` (Settings' own door).
-- `scripts/wizard-three-steps.mjs 5199 [5198]` — 27 assertions; the second port
-  runs `VITE_TODOIST_CLIENT_ID=x npx vite --port 5198 --strictPort` for the
-  Todoist half. Stub server records writes: the habits claim is "the server
-  received two rows". Controls: a habit on the server keeps the starter away, a
-  task keeps the Todoist prompt away, and the pre-change code fails the wizard
-  assertions. **Not measured:** the Todoist connect/import itself (a real OAuth popup).
+## The setup guide — eight steps, new signups only, one desk
+`modules/wizard/`. A full-page "morning desk": a real photo (`public/wizard/desk.jpg`),
+a laptop whose screen is a live miniature of the app (`scene/`), and one framed
+panel that asks. Steps (`steps.ts`): 1 You · 2 Accounts and companies · 3 AI key ·
+4 Rhythm · 5 Automation and alerts · 6 Habits and tasks · 7 Finance · 8 Done.
+**4–7 are optional** and each has a skip.
+- **Shown to a new signup only** (`wizardGate.ts`): the account's `created_at` is
+  within `NEW_SIGNUP_DAYS` (3). `gateAnswer` is `open` / `done` / `established` —
+  an account that already has companies or habits is established and never sees it.
+  A missing `createdAt` is *not new*. There is **no replay**: Settings lost its
+  buttons and `professor:openWizard` is gone. The done flag is two keys, local
+  `bpa-wizard-done` and the shared pref `professor-wizard-done` (in `SHARED_KEYS`),
+  so finishing on one device keeps it shut on the next. `suppressWizardHere()` is
+  local only — the gate marks an old account done on this browser without telling
+  the account.
+- **Each step writes when it is left with Continue** (`persist.ts`, `saveStep`), and a
+  **skipped step writes nothing** — the Done summary says Skipped. Closing halfway
+  keeps what was answered. Finance stores a hash, never the password; the AI step
+  makes one real one-token request (`lib/aiKeyCheck.ts`).
+- **The Claude model is a real choice** (`CLAUDE_MODELS`, `claudeModelOf`,
+  `activeClaudeModel` in `lib/modelInfo.ts`; `AIConfig.anthropicModel`), used by the
+  assistant, ideal-week, image task extractor and the Library readers. Settings → AI
+  has the same select. **Not covered: the Telegram/bot edge functions** still use
+  their own model.
+- **Admin test = a dry run.** Admin → *Test setup guide* raises
+  `professor:testWizard`; `App.tsx` re-asks `amIAdmin()` and renders
+  `<SetupWizard testMode />`. In test mode `saveStep(…, dry)` writes nothing, the
+  OAuth button is disabled, the theme is put back and the done flag is never set,
+  so it can be run again. A banner says so.
+- Fonts are the app's (`--sb-font-num` Outfit, `--sb-font-ui` Instrument Sans); the
+  only fixed warm tones are on the photo itself (scrim, top bar).
+- **Design vs app, deliberately different:** the design shows Outlook/iCloud rows
+  (the app connects Google only), a PIN lock (the app's lock is a password) and a
+  Run/Alert pair per helper (the app has seven rule switches plus three alert chips).
+- `scripts/wizard-signup-flow.mjs [5199]` — 28 assertions: the gate (opens for a new
+  signup; shut for an old account, one with habits, the done flag and the retired
+  replay event), all eight steps writing (company POST, key, schedule, rules,
+  habit rows, lock hash, both flags), the skip path writing nothing, and the admin
+  dry run — no server write, no setting key, flag unset, theme restored, a
+  non-admin's event ignored. Control: the `dry` guard removed from one saver fails
+  exactly the two write assertions. `scripts/first-run-prompts.mjs` keeps what the
+  old three-step harness measured besides the wizard: the Habits starter and the
+  Todoist prompt.
+- **A vacuous pass found on the way:** the gate itself marks a year-old admin done
+  on that browser, so "the done flag is unset" passed or failed on the gate, not on
+  test mode. The harness clears both keys before opening the test.

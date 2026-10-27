@@ -1357,6 +1357,14 @@ function App() {
     }
   }, [])
   const [showWizard, setShowWizard] = useState(false)
+  const [testWizard, setTestWizard] = useState(false)
+  // The admin panel's "Test setup guide": a dry run, so the event is answered only
+  // after the server's own word that this account is an admin.
+  useEffect(() => {
+    const open = () => { void amIAdmin().then(ok => { if (ok) setTestWizard(true) }) }
+    window.addEventListener('professor:testWizard', open)
+    return () => window.removeEventListener('professor:testWizard', open)
+  }, [])
 
   // The setup guide is for a new signup, once (modules/wizard/wizardGate.ts).
   // Deferred 2.5 s so the first hydration — which also pulls the shared "done"
@@ -1448,6 +1456,7 @@ function App() {
           setAssistantAside(false)
         }} />
       {showWizard && <SetupWizard onClose={() => setShowWizard(false)} />}
+      {testWizard && <SetupWizard testMode onClose={() => setTestWizard(false)} />}
     </div>
   )
 }
