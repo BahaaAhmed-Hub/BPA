@@ -1,9 +1,15 @@
 import { THEMES, applyAppearance } from '@/lib/themes'
 import { useUIStore } from '@/store/uiStore'
-import { saveCompaniesToDB, type CompanyRow } from '@/lib/dbSync'
+import { saveCompaniesToDB, saveProfileToDB, type CompanyRow } from '@/lib/dbSync'
+import { DEFAULT_AUTOMATION_RULES, saveAutomationRules } from '@/lib/automation'
+import { loadNotifSettings, loadQuietHours, saveNotifSettings, saveQuietHours } from '@/lib/notifications'
+import { HABIT_TEMPLATES } from '@/lib/habitTemplates'
+import { useHabitsStore } from '@/store/habitsStore'
+import { hashPassword, loadLock, saveLock } from '@/modules/finance/lock'
+import { moduleIsOff } from '@/lib/entitlements'
 import { CLAUDE_MODELS, GROQ_MODELS, claudeModelOf } from '@/lib/modelInfo'
-import { cleanKey, loadAIConfig, saveAIConfig } from '@/modules/settings/model'
-import type { WizardState } from './state'
+import { cleanKey, loadAIConfig, loadSettings, saveAIConfig, saveSettings } from '@/modules/settings/model'
+import { clock, fromHours, type WizardState } from './state'
 import type { StepId } from './steps'
 
 /**
@@ -70,7 +76,66 @@ const ai: Saver = async (w, dry) => {
   return lines
 }
 
-const SAVERS: Partial<Record<StepId, Saver>> = { you, accounts, ai }
+const rhythm: Saver = async (w, dry) => {
+  const { start, stop, quiet } = w.rhythm
+  const q = loadQuietHours()
+  const lines = [
+    `Work ${clock(start)} to ${clock(stop)}`,
+    `Deep work from ${clock(start)}, meetings from ${clock(start + 1)}`,
+    `Quiet from ${clock(quiet % 24)} until ${q.end}`,
+  ]
+  if (dry) return lines
+  const had = localStorage.getItem('professor-settings') !== null
+  const cur = loadSettings()
+  const next = {
+    ...cur,
+    fullName: cur.fullName || w.name.trim(),
+    // The default timezone is a placeholder, not an answer: a brand-new profile is written with the browser's own rather than somebody else's.
+    timezone: had ? cur.timezone : (Intl.DateTimeFormat().resolvedOptions().timeZone || cur.timezone),
+    focusStart: fromHours(start), focusEnd: fromHours(start + 2), earliestMeeting: fromHours(start + 1), endOfDay: fromHours(stop),
+  }
+  saveSettings(next)
+  saveQuietHours({ on: true, start: fromHours(quiet), end: q.end })
+  try { await saveProfileToDB(next) } catch { /* offline: saved here, and Settings → Schedule saves it up later */ }
+  return lines
+}
+
+const automation: Saver = async (w, dry) => {
+  const on = DEFAULT_AUTOMATION_RULES.filter(r => w.rules[r.id])
+  const alerts = (Object.keys(w.alerts) as (keyof typeof w.alerts)[]).filter(k => w.alerts[k])
+  const lines = [plural(on.length, 'helper on', 'helpers on'), plural(alerts.length, 'alert on', 'alerts on')]
+  if (dry) return lines
+  saveAutomationRules(DEFAULT_AUTOMATION_RULES.map(r => ({ ...r, enabled: !!w.rules[r.id] })))
+  saveNotifSettings(loadNotifSettings().map(n => (n.id in w.alerts ? { ...n, push: w.alerts[n.id as keyof typeof w.alerts] } : n)))
+  return lines
+}
+
+const habits: Saver = async (w, dry) => {
+  const chosen = HABIT_TEMPLATES.filter(t => w.habits.includes(t.id))
+  const lines = chosen.length ? [plural(chosen.length, 'habit', 'habits') + `: ${chosen.map(t => t.name).join(', ')}`] : ['No habits picked']
+  if (dry || !chosen.length) return lines
+  const store = useHabitsStore.getState()
+  const have = new Set(store.habits.map(h => h.name.trim().toLowerCase()))
+  for (const t of chosen) {
+    // Never twice: one that is already there (made in Settings, or on another device) is left as it is.
+    if (have.has(t.name.toLowerCase())) continue
+    store.addHabit({ name: t.name, emoji: t.emoji, color: t.color, type: t.type, goal: t.goal, unit: t.unit, frequency: t.frequency, isActive: true })
+  }
+  return lines
+}
+
+const finance: Saver = async (w, dry) => {
+  if (moduleIsOff('finance')) return ['Finance is not on this plan']
+  const l = loadLock()
+  if (l.enabled && l.password) return ['Finance pages already locked']
+  if (!w.finance.lock) return ['Finance pages left open']
+  const lines = ['Finance pages locked with your password']
+  if (dry) return lines
+  saveLock({ enabled: true, relock: l.relock, password: await hashPassword(w.finance.password) })
+  return lines
+}
+
+const SAVERS: Partial<Record<StepId, Saver>> = { you, accounts, ai, rhythm, automation, habits, finance }
 
 export async function saveStep(id: StepId, w: WizardState, dry: boolean): Promise<string[]> {
   return SAVERS[id] ? SAVERS[id](w, dry) : []
