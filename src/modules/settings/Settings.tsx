@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { NAV_H } from '@/App'
-import { RefreshCw, CalendarDays, Wand2, Sparkles, ArrowUpRight, Database } from 'lucide-react'
+import { RefreshCw, CalendarDays, Sparkles, Database } from 'lucide-react'
 import { signOut as googleSignOut } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import { useHabitsStore } from '@/store/habitsStore'
@@ -347,11 +347,6 @@ export function Settings() {
               supaOk === null ? 'Checking Supabase…' : supaOk ? 'Supabase connected' : 'Local only',
               `${allAccounts.length} account${allAccounts.length === 1 ? '' : 's'}`,
             ].join(' · ')}
-            actions={
-              <GhostPill icon={ArrowUpRight} onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}>
-                Setup wizard
-              </GhostPill>
-            }
           >
             <ProfileSection
               s={settings}
@@ -375,11 +370,7 @@ export function Settings() {
     if (page === 'connected') return (
       <div>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
-          <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
-            <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer' }}>
-              <Wand2 size={ICON.sm} /> Wizard
-            </button>
-          }>
+          <SectionCard id="accounts" active={activeSection === 'accounts'}>
             <AccountsAndCompaniesSection
               companies={companies}
               setCompanies={c => { setCompanies(c); saveCompanies(c) }}
@@ -573,17 +564,6 @@ export function Settings() {
           <p style={{ margin: '5px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>{pm.sub}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              padding: '10px 18px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
-              fontSize: 'var(--sb-t-body)', fontWeight: 500, fontFamily: 'inherit',
-              boxShadow: 'var(--sb-shadow-control)',
-            }}>
-            <ArrowUpRight size={ICON.sm} strokeWidth={STROKE.rest} /> Setup wizard
-          </button>
           <button
             onClick={() => exportAllSettings()}
             style={{

@@ -49,6 +49,7 @@ const SHARED_KEYS = [
   'assistant-persona',           // what you call the assistant, and how it listens
   'mail-business-accounts',      // which mailboxes are work, not personal
   'professor-display-name',
+  'professor-wizard-done',       // the setup guide was finished or skipped — on any device
   'professor-week-start',        // which day your week starts on
   'professor-accent',            // the colour every highlight is drawn in
   'professor-compact',

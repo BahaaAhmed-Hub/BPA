@@ -11,6 +11,7 @@ import { Step1Accounts } from './steps/Step1Accounts'
 import { Step2Companies } from './steps/Step2Companies'
 import { Step3Done } from './steps/Step3Done'
 import { ICON } from '@/lib/type'
+import { markWizardDone } from './wizardGate'
 
 // ─── Exported types ────────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ export function SetupWizard({ onClose }: Props) {
     if (step <= 1) return
     setDir('back'); setAnimKey(k => k + 1); setStep(s => s - 1)
   }
-  function handleSkip() { localStorage.setItem('bpa-wizard-done', '1'); onClose() }
+  function handleSkip() { markWizardDone(); onClose() }
 
   async function handleFinish(goTo?: 'habits' | 'tasks') {
     useUIStore.getState().setThemeId(data.themeId)
@@ -114,7 +115,7 @@ export function SetupWizard({ onClose }: Props) {
       try { await saveCompaniesToDB(rows) } catch { /* offline */ }
     }
 
-    localStorage.setItem('bpa-wizard-done', '1')
+    markWizardDone()
     if (goTo) useUIStore.getState().setActiveModule(goTo)
     onClose()
   }
