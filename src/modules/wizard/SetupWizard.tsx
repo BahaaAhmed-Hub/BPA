@@ -119,8 +119,8 @@ export function SetupWizard({ onClose, testMode = false }: Props) {
   // A modal keeps the keyboard inside it: Tab from the last control returns to the first, and back.
   function trap(e: React.KeyboardEvent<HTMLDivElement>) {
     if (e.key !== 'Tab') return
-    const list = [...e.currentTarget.querySelectorAll<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])')]
-      .filter(el => !el.hasAttribute('disabled') && el.getAttribute('aria-disabled') !== 'true' && el.offsetParent !== null)
+    const list = [...e.currentTarget.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, summary, [contenteditable="true"], [tabindex]:not([tabindex="-1"])')]
+      .filter(el => !el.hasAttribute('disabled') && el.getAttribute('aria-disabled') !== 'true' && el.getClientRects().length > 0)
     if (!list.length) return
     const first = list[0], last = list[list.length - 1], at = document.activeElement
     if (e.shiftKey && (at === first || !e.currentTarget.contains(at))) { e.preventDefault(); last.focus() }

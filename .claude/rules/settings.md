@@ -682,9 +682,9 @@ panel that asks. Steps (`steps.ts`): 1 You · 2 Accounts and companies · 3 AI k
   contains the word "model", and a test for that word read as "model not offered".
 - **`saveCompaniesToDB` deletes whatever it is not handed.** The wizard passed only its
   own rows, so a company on the server and not in the draft was deleted — measured:
-  `DELETE …?id=in.(srv-only)`. It now passes the whole merged list; an existing company
+  `DELETE …?id=in.(srv-only)`. The second review caught that passing the whole *local* list is no safer — the browser can be behind the server — so `saveCompaniesToDB(rows, { remove })` now upserts only the wizard's rows and deletes exactly the ids it removed. An existing company
   keeps its calendar, people and active flag; only a company this wizard added can be
-  removed again (`isNew`, `savedByWizard`).
+  removed again (`isNew`; the set of added ids lives in sessionStorage `bpa-wizard-added`, so it survives the OAuth reload). Back from Google, the gate keeps the guide open when its own resume note is present, because the companies it just wrote make the account look established.
 - **No secrets in `bpa-wizard-resume`.** The OAuth round trip parks state in
   sessionStorage; the keys and the finance password are now left out, and the gate clears
   a note the wizard is not going to use. Test mode neither reads nor clears it.

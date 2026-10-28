@@ -883,7 +883,8 @@ for (const theme of THEMES) {
   await visit('Setup guide · 5 automation', () => wzNext('Skip this step'))
   await visit('Setup guide · 6 habits', () => wzNext('Skip this step'))
   await visit('Setup guide · 7 finance', () => wzNext('Skip this step'))
-  await visit('Setup guide · 8 done', async () => { await wzNext('Skip this step'); await page.getByRole('button', { name: 'Leave the test' }).first().click({ timeout: 4000 }) })
+  await visit('Setup guide · 8 done', () => wzNext('Skip this step'))
+  await page.getByRole('button', { name: 'Leave the test' }).first().click({ timeout: 4000 }).catch(() => {})
 
   // ── The assistant: its face, the first-use question, and named ─────────────
   await visit('Assistant · first use (asks for a name)', async () => {

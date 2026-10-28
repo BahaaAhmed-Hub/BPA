@@ -1,5 +1,5 @@
 import { loadQuietHours } from '@/lib/notifications'
-import { clock } from '../state'
+import { clock, quietEnd } from '../state'
 import type { StepCtx } from './types'
 
 /**
@@ -9,7 +9,6 @@ import type { StepCtx } from './types'
  */
 export function RhythmStep({ w, set }: StepCtx) {
   const { start, stop, quiet } = w.rhythm
-  const quietEnd = loadQuietHours().end
   const put = (patch: Partial<typeof w.rhythm>) => set(p => ({ rhythm: { ...p.rhythm, ...patch } }))
   return (
     <>
@@ -30,7 +29,7 @@ export function RhythmStep({ w, set }: StepCtx) {
             onChange={e => { const v = Number(e.target.value); put({ quiet: Math.max(v, stop) }) }} />
         </div>
       </div>
-      <p className="wz-note">Deep work opens at {clock(start)} and meetings start from {clock(start + 1)}. Nothing is sent to you during quiet hours, until {quietEnd}.</p>
+      <p className="wz-note">Deep work opens at {clock(start)} and meetings start from {clock(start + 1)}. Nothing is sent to you during quiet hours, until {quietEnd(loadQuietHours().end, start)}.</p>
     </>
   )
 }

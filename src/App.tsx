@@ -1379,7 +1379,10 @@ function App() {
       let hasCompanies = false
       try { hasCompanies = (JSON.parse(localStorage.getItem('professor-companies') ?? '[]') as unknown[]).length > 0 } catch { /* unreadable is empty */ }
       const hasHabits = useHabitsStore.getState().habits.length > 0
-      const answer = gateAnswer({ createdAt: wizardCreatedAt, hasCompanies, hasHabits })
+      let answer = gateAnswer({ createdAt: wizardCreatedAt, hasCompanies, hasHabits })
+      // Coming back from Google mid-setup: the companies and habits that make the account look
+      // established are the ones the wizard itself just wrote, so its own note keeps it open.
+      if (answer === 'established' && sessionStorage.getItem('bpa-wizard-resume')) answer = 'open'
       if (answer === 'open') setShowWizard(true)
       else if (answer === 'established') suppressWizardHere()
       // A wizard that is not going to open must not leave its OAuth resume note behind.

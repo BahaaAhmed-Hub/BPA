@@ -9,7 +9,7 @@ import { hashPassword, loadLock, saveLock } from '@/modules/finance/lock'
 import { moduleIsOff } from '@/lib/entitlements'
 import { CLAUDE_MODELS, GROQ_MODELS, claudeModelOf } from '@/lib/modelInfo'
 import { cleanKey, loadAIConfig, loadSettings, saveAIConfig, saveSettings } from '@/modules/settings/model'
-import { clock, fromHours, toHours, type WizardState } from './state'
+import { clock, fromHours, quietEnd, type WizardState } from './state'
 import type { StepId } from './steps'
 
 /**
@@ -42,7 +42,9 @@ const you: Saver = async (w, dry) => {
 }
 
 /** Companies this wizard session has already written, so Back-and-remove can take one away again. */
-const savedByWizard = new Set<string>()
+const ADDED_KEY = 'bpa-wizard-added'
+const loadAdded = (): Set<string> => { try { return new Set(JSON.parse(sessionStorage.getItem(ADDED_KEY) ?? '[]') as string[]) } catch { return new Set() } }
+const keepAdded = (s: Set<string>) => { try { sessionStorage.setItem(ADDED_KEY, JSON.stringify([...s])) } catch { /* the note is a convenience */ } }
 
 const accounts: Saver = async (w, dry) => {
   const lines = [plural(w.accounts.length, 'account connected', 'accounts connected')]
@@ -60,15 +62,17 @@ const accounts: Saver = async (w, dry) => {
     return { calendarId: '', isActive: true, users: [], ...was, id: c.id, name: c.name, color: c.color, emailDomain: c.emailDomain, accountId: c.accountId }
   })
   // Only a company this wizard added can be taken away again, when the person goes back and removes it.
+  const savedByWizard = loadAdded()
   const dropped = [...savedByWizard].filter(id => !draftIds.has(id))
   const kept = existing.filter(e => !draftIds.has(e.id) && !dropped.includes(e.id))
   const all = [...kept, ...rows]
   for (const c of w.companies) if (c.isNew) savedByWizard.add(c.id)
   for (const id of dropped) savedByWizard.delete(id)
+  keepAdded(savedByWizard)
   localStorage.setItem('professor-companies', JSON.stringify(all))
   window.dispatchEvent(new Event('professor:companiesUpdated'))
-  // The whole list: saveCompaniesToDB removes whatever it is not given.
-  try { await saveCompaniesToDB(all) } catch { /* offline: it is saved here and goes up with the next sync */ }
+  // Only this step's rows and its own removals: the browser's copy can be behind the server's, and a delete-by-difference would take what it has not seen.
+  try { await saveCompaniesToDB(rows, { remove: dropped }) } catch { /* offline: it is saved here and goes up with the next sync */ }
   return lines
 }
 
@@ -93,7 +97,7 @@ const rhythm: Saver = async (w, dry) => {
   const { start, stop, quiet } = w.rhythm
   const q = loadQuietHours()
   // Quiet ends no later than work begins, or the alerts would be held back into the working day.
-  const qEnd = toHours(q.end, 7) > start ? fromHours(start) : q.end
+  const qEnd = quietEnd(q.end, start)
   const lines = [
     `Work ${clock(start)} to ${clock(stop)}`,
     `Deep work from ${clock(start)}, meetings from ${clock(start + 1)}`,

@@ -64,7 +64,7 @@ export function AiStep({ w, set }: StepCtx) {
       const now = { provider: a.provider, key: keyOf(a), model: a.provider === 'groq' ? a.groqModel : a.anthropicModel }
       if (a.check !== 'testing' && a.check !== 'idle') return {}
       if (now.provider !== tested.provider || now.key !== tested.key || now.model !== tested.model) return {}
-      return { ai: { ...a, ...(v.ok ? { check: 'ok' as const, note: '' } : { check: v.why === 'network' ? 'idle' as const : 'failed' as const, note: v.detail }) } }
+      return { ai: { ...a, ...(v.ok ? { check: 'ok' as const, note: '' } : { check: v.why === 'network' || v.why === 'busy' ? 'idle' as const : 'failed' as const, note: v.detail }) } }
     })
   }
 

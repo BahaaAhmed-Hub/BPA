@@ -97,3 +97,8 @@ export function initialState(userName: string, themeId: string, primaryEmail: st
     saved: {},
   }
 }
+
+/** Quiet hours end no later than work begins, or alerts would be held back into the working day. */
+export function quietEnd(end: string, start: number): string {
+  return toHours(end, 7) > start ? fromHours(start) : end
+}
