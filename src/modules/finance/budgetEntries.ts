@@ -1,6 +1,7 @@
 import type { Category, Transaction } from './types'
 import { activeIn, linesOf, scheduleOf, type BudgetRule } from './modals/BudgetRuleModal'
 import { baseCurrency } from './fx'
+import { amountFor } from './budgetSteps'
 import { isoDate, shiftDaysISO } from './dates'
 
 // ─── A budget with a day on it writes the entry, not a task ──────────────────
@@ -98,7 +99,13 @@ export function occurrencesFor(
     let d = onDay(now.getFullYear(), now.getMonth(), rule.dueDay)
     while (d < today) d = shiftDaysISO(d, 7)
     const end = onDay(now.getFullYear(), now.getMonth() + monthsAhead, rule.dueDay)
-    while (d <= end) { out.push({ date: d, amount: rule.amount }); d = shiftDaysISO(d, 7) }
+    while (d <= end) {
+      // The amount the budget has in the month this payment falls in — a raise
+      // from November must not be written onto October's instalments.
+      const amount = amountFor(rule, d.slice(0, 7))
+      if (amount > 0) out.push({ date: d, amount })
+      d = shiftDaysISO(d, 7)
+    }
     return out
   }
 
@@ -115,7 +122,10 @@ export function occurrencesFor(
     if (!activeIn(rule, monthKey)) continue
     const date = onDay(d.getFullYear(), d.getMonth(), rule.dueDay)
     if (date < today) continue
-    out.push({ date, amount: rule.amount })
+    // The amount in force in *that* month, so the entry written for next
+    // month carries next month's budget and this month's keeps its own.
+    const amount = amountFor(rule, monthKey)
+    if (amount > 0) out.push({ date, amount })
   }
   return out
 }

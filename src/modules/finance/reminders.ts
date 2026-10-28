@@ -75,7 +75,7 @@ export function dueDatesFor(rule: MoneyReminder, from = new Date()): { monthKey:
  *  the amount is on the card rather than a thing to go and look up. */
 export function reminderTitle(cat: Category | undefined, rule?: BudgetRule, monthKey?: string): string {
   const name = cat?.name ?? 'money'
-  const amount = rule && monthKey && activeIn(rule, monthKey) ? monthlyAmount(rule) : 0
+  const amount = rule && monthKey && activeIn(rule, monthKey) ? monthlyAmount(rule, monthKey) : 0
   const kind = cat?.txType === 'income' ? 'Collect' : 'Pay'
   return amount > 0 ? `${kind} ${name} · ${rule?.currency ?? 'EGP'} ${group(amount)}` : `${kind} ${name}`
 }

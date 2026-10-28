@@ -717,6 +717,57 @@ written before this reads unchanged):
   dates, and leaving a day set would write a second entry every month beside the
   instalments.
 
+## Finance — a budget keeps the amount it had
+`budgetSteps.ts` (pure, no React). A rule held one `amount`, so raising rent from
+10,000 to 13,000 rewrote July too: 12,000 spent, over its limit at the time,
+read as comfortably inside the new one. Now `amount` is the **base** — what every
+month before the first change had — and `steps: [{ from: 'YYYY-MM', amount }]`
+records each change with the month it took effect. A rule that never changed has
+no `steps` and reads exactly as it always did; there is no migration, and the
+field rides inside the `finance-budget-rules` prefSync value.
+- **The rule, with no UI for it.** Typing a new amount in the panel applies it
+  from **this month on**; every earlier month keeps what it had. There is no
+  scope toggle and no timeline — it was drawn up and thrown out as more than the
+  question needs. `withAmount(rule, n, monthOnScreen)` is the one function that
+  records a change, and both the panel and the assistant's `set_budget_envelope`
+  call it, so the two cannot differ.
+- **Never earlier than this month.** `editMonth` is the later of today's month
+  and the month on screen: looking back at July and typing a number must not
+  rewrite July. The panel's amount field shows `amountFor(rule, editMonth)` —
+  what an edit would change — so while looking at a past month the field reads
+  the current figure and the "of X this month" line above it reads that month's.
+- **The field saves on every keystroke**, so a change in the same month as the
+  last one **replaces** it (1, 13, 130 … 13,000 is one change, and a typo
+  corrected within the month leaves no trace); a change that lands on what the
+  month already had is not recorded; and changes planned for later months are
+  dropped, since "from now on" covers them. A rule that never had an amount is
+  simply set — a first budget still runs every month, as a new one always did.
+- **Only the amount is versioned, and only for a `repeat` budget.** Frequency,
+  currency, bucket and due day stay global; `once` and `custom` carry their own
+  dates and are written as before. There is no "all months" option: correcting
+  an old month's budget is not possible from the panel. If that is wanted it
+  belongs behind Settings, not in the everyday flow.
+- **Read a month through `amountFor` / `monthlyAmount(rule, monthKey)`.** With no
+  month `amountFor` means *now*, which is what the callers that never had a month
+  in hand always meant. This sharpens the unqualified claim in the three-shapes
+  section that `monthlyAmount` without a month is the year's average: that holds
+  for the dated shapes; for a `repeat` rule it is this month's figure.
+  `budgetEntries.occurrencesFor` writes each instalment at **its own month's**
+  figure (weekly ones too), `reminderTitle` passes its month, the assistant's
+  range totals sum each month's own budget (23,000 over a 10,000 and a 13,000
+  month, not 26,000), and ShoppingScreen's envelope reads the current one.
+- **The bots are not involved.** Telegram and Siri cannot read or set budgets
+  (the Telegram prompt says so), so there is nothing to keep in step with the
+  three-doors rule.
+- `node scripts/budget-steps.mjs` — the pure rules, 32 cases, no browser.
+  `scripts/budget-keeps-old-amount.mjs [edit|stored]` — the panel: typing 13,000
+  records one change and last month still reads 10,000. `scripts/budget-steps-
+  readers.mjs` — the entries, the assistant and the range totals. Controls, the
+  same harnesses on the code before: the edit overwrites the base and last month
+  reads 13,000 (5 failures); November's entry is written at 10,000, the
+  assistant's write has no history, last month reads 13,000 and the range 26,000
+  (7 failures).
+
 ## Finance — a budget belongs to one of four
 `BUCKETS` / `bucketOf` in `BudgetRuleModal.tsx`. **Kind** used to be *fixed* or
 *flexible*, which only ever answered whether one line could be moved — about one
