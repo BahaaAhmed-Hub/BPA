@@ -1382,6 +1382,8 @@ function App() {
       const answer = gateAnswer({ createdAt: wizardCreatedAt, hasCompanies, hasHabits })
       if (answer === 'open') setShowWizard(true)
       else if (answer === 'established') suppressWizardHere()
+      // A wizard that is not going to open must not leave its OAuth resume note behind.
+      if (answer !== 'open') sessionStorage.removeItem('bpa-wizard-resume')
     }, 2500)
     return () => clearTimeout(timer)
   }, [wizardUserId, wizardCreatedAt])

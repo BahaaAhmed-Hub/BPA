@@ -32,12 +32,12 @@ let fails = 0
 const ok = (n, c, d = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${d ? '  ' + d : ''}`); if (!c) fails++ }
 const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] })
 
-async function open({ ageDays = 0, done = false, admin = false, seed = {} } = {}) {
+async function open({ viewport = { width: 1440, height: 900 }, ageDays = 0, done = false, admin = false, seed = {}, local = {}, sess = {} } = {}) {
   const user = { ...baseUser, created_at: new Date(Date.now() - ageDays * 864e5).toISOString() }
   const session = { ...baseSession, user }
   const db = { habits: [], tasks: [], admins: admin ? [{ user_id: user.id }] : [], ...seed }
   const writes = []
-  const ctx = await br.newContext({ viewport: { width: 1440, height: 900 }, timezoneId: 'Africa/Cairo', locale: 'en-GB' })
+  const ctx = await br.newContext({ viewport, hasTouch: viewport.width < 600, timezoneId: 'Africa/Cairo', locale: 'en-GB' })
   await ctx.route('**://placeholder.supabase.co/**', r => {
     const req = r.request(), u = req.url(), method = req.method()
     if (method === 'OPTIONS') return r.fulfill({ status: 204, headers: CORS })
@@ -55,6 +55,7 @@ async function open({ ageDays = 0, done = false, admin = false, seed = {} } = {}
       for (const row of Array.isArray(body) ? body : [body]) if (row?.id) db[table] = [...(db[table] ?? []).filter(x => x.id !== row.id), row]
       return j([])
     }
+    if (method === 'DELETE') { writes.push({ table, method, body: [], url: decodeURIComponent(u) }); return j([]) }
     return j([])
   })
   await ctx.route('**://*.googleapis.com/**', r => r.fulfill({ json: { items: [], threads: [], labels: [] }, headers: CORS }))
@@ -62,14 +63,16 @@ async function open({ ageDays = 0, done = false, admin = false, seed = {} } = {}
   const page = await ctx.newPage()
   const errors = []
   page.on('pageerror', e => errors.push(String(e).slice(0, 300)))
-  await page.addInitScript(([s, done]) => {
+  await page.addInitScript(([s, done, local, sess]) => {
     if (sessionStorage.getItem('__seeded')) return
     sessionStorage.setItem('__seeded', '1')
+    for (const [k, v] of Object.entries(local)) localStorage.setItem(k, v)
+    for (const [k, v] of Object.entries(sess)) sessionStorage.setItem(k, v)
     localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
     localStorage.setItem('google_provider_token', 'tok')
     localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
     if (done) localStorage.setItem('bpa-wizard-done', '1')
-  }, [session, done])
+  }, [session, done, local, sess])
   await page.goto(`http://localhost:${PORT}/BPA/`, { waitUntil: 'domcontentloaded' })
   return { ctx, page, db, writes, errors }
 }
@@ -160,6 +163,162 @@ console.log('— skip')
   ok('skip: summary says Skipped for the five', sum.filter(t => t.includes('Skipped')).length === 5)
   ok('skip: nothing written for them', [await ls(page, 'professor-automation-rules'), await ls(page, 'professor-quiet-hours'), await ls(page, 'professor-ai-config')].every(v => v === null))
   ok('skip: no habit rows', !writes.some(x => x.table === 'habits'))
+  await ctx.close()
+}
+
+// ═════════ review — each finding from the independent review, as a claim ═════════
+console.log('— review')
+{
+  // 1. A key test answers for the key it was asked about, not whatever is in the box when it lands.
+  const { page, ctx } = await open({ ageDays: 0 })
+  await wizardUp(page, 12000)
+  await cont(page); await to(page, 'accounts'); await cont(page); await to(page, 'ai')
+  await ctx.route('**://api.anthropic.com/**', async r => { await new Promise(res => setTimeout(res, 1200)); await r.fulfill({ status: 200, json: { id: 'm', type: 'message', role: 'assistant', model: 'x', content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } }, headers: CORS }) })
+  await page.fill('#wz-key', 'sk-ant-first-key-1234567')
+  await page.getByRole('button', { name: 'Test key' }).click()
+  await page.fill('#wz-key', 'sk-ant-second-key-7654321')
+  await page.waitForTimeout(2200)
+  ok('review: a test answering for an old key does not bless the new one', (await page.locator('.wz-ok').count()) === 0)
+  await page.getByRole('button', { name: 'Test key' }).click()
+  await page.locator('.wz-ok').waitFor({ timeout: 6000 }).catch(() => {})
+  ok('review: and a test of the key in the box still can (the control)', (await page.locator('.wz-ok').count()) === 1)
+
+  // 2. A key under the wrong provider holds Continue back, in words.
+  await page.getByRole('button', { name: /Groq/ }).first().click()
+  await page.fill('#wz-key', 'sk-ant-pasted-in-groq-1234')
+  const cb = page.locator('.wz-panel .sb-btn[data-variant="primary"]')
+  ok('review: an sk-ant key under Groq blocks Continue', await cb.isDisabled() && (await page.locator('.wz-foot .wz-note').textContent()).includes('other provider'))
+  await page.fill('#wz-key', 'gsk_a-real-looking-groq-key')
+  ok('review: the same box with a Groq key is fine (the control)', await cb.isEnabled())
+  await ctx.close()
+}
+{
+  // 3. A rate-limited Groq key is not a failed key.
+  const { page, ctx } = await open({ ageDays: 0 })
+  await wizardUp(page, 12000)
+  await cont(page); await to(page, 'accounts'); await cont(page); await to(page, 'ai')
+  await ctx.route('**://api.groq.com/**', r => r.fulfill({ status: 429, body: 'Rate limit reached for model `llama-3.3-70b-versatile`', headers: CORS }))
+  await page.getByRole('button', { name: /Groq/ }).first().click()
+  await page.fill('#wz-key', 'gsk_a-real-looking-groq-key')
+  await page.getByRole('button', { name: 'Test key' }).click()
+  await page.locator('.wz-bad').waitFor({ timeout: 6000 }).catch(() => {})
+  ok('review: a 429 says busy, not "model not offered"', /busy|rate/i.test(await page.locator('.wz-bad').textContent().catch(() => '')))
+  ok('review: and does not block Continue', await page.locator('.wz-panel .sb-btn[data-variant="primary"]').isEnabled())
+  await ctx.close()
+}
+{
+  // 4. Companies: another one on the server is never deleted; an existing one keeps its calendar; Back-and-remove takes only this wizard's own.
+  const old = { id: 'old-co', name: 'Old Co', color: '#3B82F6', calendarId: 'cal-1', emailDomain: 'old.co', accountId: '', isActive: true, users: [{ id: 'u', name: 'P' }] }
+  const server = [{ id: 'old-co', user_id: baseUser.id, name: 'Old Co' }, { id: 'srv-only', user_id: baseUser.id, name: 'Server Only' }]
+  const draft = { id: 'old-co', name: 'Old Co', color: '#3B82F6', emailDomain: 'old.co', accountId: '' }
+  const { page, writes, ctx, db } = await open({ ageDays: 0, sess: { 'bpa-wizard-resume': JSON.stringify({ idx: 1, w: { companies: [draft] } }) } })
+  ok('review: the wizard opened for the company fixture (not vacuous)', await wizardUp(page, 12000))
+  // By the time the wizard saves, one company exists here and two on the server (made in Settings, or on another device).
+  db.companies = server
+  await page.evaluate(([o, srv]) => localStorage.setItem('professor-companies', JSON.stringify([o, { ...srv, calendarId: '', isActive: true, users: [] }])), [old, { id: 'srv-only', name: 'Server Only', color: '#111111', emailDomain: '', accountId: '' }])
+  await to(page, 'accounts')
+  ok('review: an existing company has no remove button here', (await page.getByRole('button', { name: 'Remove Old Co' }).count()) === 0)
+  await page.getByRole('button', { name: 'Add a company' }).click()
+  await page.getByLabel('Company name').fill('Acme Ltd')
+  await page.getByRole('button', { name: 'Add this company' }).click()
+  await cont(page); await to(page, 'ai')
+  let stored = JSON.parse(await ls(page, 'professor-companies'))
+  ok('review: the existing company keeps its calendar and people', stored.find(c => c.id === 'old-co')?.calendarId === 'cal-1' && stored.find(c => c.id === 'old-co')?.users?.length === 1)
+  ok('review: the added one is stored', stored.some(c => c.name === 'Acme Ltd'))
+  ok('review: no company was deleted from the server', !writes.some(x => x.method === 'DELETE' && x.table === 'companies'), JSON.stringify(writes.filter(x => x.method === 'DELETE').map(x => x.url)))
+  await page.getByRole('button', { name: 'Back' }).click(); await to(page, 'accounts')
+  await page.getByRole('button', { name: 'Remove Acme Ltd' }).click()
+  await cont(page); await to(page, 'ai')
+  stored = JSON.parse(await ls(page, 'professor-companies'))
+  ok('review: Back and remove takes the added one away', !stored.some(c => c.name === 'Acme Ltd') && stored.some(c => c.id === 'old-co'))
+  const dels = writes.filter(x => x.method === 'DELETE' && x.table === 'companies').map(x => x.url).join(' ')
+  ok('review: the server delete names the added one and never the others', dels.length > 0 && !dels.includes('old-co') && !dels.includes('srv-only'), dels)
+  await ctx.close()
+}
+{
+  // 5. Secrets are not parked in sessionStorage for the OAuth round trip.
+  const { page, ctx } = await open({ ageDays: 0 })
+  await wizardUp(page, 12000)
+  await cont(page); await to(page, 'accounts'); await cont(page); await to(page, 'ai')
+  await page.fill('#wz-key', 'sk-ant-secret-key-1234567')
+  await cont(page); await to(page, 'rhythm')
+  for (const id of ['automation', 'habits', 'finance']) { await page.getByRole('button', { name: 'Skip this step' }).click(); await to(page, id) }
+  await page.getByRole('switch', { name: 'Lock the finance pages' }).click()
+  await page.fill('#wz-pass', 'hunter2-secret')
+  await page.getByRole('button', { name: '02 Accounts' }).click(); await to(page, 'accounts')
+  await ctx.route('**://placeholder.supabase.co/auth/v1/authorize**', r => r.abort())
+  await ctx.route('**://accounts.google.com/**', r => r.abort())
+  // The page leaves for Google, so what it wrote is caught as it is written.
+  const recorded = []
+  await page.exposeFunction('__rec', v => { recorded.push(v) })
+  await page.evaluate(() => { const set = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { if (k === 'bpa-wizard-resume') window.__rec(v); return set.call(this, k, v) } })
+  await page.getByRole('button', { name: 'Add another Google account' }).click()
+  await page.waitForTimeout(1000)
+  const note = recorded[0]
+  ok('review: a resume note was written (not vacuous)', !!note && note.includes('"idx"'))
+  ok('review: and holds neither the API key nor the finance password', !!note && !note.includes('sk-ant-secret') && !note.includes('hunter2'))
+  await ctx.close()
+}
+{
+  // 6. Rhythm shows what it saves: an out-of-range stored value is held to the slider.
+  const { page, ctx } = await open({ ageDays: 0, local: { 'professor-settings': JSON.stringify({ focusStart: '03:00', endOfDay: '23:00', timezone: 'Africa/Cairo' }), 'professor-quiet-hours': JSON.stringify({ on: true, start: '01:00', end: '08:30' }) } })
+  await wizardUp(page, 12000)
+  await cont(page); await to(page, 'accounts'); await cont(page); await to(page, 'ai')
+  await page.getByRole('button', { name: 'Skip for now' }).click(); await to(page, 'rhythm')
+  ok('review: out-of-range stored hours are shown held to the sliders', (await page.inputValue('#wz-start')) === '5' && (await page.inputValue('#wz-stop')) === '21' && (await page.inputValue('#wz-quiet')) === '20')
+  await range(page, 'wz-start', 5)
+  await cont(page); await to(page, 'automation')
+  const q = JSON.parse(await ls(page, 'professor-quiet-hours'))
+  ok('review: quiet hours end no later than work begins', q.start === '20:00' && q.end === '05:00', JSON.stringify(q))
+  await ctx.close()
+}
+
+// ═════════ narrow — a phone, every step ═════════
+console.log('— narrow')
+{
+  const { page, ctx } = await open({ ageDays: 0, viewport: { width: 390, height: 780 } })
+  ok('narrow: opens', await wizardUp(page, 12000))
+  const ids = ['you', 'accounts', 'ai', 'rhythm', 'automation', 'habits', 'finance', 'done']
+  for (const id of ids) {
+    await to(page, id)
+    await page.waitForTimeout(900)   // the entrance animation
+    const m = await page.evaluate(() => {
+      const root = document.querySelector('[data-wizard]'), vw = window.innerWidth, vh = window.innerHeight
+      const btn = document.querySelector('.wz-panel .sb-btn[data-variant="primary"]')
+      const r = btn?.getBoundingClientRect()
+      const panel = document.querySelector('.wz-panel').getBoundingClientRect()
+      const small = [...document.querySelectorAll('.wz-panel button, .wz-panel input, .wz-panel select')].filter(e => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && b.height < 30 && !e.matches('.wz-link, .wz-link-plain, .wz-range, [type=range]') }).map(e => (e.getAttribute('aria-label') || e.textContent || e.id).trim().slice(0, 24))
+      return { sideways: document.documentElement.scrollWidth > vw + 1, btnIn: !!r && r.bottom <= vh + 1 && r.top >= 0 && r.right <= vw + 1, panelIn: panel.left >= -1 && panel.right <= vw + 1, small }
+    })
+    ok(`narrow: ${id} has no sideways scroll`, !m.sideways)
+    ok(`narrow: ${id} keeps its panel on the screen`, m.panelIn)
+    ok(`narrow: ${id} keeps the main button on the screen`, m.btnIn)
+    ok(`narrow: ${id} has no tiny tap targets`, m.small.length === 0, m.small.join(' | '))
+    if (id !== 'done') { if (id === 'ai') await page.getByRole('button', { name: 'Skip for now' }).click(); else if (['rhythm', 'automation', 'habits', 'finance'].includes(id)) await page.getByRole('button', { name: 'Skip this step' }).click(); else await cont(page) }
+  }
+  await ctx.close()
+}
+
+// ═════════ keyboard — every control that takes focus shows it ═════════
+console.log('— keyboard')
+{
+  const { page, ctx } = await open({ ageDays: 0 })
+  ok('keyboard: opens', await wizardUp(page, 12000))
+  await page.waitForTimeout(1200)
+  const seen = []
+  for (let i = 0; i < 14; i++) {
+    await page.keyboard.press('Tab')
+    seen.push(await page.evaluate(() => {
+      const e = document.activeElement
+      if (!e || !e.closest('[data-wizard]')) return { out: true }
+      const cs = getComputedStyle(e)
+      return { label: (e.getAttribute('aria-label') || e.textContent || e.id || e.tagName).trim().slice(0, 22), ring: cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0 }
+    }))
+  }
+  const inside = seen.filter(x => !x.out)
+  ok('keyboard: Tab moves through the wizard controls', inside.length >= 6, String(inside.length))
+  ok('keyboard: focus never leaves the dialog', seen.every(x => !x.out))
+  ok('keyboard: each one shows a focus ring', inside.every(x => x.ring), inside.filter(x => !x.ring).map(x => x.label).join(' | '))
   await ctx.close()
 }
 

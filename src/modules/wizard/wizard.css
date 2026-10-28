@@ -161,9 +161,8 @@
 .wz-steps ol { display: flex; align-items: center; gap: 22px; margin: 0; padding: 0; list-style: none; }
 .wz-step {
   all: unset; box-sizing: border-box; cursor: pointer; min-height: 32px; display: flex; align-items: center;
-  font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: #6E6458;
+  font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: #4F463B;
 }
-.wz-step[data-optional] { opacity: .8; }
 .wz-step[data-active] { color: #1B1A17; opacity: 1; border-bottom: 1.5px solid #1B1A17; }
 .wz-step[aria-disabled="true"] { cursor: default; }
 .wz-x { all: unset; box-sizing: border-box; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; border: 1px solid #BFB4A4; background: rgba(255,255,255,.55); display: flex; align-items: center; justify-content: center; color: #1B1A17; }
@@ -222,6 +221,7 @@
 .wz-opt[aria-pressed="true"] { border-color: var(--sb-ink-1); background: color-mix(in srgb, var(--sb-accent) 22%, transparent); }
 .wz-opt b { display: block; font-size: var(--sb-t-body); line-height: 1.2; color: var(--sb-ink-1); }
 .wz-opt small { display: block; font-size: var(--sb-t-meta); color: var(--sb-ink-3); }
+.wz-opt[aria-pressed="true"] small { color: var(--sb-ink-2); }
 .wz-logo { width: 32px; height: 32px; flex: none; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: var(--sb-overlay); border: var(--sb-border-width) solid var(--sb-border); }
 .wz-theme { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 14px 0 8px; border-radius: 999px; border: 1px solid var(--sb-border); font-size: var(--sb-t-body); font-weight: 500; color: var(--sb-ink-1); }
 .wz-theme[aria-pressed="true"] { border-color: var(--sb-ink-1); background: var(--sb-card); }
@@ -244,13 +244,21 @@
 .wz-btn2[aria-disabled="true"] { opacity: .45; cursor: default; }
 .wz-link { all: unset; cursor: pointer; font-size: var(--sb-t-body-s); color: var(--sb-ink-2); text-decoration: underline; text-underline-offset: 4px; min-height: 44px; display: inline-flex; align-items: center; }
 .wz-link-plain { all: unset; cursor: pointer; text-decoration: underline; font-weight: 600; }
-.wz-foot { display: flex; flex-direction: column; gap: 0; }
+.wz-foot {
+  display: flex; flex-direction: column; gap: 0;
+  /* On a long step the way forward stays in reach: it rides the bottom edge of the scrolling panel. */
+  position: sticky; bottom: -18px; margin: 0 -24px -18px; padding: 12px 24px 18px; background: var(--sb-overlay);
+  border-top: var(--sb-border-width) solid var(--sb-hairline);
+}
 .wz-foot-row { display: flex; align-items: center; gap: 10px; }
 .wz-foot-row .grow { flex: 1; }
 .wz-back { all: unset; cursor: pointer; min-height: 44px; padding: 0 4px; display: flex; align-items: center; font-size: var(--sb-t-body); font-weight: 600; color: var(--sb-ink-2); }
 .wz-ok { font-size: var(--sb-t-body-s); font-weight: 600; color: var(--sb-positive-deep); }
 .wz-bad { font-size: var(--sb-t-body-s); font-weight: 600; color: var(--sb-negative-deep); }
 .wz-test-banner { position: absolute; z-index: 9; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 999px; background: var(--sb-ink-1); color: var(--sb-ink-on-fill); font-size: var(--sb-t-body-s); font-weight: 600; box-shadow: 0 10px 30px -10px rgba(0,0,0,.5); }
+/* On the banner's own ground, whichever theme it is: the ink is inherited, so the pair cannot disagree. */
+.wz-banner-btn { all: unset; box-sizing: border-box; cursor: pointer; min-height: 32px; padding: 0 14px; display: flex; align-items: center; border-radius: 999px; border: 1px solid currentColor; color: inherit; font: inherit; }
+.wz-banner-btn:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .wz-ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; }
 .wz-sum { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: var(--sb-border-width) solid var(--sb-hairline); }
 .wz-sum > i { width: 20px; height: 20px; border-radius: 50%; background: var(--sb-positive); color: var(--sb-ink-on-fill); display: flex; align-items: center; justify-content: center; flex: none; }
@@ -258,6 +266,9 @@
 .wz-sum b { display: block; font-size: var(--sb-t-body); font-weight: 600; line-height: 1.25; }
 .wz-sum small { display: block; font-size: var(--sb-t-meta); color: var(--sb-ink-3); line-height: 1.3; }
 
+/* `all: unset` above removes the browser's focus ring along with everything else; this puts one back on every control. */
+.wz-root :is(button, select, input, [role="switch"]):focus-visible { outline: 2px solid var(--sb-ink-1); outline-offset: 2px; }
+.wz-top :is(button):focus-visible { outline-color: #1B1A17; }
 @media (max-width: 900px) {
   .wz-top { padding: 14px 16px 0; gap: 12px; }
   .wz-steps { display: none; }

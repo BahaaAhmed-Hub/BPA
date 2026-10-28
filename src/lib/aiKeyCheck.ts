@@ -25,7 +25,8 @@ export async function checkKey(provider: 'anthropic' | 'groq', key: string, mode
       if (res.ok) return { ok: true }
       const text = await res.text().catch(() => '')
       if (res.status === 401 || res.status === 403) return { ok: false, why: 'rejected', detail: 'Groq did not accept that key.' }
-      if (res.status === 404 || /model/i.test(text)) return { ok: false, why: 'model', detail: 'Groq does not offer that model to this key.' }
+      if (res.status === 429 || res.status >= 500) return { ok: false, why: 'network', detail: 'Groq is busy or rate-limiting. Try again in a moment.' }
+      if (res.status === 404 || (res.status === 400 && /model/i.test(text))) return { ok: false, why: 'model', detail: 'Groq does not offer that model to this key.' }
       return { ok: false, why: 'other', detail: `Groq answered ${res.status}.` }
     } catch {
       return { ok: false, why: 'network', detail: 'Could not reach Groq. Check your connection.' }
@@ -40,6 +41,7 @@ export async function checkKey(provider: 'anthropic' | 'groq', key: string, mode
     if (e instanceof Anthropic.APIConnectionError) return { ok: false, why: 'network', detail: 'Could not reach Anthropic. Check your connection.' }
     if (e instanceof Anthropic.APIError) {
       if (e.status === 401 || e.status === 403) return { ok: false, why: 'rejected', detail: 'Anthropic did not accept that key.' }
+      if (e.status === 429 || e.status >= 500) return { ok: false, why: 'network', detail: 'Anthropic is busy or rate-limiting. Try again in a moment.' }
       if (e.status === 404) return { ok: false, why: 'model', detail: 'That key cannot use this model. Pick another.' }
       return { ok: false, why: 'other', detail: e.message.slice(0, 140) }
     }

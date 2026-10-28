@@ -44,7 +44,7 @@ export function AccountsStep({ w, set, dry, beforeOAuth }: StepCtx) {
   function addCompany() {
     const n = name.trim()
     if (!n) return
-    set(p => ({ companies: [...p.companies, { id: crypto.randomUUID(), name: n, color, emailDomain: domain.trim().replace(/^@/, ''), accountId: '' }] }))
+    set(p => ({ companies: [...p.companies, { id: crypto.randomUUID(), name: n, color, emailDomain: domain.trim().replace(/^@/, ''), accountId: '', isNew: true }] }))
     setName(''); setDomain(''); setColor(COLORS[(COLORS.indexOf(color) + 1) % COLORS.length]); setAdding(false)
   }
 
@@ -71,8 +71,10 @@ export function AccountsStep({ w, set, dry, beforeOAuth }: StepCtx) {
             <div key={c.id} className="wz-row">
               <span className="wz-dot" style={{ background: c.color }} />
               <div className="grow"><div className="t1">{c.name}</div><div className="t2">{c.emailDomain ? `mail from @${c.emailDomain}` : 'no email domain'}</div></div>
-              <button type="button" className="wz-back" style={{ minHeight: 32, padding: 4 }} aria-label={`Remove ${c.name}`}
-                onClick={() => set(p => ({ companies: p.companies.filter(x => x.id !== c.id) }))}><X size={ICON.sm} aria-hidden /></button>
+              {c.isNew && (
+                <button type="button" className="wz-back" style={{ minHeight: 32, padding: 4 }} aria-label={`Remove ${c.name}`}
+                  onClick={() => set(p => ({ companies: p.companies.filter(x => x.id !== c.id) }))}><X size={ICON.sm} aria-hidden /></button>
+              )}
             </div>
           ))}
           {adding ? (

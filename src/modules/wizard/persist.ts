@@ -9,7 +9,7 @@ import { hashPassword, loadLock, saveLock } from '@/modules/finance/lock'
 import { moduleIsOff } from '@/lib/entitlements'
 import { CLAUDE_MODELS, GROQ_MODELS, claudeModelOf } from '@/lib/modelInfo'
 import { cleanKey, loadAIConfig, loadSettings, saveAIConfig, saveSettings } from '@/modules/settings/model'
-import { clock, fromHours, type WizardState } from './state'
+import { clock, fromHours, toHours, type WizardState } from './state'
 import type { StepId } from './steps'
 
 /**
@@ -41,21 +41,34 @@ const you: Saver = async (w, dry) => {
   return lines
 }
 
+/** Companies this wizard session has already written, so Back-and-remove can take one away again. */
+const savedByWizard = new Set<string>()
+
 const accounts: Saver = async (w, dry) => {
   const lines = [plural(w.accounts.length, 'account connected', 'accounts connected')]
   if (w.companies.length) lines.push(plural(w.companies.length, 'company', 'companies') + `: ${w.companies.map(c => c.name).join(', ')}`)
   if (dry || !w.companies.length) return lines
 
-  const rows: CompanyRow[] = w.companies.map(c => ({
-    id: c.id, name: c.name, color: c.color, calendarId: '', emailDomain: c.emailDomain, accountId: c.accountId, isActive: true, users: [],
-  }))
-  // Merged with what is already there, never over it: a company added in Settings must survive this.
+  // Merged with what is already there, never over it: a company added in Settings must survive
+  // this, and one that already exists keeps its calendar, people and active flag.
   let existing: CompanyRow[] = []
   try { existing = JSON.parse(localStorage.getItem('professor-companies') ?? '[]') as CompanyRow[] } catch { /* unreadable is empty */ }
-  const ids = new Set(rows.map(r => r.id))
-  localStorage.setItem('professor-companies', JSON.stringify([...existing.filter(e => !ids.has(e.id)), ...rows]))
+  const draftIds = new Set(w.companies.map(c => c.id))
+  const byId = new Map(existing.map(e => [e.id, e]))
+  const rows: CompanyRow[] = w.companies.map(c => {
+    const was = byId.get(c.id)
+    return { calendarId: '', isActive: true, users: [], ...was, id: c.id, name: c.name, color: c.color, emailDomain: c.emailDomain, accountId: c.accountId }
+  })
+  // Only a company this wizard added can be taken away again, when the person goes back and removes it.
+  const dropped = [...savedByWizard].filter(id => !draftIds.has(id))
+  const kept = existing.filter(e => !draftIds.has(e.id) && !dropped.includes(e.id))
+  const all = [...kept, ...rows]
+  for (const c of w.companies) if (c.isNew) savedByWizard.add(c.id)
+  for (const id of dropped) savedByWizard.delete(id)
+  localStorage.setItem('professor-companies', JSON.stringify(all))
   window.dispatchEvent(new Event('professor:companiesUpdated'))
-  try { await saveCompaniesToDB(rows) } catch { /* offline: it is saved here and goes up with the next sync */ }
+  // The whole list: saveCompaniesToDB removes whatever it is not given.
+  try { await saveCompaniesToDB(all) } catch { /* offline: it is saved here and goes up with the next sync */ }
   return lines
 }
 
@@ -79,10 +92,12 @@ const ai: Saver = async (w, dry) => {
 const rhythm: Saver = async (w, dry) => {
   const { start, stop, quiet } = w.rhythm
   const q = loadQuietHours()
+  // Quiet ends no later than work begins, or the alerts would be held back into the working day.
+  const qEnd = toHours(q.end, 7) > start ? fromHours(start) : q.end
   const lines = [
     `Work ${clock(start)} to ${clock(stop)}`,
     `Deep work from ${clock(start)}, meetings from ${clock(start + 1)}`,
-    `Quiet from ${clock(quiet % 24)} until ${q.end}`,
+    `Quiet from ${clock(quiet % 24)} until ${qEnd}`,
   ]
   if (dry) return lines
   const had = localStorage.getItem('professor-settings') !== null
@@ -95,7 +110,7 @@ const rhythm: Saver = async (w, dry) => {
     focusStart: fromHours(start), focusEnd: fromHours(start + 2), earliestMeeting: fromHours(start + 1), endOfDay: fromHours(stop),
   }
   saveSettings(next)
-  saveQuietHours({ on: true, start: fromHours(quiet), end: q.end })
+  saveQuietHours({ on: true, start: fromHours(quiet), end: qEnd })
   try { await saveProfileToDB(next) } catch { /* offline: saved here, and Settings → Schedule saves it up later */ }
   return lines
 }

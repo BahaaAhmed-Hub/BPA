@@ -51,6 +51,7 @@ export function SetupWizard({ onClose, testMode = false }: Props) {
 
   // Back from an OAuth round trip: where the person was, with what they had typed.
   useEffect(() => {
+    if (testMode) return
     const saved = sessionStorage.getItem(RESUME_KEY)
     if (!saved) return
     sessionStorage.removeItem(RESUME_KEY)
@@ -59,7 +60,7 @@ export function SetupWizard({ onClose, testMode = false }: Props) {
       if (typeof p.idx === 'number' && p.idx >= 0 && p.idx <= LAST) { const at = p.idx; setIdx(at); setFurthest(f => Math.max(f, at)) }
       if (p.w) setW(prev => ({ ...prev, ...p.w, saved: { ...prev.saved, ...p.w?.saved } }))
     } catch { /* an unreadable note is no note */ }
-  }, [])
+  }, [testMode])
 
   // A dry run leaves nothing applied: the theme the admin tried is put back.
   useEffect(() => () => { if (testMode) applyAppearance({ themeId: startTheme.current }) }, [testMode])
@@ -108,11 +109,27 @@ export function SetupWizard({ onClose, testMode = false }: Props) {
     go(idx + 1)
   }
 
-  function beforeOAuth() { sessionStorage.setItem(RESUME_KEY, JSON.stringify({ idx, w })) }
+  // Secrets are never parked in sessionStorage: the keys and the finance password are
+  // retyped on return rather than left as a second plaintext copy.
+  function beforeOAuth() {
+    const safe: WizardState = { ...w, ai: { ...w.ai, anthropicKey: '', groqKey: '', check: 'idle', note: '' }, finance: { ...w.finance, password: '' } }
+    sessionStorage.setItem(RESUME_KEY, JSON.stringify({ idx, w: safe }))
+  }
+
+  // A modal keeps the keyboard inside it: Tab from the last control returns to the first, and back.
+  function trap(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== 'Tab') return
+    const list = [...e.currentTarget.querySelectorAll<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter(el => !el.hasAttribute('disabled') && el.getAttribute('aria-disabled') !== 'true' && el.offsetParent !== null)
+    if (!list.length) return
+    const first = list[0], last = list[list.length - 1], at = document.activeElement
+    if (e.shiftKey && (at === first || !e.currentTarget.contains(at))) { e.preventDefault(); last.focus() }
+    else if (!e.shiftKey && (at === last || !e.currentTarget.contains(at))) { e.preventDefault(); first.focus() }
+  }
 
   const Body = def.Body
   return (
-    <div className="wz-root" role="dialog" aria-modal="true" aria-labelledby="wz-title" data-wizard data-wz-step={meta.id} data-wz-test={testMode ? '' : undefined}>
+    <div className="wz-root" role="dialog" aria-modal="true" aria-labelledby="wz-title" data-wizard data-wz-step={meta.id} onKeyDown={trap} data-wz-test={testMode ? '' : undefined}>
       <Desk><Screen step={meta.id} w={w} /></Desk>
       <div className="wz-scrim" aria-hidden="true" />
 
@@ -162,7 +179,7 @@ export function SetupWizard({ onClose, testMode = false }: Props) {
       {testMode && (
         <div className="wz-test-banner" role="status">
           Test mode. Nothing here is saved.
-          <Button size="sm" onClick={closeAll}>Leave the test</Button>
+          <button type="button" className="wz-banner-btn" onClick={closeAll}>Leave the test</button>
         </div>
       )}
     </div>

@@ -20,6 +20,8 @@ const keyOf = (ai: WizardState['ai']) => (ai.provider === 'groq' ? ai.groqKey : 
 export function aiBlocker(w: WizardState): string | null {
   const k = keyOf(w.ai)
   if (!k) return 'Paste a key to continue, or skip this for now.'
+  if (stray(w.ai)) return 'That key belongs to the other provider. Switch to it, or skip this for now.'
+  if (k.length < 8) return 'That key looks too short. Check it, or skip this for now.'
   if (w.ai.check === 'testing') return 'Checking the key…'
   if (w.ai.check === 'failed') return 'That key did not work. Fix it and test again, or skip this for now.'
   return null
@@ -53,8 +55,17 @@ export function AiStep({ w, set }: StepCtx) {
     if (!key) return
     if (key.length < 8) { edit({ check: 'short', note: 'That key looks too short.' }); return }
     edit({ check: 'testing', note: '' })
+    const tested = { provider: ai.provider, key, model }
     const v = await checkKey(ai.provider, key, model)
-    edit(v.ok ? { check: 'ok', note: '' } : { check: v.why === 'network' ? 'idle' : 'failed', note: v.detail })
+    // The answer belongs to the key, model and provider that were asked about: if any
+    // changed while the request was out, it says nothing about what is in the box now.
+    set(prev => {
+      const a = prev.ai
+      const now = { provider: a.provider, key: keyOf(a), model: a.provider === 'groq' ? a.groqModel : a.anthropicModel }
+      if (a.check !== 'testing' && a.check !== 'idle') return {}
+      if (now.provider !== tested.provider || now.key !== tested.key || now.model !== tested.model) return {}
+      return { ai: { ...a, ...(v.ok ? { check: 'ok' as const, note: '' } : { check: v.why === 'network' ? 'idle' as const : 'failed' as const, note: v.detail }) } }
+    })
   }
 
   function moveStray() {
@@ -82,6 +93,7 @@ export function AiStep({ w, set }: StepCtx) {
 
       <div>
         <label htmlFor="wz-model" className="wz-lab">Model</label>
+        <p className="wz-note" style={{ marginBottom: 6 }}>Used in the app and the assistant panel. Telegram and Siri answer with their own model.</p>
         <div className="wz-select">
           <select id="wz-model" value={model}
             onChange={e => edit(ai.provider === 'groq' ? { groqModel: e.target.value, check: 'idle', note: '' } : { anthropicModel: e.target.value, check: 'idle', note: '' })}>

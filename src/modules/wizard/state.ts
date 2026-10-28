@@ -8,6 +8,8 @@ import type { StepId } from './steps'
 
 export interface CompanyDraft {
   id: string; name: string; color: string; emailDomain: string; accountId: string
+  /** Added in this wizard — the only ones it may take away again. */
+  isNew?: boolean
 }
 
 export interface AccountView { email: string; primary: boolean }
@@ -78,7 +80,12 @@ export function initialState(userName: string, themeId: string, primaryEmail: st
       anthropicModel: claudeModelOf(ai), groqModel: ai.groqModel,
       check: 'idle', note: '',
     },
-    rhythm: { start: toHours(s.focusStart, 9), stop: toHours(s.endOfDay, 17), quiet: toHours(q.start, 22.5) },
+    rhythm: {
+      // Held to the sliders' own ranges, so what is shown is what is saved.
+      start: Math.min(11, Math.max(5, toHours(s.focusStart, 9))),
+      stop: Math.min(21, Math.max(14, toHours(s.endOfDay, 17))),
+      quiet: Math.min(24, Math.max(20, toHours(q.start, 22.5))),
+    },
     rules: Object.fromEntries(loadAutomationRules().map(r => [r.id, r.enabled])),
     alerts: {
       needsyou: notif.find(n => n.id === 'needsyou')?.push ?? true,

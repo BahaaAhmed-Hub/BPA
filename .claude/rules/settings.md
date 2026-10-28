@@ -658,15 +658,46 @@ panel that asks. Steps (`steps.ts`): 1 You · 2 Accounts and companies · 3 AI k
 - **Design vs app, deliberately different:** the design shows Outlook/iCloud rows
   (the app connects Google only), a PIN lock (the app's lock is a password) and a
   Run/Alert pair per helper (the app has seven rule switches plus three alert chips).
-- `scripts/wizard-signup-flow.mjs [5199]` — 28 assertions: the gate (opens for a new
+- `scripts/wizard-signup-flow.mjs [5199]` — 82 assertions: the gate (opens for a new
   signup; shut for an old account, one with habits, the done flag and the retired
   replay event), all eight steps writing (company POST, key, schedule, rules,
   habit rows, lock hash, both flags), the skip path writing nothing, and the admin
   dry run — no server write, no setting key, flag unset, theme restored, a
-  non-admin's event ignored. Control: the `dry` guard removed from one saver fails
+  non-admin's event ignored, then the review findings below, a phone-width pass over all eight steps, and keyboard focus. Control: the `dry` guard removed from one saver fails
   exactly the two write assertions. `scripts/first-run-prompts.mjs` keeps what the
   old three-step harness measured besides the wizard: the Habits starter and the
   Todoist prompt.
 - **A vacuous pass found on the way:** the gate itself marks a year-old admin done
   on that browser, so "the done flag is unset" passed or failed on the gate, not on
   test mode. The harness clears both keys before opening the test.
+
+### What the independent review found, each now a harness claim
+- **A key test answers for the key it was asked about.** The result used to land on
+  whatever the box held when the request returned, so an edit mid-flight blessed an
+  untested key. Control on the old code: fails.
+- **Continue is held for a key under the wrong provider** (`sk-ant` under Groq) and for
+  one under 8 characters — the misfiled-key bug from "Settings — the Model picker"
+  above, which the first-run path had reintroduced.
+- **429 and 5xx are "busy", never "that key did not work".** Groq's rate-limit body
+  contains the word "model", and a test for that word read as "model not offered".
+- **`saveCompaniesToDB` deletes whatever it is not handed.** The wizard passed only its
+  own rows, so a company on the server and not in the draft was deleted — measured:
+  `DELETE …?id=in.(srv-only)`. It now passes the whole merged list; an existing company
+  keeps its calendar, people and active flag; only a company this wizard added can be
+  removed again (`isNew`, `savedByWizard`).
+- **No secrets in `bpa-wizard-resume`.** The OAuth round trip parks state in
+  sessionStorage; the keys and the finance password are now left out, and the gate clears
+  a note the wizard is not going to use. Test mode neither reads nor clears it.
+- **Rhythm shows what it saves**: stored hours are held to the sliders' ranges, and quiet
+  hours end no later than work begins.
+- **Contrast** (`ink-audit` now opens all eight steps through the admin button): the top
+  bar's nav ink on the photo, the selected provider card's caption, and the test banner's
+  button (inherited ink, since `--sb-ink-1` is light in Glass).
+- **Keyboard**: `all: unset` had removed the focus ring from about a dozen control
+  classes — restored — and the dialog now traps Tab. The panel footer is sticky, so the
+  main button stays on screen on a long step on a phone.
+- `ui-render` and `ink-audit` seed `bpa-wizard-done`: their stub account is brand new, so
+  without it the wizard covered every screen they measure.
+- **Not measured here**: real Supabase / Google OAuth / a real signup, and Groq (the
+  sandbox's proxy refuses it). Anthropic was probed for real: a bad key answers 401,
+  which is the `rejected` path. The model ids are the ones in `modelInfo.ts`.
