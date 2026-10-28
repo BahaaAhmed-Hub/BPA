@@ -59,3 +59,6 @@ export function ModelBadge({ provider, model, usage }: { provider: 'anthropic' |
     </span>
   )
 }
+
+/** The mark alone, for a screen that draws a provider choice (the setup guide). */
+export { Mark as ModelMark }

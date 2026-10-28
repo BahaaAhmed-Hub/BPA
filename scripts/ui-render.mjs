@@ -215,6 +215,7 @@ for (const theme of THEMES) {
         localStorage.setItem('google_provider_token', 'tok')
         localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
         localStorage.setItem('cal-view', 'week')
+        localStorage.setItem('bpa-wizard-done', '1')   // the stub account is brand new; the guide is not what is measured here
       }
       // Merged, never replaced: this runs before every navigation, and Settings
       // is reached by writing `activeModule` and reloading (see ink-audit).

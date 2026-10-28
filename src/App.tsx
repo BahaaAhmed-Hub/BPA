@@ -55,6 +55,7 @@ import { useTaskCalendarPush } from './lib/taskAutoSchedule'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
+import { gateAnswer, suppressWizardHere } from './modules/wizard/wizardGate'
 import { Search, Settings, LogOut, ShieldCheck } from 'lucide-react'
 import { ICON } from '@/lib/type'
 import { shoppingIsOff, useShoppingOff } from './modules/finance/shopping/shoppingPrefs'
@@ -971,6 +972,9 @@ function clearUserData(clearTasks: () => void, clearHabits: () => void) {
     // account's prefs, so it must not be read as the next account's: a stale
     // entry that happened to match would suppress a push the new user needs.
     'professor-prefs-seen',
+    // Whether the setup guide was closed is a fact about one account. The next
+    // person on this browser is a new signup or they are not — their own date says.
+    'bpa-wizard-done', 'professor-wizard-done',
   ]
   userKeys.forEach(k => localStorage.removeItem(k))
   // Keyed by user id as well, so it cannot be read as the next account's —
@@ -1180,7 +1184,7 @@ function App() {
         if (lastUserId && lastUserId !== u.id) clearUserData(clearTasks, clearHabits)
         localStorage.setItem(LAST_USER_KEY, u.id)
       }
-      setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
+      setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined, createdAt: u.created_at } : null)
       if (u) {
         void hydrate(u.id)
         // Preferences that are your work rather than this device's.
@@ -1206,7 +1210,7 @@ function App() {
 
       // ── Normal sign-in / sign-out ──────────────────────────────────────────
       const u = session?.user
-      setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
+      setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined, createdAt: u.created_at } : null)
       setLoading(false)
 
       if (u) {
@@ -1389,34 +1393,39 @@ function App() {
     }
   }, [])
   const [showWizard, setShowWizard] = useState(false)
-  const wizardChecked = useRef(false)
-
-  // Show wizard on first login, and on professor:openWizard event.
-  // Defer by 2.5 s so the initial DB hydration can finish before we judge whether
-  // the account has data — a new device for an existing user must not be mistaken
-  // for a brand-new account just because localStorage is empty there.
+  const [testWizard, setTestWizard] = useState(false)
+  // The admin panel's "Test setup guide": a dry run, so the event is answered only
+  // after the server's own word that this account is an admin.
   useEffect(() => {
-    if (!user || wizardChecked.current) return
-    wizardChecked.current = true
-    if (localStorage.getItem('bpa-wizard-done')) return
+    const open = () => { void amIAdmin().then(ok => { if (ok) setTestWizard(true) }) }
+    window.addEventListener('professor:testWizard', open)
+    return () => window.removeEventListener('professor:testWizard', open)
+  }, [])
+
+  // The setup guide is for a new signup, once (modules/wizard/wizardGate.ts).
+  // Deferred 2.5 s so the first hydration — which also pulls the shared "done"
+  // pref from another device — lands before the answer is taken. Depends on the
+  // id and the signup date, not on the user object: a token refresh hands back a
+  // new object for the same person and must not re-ask.
+  const wizardUserId = user?.id
+  const wizardCreatedAt = user?.createdAt
+  useEffect(() => {
+    if (!wizardUserId) return
     const timer = setTimeout(() => {
-      const hasCompanies = (JSON.parse(localStorage.getItem('professor-companies') ?? '[]') as unknown[]).length > 0
-      const hasHabits    = useHabitsStore.getState().habits.length > 0
-      if (hasCompanies || hasHabits) {
-        // Existing user on a new device — suppress silently
-        localStorage.setItem('bpa-wizard-done', '1')
-      } else {
-        setShowWizard(true)
-      }
+      let hasCompanies = false
+      try { hasCompanies = (JSON.parse(localStorage.getItem('professor-companies') ?? '[]') as unknown[]).length > 0 } catch { /* unreadable is empty */ }
+      const hasHabits = useHabitsStore.getState().habits.length > 0
+      let answer = gateAnswer({ createdAt: wizardCreatedAt, hasCompanies, hasHabits })
+      // Coming back from Google mid-setup: the companies and habits that make the account look
+      // established are the ones the wizard itself just wrote, so its own note keeps it open.
+      if (answer === 'established' && sessionStorage.getItem('bpa-wizard-resume')) answer = 'open'
+      if (answer === 'open') setShowWizard(true)
+      else if (answer === 'established') suppressWizardHere()
+      // A wizard that is not going to open must not leave its OAuth resume note behind.
+      if (answer !== 'open') sessionStorage.removeItem('bpa-wizard-resume')
     }, 2500)
     return () => clearTimeout(timer)
-  }, [user])
-
-  useEffect(() => {
-    const handler = () => { setShowWizard(true) }
-    window.addEventListener('professor:openWizard', handler)
-    return () => window.removeEventListener('professor:openWizard', handler)
-  }, [])
+  }, [wizardUserId, wizardCreatedAt])
 
   if (loading) return <LoadingScreen />
   if (!user)   return <LoginScreen />
@@ -1489,6 +1498,7 @@ function App() {
           setAssistantAside(false)
         }} />
       {showWizard && <SetupWizard onClose={() => setShowWizard(false)} />}
+      {testWizard && <SetupWizard testMode onClose={() => setTestWizard(false)} />}
     </div>
   )
 }

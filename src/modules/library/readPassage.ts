@@ -9,6 +9,7 @@
 // can always still be typed by hand.
 import { anthropic, anthropicKey } from '@/lib/professor'
 import { AiFailure, describeAiFailure } from './aiFailure'
+import { activeClaudeModel } from '@/lib/modelInfo'
 
 export interface PassageRead {
   text: string
@@ -43,7 +44,7 @@ export async function readPassage(image: { data: string; mediaType: string }): P
   let raw = ''
   try {
     const msg = await anthropic().messages.create({
-      model: 'claude-sonnet-4-6',
+      model: activeClaudeModel(),
       max_tokens: 2000,
       system: SYSTEM,
       messages: [{

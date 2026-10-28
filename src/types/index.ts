@@ -280,6 +280,8 @@ export interface User {
   email: string
   name?: string
   avatarUrl?: string
+  /** When the account was made (ISO). The setup guide is for new signups only, and this is how it knows. */
+  createdAt?: string
 }
 
 /** Open means open: not finished, not abandoned. Three screens each had their

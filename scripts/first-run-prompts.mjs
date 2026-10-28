@@ -1,17 +1,13 @@
 #!/usr/bin/env node
 /**
- * wizard-three-steps — the setup wizard is three steps, and habits and tasks
- * are set up where they live
+ * first-run-prompts — habits and tasks are set up where they live
+ * (the setup wizard itself is measured by wizard-signup-flow.mjs)
  *
  *   npx vite --port 5199 --strictPort                                   (one shell)
  *   VITE_TODOIST_CLIENT_ID=x npx vite --port 5198 --strictPort          (another, for the Todoist half)
- *   node scripts/wizard-three-steps.mjs [5199] [5198]
+ *   node scripts/first-run-prompts.mjs [5199] [5198]
  *
  * P2.5 of docs/ui-unification.md. Measured, per part:
- *   wizard — opens at "Step 1 of 3" with three progress segments; step 1 holds the
- *            name field, the theme tiles AND the accounts card; step 2 is
- *            companies; step 3 is done and has NO habits/tasks count. "Pick your
- *            habits" finishes the wizard (flag set) and lands on Habits.
  *   habits — an empty Habits screen shows the starter; picking two presets and
  *            adding them makes two rows AND sends two habit rows to the server;
  *            with a habit already on the server the starter is not drawn (the
@@ -75,36 +71,6 @@ async function open({ p = port, seed = {}, module, wizardDone }) {
   return { ctx, page, writes, db }
 }
 const text = page => page.locator('body').innerText()
-
-// ── The wizard ──────────────────────────────────────────────────────────────
-{
-  const { ctx, page } = await open({ wizardDone: false })
-  // The first-login timer is cancelled by StrictMode's double mount in dev (a ref guards its re-arm), so open it by the Settings door's own event.
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent('professor:openWizard')))
-  await page.getByText('Step 1 of 3').waitFor({ timeout: 8000 }).catch(() => {})
-  ok('wizard: opens at "Step 1 of 3" (not 6)', await page.getByText('Step 1 of 3').count() === 1)
-  ok('wizard: three progress segments', await page.locator('div[title="Companies"], div[title="Done"], div[title="You & accounts"]').count() === 3)
-  ok('wizard: step 1 has the name field', await page.getByPlaceholder('Your name...').count() === 1)
-  ok('wizard: step 1 has the theme tiles', await page.getByText('Choose your theme').count() === 1)
-  ok('wizard: step 1 has the accounts card too', await page.getByText('Connect your accounts').count() === 1)
-  ok('wizard: step 1 has no hero/feature cards (compact)', await page.getByText('AI Prioritization').count() === 0)
-  await page.getByRole('button', { name: /^Next/ }).click()
-  await page.getByText('Step 2 of 3').waitFor({ timeout: 4000 })
-  ok('wizard: step 2 is companies', /compan/i.test(await text(page)) && await page.getByText('Step 2 of 3').count() === 1)
-  await page.getByRole('button', { name: /^Next/ }).click()
-  await page.getByText('Step 3 of 3').waitFor({ timeout: 4000 })
-  const t = await text(page)
-  ok('wizard: step 3 is the Done screen', await page.getByText("You're all set").count() === 1)
-  ok('wizard: it counts Accounts and Companies', await page.getByText('Accounts', { exact: true }).count() === 1 && await page.getByText('Companies', { exact: true }).count() >= 1)
-  ok('wizard: and has no Habits or Tasks count (control: the old Done had both)', await page.getByText('Habits', { exact: true }).count() === 0 && await page.getByText('Tasks', { exact: true }).count() === 0)
-  ok('wizard: step 3 offers Pick your habits and Add your tasks', await page.getByRole('button', { name: 'Pick your habits' }).count() === 1 && await page.getByRole('button', { name: 'Add your tasks' }).count() === 1)
-  ok('wizard: there is no step 4', await page.getByText('Step 4 of').count() === 0 && await page.getByRole('button', { name: /^Next/ }).count() === 0)
-  await page.getByRole('button', { name: 'Pick your habits' }).click()
-  await page.waitForTimeout(400)
-  ok('wizard: it finished (flag set, overlay gone)', await page.evaluate(() => localStorage.getItem('bpa-wizard-done')) === '1' && await page.getByText('Step 3 of 3').count() === 0)
-  ok('wizard: and landed on Habits', await page.locator('[data-side-rail] [aria-current]').first().getAttribute('aria-label').catch(() => '') === 'Habits' || await page.locator('[data-habit-starter]').count() === 1)
-  await ctx.close()
-}
 
 // ── The Habits first-run prompt ─────────────────────────────────────────────
 {

@@ -242,15 +242,25 @@ type DbCompanyExtended = DbCompany & {
   logo_url?: string | null
 }
 
-export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> {
+/**
+ * `only` is for a caller that holds a few rows rather than the whole list (the setup
+ * guide): it upserts those and deletes exactly `remove`, never what it was not told about.
+ * Without it the list is taken as the whole truth and anything missing from it is deleted.
+ */
+export async function saveCompaniesToDB(companies: CompanyRow[], only?: { remove: string[] }): Promise<void> {
   const session = await getSession()
   const userId  = session.user.id
 
-  const { data: existing } = await supabase
-    .from('companies').select('id').eq('user_id', userId)
-  const existingIds = (existing ?? []).map((r: { id: string }) => r.id)
-  const keepIds     = companies.map(c => c.id)
-  const toDelete    = existingIds.filter((id: string) => !keepIds.includes(id))
+  let toDelete: string[]
+  if (only) {
+    toDelete = only.remove
+  } else {
+    const { data: existing } = await supabase
+      .from('companies').select('id').eq('user_id', userId)
+    const existingIds = (existing ?? []).map((r: { id: string }) => r.id)
+    const keepIds     = companies.map(c => c.id)
+    toDelete = existingIds.filter((id: string) => !keepIds.includes(id))
+  }
 
   if (toDelete.length) {
     await supabase.from('companies').delete().in('id', toDelete)

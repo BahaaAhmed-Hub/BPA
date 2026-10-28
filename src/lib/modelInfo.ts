@@ -9,6 +9,29 @@
  */
 export const ASSISTANT_CLAUDE_MODEL = 'claude-sonnet-4-6'
 
+/**
+ * Which Claude models a person can choose, and which one is used when they have
+ * not. The id is exactly what is sent. The default stays `ASSISTANT_CLAUDE_MODEL`:
+ * choosing is opt-in, so an account that never opens the picker is unchanged.
+ */
+export const CLAUDE_MODELS: { id: string; label: string; note: string }[] = [
+  { id: ASSISTANT_CLAUDE_MODEL, label: 'Sonnet 4.6', note: 'balanced, the default' },
+  { id: 'claude-sonnet-5-5',    label: 'Sonnet 5.5', note: 'newer, balanced' },
+  { id: 'claude-opus-5-5',      label: 'Opus 5.5',   note: 'most capable' },
+  { id: 'claude-haiku-5-5',     label: 'Haiku 5.5',  note: 'fastest' },
+]
+
+export const GROQ_MODELS: { id: string; label: string; note: string }[] = [
+  { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', note: 'best quality' },
+  { id: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B',  note: 'fastest' },
+  { id: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B',  note: 'long context' },
+]
+
+/** The Claude model saved in Settings → AI (`claudeModel`), else the app's default — for the callers that do not hold a config. */
+export function activeClaudeModel(): string {
+  try { return ((JSON.parse(localStorage.getItem('professor-ai-config') ?? '{}') as { claudeModel?: string }).claudeModel ?? '').trim() || ASSISTANT_CLAUDE_MODEL } catch { return ASSISTANT_CLAUDE_MODEL }
+}
+
 export type ModelMarkKind = 'claude' | 'groq' | 'other'
 
 export interface ModelInfo {

@@ -11,6 +11,7 @@
 // whole thing as an AI explanation.
 import { anthropic, anthropicKey } from '@/lib/professor'
 import { AiFailure, describeAiFailure } from './aiFailure'
+import { activeClaudeModel } from '@/lib/modelInfo'
 
 export interface Explanation {
   /** Two or three plain sentences on what the passage is saying. */
@@ -45,7 +46,7 @@ export async function explainQuote(input: { text: string; title: string; authors
   let raw = ''
   try {
     const msg = await anthropic().messages.create({
-      model: 'claude-sonnet-4-6', max_tokens: 700, system: SYSTEM,
+      model: activeClaudeModel(), max_tokens: 700, system: SYSTEM,
       messages: [{ role: 'user', content: prompt }],
     })
     raw = msg.content.find(b => b.type === 'text')?.text ?? ''

@@ -537,6 +537,7 @@ for (const theme of THEMES) {
     localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
     localStorage.setItem('cal-intel-cals-cache', JSON.stringify(cs))
     localStorage.setItem('cal-view', 'week')
+    localStorage.setItem('bpa-wizard-done', '1')
     // **Merged, never replaced.** An init script runs before *every*
     // navigation, so writing this whole key again wiped whatever the run had
     // just put in it — and the Settings visit reaches its module by setting
@@ -1070,6 +1071,26 @@ for (const theme of THEMES) {
     await page.locator('button', { hasText: /^Audit/ }).first().click({ timeout: 4000 }).catch(() => {})
     await page.waitForTimeout(700)
   })
+
+  // ── The setup guide, all eight steps, reached through the admin's own test button ─
+  const wzNext = async (skip) => {
+    if (skip) await page.getByRole('button', { name: skip }).first().click({ timeout: 4000 })
+    else await page.locator('.wz-panel .sb-btn[data-variant="primary"]').click({ timeout: 4000 })
+    await page.waitForTimeout(700)
+  }
+  await visit('Setup guide · 1 you', async () => {
+    await goAdmin()
+    await page.locator('[data-test-wizard]').click({ timeout: 4000 })
+    await page.locator('[data-wizard]').waitFor({ timeout: 6000 })
+  })
+  await visit('Setup guide · 2 accounts', () => wzNext())
+  await visit('Setup guide · 3 AI key', () => wzNext())
+  await visit('Setup guide · 4 rhythm', () => wzNext('Skip for now'))
+  await visit('Setup guide · 5 automation', () => wzNext('Skip this step'))
+  await visit('Setup guide · 6 habits', () => wzNext('Skip this step'))
+  await visit('Setup guide · 7 finance', () => wzNext('Skip this step'))
+  await visit('Setup guide · 8 done', () => wzNext('Skip this step'))
+  await page.getByRole('button', { name: 'Leave the test' }).first().click({ timeout: 4000 }).catch(() => {})
 
   // ── The assistant: its face, the first-use question, and named ─────────────
   await visit('Assistant · first use (asks for a name)', async () => {

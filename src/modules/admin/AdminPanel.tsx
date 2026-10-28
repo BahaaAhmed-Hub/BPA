@@ -127,16 +127,22 @@ export default function AdminPanel() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 40 }}>
-      <div>
-        <div style={EYEBROW}>ADMIN</div>
-        <h1 style={{
-          margin: 0, fontFamily: 'Outfit, system-ui', fontSize: 28, fontWeight: 600,
-          letterSpacing: '-0.03em', color: 'var(--sb-ink-1)',
-        }}>Plans &amp; modules</h1>
-        <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', maxWidth: 620 }}>
-          What each plan includes, and the exceptions. Switching a module here changes
-          what somebody may see — it never reads their data.
-        </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div>
+          <div style={EYEBROW}>ADMIN</div>
+          <h1 style={{
+            margin: 0, fontFamily: 'Outfit, system-ui', fontSize: 28, fontWeight: 600,
+            letterSpacing: '-0.03em', color: 'var(--sb-ink-1)',
+          }}>Plans &amp; modules</h1>
+          <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', maxWidth: 620 }}>
+            What each plan includes, and the exceptions. Switching a module here changes
+            what somebody may see — it never reads their data.
+          </p>
+        </div>
+        {/* A dry run of the new-signup setup guide: every step works, nothing is saved. */}
+        <Button data-test-wizard onClick={() => window.dispatchEvent(new Event('professor:testWizard'))}>
+          Test setup guide
+        </Button>
       </div>
 
       <Segmented
