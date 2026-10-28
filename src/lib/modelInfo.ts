@@ -27,15 +27,9 @@ export const GROQ_MODELS: { id: string; label: string; note: string }[] = [
   { id: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B',  note: 'long context' },
 ]
 
-/** The model a saved config means. An id that is not on the list (a stale or edited value) is the default, never sent as it stands. */
-export function claudeModelOf(cfg: { anthropicModel?: string } | null | undefined): string {
-  const id = cfg?.anthropicModel
-  return id && CLAUDE_MODELS.some(m => m.id === id) ? id : ASSISTANT_CLAUDE_MODEL
-}
-
-/** Same answer, read straight from where the config lives — for the callers that do not hold one. */
+/** The Claude model saved in Settings → AI (`claudeModel`), else the app's default — for the callers that do not hold a config. */
 export function activeClaudeModel(): string {
-  try { return claudeModelOf(JSON.parse(localStorage.getItem('professor-ai-config') ?? '{}') as { anthropicModel?: string }) } catch { return ASSISTANT_CLAUDE_MODEL }
+  try { return ((JSON.parse(localStorage.getItem('professor-ai-config') ?? '{}') as { claudeModel?: string }).claudeModel ?? '').trim() || ASSISTANT_CLAUDE_MODEL } catch { return ASSISTANT_CLAUDE_MODEL }
 }
 
 export type ModelMarkKind = 'claude' | 'groq' | 'other'
@@ -68,15 +62,21 @@ function claudeParts(id: string): { family: string; version: string } | null {
 /** Words an open-weights id carries that say nothing a person reads. */
 const NOISE = new Set(['versatile', 'instant', 'preview', 'it', 'chat', 'instruct', 'latest', 'tool', 'use'])
 
+/** Letters that are an initialism, not a word: "gpt-oss" is GPT OSS, not "Gpt Oss". */
+const ACRONYMS = new Set(['gpt', 'oss', 'moe', 'vl'])
+
 function openParts(id: string): { family: string; version: string; label: string } {
-  const tokens = id.toLowerCase().split('-').filter(Boolean)
+  // "openai/gpt-oss-120b", "meta-llama/llama-4-scout-17b-16e-instruct": the part before the slash is who published it,
+  // which the header already says with its mark. Showing it made "Openai/gpt Oss 120B".
+  const base = id.includes('/') ? id.slice(id.lastIndexOf('/') + 1) : id
+  const tokens = base.toLowerCase().split('-').filter(Boolean)
   const shown: string[] = []
   let version = ''
   for (const t of tokens) {
     if (NOISE.has(t) || /^\d{4,}$/.test(t)) continue                       // "versatile", a 32768-token context window
     if (/^\d+(\.\d+)?$/.test(t)) { if (!version) version = t; shown.push(t); continue }
     if (/^(\d+x)?\d+(\.\d+)?b$/.test(t)) { shown.push(t.toUpperCase()); continue }   // 70b → 70B, 8x7b → 8X7B
-    shown.push(cap(t))
+    shown.push(ACRONYMS.has(t) ? t.toUpperCase() : cap(t))
   }
   const label = shown.join(' ').replace(/(\d)X(\d)/g, '$1x$2')
   return { family: tokens.length ? cap(tokens[0]) : id, version, label: label || id }

@@ -49,6 +49,9 @@ export interface TaskRow {
   checklist?: unknown[]
   attachments?: unknown[]
   links?: string[]
+  /** 20260042 */
+  projectId?: string
+  milestoneId?: string
 }
 
 /** The eight values that used to be stored in the description column. */
@@ -372,6 +375,10 @@ export async function loadCompaniesFromDB(): Promise<CompanyRow[]> {
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
 
+/** Set once a row has come back carrying `project_id`: only then can a task
+ *  that left its project write the null that clears it. */
+let taskProjectColumns = false
+
 export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
   const session = await getSession()
   const userId  = session.user.id
@@ -413,7 +420,7 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
   // Everything from migration 20260003. The description column held the task's
   // type until then, so both are written: task_type properly, and description
   // as the task's own notes.
-  const full = tasks.map((t, i) => ({
+  const fullBase = tasks.map((t, i) => ({
     ...rows[i],
     description:    t.description ?? null,
     task_type:      t.taskType ?? null,
@@ -429,8 +436,22 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
     links:          t.links ?? [],
   }))
 
+  // 20260042. Sent once a task holds a project or the database is known to have
+  // the columns — so a project that has not run it keeps saving every task, and
+  // a task that LEAVES a project can still write the null that clears it.
+  const sendProject = taskProjectColumns || tasks.some(t => t.projectId || t.milestoneId)
+  const full = sendProject
+    ? fullBase.map((f, i) => ({ ...f, project_id: tasks[i].projectId ?? null, milestone_id: tasks[i].milestoneId ?? null }))
+    : fullBase
+
   const { error } = await supabase.from('tasks').upsert(full, { onConflict: 'id' })
   if (!error) { clearSyncGap('tasks'); return }
+
+  // Only the project columns are missing: lose them, not the other twelve.
+  if (sendProject && columnProblem(error) === 'columns' && /project_id|milestone_id/.test(error.message)) {
+    const { error: noProject } = await supabase.from('tasks').upsert(fullBase, { onConflict: 'id' })
+    if (!noProject) { reportSyncGap('tasks', 'columns', error.message); return }
+  }
 
   // Before the migration is applied the whole write is rejected, which would
   // stop tasks saving at all — so fall back to the columns that predate it.
@@ -458,6 +479,7 @@ export async function loadTasksFromDB(): Promise<TaskRow[]> {
   if (error || !data) return []
 
   const STATIC_TAGS = new Set(['teradix', 'dxtech', 'consulting', 'personal'])
+  if ((data as Record<string, unknown>[]).some(r => 'project_id' in r)) taskProjectColumns = true
   return (data as (Record<string, unknown>)[]).map(r => {
     const tag = (r.company_tag as string) || ''
     // If tag is a dynamic companyId (not a known static tag), store in companyId
@@ -496,6 +518,8 @@ export async function loadTasksFromDB(): Promise<TaskRow[]> {
       ...(Array.isArray(r.checklist)   && r.checklist.length   ? { checklist:   r.checklist }   : {}),
       ...(Array.isArray(r.attachments) && r.attachments.length ? { attachments: r.attachments } : {}),
       ...(Array.isArray(r.links)       && r.links.length       ? { links: r.links as string[] } : {}),
+      ...(r.project_id   ? { projectId:   r.project_id as string }   : {}),
+      ...(r.milestone_id ? { milestoneId: r.milestone_id as string } : {}),
     }
   })
 }

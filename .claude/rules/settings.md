@@ -643,11 +643,12 @@ panel that asks. Steps (`steps.ts`): 1 You · 2 Accounts and companies · 3 AI k
   **skipped step writes nothing** — the Done summary says Skipped. Closing halfway
   keeps what was answered. Finance stores a hash, never the password; the AI step
   makes one real one-token request (`lib/aiKeyCheck.ts`).
-- **The Claude model is a real choice** (`CLAUDE_MODELS`, `claudeModelOf`,
-  `activeClaudeModel` in `lib/modelInfo.ts`; `AIConfig.anthropicModel`), used by the
-  assistant, ideal-week, image task extractor and the Library readers. Settings → AI
-  has the same select. **Not covered: the Telegram/bot edge functions** still use
-  their own model.
+- **The model step uses Settings → AI's own field**: `AIConfig.claudeModel` (empty = the
+  app's default `ASSISTANT_CLAUDE_MODEL`, so a default that moves moves for everyone who
+  never chose), read through `claudeModelOf` / `activeClaudeModel()`. Main added that
+  field independently while this was in review; the wizard writes `''` when the default
+  is kept, and a model typed into Settings stays selectable here. **Not covered: the
+  Telegram/Siri/price-watch edge functions** still use their own model; the step says so.
 - **Admin test = a dry run.** Admin → *Test setup guide* raises
   `professor:testWizard`; `App.tsx` re-asks `amIAdmin()` and renders
   `<SetupWizard testMode />`. In test mode `saveStep(…, dry)` writes nothing, the
@@ -701,3 +702,11 @@ panel that asks. Steps (`steps.ts`): 1 You · 2 Accounts and companies · 3 AI k
 - **Not measured here**: real Supabase / Google OAuth / a real signup, and Groq (the
   sandbox's proxy refuses it). Anthropic was probed for real: a bad key answers 401,
   which is the `rejected` path. The model ids are the ones in `modelInfo.ts`.
+
+## Settings → AI — "Which model" sits under the key, and asks the provider
+`sections/ModelPicker.tsx`, mounted by `ProfessorSection` after the key field (it needs the key). The provider pills still
+choose a *provider* and nothing else; the model is a separate row, per provider (`groqModel`, `claudeModel`), so neither can
+land in the other's field. What it does and why is in `assistant.md` ("The model is the person's choice…"). The old
+`GROQ_MODELS` export (it still offered Mixtral, long retired, and nothing read it) is gone. `settings-snapshot.mjs` will
+show the AI section changed — that is this row.
+

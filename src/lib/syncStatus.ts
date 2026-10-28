@@ -6,7 +6,7 @@
 //
 // This records that gap so the app can say it out loud.
 
-export type SyncEntity = 'habits' | 'tasks' | 'companies'
+export type SyncEntity = 'habits' | 'tasks' | 'companies' | 'projects'
 
 export interface SyncGap {
   entity: SyncEntity
@@ -14,8 +14,9 @@ export interface SyncGap {
    *  'cache'   — the columns exist, but Supabase's API layer is still serving
    *              a schema it cached before they did. Different problem, and a
    *              different fix, so it must not be reported as the first.
+   *  'tables'  — a whole table is absent (projects), so nothing is being saved.
    *  'error'   — it failed outright. */
-  kind: 'columns' | 'cache' | 'error'
+  kind: 'columns' | 'cache' | 'error' | 'tables'
   detail?: string
   at: number
 }
@@ -32,8 +33,13 @@ export function reportSyncGap(entity: SyncEntity, kind: SyncGap['kind'], detail?
   announce()
 }
 
-export function clearSyncGap(entity: SyncEntity): void {
-  if (gaps.delete(entity)) announce()
+/** `onlyKinds` limits what a success may clear: a push that worked says the tables are there and
+ *  the server is answering, not that a column it is still leaving out has appeared. */
+export function clearSyncGap(entity: SyncEntity, onlyKinds?: SyncGap['kind'][]): void {
+  const g = gaps.get(entity)
+  if (!g || (onlyKinds && !onlyKinds.includes(g.kind))) return
+  gaps.delete(entity)
+  announce()
 }
 
 export function getSyncGaps(): SyncGap[] {
@@ -51,4 +57,5 @@ export const MIGRATION_FOR: Record<SyncEntity, string> = {
   habits: '20260002_habit_appearance.sql',
   tasks:  '20260003_task_full_sync.sql',
   companies: '20260011_company_hidden.sql',
+  projects: '20260042_projects.sql',
 }

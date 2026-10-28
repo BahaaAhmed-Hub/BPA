@@ -19,6 +19,7 @@ rather than 4,392.
 | the assistant panel, its face, name and voice | `.claude/rules/assistant.md` |
 | the Library — shelf, quotes, reader, discover, tracker, releases | `.claude/rules/library.md` |
 | the rail, one ground, ink, overlays, companies, the lens, link previews | `.claude/rules/shell.md` |
+| projects — milestones, links across modules, project page | `.claude/rules/projects.md` |
 
 **If you are about to work in one of those areas and its file is not already in
 context, read it first.** The glob should load it; a pointer you can act on is
@@ -36,6 +37,15 @@ else, and a cloud session clones the remote rather than a working copy.
 `node scripts/memory-is-all-there.mjs` is the check, and it has to be run
 **against a fresh clone** to mean anything — against the working copy it
 passed, because the files were sitting on disk.
+
+## One assistant, three doors
+The in-app assistant (`src/lib/assistantTools.ts`), the Telegram bot (`supabase/functions/telegram-bot`) and Siri
+(`supabase/functions/professor-siri`) are **one assistant** to the person using them, however differently they are built.
+**Any capability added to one is added to all three in the same change** — tool, schema, prompt hint, consent gate
+(`_shared/assistantGate.ts`) and a test that reads each file. Put the logic in `supabase/functions/_shared/` (pure, no
+Deno) so the three cannot drift; if one genuinely cannot have it (Siri has no buttons, say), say so in the PR and in the
+rule file rather than leaving it silently missing. `scripts/bots-invite-guests.mjs` is the pattern: the real functions
+lifted out of all three files, run against a fake Google that can refuse.
 
 ## How a change is proven here
 Every claim in those files was measured, and the method is the point:

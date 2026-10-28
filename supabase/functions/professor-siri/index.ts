@@ -18,7 +18,8 @@
  */
 
 import { calledLine, personaName } from '../_shared/persona.ts'
-import { CalendarHub, eventLine } from '../_shared/googleCalendars.ts'
+import { CalendarHub, eventLine, parseGuests } from '../_shared/googleCalendars.ts'
+import { meetRequest, meetLinkOf, meetSentence, supportsMeet, noMeetSentence } from '../_shared/meet.ts'
 import { approvalSpoken, gateCall, KIT_RULES, KIT_TOOLS, latestPendingId, parseYesNo, runKitTool, takeAction, type GateCtx, type Parked } from '../_shared/botKit.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -465,8 +466,22 @@ async function toolAddCalendarEvent(userId: string, args: Record<string, unknown
   if (args.description) event.description = args.description
   if (args.location)    event.location    = args.location
 
+  // Guests: Google emails the invitation itself (sendUpdates=all). The gate has
+  // already put these addresses in front of the person before this runs.
+  const { emails: guests, rejected } = parseGuests(args.guests)
+  if (guests.length) event.attendees = guests.map(email => ({ email }))
+  // A Meet link is minted by Google when asked for; it emails nobody by itself.
+  const askedMeet = args.add_meet === true
+  // Only a calendar that allows Meet is asked for one — its provider is its own setting, read from Google.
+  const wantMeet = askedMeet && supportsMeet(target.meetTypes)
+  if (wantMeet) Object.assign(event, meetRequest())
+  const qs = new URLSearchParams()
+  if (guests.length) qs.set('sendUpdates', 'all')
+  if (wantMeet) qs.set('conferenceDataVersion', '1')
+  const notify = qs.size ? `?${qs}` : ''
+
   const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(target.calendarId)}/events`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(target.calendarId)}/events${notify}`,
     {
       method:  'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -480,13 +495,16 @@ async function toolAddCalendarEvent(userId: string, args: Record<string, unknown
     return `Calendar error: ${err.error?.message ?? res.status}`
   }
 
-  const created = await res.json() as { summary?: string; start?: { dateTime?: string; date?: string } }
+  const created = await res.json() as { summary?: string; start?: { dateTime?: string; date?: string }; hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] } }
   const when = created.start?.dateTime
     ? created.start.dateTime.slice(0, 16).replace('T', ' at ')
     : (created.start?.date ?? start)
   // Say which calendar it landed on — with several in play, "created" alone
   // does not tell you whether it went where you meant.
-  return `Created "${created.summary ?? title}" on ${when} in ${target.name}.`
+  const invited = guests.length ? ` Invited ${guests.join(', ')}.` : ''
+  const skipped = rejected.length ? ` Not invited (not an email address): ${rejected.join(', ')} — ask for their email.` : ''
+  const meet = wantMeet ? meetSentence(created) : askedMeet ? noMeetSentence(target.name, target.meetTypes) : ''
+  return `Created "${created.summary ?? title}" on ${when} in ${target.name}.${invited}${skipped}${meet}`
 }
 
 async function toolUpdateCalendarEvent(userId: string, args: Record<string, unknown>): Promise<string> {
@@ -508,7 +526,11 @@ async function toolUpdateCalendarEvent(userId: string, args: Record<string, unkn
     const e = args.end as string
     patch.end = e.includes('T') ? { dateTime: e } : { date: e }
   }
-  if (!Object.keys(patch).length) return 'Nothing to update.'
+  const { emails: addGuests, rejected: badGuests } = parseGuests(args.add_guests)
+  const wantMeet = args.add_meet === true
+  if (!Object.keys(patch).length && !addGuests.length && !wantMeet) {
+    return badGuests.length ? `Not an email address: ${badGuests.join(', ')} — ask for their email.` : 'Nothing to update.'
+  }
 
   // An event id means nothing without its calendar, and the id may come back
   // bare — so it is looked up rather than assumed to be on the default one.
@@ -516,8 +538,36 @@ async function toolUpdateCalendarEvent(userId: string, args: Record<string, unkn
   if (!found) return "Couldn't find that event on any of your calendars. Ask for the calendar again and use the id it gives."
   if (!found.calendar.writable) return `"${found.calendar.name}" is read-only for you, so that event can't be edited.`
 
+  // A PATCH replaces the attendee list, so the current one is read and added to
+  // — sending only the new address would uninvite everyone already on it. The
+  // same read tells us whether the event already has a Meet link, which is
+  // never replaced.
+  const meetOk = wantMeet && supportsMeet(found.calendar.meetTypes)
+  let existingMeet: string | null = null
+  if (addGuests.length || meetOk) {
+    const cur = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(found.calendar.calendarId)}/events/${encodeURIComponent(found.eventId)}`,
+      { headers: { Authorization: `Bearer ${found.token}` } },
+    )
+    if (!cur.ok) return "Couldn't read that event, so nothing was changed."
+    const body = (await cur.json()) as { attendees?: Record<string, unknown>[]; hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] } }
+    if (addGuests.length) {
+      const have = body.attendees ?? []
+      const known = new Set(have.map(a => String(a.email ?? '').toLowerCase()))
+      patch.attendees = [...have, ...addGuests.filter(e => !known.has(e.toLowerCase())).map(email => ({ email }))]
+    }
+    if (meetOk) {
+      existingMeet = meetLinkOf(body)
+      if (!existingMeet) Object.assign(patch, meetRequest())
+    }
+  }
+  if (!Object.keys(patch).length) {
+    if (wantMeet && !meetOk) return noMeetSentence(found.calendar.name, found.calendar.meetTypes).trim()
+    return existingMeet ? `That event already has a Meet link: ${existingMeet}` : 'Nothing to update.'
+  }
+
   const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(found.calendar.calendarId)}/events/${encodeURIComponent(found.eventId)}`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(found.calendar.calendarId)}/events/${encodeURIComponent(found.eventId)}${[addGuests.length ? 'sendUpdates=all' : '', patch.conferenceData ? 'conferenceDataVersion=1' : ''].filter(Boolean).map((x, n) => (n ? '&' : '?') + x).join('')}`,
     {
       method:  'PATCH',
       headers: { Authorization: `Bearer ${found.token}`, 'Content-Type': 'application/json' },
@@ -531,8 +581,11 @@ async function toolUpdateCalendarEvent(userId: string, args: Record<string, unkn
     return `Calendar error: ${err.error?.message ?? res.status}`
   }
 
-  const updated = await res.json() as { summary?: string }
-  return `Updated "${updated.summary ?? args.title}" in ${found.calendar.name}.`
+  const updated = await res.json() as { summary?: string; hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] } }
+  const invited = addGuests.length ? ` Invited ${addGuests.join(', ')}.` : ''
+  const skipped = badGuests.length ? ` Not invited (not an email address): ${badGuests.join(', ')} — ask for their email.` : ''
+  const meet = patch.conferenceData ? meetSentence(updated) : existingMeet ? ` It already had a Meet link: ${existingMeet}` : wantMeet && !meetOk ? noMeetSentence(found.calendar.name, found.calendar.meetTypes) : ''
+  return `Updated "${updated.summary ?? args.title}" in ${found.calendar.name}.${invited}${skipped}${meet}`
 }
 
 // ── Shopping tools ────────────────────────────────────────────────────────────
@@ -960,6 +1013,8 @@ const CLAUDE_TOOLS = [
         description: { type: 'string' },
         location:    { type: 'string' },
         calendar:    { type: 'string', description: 'Which calendar to put it on, by name (e.g. "Teradix", "DX"). Defaults to the main one.' },
+        add_meet:    { type: 'boolean', description: 'true to attach a Google Meet video link to the new event.' },
+        guests:      { type: 'array', items: { type: 'string' }, description: 'Email addresses to invite. Google emails each an invitation, so the user is asked to approve first. Only real addresses the user gave — never guess one from a name; ask for it.' },
       },
     },
   },
@@ -974,6 +1029,8 @@ const CLAUDE_TOOLS = [
         title:       { type: 'string', description: 'New event title' },
         start:       { type: 'string', description: 'New start — ISO datetime or date' },
         end:         { type: 'string', description: 'New end — ISO datetime or date' },
+        add_meet:    { type: 'boolean', description: 'true to add a Google Meet video link to this event (an existing link is kept, never replaced).' },
+        add_guests:  { type: 'array', items: { type: 'string' }, description: 'Email addresses to ADD to the guest list (existing guests are kept). Google emails each an invitation, so the user is asked to approve first. Only real addresses the user gave — ask if you do not have one.' },
         description: { type: 'string' },
         location:    { type: 'string' },
       },
@@ -1176,6 +1233,8 @@ IMPORTANT — understand natural speech (Arabic and English):
 - "what's on the Teradix calendar" / "إيه اللي في تقويم Teradix" → get_calendar_events(calendar="Teradix")
 - "add it to the DX calendar" / "حطها في تقويم DX" → add_calendar_event(..., calendar="DX")
 - "add a meeting tomorrow at 3pm" / "حجز اجتماع بكرا الساعة 3" → add_calendar_event(title="meeting", start="${tomorrow}T15:00:00")
+- "add a video link" / "add a Meet link" / "ضيف لينك ميت" → add_calendar_event(..., add_meet=true) when creating, or get_calendar_events then update_calendar_event(event_id=..., add_meet=true). Reply with the link the tool returns; if it says Google has not returned it yet, say so — never invent a link.
+- "invite ahmed@x.com to it" / "ادعي ahmed@x.com" → add_calendar_event(..., guests=["ahmed@x.com"]) when creating, or update_calendar_event(event_id=..., add_guests=["ahmed@x.com"]) for an existing event (get_calendar_events first). Guests need a real email address: if the user only gave a name, ASK for the address — never invent one. Inviting emails them, so the user is asked to approve first; do not say anyone was invited until it is approved.
 - "rename the meeting to X" / "غير اسم الاجتماع" → get_calendar_events, then update_calendar_event(event_id=..., title="X")
 - "move the meeting to 4pm" / "حول الاجتماع الساعة 4" → get_calendar_events, then update_calendar_event(event_id=..., start="...T16:00:00")
 - "rename task X to Y" / "غير اسم المهمة" → get_tasks, then update_task(task_id=..., title="Y")

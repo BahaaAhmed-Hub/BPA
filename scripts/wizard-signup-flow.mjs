@@ -335,7 +335,9 @@ console.log('— keyboard')
       const e = document.activeElement
       if (!e || !e.closest('[data-wizard]')) return { out: true }
       const cs = getComputedStyle(e)
-      return { label: (e.getAttribute('aria-label') || e.textContent || e.id || e.tagName).trim().slice(0, 22), ring: cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0 }
+      // A field you type into shows its caret and no ring, app-wide (index.css); every other stop must show one.
+      const typed = e.matches('textarea, input:not([type]), input[type=text], input[type=password], input[type=email], input[type=search]')
+      return { label: (e.getAttribute('aria-label') || e.textContent || e.id || e.tagName).trim().slice(0, 22), ring: typed || (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) }
     }))
   }
   const inside = seen.filter(x => !x.out)

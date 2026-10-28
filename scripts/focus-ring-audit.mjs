@@ -82,7 +82,9 @@ for (const [label] of screens) {
       const shadow = cs.boxShadow !== 'none'
       const name = (el.getAttribute('aria-label') || el.title || el.textContent || el.placeholder || '').trim().replace(/\s+/g, ' ').slice(0, 26)
       const key = el.tagName + '|' + (el.getAttribute('data-flip-id') || '') + '|' + name + '|' + Math.round(el.getBoundingClientRect().top) + '|' + Math.round(el.getBoundingClientRect().left)
-      return { key, tag: el.tagName.toLowerCase(), name, ring, shadow, inRail: !!el.closest('[data-side-rail]') }
+      // Text you type into shows a caret, not a ring (index.css) — by design.
+      const typed = el.matches('textarea, [contenteditable=""], [contenteditable="true"], input:not([type]), input:is([type="text"],[type="search"],[type="number"],[type="email"],[type="password"],[type="tel"],[type="url"],[type="date"],[type="time"],[type="datetime-local"],[type="month"],[type="week"])')
+      return { key, tag: el.tagName.toLowerCase(), name, ring: ring || typed, shadow, inRail: !!el.closest('[data-side-rail]') }
     })
     if (!r || seen.has(r.key)) continue
     seen.add(r.key); stops++

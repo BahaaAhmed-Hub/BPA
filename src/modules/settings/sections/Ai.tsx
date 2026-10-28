@@ -9,13 +9,12 @@ import { AssistantAvatar } from '@/modules/assistant/AssistantAvatar'
 import { notify } from '@/lib/undo'
 import { ICON } from '@/lib/type'
 import { inputStyle, selectStyle } from '@/lib/fields'
-import { CLAUDE_MODELS, GROQ_MODELS, claudeModelOf } from '@/lib/modelInfo'
 import { type AIConfig, type AppSettings, cleanKey, loadAIConfig, misplacedAnthropicKey, saveAIConfig, setAIPushListener } from '../model'
 import { FieldRow, Toggle } from '../ui'
 import { PILL_BASE, pillSelectStyle } from '../pillStyles'
+import { ModelPicker } from './ModelPicker'
 
 // ─── CHUNK 6: Professor AI + Notifications + Appearance sections ──────────────
-
 
 /** What the person calls the assistant. Saved as they type (held briefly), and shared with every device and bot. */
 function AssistantNameRow() {
@@ -130,16 +129,6 @@ export function ProfessorSection() {
         />
       </FieldRow>
 
-      {/* ── Which model, within the provider ── */}
-      <FieldRow label={ai.provider === 'groq' ? 'Groq model' : 'Claude model'} sub="Which one answers. The default is a good place to stay.">
-        <select aria-label={ai.provider === 'groq' ? 'Groq model' : 'Claude model'}
-          value={ai.provider === 'groq' ? ai.groqModel : claudeModelOf(ai)}
-          onChange={e => setAI(ai.provider === 'groq' ? { groqModel: e.target.value } : { anthropicModel: e.target.value })}
-          style={{ ...selectStyle, minWidth: 220 }}>
-          {(ai.provider === 'groq' ? GROQ_MODELS : CLAUDE_MODELS).map(m => <option key={m.id} value={m.id}>{m.label} · {m.note}</option>)}
-        </select>
-      </FieldRow>
-
       {/* An Anthropic key typed into the Groq box reaches nothing — say so
           where it happened, and offer the one move that fixes it. */}
       {misplacedAnthropicKey(ai) && (
@@ -198,6 +187,8 @@ export function ProfessorSection() {
           {keySync === 'failed'  && `Saved here, but it could not reach your account${lastPushError ? ` (${lastPushError})` : ''} — it will not follow you to another device or the bots yet`}
         </p>
       )}
+
+      <ModelPicker ai={ai} setAI={setAI} />
 
       <div style={{ height: 6, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', marginTop: 12, marginBottom: 12 }} />
 

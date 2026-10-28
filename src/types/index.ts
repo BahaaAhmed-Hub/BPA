@@ -224,6 +224,8 @@ export interface Task {
   attachments?: TaskAttachment[]
   capturedVia?: 'voice' | 'mail' | 'manual'   // brain dump provenance (9F)
   links?: string[]           // threads, docs and pages attached to the task
+  projectId?: string         // the project this task belongs to (see .claude/rules/projects.md)
+  milestoneId?: string       // a phase of that project
 }
 
 export interface ChecklistStep {

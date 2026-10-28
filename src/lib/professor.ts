@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { activeClaudeModel, claudeModelOf } from './modelInfo'
+import { ASSISTANT_CLAUDE_MODEL } from './modelInfo'
 import type { DbUser, DbCompany, DbTask, DbCalendarEvent, DbWeeklyReview } from '@/types/database'
 import type { AIConfig } from '@/modules/settings/Settings'
 
@@ -41,6 +41,8 @@ export function anthropic(): Anthropic {
   return new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
 }
 
+/** The Claude model chosen in Settings → AI, read at call time (the person can change it while the app is open). */
+const modelNow = (): string => getAIConfig().claudeModel.trim() || ASSISTANT_CLAUDE_MODEL
 const MAX_TOKENS = 4000
 
 // ─── AI config helpers ────────────────────────────────────────────────────────
@@ -54,10 +56,11 @@ function getAIConfig(): AIConfig {
       anthropicKey: (saved.anthropicKey ?? '').replace(/\s+/g, ''),
       groqKey: (saved.groqKey ?? '').replace(/\s+/g, ''),
       groqModel: saved.groqModel ?? 'llama-3.3-70b-versatile',
-      anthropicModel: saved.anthropicModel,
+      claudeModel: saved.claudeModel ?? '',
+      prices: saved.prices ?? {},
     }
   } catch {
-    return { provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile' }
+    return { provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile', claudeModel: '', prices: {} }
   }
 }
 
@@ -244,7 +247,7 @@ export async function call(system: string, userMessage: string): Promise<string>
   try {
     const freshClient = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
     const msg = await freshClient.messages.create({
-      model: claudeModelOf(aiCfg), max_tokens: MAX_TOKENS, system,
+      model: modelNow(), max_tokens: MAX_TOKENS, system,
       messages: [{ role: 'user', content: userMessage }],
     })
     const block = msg.content.find(b => b.type === 'text')
@@ -256,6 +259,14 @@ export async function call(system: string, userMessage: string): Promise<string>
     if (is401) throw new ProfessorError(`Anthropic refused the key (${apiKey.slice(0, 11)}…${apiKey.slice(-4)}, ${apiKey.length} characters). Check Settings → AI. Anthropic said: ${msg.slice(0, 200)}`, 'config_error')
     throw new ProfessorError(`Anthropic request failed: ${msg}`, 'api_error', err)
   }
+}
+
+/** Whether a model call could be made at all — the key for the provider chosen in
+ *  Settings → AI is present. Lets a screen say so *before* offering a button that
+ *  would only answer "no key". */
+export function aiConfigured(): boolean {
+  const c = getAIConfig()
+  return c.provider === 'groq' ? !!c.groqKey : !!c.anthropicKey
 }
 
 /** Parse JSON from a response that may wrap it in a fenced code block. */
@@ -694,7 +705,7 @@ ${systemContext ?? ''}`
 
   try {
     const msg = await anthropic().messages.create({
-      model: activeClaudeModel(),
+      model: modelNow(),
       max_tokens: MAX_TOKENS,
       system,
       messages: messages.map(m => ({ role: m.role, content: m.content })),

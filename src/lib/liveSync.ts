@@ -23,7 +23,7 @@
 import { backoffLeft } from './serverStrain'
 import { supabase } from '@/lib/supabase'
 
-export type LiveDomain = 'habits' | 'tasks' | 'finance' | 'library'
+export type LiveDomain = 'habits' | 'tasks' | 'finance' | 'library' | 'projects'
 
 /** Every table whose changes anyone here cares about, and who to tell. */
 const DOMAIN_OF_TABLE: Record<string, LiveDomain> = {
@@ -50,16 +50,19 @@ const DOMAIN_OF_TABLE: Record<string, LiveDomain> = {
   library_plans:            'library',
   library_goals:            'library',
   library_quote_reviews:    'library',
+  projects:                 'projects',
+  project_milestones:       'projects',
+  project_links:            'projects',
 }
 
-const DOMAINS = ['habits', 'tasks', 'finance', 'library'] as const
+const DOMAINS = ['habits', 'tasks', 'finance', 'library', 'projects'] as const
 
 type Refetch = () => void | Promise<void>
 
 const refetchers = new Map<LiveDomain, Refetch>()
 const pending  = new Map<LiveDomain, ReturnType<typeof setTimeout>>()
-const lastRun  : Record<LiveDomain, number> = { habits: 0, tasks: 0, finance: 0, library: 0 }
-const lastWrite: Record<LiveDomain, number> = { habits: 0, tasks: 0, finance: 0, library: 0 }
+const lastRun  : Record<LiveDomain, number> = { habits: 0, tasks: 0, finance: 0, library: 0, projects: 0 }
+const lastWrite: Record<LiveDomain, number> = { habits: 0, tasks: 0, finance: 0, library: 0, projects: 0 }
 
 /** A row change rarely arrives alone — one edit can touch a habit and three of
  *  its logs — so let the burst finish before reading. */
@@ -134,6 +137,7 @@ export interface LiveSyncHandlers {
   finance: Refetch
   /** Optional so a caller that predates the Library keeps compiling. */
   library?: Refetch
+  projects?: Refetch
 }
 
 /** Returns the teardown. Safe to call again after sign-out and back in. */
@@ -142,6 +146,7 @@ export function startLiveSync(userId: string, handlers: LiveSyncHandlers): () =>
   refetchers.set('tasks',   handlers.tasks)
   refetchers.set('finance', handlers.finance)
   if (handlers.library) refetchers.set('library', handlers.library)
+  if (handlers.projects) refetchers.set('projects', handlers.projects)
 
   // ── Push ───────────────────────────────────────────────────────────────────
   // One channel, one listener per table. The user_id filter is what keeps a

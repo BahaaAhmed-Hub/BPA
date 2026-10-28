@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { ASSISTANT_CLAUDE_MODEL } from '@/lib/modelInfo'
 import { pushSharedPrefs, type PushResult } from '@/lib/prefSync'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -55,12 +56,20 @@ export interface AIConfig {
   anthropicKey: string
   groqKey: string
   groqModel: string
-  /** Which Claude model answers. Absent means the app's own default (`ASSISTANT_CLAUDE_MODEL`). */
-  anthropicModel?: string
+  /** Which Claude model. Empty means "the app's own default" (`ASSISTANT_CLAUDE_MODEL`), so a default that moves
+   *  moves for everyone who never chose — and a chosen one stays where it was put. */
+  claudeModel: string
+  /** The person's own price per million tokens, by model id — what turns the usage counter's tokens into an amount that
+   *  is theirs rather than an estimate. Absent for a model means the built-in estimate (or none, if the app has none). */
+  prices: Record<string, { in: number; out: number }>
 }
 const AI_CONFIG_DEFAULTS: AIConfig = {
-  provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile',
+  provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile', claudeModel: '', prices: {},
 }
+/** The Claude model to send: the one chosen in Settings → AI, else the app's default. */
+export const claudeModelOf = (c: Pick<AIConfig, 'claudeModel'>): string => (c.claudeModel ?? '').trim() || ASSISTANT_CLAUDE_MODEL
+/** Fired after the AI config is saved, so a screen that is showing the model (the assistant's header) can redraw. */
+export const AI_CONFIG_EVENT = 'professor:aiConfigChanged'
 /** An `sk-ant-…` key sitting in the Groq field is not ambiguous: Groq's own
  *  keys begin `gsk_`, so this is an Anthropic key that was typed while the
  *  provider picker said Groq — which the old labels made easy, since the Groq
@@ -90,6 +99,7 @@ export function loadAIConfig(): AIConfig {
 let aiPushTimer: ReturnType<typeof setTimeout> | null = null
 export function saveAIConfig(c: AIConfig) {
   lsSet('professor-ai-config', c)
+  window.dispatchEvent(new Event(AI_CONFIG_EVENT))
   // The bots read this key out of Postgres, not out of this browser, and the
   // ordinary push is a five-minute timer. Typing a new key and messaging the
   // bot straight away therefore asked it with the old one — which is

@@ -7,7 +7,7 @@ import { HABIT_TEMPLATES } from '@/lib/habitTemplates'
 import { useHabitsStore } from '@/store/habitsStore'
 import { hashPassword, loadLock, saveLock } from '@/modules/finance/lock'
 import { moduleIsOff } from '@/lib/entitlements'
-import { CLAUDE_MODELS, GROQ_MODELS, claudeModelOf } from '@/lib/modelInfo'
+import { ASSISTANT_CLAUDE_MODEL, CLAUDE_MODELS, GROQ_MODELS } from '@/lib/modelInfo'
 import { cleanKey, loadAIConfig, loadSettings, saveAIConfig, saveSettings } from '@/modules/settings/model'
 import { clock, fromHours, quietEnd, type WizardState } from './state'
 import type { StepId } from './steps'
@@ -81,14 +81,15 @@ const ai: Saver = async (w, dry) => {
   const provider = a.provider === 'groq' ? 'Groq' : 'Claude'
   const model = a.provider === 'groq'
     ? (GROQ_MODELS.find(m => m.id === a.groqModel)?.label ?? a.groqModel)
-    : (CLAUDE_MODELS.find(m => m.id === claudeModelOf(a))?.label ?? a.anthropicModel)
+    : (CLAUDE_MODELS.find(m => m.id === a.anthropicModel)?.label ?? a.anthropicModel)
   const lines = [`${provider} · ${model}`, a.check === 'ok' ? 'Key tested and saved' : 'Key saved, not tested']
   if (dry) return lines
   saveAIConfig({
     ...loadAIConfig(),
     provider: a.provider,
     anthropicKey: cleanKey(a.anthropicKey), groqKey: cleanKey(a.groqKey),
-    groqModel: a.groqModel, anthropicModel: claudeModelOf(a),
+    groqModel: a.groqModel, // Empty means "the app's default", so a default that moves moves for everyone who never chose.
+    claudeModel: a.anthropicModel === ASSISTANT_CLAUDE_MODEL ? '' : a.anthropicModel,
   })
   return lines
 }

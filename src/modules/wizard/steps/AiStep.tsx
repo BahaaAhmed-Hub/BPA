@@ -45,8 +45,10 @@ export function AiStep({ w, set }: StepCtx) {
   const ai = w.ai
   const p = PROVIDERS.find(x => x.id === ai.provider)!
   const key = keyOf(ai)
-  const models = ai.provider === 'groq' ? GROQ_MODELS : CLAUDE_MODELS
   const model = ai.provider === 'groq' ? ai.groqModel : ai.anthropicModel
+  const base = ai.provider === 'groq' ? GROQ_MODELS : CLAUDE_MODELS
+  // A model typed into Settings that is not on the list stays selectable, rather than being swapped for the default.
+  const models = base.some(m => m.id === model) ? base : [{ id: model, label: model, note: 'set in Settings' }, ...base]
   const wrong = stray(ai)
 
   const edit = (patch: Partial<WizardState['ai']>) => set(prev => ({ ai: { ...prev.ai, ...patch } }))

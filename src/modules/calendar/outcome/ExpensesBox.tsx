@@ -95,7 +95,7 @@ function envelopeFor(
 
 // ─── Locked ──────────────────────────────────────────────────────────────────
 
-function Unlock({ onDone }: { onDone: () => void }) {
+export function Unlock({ onDone }: { onDone: () => void }) {
   const [pw, setPw] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

@@ -16,6 +16,8 @@ import { LibraryModule } from './modules/library/LibraryModule'
 import { ASK_EVENT } from './lib/assistantBridge'
 import { NameListener } from './modules/assistant/NameListener'
 import { useLibraryStore } from './modules/library/libraryStore'
+import { useProjectStore } from './store/projectStore'
+import { ProjectsModule } from './modules/projects/ProjectsModule'
 import { libraryIsOff, useLibraryOff } from './modules/library/libraryPrefs'
 import { useUIStore } from './store/uiStore'
 import { cachedModules, fetchModules, forgetEntitlements, moduleIsOff, useModules } from './lib/entitlements'
@@ -271,6 +273,11 @@ function LoginScreen() {
 // ─── Loading screen ────────────────────────────────────────────────────────────
 
 function LoadingScreen() {
+  // Waking a dimmed iPad often finds the network a second or two behind the page. The session is kept and refreshing
+  // retries on its own (measured: signed in again as soon as the connection returns), but a splash that says nothing
+  // for 15–30 seconds reads as a hang, so say what is happening.
+  const [slow, setSlow] = useState(false)
+  useEffect(() => { const t = setTimeout(() => setSlow(true), 6000); return () => clearTimeout(t) }, [])
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -292,6 +299,17 @@ function LoadingScreen() {
         </svg>
       </div>
       <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>Loading your system…</span>
+      {slow && (
+        <div role="status" data-loading-slow style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, maxWidth: 300, textAlign: 'center' }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
+            Still reconnecting. You are signed in; this carries on as soon as the connection is back.
+          </span>
+          <button type="button" onClick={() => location.reload()} style={{
+            fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-1)', background: 'var(--sb-card)',
+            border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-pill)', padding: '6px 14px', cursor: 'pointer',
+          }}>Reload</button>
+        </div>
+      )}
       <style>{`
         @keyframes sbPulse {
           0%, 100% { opacity: 1; transform: scale(1); }
@@ -319,6 +337,12 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   tasks: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l2.6 2.5L16 9.5"/>
+    </svg>
+  ),
+  // Three layers stacked — a body of work made of parts.
+  projects: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5L12 21l9-4.5"/>
     </svg>
   ),
   habits: (
@@ -388,6 +412,7 @@ const NAV_ITEMS = [
   // reachable only by something else setting the module for you.
   { id: 'inbox',     label: 'Mail'     },
   { id: 'tasks',     label: 'Tasks'    },
+  { id: 'projects',  label: 'Projects' },
   { id: 'habits',    label: 'Habits'   },
   { id: 'finance',   label: 'Finance'  },
   // Shopping used to be a tab inside Finance. It is its own place now — shown when Settings → Finance turns it on.
@@ -763,6 +788,7 @@ function ActiveModule() {
       {everMounted.current.has('tasks') && !moduleIsOff('tasks')      && <div style={show('tasks')}><TaskCommand /></div>}
       {everMounted.current.has('calendar') && !moduleIsOff('calendar')   && <div style={show('calendar')}><CalendarModule /></div>}
       {everMounted.current.has('inbox') && !moduleIsOff('inbox')      && <div style={show('inbox')}><InboxModule /></div>}
+      {everMounted.current.has('projects') && !moduleIsOff('projects') && <div style={show('projects')}><ProjectsModule /></div>}
       {everMounted.current.has('habits') && !moduleIsOff('habits')     && <div style={show('habits')}><HabitsModule /></div>}
       {everMounted.current.has('review')     && <div style={show('review')}><ReviewModule /></div>}
       {everMounted.current.has('morning') && !moduleIsOff('morning')    && <div style={show('morning')}><MorningModule /></div>}
@@ -828,6 +854,10 @@ async function loadAllFromDB(
     // iPad — each device saw only what it had entered itself.
     off('finance') ? Promise.resolve() : useFinanceStore.getState().loadFromDB(),
     libraryIsOff() ? Promise.resolve() : useLibraryStore.getState().loadFromDB(),
+    // Off means never loaded — and not drawn from a copy this device kept while it was on:
+    // the store is emptied, so every place that offers a project (the task panel, the
+    // event and mail rows, the lens) has nothing to offer.
+    moduleIsOff('projects') ? Promise.resolve(useProjectStore.getState().clearAll()) : useProjectStore.getState().loadFromDB(),
     // Companies
     loadCompaniesFromDB().then(companies => {
       if (companies.length === 0) return
@@ -933,7 +963,7 @@ async function loadAllFromDB(
 /** Wipe every user-specific key from localStorage and reset in-memory stores. */
 function clearUserData(clearTasks: () => void, clearHabits: () => void) {
   const userKeys = [
-    'professor-tasks', 'professor-habits', 'professor-habit-logs',
+    'professor-tasks', 'professor-projects', 'professor-habits', 'professor-habit-logs',
     'professor-companies', 'professor-company-users', 'professor-connected-accounts',
     'professor-review-hours', 'professor-section-order',
     'cal-view-mode', 'cal-hidden-calendars', 'cal-intel-hidden', 'cal-list-cache',
@@ -958,6 +988,7 @@ function clearUserData(clearTasks: () => void, clearHabits: () => void) {
   clearTasks()
   clearHabits()
   useLibraryStore.getState().clearAll()
+  useProjectStore.getState().clearAll()
   saveAccounts([])
 }
 
@@ -967,6 +998,10 @@ function App() {
   const stopPrefSync = useRef<(() => void) | null>(null)
   const stopLiveSync = useRef<(() => void) | null>(null)
   useEffect(() => () => { stopPrefSync.current?.(); stopLiveSync.current?.() }, [])
+  // The plan can change under an open app, or differ from the answer a warm boot started on.
+  // Either way a module that has gone is emptied here: its kept copy must not stay drawn.
+  const planModules = useModules()
+  useEffect(() => { if (moduleIsOff('projects')) useProjectStore.getState().clearAll() }, [planModules])
   const loadTasksFromDB  = useTaskStore(s => s.loadFromDB)
   const clearTasks       = useTaskStore(s => s.clearAll)
   const loadHabitsFromDB = useHabitsStore(s => s.loadFromDB)
@@ -984,6 +1019,7 @@ function App() {
       // Asked at call time, not at start: the person can switch the Library on
       // while the app is open, and a handler fixed at boot would never wake.
       library: async () => { if (!libraryIsOff()) await useLibraryStore.getState().loadFromDB() },
+      projects: async () => { if (!moduleIsOff('projects')) await useProjectStore.getState().loadFromDB() },
     })
     // Shopping has its own Realtime channel — start it alongside liveSync.
     // It tears its own previous channel down, as this function does above.
@@ -1448,6 +1484,7 @@ function App() {
         open={assistantOpen}
         minimised={assistantAside}
         onMinimise={() => setAssistantAside(true)}
+        onOpenRequest={() => { setAssistantOpen(true); setAssistantAside(false) }}
         onClose={() => { setAssistantOpen(false); setAssistantAside(false) }} />
       {/* While it is put aside the button is back in its "open me" state, so
           either the tab or the button brings it back. */}

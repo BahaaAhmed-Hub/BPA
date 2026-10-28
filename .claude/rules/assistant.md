@@ -280,3 +280,181 @@ Tests: `assistant-approval` (19), `assistant-library` (23), `assistant-calendar-
 
 ## Telegram and Siri use the same policy
 The consent policy (`approvalFor`, `DECLINED`) now lives in `supabase/functions/_shared/assistantGate.ts` and the guide in `_shared/appGuide.ts`; `src/lib/assistantPolicy.ts` and `src/lib/appGuide.ts` re-export them, so the panel, the Telegram bot and Siri gate the same acts and answer from the same text. How the bots park and approve an act is in `server.md` ("Telegram and Siri are the app's assistant too").
+
+## The conversation lives on the server, and the answer is written there
+`20260042/43` (tables), `functions/assistant-chat` + `_shared/assistantChat.ts` (the model call),
+`lib/assistantChatView.ts` (pure rules) + `assistantChatApi.ts` (Supabase calls), and the block in `AssistantPanel`
+headed "The conversation on the server". It used to be React state only, so iPad Safari reloading a dimmed tab lost
+the thread, and the browser's own request to Anthropic died with the page.
+- **The server is the source of truth.** `assistant_conversations` / `assistant_messages`: plain text per message, a
+  `status` (`streaming`|`complete`|`error`), tool chips as `role = 'tool'` rows, attachments as name+kind only. Order by
+  `id`, never `created_at`. `client_id` makes a retried insert one row. The address carries `?c=<uuid>`; with none, the
+  newest live conversation under 24h old is adopted (that is how a second device finds the thread). ✕ **archives**
+  (`archived_at`), it does not delete.
+- **One model step per invocation of `assistant-chat`**, answered 202 at once, finished in `EdgeRuntime.waitUntil`, so
+  it carries on when the page is gone. It writes the answer into one `streaming` row (every ~700ms), then `complete`.
+  The page supplies the **system prompt, tool list, model and key** because it owns them; the key falls back to the one
+  saved under Settings → AI (`shared_prefs`), then `ANTHROPIC_API_KEY`. Anthropic streams (SSE); Groq is one reply.
+  Deployed with the gateway's JWT check ON, and it checks the conversation is the caller's.
+- **Tools still run in the browser** (they read/write the app's stores and wait on the approval card). The function
+  parks each call as a `running` tool row and stops; **the page that claims it runs it** (a conditional update is the
+  claim, so two open devices cannot both run `delete_task`; a claim older than 2 minutes, or this device's own after a
+  reload, may be retaken; a heartbeat keeps it alive under an approval card), writes `tool_result`, and any page that
+  sees every tool of the step back asks for the next step (`mode: 'continue'`). The in-flight turn's exact provider
+  messages sit in `conversations.turn` and are cleared when the turn ends. A tool only runs on a page that is visible.
+- **The lock is an index**: one `streaming` row per conversation, so a double Send or two devices both continuing get
+  a 23505 → "busy", not two answers. A streaming row untouched for ~100s (`STALE_ANSWER_MS`) is **interrupted** on
+  screen and marked `error` on the server; the function sweeps the same on its next step.
+- **Coming back**: `visibilitychange`, `pageshow` (bfcache restore), `online`, `focus` refetch (a trailing refresh —
+  a 1s debounce that *dropped* the later event lost a message); while busy a 2.5s poll backs up Realtime, which does
+  not survive a dimmed iPad. A half-typed message is kept per device (`assistant-draft`). Loading shows "Still
+  reconnecting…" after 6s.
+- **The old in-browser loop remains** for a message with a file (the bytes are not sent through the function), and when
+  the function or tables are unavailable (404 → `serverMode = 'no'` for that page's life, the user row it wrote is
+  deleted). Those turns are written to the thread afterwards (`persistBubbles`) so they still survive a reload — just
+  not mid-flight. The browser path is also handed the thread's plain text so it remembers.
+- **Known limits**: the stale-answer test compares the device clock with the server's `updated_at` (a clock minutes
+  fast would call live answers interrupted); a turn whose tool needs a browser stalls until a device is in front of
+  the person; Realtime was not exercised (the stand-in has no websocket) — the poll is what the harness proves.
+Tests: `assistant-conversations-sql.sh <socket-dir> [port]` (60 assertions, throwaway Postgres 16; needs a non-root user
+to run the server; cross-user update/delete counts have no RLS-off control of their own), `assistant-chat-server.mjs`
+(56: the real `_shared/assistantChat.ts` transpiled, a fake DB that enforces the lock and a fake model that can refuse;
+control: lock removed → both requests call the model; also typechecks `index.ts` strictly against stub Deno types),
+`assistant-chat-view.mjs` (33), `assistant-persists.mjs` (a stateful stand-in project whose function writes from Node
+on a timer: page killed mid-answer then reopened, second device, bfcache, interrupted answer, drafts, tool run once
+across two devices, approval card across a reload, 404 fallback, file stays in the browser, ✕ archives),
+`auth-survives-dim.mjs` (12). **Not exercised: the real Deno function, a real Anthropic/Groq stream, Realtime, a real iPad.**
+
+## The model is the person's choice, and one that stops working is replaced
+`lib/modelCatalog.ts`, `settings/sections/ModelPicker.tsx`, `claudeModel` in `AIConfig`, `ModelBadge`. The Groq id was a
+hard-coded constant, so when Groq answered *"The model `llama-3.3-70b-versatile` does not exist or you do not have access
+to it"* there was nothing to do but wait for a developer.
+- **Settings → AI → "Which model"** is a combo box fed by the provider's own model list asked with the person's key
+  (`GET /models`; Groq's speech, guard and TTS models are filtered out), and it takes any typed id. On Groq the chosen
+  model is also **tried with one token** — "listed" is not "allowed", and that gap is the report. A model that fails is
+  named in the provider's words with a one-click "Use <best the key can use> instead". Claude's is not tried (that would
+  be a paid request per keystroke); an empty Claude box means "the app's default" so a default that moves moves for
+  everyone who never chose. `claudeModelOf(cfg)` is the one place that reads it; the assistant, the panel header and
+  `professor.ts` all do.
+- **Self-heal on send** (`ensureWorkingGroqModel`, in `sendMessage` before both the server and the browser path): one probe
+  per `key|model` per page session. Only a definite *"that model is not available"* (404, or the provider's words) changes
+  anything — offline, a bad key and a rate limit leave the choice alone, and a billing refusal is **not** a missing model
+  (`isBillingMessage`). It tries a few candidates, best first (`GROQ_PREFERENCE`, then whatever else the key has), saves the
+  working one, and `notify`s what it switched from and where to change it.
+- **Three failures, three sentences** (the panel and the function's `friendlyError`): a refused key, an account out of credit
+  or past its billing date ("choose another provider or model in Settings → AI"), a model the key cannot use.
+- **The header shows the model in use**, redrawn when Settings saves (`professor:aiConfigChanged`), and a long id is cut
+  with an ellipsis (the label box, `minWidth: 0` all the way up the header) with the whole id as the tooltip.
+  `describeModel` drops a publisher prefix and knows initialisms: `openai/gpt-oss-120b` is "GPT OSS 120B", not
+  "Openai/gpt Oss 120B".
+- **Not covered**: the Telegram bot and Siri choose their own models server-side and do not read this setting.
+Tests: `assistant-models.mjs` (31, the real catalog against a provider that refuses; offline / bad key / rate limit leave the
+choice alone), `assistant-model-choice.mjs` (browser: the exact error in the report, the picker, the heal, billing, the
+ellipsis measured against the header's buttons, Settings→header with no reload, Claude's choice reaching the request).
+
+## The usage counter sits beside the model name, and tokens are exact while money is not
+`lib/aiUsage.ts` (pure), `ModelBadge` (`data-usage-counter`), the header block in `AssistantPanel`, `20260044_assistant_usage.sql`,
+`MonthUsageRow` / `PriceRow` in `settings/sections/ModelPicker.tsx`. "I need the counter of tokens or used amount reflected
+beside the model during usage."
+- **Tokens are what the provider reported** — Anthropic in `message_start` (input, cache) and the *running total* in
+  `message_delta` (output), Groq in `usage` — kept as `assistant_messages.usage` on the answer that request produced
+  (`{input, output, cacheRead, cacheWrite, model, provider}`). A conversation's figure is a sum of rows, so every device
+  and a reload agree. **A step that only asked for a tool keeps its empty answer row** (the page draws a complete answer
+  with no words as nothing): a tool loop is several requests and every one is billed. A failed request records nothing;
+  a provider that said nothing records zeros — never a guess.
+- **Counted once.** The in-browser path writes its usage with the turn (`persistBubbles`, grouped per model, on the last
+  answer or on an empty answer row if there was none), marks the entries `persisted` so a later write cannot repeat them,
+  and drops them from the live list only when the rows that now hold them have been read back.
+- **During usage**: the figure moves while an answer is written — characters ÷ 4 for the streaming row, drawn with a "~"
+  (`data-usage-live`) — and the exact number replaces it when the row completes. The name gives way (ellipsis), the
+  counter does not (`flexShrink: 0`), measured against the header's Close button.
+- **The amount is an estimate and says so** ("≈", and the tooltip). Neither provider lets an app read a balance or an
+  invoice, so money is tokens × a price per million. `BUILT_IN` in `aiUsage.ts` are list-price estimates for a few
+  families **entered from memory — check them**; a model with no price shows tokens and **no amount** (never `$0`); a
+  person's own rate (Settings → AI → Price, `AIConfig.prices[modelId]`) beats the estimate and, when every priced figure is
+  theirs, drops the "≈". Sub-cent is "<$0.01" with no "≈"; a conversation that changed model shows "+" (a floor) and names
+  what had no price. Cache writes bill at 1.25× input and reads at 0.1×.
+- **Settings → AI → Used this month** is a sum over this month's rows (RLS makes it the person's own), across devices,
+  per model. **It is the assistant's chat only** — the morning brief, mail drafts and the other AI features use the same
+  key and are not counted; the provider's billing page is the only total for a key.
+Tests: `assistant-usage.mjs` (36, the arithmetic and wording), `assistant-chat-server.mjs` (66: both providers' usage,
+a tool loop counted per request, a failed request records nothing), `assistant-usage-counter.mjs` (browser: exact on both
+providers, live then exact, counted once and rebuilt from rows after a reload, a tool loop, unpriced model, own rate,
+layout with a very long model name, month total excluding last month, the price row), the SQL harness (20260044).
+**Not exercised: a real provider's usage fields (the stand-ins send the documented shapes), or the built-in prices being
+right.**
+
+## Live limits — the provider's own word on how much room is left (not a balance)
+`supabase/functions/_shared/providerLimits.ts` (re-exported by `src/lib/providerLimits.ts`), `LimitsLine.tsx`, `LiveLimitsRow` in
+`ModelPicker.tsx`, `usage.limits` on the answer row. The usage counter says what **this app** spent; a limit says what the
+**provider** will still allow the **account** — everything using that key or organisation — which is what decides whether the
+next message works. "Reflect live usage … so the user can take the right actions."
+- **No ordinary key can read a balance or an invoice from either provider.** Anthropic's account usage/cost needs an *Admin* key
+  on an organisation account (not built — a more powerful credential, deliberately left out). What both send on every reply,
+  free, are rate-limit headers: Groq `x-ratelimit-{limit,remaining,reset}-{requests,tokens}` (**requests are per DAY, tokens per
+  MINUTE**, reset as a duration like `2m59.56s`, `retry-after` only on a 429); Anthropic `anthropic-ratelimit-{requests,tokens,
+  input-tokens,output-tokens}-{limit,remaining,reset}` (per minute, reset an RFC 3339 time). **The Anthropic names are from
+  memory of its docs; a search could not confirm them and the doc hosts are unreachable from here — check on the first real reply.**
+- **Only what a header said is shown.** A missing/zero/negative/non-numeric header is an absent bucket, never a guess; `remaining`
+  is clamped to the limit; a bucket whose reset time has passed is shown **refilled** (with the reading's age) instead of the old
+  shortfall. Level: ok ≥ 20%, low < 20%, out < 5%, decided by the tightest bucket. Anthropic's combined `tokens` bucket is the
+  headline; input/output are listed only when it is absent.
+- **A browser can read a response header only if the provider's CORS rules expose it** (`access-control-expose-headers`).
+  The server path's function always can, and stores the reading on the answer row (`usage.limits`) so every device and a reload
+  see it; the page's own in-browser requests read them through a tapped `fetch` (Anthropic SDK `fetch` option; Groq `res.headers`)
+  and show nothing when they are hidden. Measured in Chromium with the same reply sent with and without exposure.
+  A refusal keeps its reading too, on a **zero-token** usage (nothing was spent), so the next device knows the account is out.
+- **Shown** under the model name (`data-limits-line`, quiet at ok; "Running low · …" and "Limit reached · … opens again in 23s"
+  in different colours, with what to do in the tooltip), for the provider in use only, redrawn every 10s so a refilled minute
+  bucket stops looking empty; and in Settings → AI → **Live limits** with each bucket in full and its age. A 429 is explained
+  ("used up its allowance for now — it opens again in 23s … the limit is the account's, not this app") on both paths.
+- **Duration formatting rounds whole seconds first** (`2m60s` was a bug found by the browser harness).
+Tests: `assistant-limits.mjs` (26, the parser and wording against honest and dishonest headers), `assistant-chat-server.mjs`
+(headers captured on both providers; a 429 with `retry-after` keeps a zero-token reading), `assistant-limits-live.mjs` (browser:
+ok/low/out colours, headers hidden by CORS → no line and the tokens still counted, Anthropic, a 429, a reading stored on a row
+shown on another device, wrong provider hidden, refilled bucket, layout beside a long model name, the Settings row).
+**Not exercised: a real Groq/Anthropic reply (the stand-ins send the documented names).**
+
+## A rate limit is not "out of credit" — a word in a URL is not evidence
+"Groq says the account is out of credit or past its billing date … It said: Rate limit reached for model `openai/gpt-oss-120b` …
+tokens per minute (TPM): Limit 8000, Used 1939, Requested 7776." The classifier looked for the bare word **billing**, and Groq's
+rate-limit message ends *"Upgrade to Dev Tier today at …/settings/billing"* — so every Groq rate limit read as an unpaid account,
+sending the person to top up an account that was fine. Measured, not assumed: the old regex does **not** match the visible text and
+**does** match it with that closing line.
+- **One shared classifier** (`_shared/providerLimits.ts`, used by the function *and* the page): `isBillingMessage` is explicit
+  phrases only (`credit balance`, `insufficient_quota`, `payment required`, `exceeded your current quota`, `out of credit(s)`,
+  `billing_hard_limit`); `isRateLimitMessage` is a 429 or the words (`rate limit`, `tokens/requests per minute/day`, TPM/TPD/RPM/RPD).
+  **Order matters**: credit first (on its own words or a 402), then the rate limit, then a model the key cannot use, then a refused key.
+- **The rate-limit sentence uses the provider's numbers** (`parseRateLimitMessage`, `rateLimitSentence`): what was hit and for which
+  model, the allowance, how much was already used, what *this message* needs, when it opens again — and if the message alone is ≥ 90% of
+  the allowance it says waiting will not fix it and a model with a higher limit will. A `retry-after` header beats the message's own
+  estimate; with nothing to parse it falls back to a plain sentence. It always says the limit is the organisation's, not this app's.
+- **Groq counts the room a request RESERVES for its answer (`max_tokens`) against the per-minute allowance up front** — inferred from
+  the report (7,776 requested with 4,096 reserved leaves ~3.7k of input), not confirmed in Groq's docs from here. Groq requests now
+  reserve `GROQ_MAX_REPLY_TOKENS = 2048` (page and function; Claude keeps 4,096). An answer that still hits it is marked as cut off.
+  The remaining weight is the request itself: ~60 tool definitions plus the system prompt are most of the ~3.7k input tokens, so a
+  small plan (8,000 TPM) still has little headroom for a second message in the same minute — pruning the tool list per message is the
+  next lever if that bites.
+Tests: `assistant-limits.mjs` (the exact reported message — not billing, is a rate limit, facts parsed, sentence with the numbers,
+the nearly-full vs busy-minute cases; **control: the old regex does classify it as billing**; genuine credit messages still do),
+`assistant-chat-server.mjs` (the same through `runStep`; a credit message still reads as credit; the requested reply room reaches the
+request), `assistant-model-choice.mjs` (in the real panel: the explanation, not "out of credit", the model left alone, 2,048 on Groq
+and 4,096 on Claude).
+
+
+## The in-app assistant reads and writes the calendar it is asked about, with that calendar's own account
+`resolveCal` / `splitEventRef` / `refOf` in `assistantTools.ts`. The calendar tools were wired to `/calendars/primary` of one
+account, so an event on a company calendar (Teradix, DX) could not be seen, edited, deleted or given a video link by the
+app's assistant — only by the bots, which already read every calendar through `CalendarHub`.
+- **`calendar` on list / create / update / delete** (name, id or the account's address, matched loosely against
+  `cal-intel-cals-cache`). The token is the one of the **account that calendar lives on**; a write only matches a writable
+  calendar. **A name that matches nothing is an error, never a fall-back** to the default diary (the `taskCalendar.ts` rule).
+- **Listing with no calendar reads every visible calendar** (not the ones hidden in `cal-intel-hidden`, 12 at most), each with
+  its own account, and says which calendar each event is on. A calendar that could not be read is **named in
+  `could_not_read`**, not an empty day. Ids come back as `eventId::calendarId` (plain for the main calendar); an edit takes it
+  as given, a bare id still means the default calendar.
+- **The Meet link is minted on the calendar the event is on**, and `allowedConferenceSolutionTypes` is read from *that*
+  calendar's list entry. The reply names the calendar.
+`scripts/bots-invite-guests.mjs` has a personal account and a Teradix account (tokens that say which they are): the company
+write carries `tok:ceo@teradix.com`, the control carries the default, an unknown or read-only calendar sends nothing.
+**Not exercised: the browser panel.**

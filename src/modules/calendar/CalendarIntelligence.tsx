@@ -58,12 +58,18 @@ import type { OutcomeEvent } from './MeetingOutcome'
 import type { OutcomeCalendarPort, OutcomeEventRef, PortResult } from './outcome/shared'
 import { OutcomesCard } from './outcome/OutcomesCard'
 import { useFocusClass, useCompanyFocus } from '@/lib/companyFocus'
+import { useProjectFocusClass } from '@/modules/projects/useProjectFocusClass'
+import { useEventProject } from '@/modules/projects/useEventProject'
 import { loadDynamicCompanies, type DynamicCompany } from '@/types'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
 import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
 import { syncTaskToEvent } from '@/lib/taskEventLink'
 import { parseRecurrence } from './recurrence'
 import { useUIStore } from '@/store/uiStore'
+import { MilestoneChip, useMilestoneMarkers } from '@/modules/projects/MilestoneMarkers'
+import { EventProjectRow } from '@/modules/projects/EventProjectRow'
+import { eventMeta, sameMeta } from '@/modules/projects/eventLinks'
+import { useProjectStore } from '@/store/projectStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
@@ -126,6 +132,8 @@ interface NewEventData {
   status?:      EventStatus
   /** Drive files uploaded while composing. */
   attachments?: { fileUrl: string; fileId?: string; title?: string; mimeType?: string }[]
+  /** Chosen in the composer; linked here, once Google has given the event an id. */
+  projectId?:   string
 }
 
 interface CalWithAccount extends GCalCalendar {
@@ -761,7 +769,7 @@ function ResizeHandle({ eventId, edge }: { eventId: string; edge: 'top' | 'botto
 }
 
 // ─── EventBlock (draggable, positioned in time grid) ─────────────────────────
-function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, focusClass, onStatusToggle, onClick, onContextMenu }: {
+function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, focusClass, project, onStatusToggle, onClick, onContextMenu }: {
   event: GCalEventExt
   layout: EventLayout
   status: EventStatus | undefined
@@ -773,6 +781,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
    *  is), the out-of-focus class when it is not. Decided at the call site,
    *  which is where the calendar→company map lives. */
   focusClass?: string
+  /** The project this event belongs to, drawn as a dot — colour is the identity, the name is the label. */
+  project?: { name: string; color?: string }
   onStatusToggle: (s: EventStatus) => void
   onClick: (e: React.MouseEvent) => void
   onContextMenu?: (e: React.MouseEvent) => void
@@ -961,6 +971,16 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         position: 'absolute', left: 4, top: 4, bottom: 4, width: 3, borderRadius: 999,
         background: color, opacity: isCancelled ? 0.4 : 0.85,
       }} />
+
+      {/* Which project it belongs to: a dot in the project's colour, ringed in the card's own ground so
+          it reads on every fill. The name is the label — colour alone identifies nothing. */}
+      {project && !isDragOverlay && (
+        <span data-event-project-dot title={`Project: ${project.name}`} aria-label={`Project: ${project.name}`} role="img" style={{
+          position: 'absolute', top: 5, right: 5, width: 9, height: 9, borderRadius: '50%', zIndex: 1,
+          background: project.color ?? 'var(--sb-ink-3)',
+          boxShadow: '0 0 0 1.5px var(--sb-overlay)',
+        }} />
+      )}
 
       {/* Done is a tick in front of the name; cancelled strikes the name
           through. Neither touches the card's colour — that belongs to the
@@ -1407,6 +1427,8 @@ export function CalendarIntelligence() {
   // map is rebuilt when Settings changes the companies, and the class comes
   // from `companyFocus` so the fade is the same one tasks and mail wear.
   const focusClass = useFocusClass()
+  const projectFocus = useProjectFocusClass({ taskBlocks: true })
+  const projectOfEvent = useEventProject()
   const [lensCompany] = useCompanyFocus()
   const [focusCompanies, setFocusCompanies] = useState<DynamicCompany[]>(
     () => loadDynamicCompanies().filter(c => !c.hidden))
@@ -1611,6 +1633,8 @@ export function CalendarIntelligence() {
   const focus = useUIStore(s => s.focus)
   const clearFocus = useUIStore(s => s.clearFocus)
   const focusOn = useUIStore(s => s.focusOn)
+  // Milestones of live projects, by day — drawn as markers, never as events.
+  const milestonesByDay = useMilestoneMarkers()
   const pendingFocusId = useRef<string | null>(null)
   useEffect(() => {
     if (focus?.module !== 'calendar') return
@@ -2165,8 +2189,12 @@ export function CalendarIntelligence() {
       ? await getGoogleToken(cal.accountEmail)
       : (await refreshPrimaryToken() || cal.accountToken)
     if (!token) return
+    // What is linked to it now — an undo writes the event again under a new id,
+    // and the links have to follow it there or the undo quietly loses them.
+    const wasLinked = useProjectStore.getState().links.filter(l => l.kind === 'event' && l.refId === ev.id)
     const ok = await deleteCalendarEventWithToken(token, ev.calendarId, ev.id)
     if (ok) {
+      useProjectStore.getState().removeLinksByRef('event', ev.id)
       // Google has no undelete, so taking this back means writing the same
       // event again. It comes back with a new id — which is why the undo says
       // "put it back" rather than pretending nothing happened.
@@ -2181,7 +2209,10 @@ export function CalendarIntelligence() {
       const calendarId = ev.calendarId
       pushUndo(`Deleted "${ev.summary ?? 'an event'}"`, async () => {
         const back = await createCalendarEventWithToken(token, calendarId, body)
-        if (back.event) setEvents(prev => [...prev, { ...back.event as GCalEvent, calendarId } as GCalEventExt])
+        if (back.event) {
+          setEvents(prev => [...prev, { ...back.event as GCalEvent, calendarId } as GCalEventExt])
+          for (const l of wasLinked) useProjectStore.getState().addLink(l.projectId, 'event', (back.event as GCalEvent).id, l.meta)
+        }
       })
       setEvents(prev => prev.filter(e => e.id !== ev.id))
       if (selectedEvent?.id === ev.id) setSelectedEvent(null)
@@ -2574,6 +2605,21 @@ export function CalendarIntelligence() {
     const start = getWeekStart(first, firstDow)
     return Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d })
   }, [anchorDate, firstDow])
+  // A project's link to an event remembers what the event is (title, hours), since
+  // the project page cannot ask Google. The calendar is the one thing that can see
+  // the event, so it refreshes the snapshot whenever it has the event loaded. Equal
+  // snapshots write nothing, which is what stops two open devices trading writes.
+  const projectLinks = useProjectStore(s => s.links)
+  useEffect(() => {
+    for (const l of projectLinks) {
+      if (l.kind !== 'event') continue
+      const ev = events.find(e => e.id === l.refId)
+      if (!ev) continue
+      const meta = eventMeta(ev)
+      if (!sameMeta(l.meta, meta)) useProjectStore.getState().setLinkMeta(l.id, meta)
+    }
+  }, [events, projectLinks])
+
   // Filter out block-events for rules with hideBlocked=true (or global originalsOnly).
   // Uses two paths: localStorage map (fast) + description marker (cross-device, no Apply needed).
   const displayedEvents = (() => {
@@ -2745,6 +2791,11 @@ export function CalendarIntelligence() {
         : e
       ))
       if (data.status && created.id) toggleStatus(created.id, data.status)
+      // Linked only now: there was no id to link while composing, and a failed create leaves nothing behind.
+      if (data.projectId && created.id) {
+        useProjectStore.getState().addLink(data.projectId, 'event', created.id,
+          eventMeta({ ...created, calendarId: data.calId }))
+      }
     } else {
       setEvents(prev => prev.filter(e => e.id !== tempId))
     }
@@ -3224,6 +3275,8 @@ export function CalendarIntelligence() {
                     fontVariantNumeric: 'tabular-nums',
                   }}>{day.getDate()}</span>
 
+                  {(milestonesByDay.get(ds) ?? []).slice(0, 2).map(mk => <MilestoneChip key={mk.id} marker={mk} compact />)}
+
                   {shown.map(e => {
                     const cal = allCalendars.find(c => c.id === (e as GCalEventExt).calendarId)
                     const col = cal ? calEffectiveColor(cal) : undefined
@@ -3323,6 +3376,24 @@ export function CalendarIntelligence() {
               )
             })}
           </div>
+
+          {/* Milestones — only when the week has one due. They are not events: nothing
+              is written to Google and nobody is invited. Each opens its project. */}
+          {weekDays.some(day => milestonesByDay.has(localDateStr(day))) && (
+            <div data-cal-milestones style={{ display: 'flex', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', flexShrink: 0, minHeight: 22 }}>
+              <div style={{ width: 84, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 12, paddingTop: 8, fontFamily: MONO, fontSize: 9.5, fontWeight: 500, color: 'var(--sb-ink-4)', letterSpacing: '0.14em', textTransform: 'uppercase' as const, whiteSpace: 'nowrap' }}>
+                Due
+              </div>
+              {weekDays.map(day => {
+                const ds = localDateStr(day)
+                return (
+                  <div key={ds} style={{ flex: 1, padding: '6px 4px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 68, overflowY: 'auto' }}>
+                    {(milestonesByDay.get(ds) ?? []).map(mk => <MilestoneChip key={mk.id} marker={mk} />)}
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
           {/* All-day events strip — only shown when the week has at least one all-day event */}
           {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
@@ -3602,7 +3673,8 @@ export function CalendarIntelligence() {
                           isSelected={selectedEvent?.id === ev.id}
                           isDragSrc={draggingEvt?.id === ev.id && dragMode === 'move'}
                           colorOverride={cal ? calEffectiveColor(cal) : undefined}
-                          focusClass={focusClass(companyOfCalendar((ev as GCalEventExt).calendarId))}
+                          focusClass={focusClass(companyOfCalendar((ev as GCalEventExt).calendarId)) || projectFocus.event(ev.id)}
+                          project={projectOfEvent(ev.id)}
                           onStatusToggle={s => {
                             toggleStatus(ev.id, s)
                           }}
@@ -3767,6 +3839,8 @@ export function CalendarIntelligence() {
               <OutcomesCard
                 eventId={ev.id} done={eventStatuses[ev.id] === 'done'}
                 onReopen={() => { const o = outcomeOf(ev.id); if (o) askAboutOutcome(o) }} />
+              {/* Which project it belongs to — the same link the project page lists. */}
+              <EventProjectRow ev={ev} />
               {/* What the Professor has read about this meeting. */}
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>Prep</span>

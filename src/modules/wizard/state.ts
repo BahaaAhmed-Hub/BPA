@@ -1,9 +1,8 @@
-import { loadAIConfig, loadSettings } from '@/modules/settings/model'
+import { claudeModelOf, loadAIConfig, loadSettings } from '@/modules/settings/model'
 import { loadAutomationRules } from '@/lib/automation'
 import { loadNotifSettings, loadQuietHours } from '@/lib/notifications'
 import { loadLock } from '@/modules/finance/lock'
 import { loadAccounts } from '@/lib/multiAccount'
-import { claudeModelOf } from '@/lib/modelInfo'
 import type { StepId } from './steps'
 
 export interface CompanyDraft {
