@@ -20,6 +20,8 @@ import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
 import { notify } from '@/lib/undo'
 import { txIn, unpaidRateNote } from '../txRates'
+import { isBorrowing, isRepayment } from '../loans'
+import { LoanMark } from '../components/LoanMark'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -107,6 +109,9 @@ function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
   }, [])
   return [ref, w]
 }
+
+/** What a figure was summed from. `borrowed` and `repaid` are the two neutral lines. */
+type DrillKind = 'income' | 'expense' | 'both' | 'borrowed' | 'repaid'
 
 interface Series { id: string; name: string; color: string; amounts: number[]; kind: 'income' | 'expense'; under?: string }
 
@@ -613,7 +618,7 @@ export function ReflectionScreen(_props?: any) {
   }, [])
 
   // Build categoryId → monthly amounts map for given year
-  const { incomeRows, expenseRows, monthlyIncome, monthlyExpense } = useMemo(() => {
+  const { incomeRows, expenseRows, monthlyIncome, monthlyExpense, borrowed, repaid } = useMemo(() => {
     // Filter to the selected year
     const yearTx = transactions.filter(tx => filedIn(tx, String(year)))
 
@@ -661,8 +666,22 @@ export function ReflectionScreen(_props?: any) {
     const monthlyIncome  = monthly('income')
     const monthlyExpense = monthly('expense')
 
-    return { incomeRows, expenseRows, monthlyIncome, monthlyExpense }
-  }, [transactions, categories, year, base, fxTick, filedIn])
+    // Money borrowed, and money paid back, are neither income nor spending — they
+    // are cash in and cash out against a debt — so they are read apart and added to
+    // no total here. `count` is entries, not money: a borrowing in a currency with
+    // no rate sums to nothing and the line still has to be there to say so.
+    const loanLine = (is: (tx: Transaction) => boolean) => ({
+      count: yearTx.filter(is).length,
+      months: MONTHS_SHORT.map((_, mi) => {
+        const prefix = `${year}-${String(mi + 1).padStart(2, '0')}`
+        return yearTx.filter(tx => is(tx) && filedIn(tx, prefix)).reduce((n, tx) => n + (txIn(tx, base) ?? 0), 0)
+      }),
+    })
+    const borrowed = loanLine(tx => isBorrowing(tx, accounts))
+    const repaid   = loanLine(tx => isRepayment(tx, accounts))
+
+    return { incomeRows, expenseRows, monthlyIncome, monthlyExpense, borrowed, repaid }
+  }, [transactions, categories, accounts, year, base, fxTick, filedIn])
 
   /** Which categories have their parts showing. Declared here because a drop
    *  that nests a row opens the row it landed in. */
@@ -870,7 +889,7 @@ export function ReflectionScreen(_props?: any) {
   // Each cell is a sum; this is the list it was summed from, so an entry filed
   // wrong can be corrected where the wrongness is visible.
   const [drill, setDrill] = useState<
-    { ids: string[] | null; label: string; month: number | null; kind: 'income' | 'expense' | 'both' } | null
+    { ids: string[] | null; label: string; month: number | null; kind: DrillKind } | null
   >(null)
   const [editing, setEditing] = useState<Transaction | null>(null)
   /** The one entry the panel is showing instead of the list. */
@@ -886,7 +905,7 @@ export function ReflectionScreen(_props?: any) {
       cat.txType === 'income' ? 'income' : 'expense')
   }
 
-  function openDrill(ids: string[] | null, label: string, month: number | null, kind: 'income' | 'expense' | 'both') {
+  function openDrill(ids: string[] | null, label: string, month: number | null, kind: DrillKind) {
     setOpenTx(null)
     setDrill({ ids, label, month, kind })
   }
@@ -935,9 +954,13 @@ export function ReflectionScreen(_props?: any) {
   const drillTx = useMemo(() => {
     if (!drill) return []
     const ids = drill.ids ? new Set(drill.ids) : null
-    const wanted = (t: string) => drill.kind === 'both' ? (t === 'income' || t === 'expense') : t === drill.kind
+    const wanted = (tx: Transaction) =>
+      drill.kind === 'borrowed' ? isBorrowing(tx, accounts)
+      : drill.kind === 'repaid' ? isRepayment(tx, accounts)
+      : drill.kind === 'both' ? (tx.type === 'income' || tx.type === 'expense')
+      : tx.type === drill.kind
     const pick = (list: Transaction[], prefix: string | null) => list
-      .filter(tx => wanted(tx.type) && (prefix === null || filedIn(tx, prefix)))
+      .filter(tx => wanted(tx) && (prefix === null || filedIn(tx, prefix)))
       .filter(tx => (ids ? !!tx.categoryId && ids.has(tx.categoryId) : true))
       .sort((a, b) => b.date.localeCompare(a.date))
     // A span drops the month: "August, over five years" is a different question
@@ -947,7 +970,7 @@ export function ReflectionScreen(_props?: any) {
       ? String(year)
       : `${year}-${String(drill.month + 1).padStart(2, '0')}`
     return pick(transactions, prefix)
-  }, [drill, transactions, history, year, filedIn])
+  }, [drill, transactions, accounts, history, year, filedIn])
 
   /** The span's totals, year by year — the shape of the question. A list of
    *  four hundred entries does not answer "is this getting worse". */
@@ -1420,6 +1443,23 @@ export function ReflectionScreen(_props?: any) {
             <TotalRow label="Total income" months={visIncome} total={totalIncome} sign={1} COL_W={COL_W} NAME_W={NAME_W}
               onDrill={(label, month) => openDrill(visibleIds(incomeRows), label, month, 'income')} />
 
+            {/* Borrowed money. Cash in and cash out against a debt: drawn only when the
+                year has any, kept out of every total above and below, and neutral in
+                ink — it is neither earned nor spent. */}
+            {(borrowed.count > 0 || repaid.count > 0) && (<>
+              <tr style={{ height: 8 }}><td colSpan={14} /></tr>
+              {borrowed.count > 0 && (
+                <LoanLine label="Borrowed" note="cash in · not income" months={borrowed.months}
+                  COL_W={COL_W} ROW_H={ROW_H}
+                  onDrill={(label, month) => openDrill(null, label, month, 'borrowed')} />
+              )}
+              {repaid.count > 0 && (
+                <LoanLine label="Re-pay borrowed" note="cash out · not spending" months={repaid.months} out
+                  COL_W={COL_W} ROW_H={ROW_H}
+                  onDrill={(label, month) => openDrill(null, label, month, 'repaid')} />
+              )}
+            </>)}
+
             {/* Spacer */}
             <tr style={{ height: 12 }}><td colSpan={14} /></tr>
 
@@ -1512,7 +1552,9 @@ export function ReflectionScreen(_props?: any) {
                 transaction={null}
                 initial={{
                   categoryId: addTarget?.id,
-                  type: drill.kind === 'income' ? 'income' : 'expense',
+                  type: drill.kind === 'income' ? 'income'
+                    : drill.kind === 'borrowed' || drill.kind === 'repaid' ? 'transfer' : 'expense',
+                  borrowed: drill.kind === 'borrowed',
                   date: addDate,
                 }}
                 accounts={accounts}
@@ -1537,7 +1579,8 @@ export function ReflectionScreen(_props?: any) {
                 fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: drill.kind === 'income' ? OLIVE : drill.kind === 'expense' ? RUST : 'var(--sb-ink-3)' }} />
-                {drill.kind === 'income' ? 'Income' : drill.kind === 'expense' ? 'Spending' : 'In and out'}
+                {drill.kind === 'income' ? 'Income' : drill.kind === 'expense' ? 'Spending'
+                  : drill.kind === 'borrowed' ? 'Borrowed — not income' : drill.kind === 'repaid' ? 'Paid back — not spending' : 'In and out'}
               </span>
               <button onClick={() => setDrill(null)} title="Close"
                 style={{
@@ -1561,6 +1604,7 @@ export function ReflectionScreen(_props?: any) {
                   {drillTx.length} {drillTx.length === 1 ? 'entry' : 'entries'} ·{' '}
                   {acct(drillTx.reduce((n, t) => {
                     const v = txIn(t, base) ?? 0
+                    if (drill.kind === 'borrowed' || drill.kind === 'repaid') return n + v
                     return n + (t.type === 'income' ? v : -v)
                   }, 0), { currency: base })}
                 </>}
@@ -1633,7 +1677,9 @@ export function ReflectionScreen(_props?: any) {
                     icon={cat?.icon}
                     tone={cat?.color ?? (tx.type === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)')}
                     title={tx.payee?.trim() || cat?.name || 'Entry'}
+                    neutral={isBorrowing(tx, accounts) || isRepayment(tx, accounts)}
                     marks={<>
+                      <LoanMark kind={isBorrowing(tx, accounts) ? 'borrowed' : isRepayment(tx, accounts) ? 'repaid' : null} />
                       <DuplicateMark scope={dupes.get(tx.id)} />
                       <BudgetMark on={isBudgetEntry(tx)} />
                     </>}
@@ -1760,6 +1806,34 @@ function TotalRow({ label, months, total, sign, COL_W, NAME_W: _NAME_W, onDrill 
         style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: total === 0 ? 'var(--sb-border)' : col, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
         {sign === 1 ? fmt(total) : fmtOut(total)}
       </td>
+    </tr>
+  )
+}
+
+/** One neutral line of the table: a label with what it is not, and a figure per month.
+ *  Muted ink and no tone — a borrowing is not earned and a repayment is not spent. */
+function LoanLine({ label, note, months, out, COL_W, ROW_H, onDrill }: {
+  label: string; note: string; months: number[]; out?: boolean; COL_W: number; ROW_H: number
+  onDrill: (label: string, month: number | null) => void
+}) {
+  const f = out ? fmtOut : fmt
+  const total = months.reduce((n, v) => n + v, 0)
+  const cell = (v: number, onClick: (() => void) | undefined, key: string | number, w: number, bold?: boolean) => (
+    <td key={key} onClick={v === 0 ? undefined : onClick} data-loan-cell
+      style={{ width: w, minWidth: w, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)',
+        fontWeight: bold ? 700 : 400, color: v === 0 ? 'var(--sb-border)' : 'var(--sb-ink-2)', fontVariantNumeric: 'tabular-nums',
+        whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
+      {f(v)}
+    </td>
+  )
+  return (
+    <tr data-loan-line={label} style={{ height: ROW_H, borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+      <td style={{ padding: '0 14px', position: 'sticky', left: 0, background: 'var(--sb-page)', zIndex: 2 }}>
+        <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap' }}>{label}</span>
+        <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' }}>{note}</span>
+      </td>
+      {months.map((v, mi) => cell(v, () => onDrill(`${label} · ${MONTHS_SHORT[mi]}`, mi), mi, COL_W))}
+      {cell(total, () => onDrill(`${label} · the year`, null), 'total', 100, true)}
     </tr>
   )
 }

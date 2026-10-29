@@ -1252,6 +1252,18 @@ read as a loss that was never a gain.
   still overrides it. `scripts/loans.mjs` (57) holds the detector with controls
   (no name, a place, empty); `loans-ui.mjs new` reads the name off the note and
   renames the row — the same run on the old form fails at the first step.
+- **Financials draws two neutral lines, only when the year has any.** `Borrowed` (cash in,
+  *not income*) and `Re-pay borrowed` (cash out, *not spending*) sit between *Total income*
+  and *EXPENSES* in `ReflectionScreen` (`LoanLine`), read by `isBorrowing` / `isRepayment`
+  and filed by the same `filedIn` as every row (so *when it is due* counts a planned
+  instalment, *when it was paid* does not). **They are in no total**: Total income, Total
+  expenses, Net and Cumulative never see them. A line is drawn on **entries**, not money —
+  a borrowing in a currency with no rate sums to nothing and still has to be there. The
+  figure opens the entries behind it (`DrillKind` `borrowed` / `repaid`), marked
+  Borrowed / Repaid, summed as a magnitude, with *Add an entry* opening in Borrowed.
+  `node scripts/financials-borrowed.mjs 5199 [none|lines|drill|control]` — absent with no
+  loan; present with it and the three totals identical to `none`; ink ≥ 4.5 in four themes
+  (`INK_THEME=`). Control: the same 150,000 filed as income reads 250,000, with no line.
 - **Not built yet** (the plan's chunks 4–10): a payment plan on the loan and its
   budget line, funding the instalment first, Pay back from the goal or the
   balance row, optional interest, and borrowing/repaying through the assistant,
