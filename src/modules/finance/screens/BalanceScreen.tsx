@@ -78,7 +78,7 @@ function formatBalance(bal: number, currency = 'EGP'): string {
  *  ("Platinum CC") made it taller, and a bar, balance or button with no width
  *  of its own put every edge a few pixels somewhere else on the next row. */
 const ROW_H = 58
-const COL_HANDLE = 18, COL_ICON = 28, COL_LIMIT = 170, COL_BALANCE = 190, COL_ACTION = 84, COL_EDIT = 26
+const COL_HANDLE = 18, COL_ICON = 28, COL_LIMIT = 170, COL_BALANCE = 160, COL_ACTION = 84, COL_EDIT = 26
 /** Below this the ceiling no longer has a column of its own: the bar sits along
  *  the foot of the row and the figures join the line under the name, so the
  *  tracks that remain never have to squeeze the name to nothing. */
@@ -218,7 +218,13 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
             }} />
         ) : (
           <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={account.name}>{account.name}</span>
+            {/* Up to two lines, then the row's own fixed height still holds: a long
+                name ("World Platinum Signature CC") is shown whole rather than cut
+                at the width the money columns leave it. */}
+            <span title={account.name} style={{
+              minWidth: 0, lineHeight: 1.1, overflow: 'hidden', display: '-webkit-box',
+              WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'anywhere',
+            }}>{account.name}</span>
             {account.accountType === 'loan' && (
               <button
                 onClick={e => { e.stopPropagation(); setRenaming(account.name) }}

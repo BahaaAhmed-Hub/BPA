@@ -512,6 +512,28 @@ export function GoalsScreen(_props?: any) {
     setFormOpen(false)
   }
 
+  // Up or down one place among its own kind, from the timeline's arrows. A debt
+  // and a goal share one ranking but are drawn in two sections, so "up" means past
+  // the one above it *in its section* — swapping with a neighbour of the other
+  // kind would move nothing the person can see. The same positions the drag writes.
+  function moveRank(id: string, dir: -1 | 1) {
+    const order = byRank(allGoals)
+    const me = order.find(g => g.id === id)
+    if (!me) return
+    const peers = order.filter(g => isDebtGoal(g) === isDebtGoal(me))
+    const other = peers[peers.indexOf(me) + dir]
+    if (!other) return
+    const ids = order.map(g => g.id)
+    const i = ids.indexOf(me.id), j = ids.indexOf(other.id)
+    ;[ids[i], ids[j]] = [ids[j], ids[i]]
+    ids.forEach((gid, n) => {
+      const g = allGoals.find(x => x.id === gid)
+      if (!g || g.rank === n) return
+      if (isDebtGoal(g)) setDebtRank(g.id, n)
+      else void upsertGoal({ ...g, rank: n })
+    })
+  }
+
   // ─── Ranking by drag ───────────────────────────────────────────────────────
   // Same as the Financials table: pointer events, because dragstart never
   // fires for a finger and this is a list you reorder on a tablet.
@@ -838,7 +860,7 @@ export function GoalsScreen(_props?: any) {
             background: C.card, border: `var(--sb-border-width) solid ${C.border}`,
             borderRadius: 'var(--sb-r-card)', padding: '16px 18px',
           }}>
-            <GoalTimeline schedule={schedule} goals={allGoals} currency={cur} surplus={capacity.surplus} />
+            <GoalTimeline schedule={schedule} goals={allGoals} currency={cur} surplus={capacity.surplus} onMove={moveRank} />
           </div>
         </div>
       )}

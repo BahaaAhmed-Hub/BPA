@@ -299,6 +299,19 @@ figure is added to something denominated differently:
   currency is set by hand — after which the choice stands.
 
 ## Finance — Balances screen
+- **Every account row is one box, and its name is all there.** One fixed height
+  (`ROW_H`, 58) and one grid per row — handle, icon, name, [ceiling], balance, action,
+  edit — so every edge is at the same x (`rowColumns`; below `COMPACT_BELOW` the
+  ceiling folds into the caption and a hairline on the row's foot). The name may take
+  **two lines** (line-clamp, `title` carries the rest): at the width the money columns
+  leave it, "World Platinum Signature CC" was cut to "World Platinum Si…" when it was
+  one, and a name you cannot read in full is how two accounts get confused. The
+  balance column is 160px. Not asserted: a 276px list column (a ~760px window, where
+  the list sits beside the feed) is narrower than the fixed columns and a row spills
+  — as on `main` before this.
+  `node scripts/account-rows-uniform.mjs 5199` (heights/widths/edges; old code reads
+  46/91/68) and `node scripts/balance-rows-same-size.mjs 5199 [wide|narrow]` (names
+  not clipped, at most two lines, nothing spilling).
 - **A card has a ceiling.** `Account.creditLimit` (`20260008`, `credit_limit`) drives the
   usage bar and "X left of Y" on the row. `saveAccount` drops the column and retries if
   the migration has not run.
@@ -463,6 +476,28 @@ the app in. On one twelve-month ledger the same data reported anywhere between
   month's figure instead of keeping whichever call was first. Reported as 20,000
   when it is really 23,800, the "then each month" line is wrong and so is every
   date read off it.
+
+## Finance — the timeline: one colour a kind, a figure in one currency, a whole year
+`GoalTimeline.tsx`. Four things were wrong with it at once.
+- **One colour per kind, not per goal.** Debts are `--sb-negative`, goals `--sb-positive`
+  (`colours()`), badge text `--sb-ink-on-fill`. A lane per hue said nothing: the colour
+  answers *what is this*, owed or put aside. The goal's own `color` is no longer read here.
+- **`planned N of M`, in one currency.** The plan's figures are in the base currency; a
+  debt's target is in its own, so a USD debt printed *10,904 of 2,500* (pounds against
+  dollars). The target is converted (`convert`) and, with no rate, shown with its own
+  currency. It says *planned* because it is what the plan puts in over the months drawn —
+  *150,000 of 150,000* on a lender is cash you hold covering it this month, not a payment
+  made, and read as one.
+- **A whole year, and a rule between years.** At least 12 months, on to the December the
+  axis ends in (it stopped at March beside a lane that ended in March, leaving grey that
+  looked like later). A hairline (`YEAR_EDGE`) on each January in the header and every lane.
+- **Each section folds** (`Debts to clear`, `Goals`; the chevron and the whole name are
+  one button, `aria-expanded`, kept in `finance-goals-timeline-collapsed`), and **each
+  lane moves** with up/down arrows. `moveRank` in `GoalsScreen` swaps with the neighbour
+  of its own kind — debts and goals share one ranking but are drawn in two sections — and
+  writes the same positions the drag does, so the plan is run again.
+`node scripts/goal-timeline.mjs 5199 [colour|figure|year|fold|move]` — read from computed
+styles, rects and the stored ranks; each mode fails when its one property is reverted.
 
 ## Finance — the open goal is one panel, not five cards
 `GoalDetail` used to be five white cards loose on the page ground, each
@@ -1219,6 +1254,18 @@ read as a loss that was never a gain.
   still overrides it. `scripts/loans.mjs` (57) holds the detector with controls
   (no name, a place, empty); `loans-ui.mjs new` reads the name off the note and
   renames the row — the same run on the old form fails at the first step.
+- **Financials draws two neutral lines, only when the year has any.** `Borrowed` (cash in,
+  *not income*) and `Re-pay borrowed` (cash out, *not spending*) sit between *Total income*
+  and *EXPENSES* in `ReflectionScreen` (`LoanLine`), read by `isBorrowing` / `isRepayment`
+  and filed by the same `filedIn` as every row (so *when it is due* counts a planned
+  instalment, *when it was paid* does not). **They are in no total**: Total income, Total
+  expenses, Net and Cumulative never see them. A line is drawn on **entries**, not money —
+  a borrowing in a currency with no rate sums to nothing and still has to be there. The
+  figure opens the entries behind it (`DrillKind` `borrowed` / `repaid`), marked
+  Borrowed / Repaid, summed as a magnitude, with *Add an entry* opening in Borrowed.
+  `node scripts/financials-borrowed.mjs 5199 [none|lines|drill|control]` — absent with no
+  loan; present with it and the three totals identical to `none`; ink ≥ 4.5 in four themes
+  (`INK_THEME=`). Control: the same 150,000 filed as income reads 250,000, with no line.
 - **Not built yet** (the plan's chunks 4–10): a payment plan on the loan and its
   budget line, funding the instalment first, Pay back from the goal or the
   balance row, optional interest, and borrowing/repaying through the assistant,
