@@ -6,7 +6,8 @@ import { isBudgetEntry } from './budgetEntries'
 import { todayISO } from './dates'
 import { FALLBACK_EXPENSE_ICON } from '@/lib/glyphs'
 import { txIn } from './txRates'
-import { SETTLED_BELOW } from './loans'
+import { SETTLED_BELOW, isRepayment, dueThisMonth } from './loans'
+import { planPhrase, type LoanPlan } from './loanPlan'
 
 // ─── Can this goal actually happen? ──────────────────────────────────────────
 //
@@ -344,9 +345,17 @@ export function capacityFrom(
     if (tx.date <= today) continue
     const v = txIn(tx, base)
     if (v === null) continue
-    if (tx.type === 'expense') committed += v
+    // A repayment due later this month is cash already spoken for, like a bill:
+    // it will leave the account it is paid from, into a debt. Any other transfer
+    // moves money between your own accounts and leaves nothing. Only *this*
+    // month's: the months after it are the payment plan's schedule, which takes
+    // each instalment off that month's money — counting the entry here as well
+    // would take every one of them twice.
+    const repays = tx.type === 'transfer' && isRepayment(tx, accounts)
+      && tx.date.slice(0, 7) === today.slice(0, 7)
+    if (tx.type === 'expense' || repays) committed += v
     if (tx.type === 'income')  committed -= v
-    if (tx.type !== 'expense' && tx.type !== 'income') continue   // a transfer moves, it does not leave
+    if (tx.type !== 'expense' && tx.type !== 'income' && !repays) continue
     pending.push({
       id: tx.id,
       month: monthKey(tx.date),
@@ -552,6 +561,20 @@ export interface ScheduleOptions {
    *  not, which a monthly average can never say.
    */
   outflowAt?: (m: number) => number
+  /**
+   *  What a goal is paid by a plan, month by month: goal id → what falls in
+   *  month `m`, in the base currency. A loan's payment plan is the case — "2,000
+   *  on the 1st, whatever happens".
+   *
+   *  It is taken **first**, before the month's money is divided, under every
+   *  policy: a plan is a promise, not a wish to be ranked against the others. A
+   *  month too short to cover it runs at a deficit (the buffer carries it, and
+   *  the months after pay it back before any goal is funded) rather than the
+   *  instalment quietly not being paid. And a goal with a plan is not also funded
+   *  from the monthly surplus — that is what the plan is for — so the same debt
+   *  is never paid twice. Spare cash today can still finish it early.
+   */
+  fixed?: Map<string, (m: number) => number>
 }
 
 export function scheduleGoals(
@@ -569,6 +592,7 @@ export function scheduleGoals(
   const horizon = opts.horizon ?? horizonArg
   const base = capacity.currency
   const ordered = byRank(goals)
+  const fixed = opts.fixed ?? new Map<string, (m: number) => number>()
   const need = new Map(ordered.map(g => [g.id, remainingOf(g, base)]))
   const lump = new Map<string, number>()
   const monthly = new Map<string, number>()
@@ -600,7 +624,9 @@ export function scheduleGoals(
    *  policy says to. Both the spare cash and every month's surplus go through
    *  this, or the control means nothing in the case it matters most. */
   const divide = (amount: number, month: number, shares: MonthShare[]): number => {
-    const hungry = ordered.filter(g => (need.get(g.id) ?? 0) > 0)
+    // A goal with a payment plan is paid by the plan; only the spare cash today
+    // (month 0) may also go to it, to finish it early.
+    const hungry = ordered.filter(g => (need.get(g.id) ?? 0) > 0 && (month === 0 || !fixed.has(g.id)))
     let left = Math.max(0, amount)
     if (left <= 0 || hungry.length === 0) return 0
 
@@ -692,26 +718,37 @@ export function scheduleGoals(
   const goes  = opts.outflowAt ?? (() => 0)
   // Nothing arrives and nothing is dated: every month would be the same empty
   // row, a hundred and twenty times.
-  const barren = !opts.surplusAt && !opts.outflowAt && flat <= 0
+  const barren = !opts.surplusAt && !opts.outflowAt && flat <= 0 && fixed.size === 0
   for (let m = 1; m <= horizon && !barren; m++) {
     if (ordered.every(g => (need.get(g.id) ?? 0) <= 0)) break
     const came = comes(m)
     const went = goes(m)
     pot += came - went
     const shares: MonthShare[] = []
+
+    // The plans, first. Taken whether or not the month can afford them: a
+    // month short of an instalment is a deficit the buffer carries, not an
+    // instalment that did not happen.
+    let planned = 0
+    for (const g of ordered) {
+      const want = fixed.get(g.id)?.(m) ?? 0
+      if (want > 0) planned += put(g, want, m, shares)
+    }
+    pot -= planned
+
     const before = Math.max(0, pot)
     if (before <= 0) {
       // A month that took something out is worth a row even though it put
       // nothing in — that *is* the news. One where simply nothing happened is
       // not, and a run of them is a wall.
-      if (went > 0) rows.push({ month: addMonths(today, m), fromSpare: 0, fromSurplus: 0, shares, came, went, carried: pot })
+      if (went > 0 || planned > 0) rows.push({ month: addMonths(today, m), fromSpare: 0, fromSurplus: planned, shares, came, went, carried: pot })
       continue
     }
 
     divide(before, m, shares)
 
     const spent = shares.reduce((n, s) => n + s.amount, 0)
-    pot -= spent
+    pot -= spent - planned            // the plans were taken off the pot above
     if (spent > 0 || went > 0) {
       rows.push({ month: addMonths(today, m), fromSpare: 0, fromSurplus: spent, shares, came, went, carried: pot })
     }
@@ -810,6 +847,9 @@ export function debtGoals(
   accounts: Account[],
   transactions: Transaction[],
   ranks: Record<string, number> = {},
+  /** Loan id → its payment plan, so the goal can say how it is being paid. */
+  plans: Record<string, LoanPlan> = {},
+  today = todayISO(),
 ): Goal[] {
   const { balances } = liveBalances(accounts, transactions)
   const base = baseCurrency()
@@ -822,15 +862,23 @@ export function debtGoals(
     if (toBase(bal, a.currency, base) === null) return
     const id = `${DEBT_PREFIX}${a.id}`
     const loan = a.accountType === 'loan'
+    // A loan on a plan asks for what the plan has not already got filed for this
+    // month (see `dueThisMonth`) — or the goal waits for an instalment no month
+    // of the schedule pays. Without a plan nothing is scheduled, so nothing is
+    // taken off.
+    const target = loan && plans[a.id] ? -bal - dueThisMonth(a, transactions, today) : -bal
+    if (target < DEBT_FLOOR) return
     out.push({
       id,
       // A card is cleared; a person is repaid.
       name: loan ? `Repay ${a.name}` : `Clear ${a.name}`,
       icon: a.emoji || FALLBACK_EXPENSE_ICON,
-      targetAmount: Math.round(-bal * 100) / 100,
+      targetAmount: Math.round(target * 100) / 100,
       currentAmount: 0,
       color: a.color,
-      sub: loan ? 'money you borrowed' : `owed on ${a.bank}${a.last4 ? ` ·· ${a.last4}` : ''}`,
+      sub: loan
+        ? (plans[a.id] ? `loan · ${planPhrase(plans[a.id], a.currency)}` : 'money you borrowed')
+        : `owed on ${a.bank}${a.last4 ? ` ·· ${a.last4}` : ''}`,
       rank: ranks[id] ?? -1000 + i,
       currency: a.currency,
     })

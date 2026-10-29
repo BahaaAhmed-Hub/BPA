@@ -1239,5 +1239,57 @@ could drift from it.
   to 2,500 is a step and the seeded instalments are replaced, unticking removes the
   rule, the instalments and the unused categories; envelope shows 2,000 of 2,000
   while a plain 700 moved between accounts is in no envelope.
-- **Not built yet**: the forecast charging instalments, the goal planner funding
-  them first, Pay back, and the assistant/Telegram/Siri.
+- The forecast and the goal planner read the plan too — see *a loan's plan is paid
+  first*, below. Not built yet: Pay back, and the assistant/Telegram/Siri.
+
+## Finance — a loan's plan is paid first, and the goal asks only for what is left
+A promise is not a wish to be ranked. `scheduleGoals` takes `fixed` — goal id →
+what falls in month `m` — and pays it **before the month's money is divided**, under
+`ladder`, `share` and `commit` alike. `buildForecast` builds it from each loan's
+plan (`fixed`, `loansAt`, `loansYearly`) and offers it as a rule you can see and
+switch off: *A loan's payment plan is paid first, on its dates* (`RuleId 'loans'`;
+a figure typed over it is a year's worth, scaled onto the same months).
+- **Paid whatever happens.** A month too short for the instalment pays it anyway
+  and runs a deficit that is carried (`carried` goes negative, as it already does for
+  a dated bill); the next goal gets nothing that month, never the instalment cut.
+- **Never paid twice.** A goal with a plan is not also funded from the monthly
+  surplus (`divide` skips it after month 0) — the plan *is* its funding. The spare
+  cash today may still finish it early, as it may for any debt. What is owed is a
+  ceiling (3,000 on a plan of 2,000 is 2,000 then 1,000).
+- **Month 0 is not in the schedule, so the goal must not ask for it.** An
+  instalment due later *this* month is already an unpaid entry in the ledger —
+  committed cash — and the loan's balance still owes it. A goal asking for the whole
+  balance asked for money no month ever paid and **never landed** (`landsIn` null:
+  measured, then fixed). `dueThisMonth()` is the one figure: `debtGoals` asks for the
+  balance less it (a loan on a plan only), and the forecast schedules what is left,
+  so the two cannot disagree. A paid one is already out of the balance and takes
+  nothing off; an instalment that clears the loan leaves no goal and nothing scheduled.
+- **`committed` counts a repayment due this month and no later one.** `capacityFrom`
+  used to ignore every transfer ("a transfer moves, it does not leave"); a repayment
+  does leave the account it is paid from. But the writer files three months ahead
+  and the plan takes each of those off its own month's money, so counting them in
+  `committed` as well would have charged each twice — once from today's spare cash,
+  once from the surplus. Control in the harness: a month of instalments filed ahead
+  takes **nothing** off the spare cash; one due on the 31st takes 2,000.
+- **The cash projection charges them, the planner does not subtract them.**
+  `outflowAt` (which the planner takes off the pot) leaves loans out, because the
+  planner already takes them as the goals' own funding; `monthsAhead` adds
+  `loansAt` as *Loan payment plans*, so the month closes 2,000 lower. Count them in
+  both and each is charged twice.
+- **The goal says how it is paid**: `loan · 2,000 EGP every month, from 29 Oct
+  2026` in its row and card, and the Goals summary sentence counts loan instalments
+  among what "lands on a date of its own" — it said *nothing* above a lane drawing
+  four of them, the mistake its own comment records being made for lumpy costs.
+- **"See the rules" never opened the card.** `#sb-forecast-rules` is a wrapper
+  `<div>`; the button set `.open` on it, which does nothing — it opens the
+  `<details>` inside. Control in the harness: the rule is not on screen until the
+  button is pressed.
+- The assistant's planning (`financeTools`) is the flat plan with no forecast, so it
+  has no `fixed`: it still reads a loan as an ordinary debt goal.
+- `node scripts/loan-goals.mjs` (59, no browser) — the same ranking with the plan
+  taken away is the control throughout (debt takes the whole 5,000 and lands in month
+  2; with the plan it takes 2,000 and the car gets 3,000). `node scripts/loan-plan-ui.mjs
+  5199 goals` — a loan owed from before with no cash: *Still owed 8,000*, *Then each
+  month 2,000*, lands four payments on, the loans rule on screen only after the
+  button. `INK_ONLY=loans node scripts/ink-audit.mjs 5199` — three screens now,
+  Goals included; everything added passes in all four themes.

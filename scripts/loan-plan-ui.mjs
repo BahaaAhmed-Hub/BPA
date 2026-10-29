@@ -25,7 +25,7 @@ import { settled, watchTraffic } from './settled.mjs'
 
 const args = process.argv.slice(2)
 const port = args.find(a => /^\d+$/.test(a)) ?? '5199'
-const MODE = args.find(a => ['borrow', 'edit', 'envelope'].includes(a)) ?? 'borrow'
+const MODE = args.find(a => ['borrow', 'edit', 'envelope', 'goals'].includes(a)) ?? 'borrow'
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
 let failed = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) failed++ }
@@ -58,7 +58,9 @@ const planRule = (amount = 2000) => ({
 const DB = {
   finance_accounts: [
     acc({ id: 'a1', name: 'CIB', account_type: 'payment', currency: 'EGP' }),
-    ...(MODE === 'borrow' ? [] : [acc({ id: LOAN, name: 'Ahmed', account_type: 'loan', currency: 'EGP', emoji: '🤝', sort_order: 1 })]),
+    ...(MODE === 'borrow' ? [] : [acc({ id: LOAN, name: 'Ahmed', account_type: 'loan', currency: 'EGP', emoji: '🤝', sort_order: 1,
+      // goals: owed from before, with no cash held — so nothing can finish it today and the plan is what pays it.
+      balance: MODE === 'goals' ? -10000 : 0 })]),
   ],
   finance_categories: [
     cat({ id: 'c1', name: 'Food', icon: 'lucide:Utensils', is_system: false }),
@@ -67,8 +69,8 @@ const DB = {
       cat({ id: LOAN, name: 'Ahmed', parent_id: PARENT }),
     ]),
   ],
-  finance_transactions: MODE === 'borrow' ? [] : MODE === 'edit' ? [
-    txRow({ id: 'b0', account_id: LOAN, to_account_id: 'a1', amount: 10000, payee: 'Borrowed from Ahmed', tx_type: 'transfer', date: plusMonths(-1), paid_at: plusMonths(-1) }),
+  finance_transactions: MODE === 'borrow' ? [] : (MODE === 'edit' || MODE === 'goals') ? [
+    ...(MODE === 'edit' ? [txRow({ id: 'b0', account_id: LOAN, to_account_id: 'a1', amount: 10000, payee: 'Borrowed from Ahmed', tx_type: 'transfer', date: plusMonths(-1), paid_at: plusMonths(-1) })] : []),
     ...expectedDates.slice(0, 2).map((d, i) => txRow({ id: `plan${i}`, account_id: 'a1', to_account_id: LOAN, category_id: LOAN, amount: 2000, payee: 'Payment to Ahmed',
       tx_type: 'transfer', date: d, paid_at: null, is_cleared: false, is_recurring: true, tags: ['budget'] })),
   ] : [
@@ -228,6 +230,30 @@ if (MODE === 'envelope') {
   ok('the repayment paid under Ahmed\'s category is spent from its envelope: 2,000 of 2,000', /Loan repayments\s+2,000\s+2,000\s+Ahmed/.test(budget), budget.match(/Loan repayments[\s\S]{0,40}/)?.[0])
   ok('control — the plain 700 moved between two accounts is in no envelope', !/2,700|\b700\b/.test(budget.slice(budget.indexOf('SPENDING'), budget.indexOf('EARNING'))))
   ok('and it is spending for the month on screen: 2,000 of 2,000', /Expenses\s+2,000\s+of EGP 2,000/.test(budget), budget.match(/Expenses[\s\S]{0,40}/)?.[0])
+}
+
+if (MODE === 'goals') {
+  await tab('Goals')
+  await page.getByText('Repay Ahmed').first().waitFor({ timeout: 8000 }).catch(() => {})
+  const goals = await text()
+  if (process.env.PEEK) console.log(JSON.stringify(goals.slice(goals.indexOf('Repay Ahmed') - 300, goals.indexOf('Repay Ahmed') + 900)))
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const at = k => { const d = new Date(now.getFullYear(), now.getMonth() + k, 1); return `${MON[d.getMonth()]} ${d.getFullYear()}` }
+  ok('Goals offers "Repay Ahmed" (positive: the screen opened on it)', /Repay Ahmed/.test(goals))
+  ok('…and says how it is being paid', new RegExp(`loan · 2,000 EGP every month, from ${now.getDate()} ${MON[now.getMonth()]} ${now.getFullYear()}`).test(goals))
+  ok('it cannot be finished today: there is no cash to do it with', !/Can finish today/.test(goals))
+  ok('the summary no longer says nothing lands on a date of its own — a loan\'s instalments do', !/nothing in the next year lands on a date of its own/.test(goals) && /of the next year lands on dates of its own/.test(goals), goals.match(/forecast rules applied[^\n]*/)?.[0])
+  ok('it asks for what is left once the instalment already filed for today is paid: 8,000 of the 10,000 owed', /STILL OWED\s+EGP 8,000/.test(goals), goals.match(/STILL OWED[\s\S]{0,30}/)?.[0])
+  ok('the plan funds it: EGP 2,000 each month', /THEN EACH MONTH\s+EGP 2,000/.test(goals), goals.match(/THEN EACH MONTH[\s\S]{0,30}/)?.[0])
+  ok(`…and it lands on the plan's date, four payments on: ${at(4)}`, new RegExp(`there in ${at(4)}`).test(goals), goals.match(/there in [A-Za-z]+ \d+/)?.[0])
+  // The rule that does it is one of the forecast's, visible and switchable.
+  const closed = await text()
+  ok('control — before pressing it the rule is not on screen (the card is folded)', !/payment plan is paid first, on its dates/.test(closed))
+  await page.getByText('See the rules').first().click()
+  await page.waitForTimeout(300)
+  const withRules = await text()
+  if (process.env.PEEK) console.log(JSON.stringify(withRules.slice(withRules.indexOf('forecast rules') - 100, withRules.indexOf('forecast rules') + 700)))
+  ok('the forecast lists it as a rule: a loan\'s payment plan is paid first', /payment plan is paid first, on its dates/.test(withRules))
 }
 
 await br.close()

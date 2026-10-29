@@ -874,6 +874,18 @@ for (const theme of THEMES) {
     await financeTab('Today')
     await page.getByText('Borrowed', { exact: true }).first().waitFor({ timeout: 6000 })
   }, 40, ['Borrowed', 'Net leaves out'])
+  // The goal for a loan on a payment plan: its row, its card, the lane that
+  // draws the instalments and the forecast's loans rule. The plan is a budget
+  // rule, so it is put where the app keeps those before the Goals screen mounts.
+  await visit('Finance · loans (Goals)', async () => {
+    await page.evaluate(() => localStorage.setItem('finance-budget-rules', JSON.stringify({
+      la2: { schedule: 'repeat', amount: 2000, frequency: 'monthly', rollover: false, warn80: false, bucket: 'fixed', currency: 'EGP',
+             starts: new Date().toISOString().slice(0, 7), dueDay: 15, dueAccountId: 'la1' },
+    })))
+    await financeTab('Goals')
+    await page.getByText('Repay Ahmed').first().waitFor({ timeout: 6000 })
+    await page.getByText('See the rules').first().click()
+  }, 40, ['Repay Ahmed', 'loan ·', '/mo', 'payment plan is paid first'])
   if (loansFixture) {
     loansFixture = false
     await page.reload({ waitUntil: 'domcontentloaded' })

@@ -90,6 +90,35 @@ export const spendsEnvelope = (
   wanted: 'income' | 'expense',
 ): boolean => tx.type === wanted || (wanted === 'expense' && tx.type === 'transfer' && !!tx.categoryId)
 
+/**
+ * What is filed to go into this loan later this month and not yet paid, in the
+ * loan's own currency.
+ *
+ * The goal planner starts at *next* month: this month's money is the spare cash
+ * and what is already spoken for. A plan's instalment due on the 29th is an
+ * unpaid entry in the ledger — committed — and not part of any schedule, yet the
+ * loan's balance still owes it. A goal asking for the whole balance would ask for
+ * an instalment no month ever pays, and never land. So the goal asks for the
+ * balance **less this**, and the forecast schedules what is left; the two read
+ * the same ledger figure so they cannot disagree.
+ *
+ * Only entries dated from today to the end of this month: an overdue one is not
+ * a later instalment, and later months are the schedule's own.
+ */
+export function dueThisMonth(
+  loan: Pick<Account, 'id' | 'currency'>,
+  txs: Pick<Transaction, 'type' | 'toAccountId' | 'paidAt' | 'date' | 'amount' | 'currency' | 'tags'>[],
+  today: string,
+): number {
+  let n = 0
+  for (const t of txs) {
+    if (t.type !== 'transfer' || t.toAccountId !== loan.id || t.paidAt) continue
+    if (t.date < today || t.date.slice(0, 7) !== today.slice(0, 7)) continue
+    n += txConvert(t, Math.abs(t.amount), loan.currency) ?? 0
+  }
+  return n
+}
+
 /** How much was borrowed in these entries, in `base`. The cash-flow views show
  *  it beside "In" and never inside it: it came in, and it is not income. An
  *  entry in a currency with no rate is left out rather than added at face

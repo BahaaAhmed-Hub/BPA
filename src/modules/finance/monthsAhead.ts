@@ -222,6 +222,12 @@ export function monthsAhead(input: MonthsAheadInput): MonthsAhead {
     const dated = forecast.outflowAt(m)
     if (dated > 0) charges.push({ label: 'Budgets with their own dates', amount: -dated, source: 'budget' })
 
+    // 2b. What the loan payment plans take. Cash leaving into lenders: a
+    //     transfer, so the normal month never held it, and the goal planner
+    //     counts it as the goals' own funding rather than as a dated outflow.
+    const loans = forecast.loansAt(m)
+    if (loans > 0) charges.push({ label: 'Loan payment plans', amount: -loans, source: 'budget' })
+
     // 3. Rows already in the ledger for this month, each taking back only what
     //    its own payee usually costs.
     let givenBack = 0
@@ -237,7 +243,7 @@ export function monthsAhead(input: MonthsAheadInput): MonthsAhead {
       })
     }
 
-    const closing = opening + usual - dated
+    const closing = opening + usual - dated - loans
       + (pendingByMonth.get(key) ?? []).reduce((n, p) => n + p.amount, 0)
       + givenBack
 
@@ -251,7 +257,7 @@ export function monthsAhead(input: MonthsAheadInput): MonthsAhead {
       closing,
       charges,
       state,
-      landed: dated > 0 || (pendingByMonth.get(key)?.some(p => p.amount < 0) ?? false),
+      landed: dated > 0 || loans > 0 || (pendingByMonth.get(key)?.some(p => p.amount < 0) ?? false),
     })
     opening = closing
   }

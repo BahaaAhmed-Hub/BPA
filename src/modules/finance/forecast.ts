@@ -1,7 +1,10 @@
 import type { Account, Category, Transaction } from './types'
 import type { Capacity } from './goalPlan'
-import { WINDOW_MONTHS, typicalMonth } from './goalPlan'
+import { WINDOW_MONTHS, typicalMonth, DEBT_PREFIX } from './goalPlan'
 import { occurrencesFor } from './budgetEntries'
+import { liveBalances } from './balances'
+import { isLoan, SETTLED_BELOW, dueThisMonth } from './loans'
+import { planFromRule } from './loanPlan'
 import { scheduleOf, type BudgetRule } from './modals/BudgetRuleModal'
 import { toBase, baseCurrency } from './fx'
 import { todayISO } from './dates'
@@ -31,7 +34,7 @@ import { todayISO } from './dates'
 //     nothing later overwrites it.
 
 export type RuleId =
-  | 'income' | 'spend' | 'bonus' | 'lumpy' | 'budgets' | 'committed' | 'buffer' | 'cash' | 'inflation'
+  | 'income' | 'spend' | 'bonus' | 'lumpy' | 'budgets' | 'loans' | 'committed' | 'buffer' | 'cash' | 'inflation'
 
 export type Source = 'ledger' | 'budget' | 'setting' | 'published'
 
@@ -149,6 +152,17 @@ export interface Forecast {
   lumpyYearly: number
   /** Every month's dated total, so a screen can draw them. */
   dated: number[]
+  /** What each loan's payment plan asks in month `m`, by the goal that repays it
+   *  (`debt:<loan id>`), in the base currency. The goal planner takes these
+   *  first. Month 0 is nothing — see `outflowAt`. */
+  fixed: Map<string, (m: number) => number>
+  /** All of them added: the cash leaving into lenders in month `m`. Kept apart
+   *  from `outflowAt`, which the goal planner subtracts from the pot — the
+   *  planner takes the instalments as the goals' own funding, and counting
+   *  them in both would charge each twice. The cash projection adds this. */
+  loansAt: (m: number) => number
+  /** What the plans ask over the next twelve months. */
+  loansYearly: number
 }
 
 /**
@@ -218,6 +232,40 @@ export function buildForecast(input: ForecastInput): Forecast {
       dated[m] += sign * v
       if (m < 12) datedYearly += v
     }
+  }
+
+  // ── loan payment plans ────────────────────────────────────────────────────
+  // A plan is the loan's budget rule (loanPlan.ts) and its instalments are
+  // transfers into a debt, which the normal month never sees — so a repeating
+  // rule that the dated loop above skips as "already in the median" is, for a
+  // loan, in nothing at all. They are charged here, on their own dates, and no
+  // more than is owed: 3,000 left on a plan of 2,000 is 2,000 and then 1,000.
+  const owedBy = liveBalances(input.accounts, input.transactions).balances
+  const loanMonths = new Map<string, number[]>()      // loan id → base amount in each month
+  let loansYearly = 0
+  for (const a of input.accounts) {
+    if (!isLoan(a)) continue
+    const rule = input.budgets[a.id]
+    if (!rule || planFromRule(rule) === null) continue
+    // What is left to schedule: the balance, less what is already filed to go in
+    // this month — month 0 is not in the schedule (it is committed), and the
+    // goal asks for the balance less the same figure (`debtGoals`).
+    let left = Math.max(0, -(owedBy.get(a.id) ?? a.balance) - dueThisMonth(a, input.transactions, today))
+    if (!(left > SETTLED_BELOW)) continue
+    const cur = rule.currency ?? a.currency
+    const at = new Array<number>(months + 1).fill(0)
+    for (const { date, amount } of occurrencesFor(rule, now, months)) {
+      const m = monthsFrom(monthKey(today), monthKey(date))
+      if (m < 1 || m > months) continue
+      const take = Math.min(amount, left)
+      if (!(take > SETTLED_BELOW)) break
+      left -= take
+      const v = toBase(take, cur, base)
+      if (v === null) continue
+      at[m] += v
+      if (m >= 1 && m <= 12) loansYearly += v
+    }
+    loanMonths.set(a.id, at)
   }
 
   // ── costs that are real, but not monthly ──────────────────────────────────
@@ -323,6 +371,20 @@ export function buildForecast(input: ForecastInput): Forecast {
       ],
     },
     {
+      id: 'loans', source: 'budget', unit: `${base} a year, paid first`, on: !isOff('loans'),
+      value: mine('loans') ?? (loansYearly > 0 ? loansYearly : null),
+      yours: mine('loans') != null,
+      dormant: loansYearly > 0 ? undefined : 'no loan has a payment plan with something still owed',
+      title: "A loan's payment plan is paid first, on its dates",
+      when: 'Fires for every loan with a payment plan and a debt still to clear.',
+      why: [
+        `${money(loansYearly, base)} falls due in the next twelve months, across ${loanMonths.size} loan${loanMonths.size === 1 ? '' : 's'}.`,
+        'Each instalment is taken off the month before any goal is funded, whichever way the goals are divided — a plan is a promise, not a wish to be ranked.',
+        'A loan with a plan is not also funded from the monthly surplus, so the same debt is never paid twice. Spare cash today can still finish it early.',
+        'Switched off, the plans are ignored and the loan is funded like any other debt.',
+      ],
+    },
+    {
       id: 'committed', source: 'ledger', unit: `${base} already owed`, on: !isOff('committed'),
       value: mine('committed') ?? (capacity.committed > 0 ? capacity.committed : null),
       yours: mine('committed') != null,
@@ -412,6 +474,14 @@ export function buildForecast(input: ForecastInput): Forecast {
     return n
   }
 
+  // A figure typed over ours is a year's worth, scaled onto the same months.
+  const loansOn = rules.find(r => r.id === 'loans')?.on ?? false
+  const loanScale = mine('loans') != null && loansYearly > 0 ? mine('loans')! / loansYearly : 1
+  const loanAt = (id: string, m: number) => (loansOn && m >= 1 ? (loanMonths.get(id)?.[m] ?? 0) * loanScale : 0)
+  const fixed = new Map<string, (m: number) => number>()
+  if (loansOn) for (const id of loanMonths.keys()) fixed.set(`${DEBT_PREFIX}${id}`, (m: number) => loanAt(id, m))
+  const loansAt = (m: number) => { let n = 0; for (const id of loanMonths.keys()) n += loanAt(id, m); return n }
+
   const surplusAt = (m: number) => {
     const bonus = bonusOn && ((thisMonthIdx + m) % 12) === bonusIdx ? val('bonus') : 0
     return income - spend * Math.pow(growth, m) + bonus + ownAt(m)
@@ -441,6 +511,9 @@ export function buildForecast(input: ForecastInput): Forecast {
     surplusAt: (m: number) => surplusAt(m) + inflowAt(m),
     outflowAt,
     dated,
+    fixed,
+    loansAt,
+    loansYearly: loansOn ? loansYearly * loanScale : 0,
     flatSurplus,
     datedYearly,
     lumpyYearly: lumpyOn ? lumpYearly * lumpScale : 0,

@@ -22,7 +22,8 @@ import {
   buildForecast, loadForecast, saveForecast, FORECAST_EVENT,
   type ForecastState,
 } from '../forecast'
-import { loadRules } from '../modals/BudgetRuleModal'
+import { loadRules, BUDGET_RULES_EVENT } from '../modals/BudgetRuleModal'
+import { plansOf } from '../loanPlan'
 import { adviseGoal, ifFound, type Advice, type Move } from '../goalAdvice'
 import { C } from '@/lib/palette'
 import { DEFAULT_GOAL_ICON } from '@/lib/glyphs'
@@ -410,10 +411,20 @@ export function GoalsScreen(_props?: any) {
   const flatCapacity = useMemo(
     () => capacityFrom(accounts, transactions, bufferMonths, undefined, goals),
     [accounts, transactions, bufferMonths, goals])
+  // A loan's payment plan is a budget rule, so the plan on this screen has to
+  // follow the Budget: the rules are held in state, and a rule written while
+  // this is open replaces them and redraws everything that reads them.
+  const [rules, setRules] = useState(loadRules)
+  useEffect(() => {
+    const on = () => setRules(loadRules())
+    window.addEventListener(BUDGET_RULES_EVENT, on)
+    return () => window.removeEventListener(BUDGET_RULES_EVENT, on)
+  }, [])
+  const loanPlans = useMemo(() => plansOf(rules, accounts), [rules, accounts])
   const forecast = useMemo(() => buildForecast({
-    accounts, transactions, categories, budgets: loadRules(),
+    accounts, transactions, categories, budgets: rules,
     capacity: flatCapacity, state: forecastState,
-  }), [accounts, transactions, categories, flatCapacity, forecastState])
+  }), [accounts, transactions, categories, rules, flatCapacity, forecastState])
   // Everything below plans on the forecast's capacity, not the flat one — the
   // buffer, the cash rule and any figure you corrected are all in it.
   const capacity = forecast.capacity
@@ -425,11 +436,11 @@ export function GoalsScreen(_props?: any) {
     [capacity, forecast, transactions, currentYear])
 
   const allGoals = useMemo(
-    () => [...goals, ...debtGoals(accounts, transactions, debtRanks)],
-    [goals, accounts, transactions, debtRanks])
+    () => [...goals, ...debtGoals(accounts, transactions, debtRanks, loanPlans)],
+    [goals, accounts, transactions, debtRanks, loanPlans])
   const debts = allGoals.length - goals.length
   const runOpts = useMemo(
-    () => ({ policy, surplusAt: forecast.surplusAt, outflowAt: forecast.outflowAt }),
+    () => ({ policy, surplusAt: forecast.surplusAt, outflowAt: forecast.outflowAt, fixed: forecast.fixed }),
     [policy, forecast])
   const plans = useMemo(
     () => planGoals(allGoals, capacity, runOpts),
@@ -673,7 +684,9 @@ export function GoalsScreen(_props?: any) {
   // decoration. What is applied, what you corrected, and the one thing a flat
   // monthly figure could never have said.
   const applied = forecast.rules.filter(r => r.on && !r.dormant)
-  const datedNextYear = forecast.datedYearly + forecast.lumpyYearly
+  // Three things leave on a date of their own: budgets you wrote with dates,
+  // costs read out of the ledger, and a loan's payment plan.
+  const datedNextYear = forecast.datedYearly + forecast.lumpyYearly + forecast.loansYearly
   const yours = forecast.rules.filter(r => r.yours).length
   const forecastLine = [
     `${applied.length} of ${forecast.rules.length} forecast rules applied`,
@@ -797,9 +810,11 @@ export function GoalsScreen(_props?: any) {
               {forecastLine}
             </span>
             <button onClick={() => {
-              const el = document.getElementById('sb-forecast-rules') as HTMLDetailsElement | null
+              const el = document.getElementById('sb-forecast-rules')
               if (!el) return
-              el.open = true
+              // The id is on a wrapper; the thing that opens is the <details> inside it.
+              const card = el.querySelector('details')
+              if (card) card.open = true
               el.scrollIntoView({ behavior: 'smooth', block: 'center' })
             }}
               style={{
