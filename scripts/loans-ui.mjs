@@ -8,7 +8,7 @@
  *   new       — no lender yet. Add → Borrowed → "Ahmed", 10,000 into CIB. The lender's
  *               account is written to the server BEFORE the entry that names it (a foreign
  *               key), as a `loan`; the entry is a transfer out of it with no category. Balances
- *               gains LOANS OWED with Ahmed at (10,000); the feed marks the row Borrowed and its
+ *               gains BORROWED & LOANS OWED with Ahmed at (10,000); the feed marks the row Borrowed and its
  *               amount is neither the positive nor the negative colour, on either account's side.
  *               Today shows a Borrowed chip and leaves In at nothing. Goals offers "Repay Ahmed".
  *   rate      — a USD lender (Omar) and an EGP account, USD at 48: 500 USD shows "24,000 arrives"
@@ -104,7 +104,7 @@ await tab('Balance')
 if (MODE === 'new') {
   const before = await text()
   ok('Balances is open (positive: the payment group is there)', /PAYMENT ACCOUNTS/.test(before))
-  ok('…and there is no loans group before anything is borrowed', !/LOANS OWED/.test(before))
+  ok('…and there is no loans group before anything is borrowed', !/BORROWED & LOANS OWED/.test(before))
 
   await openAdd()
   await page.getByRole('button', { name: 'Borrowed', exact: true }).click()
@@ -119,7 +119,7 @@ if (MODE === 'new') {
   await page.getByPlaceholder('0').fill('10000')
   ok('an amount is all it needs', await save.isEnabled())
   await save.click()
-  await page.getByText('LOANS OWED').waitFor({ timeout: 5000 }).catch(() => {})
+  await page.getByText('BORROWED & LOANS OWED').waitFor({ timeout: 5000 }).catch(() => {})
   await until(() => writes.some(w => w.table === 'finance_transactions'))
 
   const iAcc = writes.findIndex(w => w.table === 'finance_accounts' && w.row.name === 'Ahmed')
@@ -134,7 +134,7 @@ if (MODE === 'new') {
   ok('the description is kept as the note', /deposit/.test(txRow?.note ?? ''), txRow?.note)
 
   const after = await text()
-  ok('Balances gains the loans group', /LOANS OWED/.test(after))
+  ok('Balances gains the loans group', /BORROWED & LOANS OWED/.test(after))
   const ahmedRow = await page.evaluate(() => [...document.querySelectorAll('[role="button"]')].find(e => /Ahmed/.test(e.textContent ?? '') && !/Borrowed/.test(e.textContent ?? ''))?.textContent ?? null)
   ok('…with Ahmed at (EGP 10,000), owed — read from the account row itself', !!ahmedRow && /\(EGP 10,000\)/.test(ahmedRow), String(ahmedRow))
   ok('CIB holds 10,000', /CIB[\s\S]{0,120}EGP 10,000/.test(after))
