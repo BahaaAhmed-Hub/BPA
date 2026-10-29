@@ -5,7 +5,7 @@ import type { AccountType, Category, Transaction } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { MoneyInput } from '../components/MoneyInput'
-import { spendingAccounts } from '../loans'
+import { spendingAccounts, spendsEnvelope } from '../loans'
 import { ruleAt, editMonth, withChange, type Change, type RuleStep } from '../budgetSteps'
 import { settled, whenPaid } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
@@ -637,7 +637,7 @@ export function BudgetRuleModal({
   // said nothing had been spent. Two answers to one question, and the panel had
   // the wrong one — an envelope holds what has come out of it.
   const mine = settled(transactions).filter(tx =>
-    tx.type === wanted && tx.categoryId && ids.has(tx.categoryId) && whenPaid(tx).startsWith(scope))
+    spendsEnvelope(tx, wanted) && tx.categoryId && ids.has(tx.categoryId) && whenPaid(tx).startsWith(scope))
   // Converted into what the budget is written in, so 117 USD counts against an
   // EGP envelope at what it is actually worth. Anything with no rate behind it
   // is still left out and named — a guessed rate is worse than a stated gap.

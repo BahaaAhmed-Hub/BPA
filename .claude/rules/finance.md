@@ -1212,3 +1212,168 @@ read as a loss that was never a gain.
   budget line, funding the instalment first, Pay back from the goal or the
   balance row, optional interest, and borrowing/repaying through the assistant,
   Telegram and Siri — the three doors must get it in one change.
+
+## Finance — a loan's payment plan is its budget line, stored once
+`loanPlan.ts` (pure), `loanPlanSave.ts` (the one writer), `LoanPlanFields`. "2,000
+every month from the 1st" is a budget — an amount, a frequency, a day, a first and
+a last month — so the plan **is** the loan's `BudgetRule`, not a second record that
+could drift from it.
+- **The loan's id is its budget category's id.** Different tables, so no collision,
+  and nothing to map: `rules[loan.id]` is the plan, `isLoanCategory(id, accounts)`
+  asks whether a line is a loan's. The parent, **Loan repayments**, is a system
+  category found by name — a category id is global, so a fixed one would collide
+  between two people. The rule is `repeat`, `bucket: 'fixed'` (a loan is the
+  example the Fixed bucket's own help gives), in the loan's currency, on the first
+  payment's day, from `starts` to an optional `ends`, paid from `dueAccountId`.
+  Monthly, quarterly and annual only: a weekly or dated rule is not something the
+  form can say, so `planFromRule` answers null for it.
+- **Offered where it is asked for.** *Set a payment plan* on the Borrowed form
+  (off by default; a lender who already has one brings it, and unticking it on
+  them takes it away) and in the account window of a loan. Save is disabled while
+  the plan is incomplete. The form says what it comes to — *Clears 10,000 in 5
+  payments, the last on 28 Feb 2027*, or by how much a plan that ends first would
+  fall short. `scheduleDates` is the form's own date generator and a harness holds
+  it to the writer's dates (`occurrencesFor`) for four plans.
+- **Saving writes in dependency order**: the lender's account, then the plan's
+  categories and rule, then the borrowing. **A raise is a step**, never an
+  overwrite (`withAmount`): the old amount stays the base and every earlier month
+  keeps it, as every budget does. `planFromRule` therefore reads `amountFor(rule)`,
+  not `rule.amount`.
+- **Removing a plan removes the rule**, and the writer removes the unpaid
+  instalments it made on its next pass. The category goes with it **unless a
+  repayment was actually paid under it** — history is what was paid; unpaid
+  instalments are the plan's scaffolding, and a category kept alive for them is an
+  empty line in the Budget. The empty parent goes with its last child. Deleting a
+  lender removes its plan.
+- **The instalments are unpaid transfers into the lender**, not expenses
+  (`runBudgetEntries` takes `loans`, what is owed on each). Paying one lowers the
+  debt; filed as an expense it would have left the lender untouched. They are filed
+  under the loan's category, so the writer's "an entry already filed on that day is
+  the entry" guard still works. **What is owed is a ceiling**: 3,000 owed on a plan
+  of 2,000 is 2,000 and then 1,000, and a loan with nothing owed schedules nothing
+  and loses its unpaid future instalments. The fallback pay-from account skips a
+  lender (accounts[0] could have been one).
+- **A repayment is spent from its envelope and from nothing else.** A repayment
+  is a transfer, so no report counts it as an expense — and the budget envelope,
+  which only ever matched `type` to the category's, would never have seen it.
+  `spendsEnvelope(tx, wanted)` is the one test (a transfer carrying a category is
+  exactly this: the entry form drops it everywhere else), used by the Budget
+  screen's envelopes and drill-down, the panel, the calendar's *N left of M*, and
+  the assistant's two budget readers. Reports, Financials and the year chart still
+  read `type === 'expense'`.
+- **`MoneyInput` forwards `aria-label`.** A hyphenated attribute is accepted by the
+  type checker on any component and silently never reached the DOM, so a field
+  labelled only by its placeholder had no name.
+- `node scripts/loan-plan.mjs` (67, no browser) — controls: the same rule with no
+  loans map writes an *expense* naming no lender; a loan still owed schedules and a
+  cleared one does not; a raise made earlier is the amount now and one planned for
+  2099 is not. `node scripts/loan-plan-ui.mjs 5199 [borrow|edit|envelope]` — the
+  stub refuses a transaction whose account is not there: borrow writes
+  account → categories → borrowing in order, the rule is at `rules[lenderId]`, three
+  unpaid transfers land on the plan's dates, the Budget shows *Loan repayments → 0 /
+  2,000 → Ahmed* under Fixed costs 100%; edit opens with the plan filled in, a raise
+  to 2,500 is a step and the seeded instalments are replaced, unticking removes the
+  rule, the instalments and the unused categories; envelope shows 2,000 of 2,000
+  while a plain 700 moved between accounts is in no envelope.
+- The forecast and the goal planner read the plan too — see *a loan's plan is paid
+  first*, below — and so does Pay back. Not built yet: optional interest, and
+  borrowing / repaying through the assistant, Telegram and Siri.
+
+## Finance — a loan's plan is paid first, and the goal asks only for what is left
+A promise is not a wish to be ranked. `scheduleGoals` takes `fixed` — goal id →
+what falls in month `m` — and pays it **before the month's money is divided**, under
+`ladder`, `share` and `commit` alike. `buildForecast` builds it from each loan's
+plan (`fixed`, `loansAt`, `loansYearly`) and offers it as a rule you can see and
+switch off: *A loan's payment plan is paid first, on its dates* (`RuleId 'loans'`;
+a figure typed over it is a year's worth, scaled onto the same months).
+- **Paid whatever happens.** A month too short for the instalment pays it anyway
+  and runs a deficit that is carried (`carried` goes negative, as it already does for
+  a dated bill); the next goal gets nothing that month, never the instalment cut.
+- **Never paid twice.** A goal with a plan is not also funded from the monthly
+  surplus (`divide` skips it after month 0) — the plan *is* its funding. The spare
+  cash today may still finish it early, as it may for any debt. What is owed is a
+  ceiling (3,000 on a plan of 2,000 is 2,000 then 1,000).
+- **Month 0 is not in the schedule, so the goal must not ask for it.** An
+  instalment due later *this* month is already an unpaid entry in the ledger —
+  committed cash — and the loan's balance still owes it. A goal asking for the whole
+  balance asked for money no month ever paid and **never landed** (`landsIn` null:
+  measured, then fixed). `dueThisMonth()` is the one figure: `debtGoals` asks for the
+  balance less it (a loan on a plan only), and the forecast schedules what is left,
+  so the two cannot disagree. A paid one is already out of the balance and takes
+  nothing off; an instalment that clears the loan leaves no goal and nothing scheduled.
+- **`committed` counts a repayment due this month and no later one.** `capacityFrom`
+  used to ignore every transfer ("a transfer moves, it does not leave"); a repayment
+  does leave the account it is paid from. But the writer files three months ahead
+  and the plan takes each of those off its own month's money, so counting them in
+  `committed` as well would have charged each twice — once from today's spare cash,
+  once from the surplus. Control in the harness: a month of instalments filed ahead
+  takes **nothing** off the spare cash; one due on the 31st takes 2,000.
+- **The cash projection charges them, the planner does not subtract them.**
+  `outflowAt` (which the planner takes off the pot) leaves loans out, because the
+  planner already takes them as the goals' own funding; `monthsAhead` adds
+  `loansAt` as *Loan payment plans*, so the month closes 2,000 lower. Count them in
+  both and each is charged twice.
+- **The goal says how it is paid**: `loan · 2,000 EGP every month, from 29 Oct
+  2026` in its row and card, and the Goals summary sentence counts loan instalments
+  among what "lands on a date of its own" — it said *nothing* above a lane drawing
+  four of them, the mistake its own comment records being made for lumpy costs.
+- **"See the rules" never opened the card.** `#sb-forecast-rules` is a wrapper
+  `<div>`; the button set `.open` on it, which does nothing — it opens the
+  `<details>` inside. Control in the harness: the rule is not on screen until the
+  button is pressed.
+- The assistant's planning (`financeTools`) is the flat plan with no forecast, so it
+  has no `fixed`: it still reads a loan as an ordinary debt goal.
+- `node scripts/loan-goals.mjs` (59, no browser) — the same ranking with the plan
+  taken away is the control throughout (debt takes the whole 5,000 and lands in month
+  2; with the plan it takes 2,000 and the car gets 3,000). `node scripts/loan-plan-ui.mjs
+  5199 goals` — a loan owed from before with no cash: *Still owed 8,000*, *Then each
+  month 2,000*, lands four payments on, the loans rule on screen only after the
+  button. `INK_ONLY=loans node scripts/ink-audit.mjs 5199` — three screens now,
+  Goals included; everything added passes in all four themes.
+
+## Finance — Pay back settles the instalment that is waiting, and a repaid loan takes its plan with it
+One entry window, one rule, two buttons. **Pay back** is on a lender's row in Balances
+and on its goal; both open the same window, started by `payBackStart` so they cannot
+offer different sums: a transfer into the lender, for the instalment that is due (or
+the plan's amount, or the whole debt with no plan), **never more than is owed**, from
+the plan's account (else the first account you can pay from — a lender or an asset is
+never one), in the lender's currency (`initial.currency`: paying a dollar lender from a
+pound account is an amount in dollars).
+- **A payment into a lender settles the instalment the plan filed for it**
+  (`instalmentFor`) — the earliest unpaid budget-tagged transfer that has come due by
+  that month, the month's own or an older one nobody paid; a later month's is a
+  prepayment, its own entry. It is settled **in place**: same id, same due day, still
+  the budget's, marked paid on the day it was paid. Entered beside it instead, it would
+  leave the instalment dotted red for money that has already moved. The window says so
+  before saving — *This is the instalment due 29 Oct (2,000): it will be marked paid*
+  — and *Record it separately* opts out (a payment of more than is due, say).
+  Typed by hand, untagged, paid, or another lender's: never matched.
+- **The window is the one place this lives**, so the Transfer tab gets it too, not only
+  the buttons: pick a lender under *To* and it says what is still owed and which
+  instalment it is. A transfer into a lender with a plan is filed under the loan's
+  budget category (`repaymentCategory`) — the form drops a transfer's category
+  everywhere else — which is the only way its envelope sees the payment.
+- **A paid-back loan retires its plan** (`retireSettledPlans`, run before the writer):
+  the rule goes, the unpaid instalments go with it, and **what was paid stays** with
+  its category. *Paid back* is deliberately not "owes nothing": a plan written just
+  before the borrowing it is for also owes nothing, and retiring it would delete it the
+  moment it was made — so only a loan something has happened on counts. Paying a lender
+  wakes the writer (`professor:moneyRemindersChanged`), because nothing else reacts to
+  a transaction, and the cap on what is owed and the retirement both wait on it.
+- `node scripts/loan-plan.mjs` (85) covers the matching and the starting figure with
+  controls (October paid, the same November payment settles November; a paid, a typed
+  and another lender's entry are never matched). `node scripts/loan-plan-ui.mjs 5199
+  [payback|separate|settle|goal]` — the window opens with 2,000 and says so; the
+  instalment itself is paid (id `plan0`, due day kept, still the budget's, under the
+  loan's category) and **no second entry exists**; Ahmed is owed 8,000, CIB holds
+  18,000, the envelope shows 2,000 spent; *separate* makes a new entry and leaves the
+  instalment waiting; *settle* (2,000 owed, 2,000 paid) removes the rule and the waiting
+  instalments, keeps the category, and folds the loan under *Show 1 paid back*; *goal*
+  is the same from the goal's button. The Goals copy for a loan no longer says
+  "Repay Ahmed's balance" or points at *Settle*, a card's button.
+- Existing, not fixed: the ink audit's Goals screen shows two more of the same token pairs
+  as Balances (green on `--sb-positive-tint` 4.22, Evergreen's red on its tint 4.22);
+  everything this feature added is ≥ 5.6 in all four themes.
+- **Still not built**: optional interest (principal against interest on a repayment)
+  and borrowing / repaying through the assistant, Telegram and Siri — the three doors
+  must get both in one change, with `_shared/` logic and a test that reads each file.

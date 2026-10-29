@@ -6,7 +6,7 @@ import { groupWhileTyping, group, ungroup } from '../format'
  *  the text rather than the number, so a half-typed "1,2" survives until the
  *  field is left, and it puts the caret back where it was — reformatting on
  *  every keystroke otherwise throws it to the end of the line. */
-export function MoneyInput({ value, onChange, onCommit, style, placeholder, autoFocus, decimals, id, min, onKeyDown }: {
+export function MoneyInput({ value, onChange, onCommit, style, placeholder, autoFocus, decimals, id, min, onKeyDown, 'aria-label': ariaLabel }: {
   value: number
   onChange: (n: number) => void
   onCommit?: (n: number) => void
@@ -19,6 +19,10 @@ export function MoneyInput({ value, onChange, onCommit, style, placeholder, auto
   id?: string
   min?: number
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
+  /** What the field is called, for a field whose label is not a <label> beside
+   *  it. Declared, because a hyphenated attribute is accepted by the type
+   *  checker on any component and then silently never reaches the DOM. */
+  'aria-label'?: string
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const [typed, setTyped] = useState<string | null>(null)
@@ -29,6 +33,7 @@ export function MoneyInput({ value, onChange, onCommit, style, placeholder, auto
   return (
     <input
       id={id}
+      aria-label={ariaLabel}
       ref={ref}
       type="text"
       inputMode="decimal"

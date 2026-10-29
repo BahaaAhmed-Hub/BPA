@@ -9,6 +9,12 @@ import { schemeFor, setScheme, dormantWhy, returnRate, type RewardScheme } from 
 import { lookUpRewards } from '../rewardLookup'
 import { inputStyle } from '@/lib/fields'
 import { DEFAULT_ACCOUNT_EMOJI, DEFAULT_LOAN_EMOJI } from '@/lib/glyphs'
+import { useFinanceStore } from '../financeStore'
+import { liveBalances } from '../balances'
+import { loadRules } from './BudgetRuleModal'
+import { planOf, planIssue, type LoanPlan } from '../loanPlan'
+import { saveLoanPlan } from '../loanPlanSave'
+import { LoanPlanFields } from '../components/LoanPlanFields'
 
 const RED   = NEGATIVE
 const GREEN = POSITIVE
@@ -63,6 +69,15 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
   // currency and what is still owed, and nothing else on this form applies.
   const isLoanType = accountType === 'loan'
 
+  // A loan can carry a payment plan, which is its budget line. Read from the
+  // budget rules, where it is stored, and written back there on Save.
+  const { accounts: allAccounts, transactions } = useFinanceStore()
+  const [plan, setPlan] = useState<LoanPlan | null>(() => (account ? planOf(loadRules(), account.id) : null))
+  const [planTouched, setPlanTouched] = useState(false)
+  // What is owed now: the entries' effect plus whatever opening figure is typed.
+  const live = account ? liveBalances(allAccounts, transactions).balances.get(account.id) ?? account.balance : Number(balance)
+  const owedNow = Math.max(0, -(live - (account?.balance ?? 0) + Number(balance)))
+
   /** What is owed is stored below zero, but "−10,000" is not how anyone says
    *  how much they owe. The field shows the amount owed; switching to or from
    *  a loan flips the sign so the number on screen stays the number typed. */
@@ -96,6 +111,14 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
     // id exists — which for a new card is here, not while the form is open.
     if (accountType === 'credit_card') setScheme(saved.id, scheme)
     else if (account) setScheme(saved.id, null)
+    // The plan is the loan's budget: written with the account, so its category
+    // takes the lender's name. A loan turned into something else loses it.
+    if (isLoanType) {
+      if (plan) void saveLoanPlan(saved, plan)
+      else if (planTouched) void saveLoanPlan(saved, null)
+    } else if (account?.accountType === 'loan') {
+      void saveLoanPlan(account, null)
+    }
     onSave(saved)
   }
 
@@ -253,6 +276,19 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               )}
             </div>
           </div>
+
+          {/* How this loan is being paid back. Optional, and it is the loan's
+              line in the Budget: the same plan the Borrowed form asks for. */}
+          {isLoanType && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }} data-loan-plan>
+              <LoanPlanFields
+                value={plan}
+                onChange={p => { setPlan(p); setPlanTouched(true) }}
+                currency={currency}
+                owed={owedNow}
+                payFrom={allAccounts.filter(a => a.accountType === 'payment' || a.accountType === 'wallet')} />
+            </div>
+          )}
 
           {/* Only a card has a ceiling. What is left on it is the ceiling less
               what is owed, which is the figure worth knowing before spending. */}
@@ -488,7 +524,8 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
           )}
 
           {/* Save */}
-          <Button variant="primary" onClick={handleSave}>
+          <Button variant="primary" onClick={handleSave}
+            disabled={isLoanType && !!plan && !!planIssue(plan)}>
             Save
           </Button>
         </div>

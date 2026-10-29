@@ -25,6 +25,9 @@ import { isUnpaid, UNPAID_TITLE } from '../unpaid'
 import { liveBalances } from '../balances'
 import { isLoan, isSettled, isBorrowing, isRepayment } from '../loans'
 import { LoanMark, LOAN_ICON } from '../components/LoanMark'
+import { saveLoanPlan } from '../loanPlanSave'
+import { planOf, payBackStart } from '../loanPlan'
+import { loadRules } from '../modals/BudgetRuleModal'
 import {
   schemeFor, isDormant, pointsFor, loadRewardSettings, type CardPoints,
 } from '../cardRewards'
@@ -69,7 +72,7 @@ function formatBalance(bal: number, currency = 'EGP'): string {
   return acct(bal, { currency })
 }
 
-function AccountRow({ account, balance, unconverted, pending, ahead, points, showPointsMoney, selected, hovered, onSelect, onHover, onEdit, onSettle, onIcon }: {
+function AccountRow({ account, balance, unconverted, pending, ahead, points, showPointsMoney, selected, hovered, onSelect, onHover, onEdit, onSettle, onPayBack, onIcon }: {
   account: Account
   balance: number
   /** Currencies filed against this account that nothing could convert. */
@@ -93,6 +96,8 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
   onEdit:  (a: Account) => void
   /** Cards only: start a payment towards what this one owes. */
   onSettle: (a: Account, owed: number) => void
+  /** Lenders only: start a payment back. */
+  onPayBack: (a: Account, owed: number) => void
   onIcon:  (a: Account, emoji: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -251,6 +256,13 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
         </Button>
       )}
 
+      {/* The same for a lender: paying back starts here, next to what is owed. */}
+      {account.accountType === 'loan' && !isSettled(balance) && owed > 0 && (
+        <Button variant="primary" onClick={e => { e.stopPropagation(); onPayBack(account, owed) }} title={`Pay ${account.name} back`} style={{ flexShrink: 0, marginLeft: 8 }}>
+          Pay back
+        </Button>
+      )}
+
       {/* The row picks the account; this opens it. One gesture each. */}
       <button
         onClick={e => { e.stopPropagation(); onEdit(account) }}
@@ -401,6 +413,8 @@ export function BalanceScreen() {
 
   // Paying a card off starts here, with the figure already in it.
   const [settling, setSettling] = useState<{ card: Account; owed: number } | null>(null)
+  // Paying a lender back starts here too, with the figure already in it.
+  const [payingBack, setPayingBack] = useState<{ loan: Account; owed: number } | null>(null)
 
   const dupes = findDuplicates(transactions)
 
@@ -619,6 +633,7 @@ export function BalanceScreen() {
                         onHover={setHoveredAccountId}
                         onEdit={a => setAccountModal({ open: true, account: a })}
                         onSettle={(a, owed) => setSettling({ card: a, owed })}
+                        onPayBack={(a, owed) => setPayingBack({ loan: a, owed })}
                         onIcon={(a, emoji) => void upsertAccount({ ...a, emoji })}
                       />
                     ))}
@@ -822,8 +837,24 @@ export function BalanceScreen() {
         <AccountModal
           account={accountModal.account}
           onSave={a => { upsertAccount(a); setAccountModal({ open: false, account: null }) }}
-          onDelete={id => { removeAccount(id); setAccountModal({ open: false, account: null }) }}
+          onDelete={id => {
+            // A lender's plan is its budget line; it goes with the lender.
+            const gone = accounts.find(a => a.id === id)
+            if (gone && isLoan(gone)) void saveLoanPlan(gone, null)
+            removeAccount(id); setAccountModal({ open: false, account: null })
+          }}
           onClose={() => setAccountModal({ open: false, account: null })}
+        />
+      )}
+      {payingBack && (
+        <TransactionModal
+          transaction={null}
+          initial={payBackStart(payingBack.loan, accounts, transactions, planOf(loadRules(), payingBack.loan.id), payingBack.owed, todayISO)}
+          accounts={accounts}
+          categories={categories}
+          history={transactions}
+          onSave={tx => { upsertTransaction(tx); setPayingBack(null) }}
+          onClose={() => setPayingBack(null)}
         />
       )}
       {settling && (

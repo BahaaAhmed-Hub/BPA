@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { GripVertical, Plus, Trash2, Check, X, ArrowRight } from 'lucide-react'
+import { Button } from '@/components/ui'
 import { useFinanceStore } from '../financeStore'
 import type { Goal } from '../types'
 import { MoneyInput } from '../components/MoneyInput'
@@ -22,7 +23,10 @@ import {
   buildForecast, loadForecast, saveForecast, FORECAST_EVENT,
   type ForecastState,
 } from '../forecast'
-import { loadRules } from '../modals/BudgetRuleModal'
+import { loadRules, BUDGET_RULES_EVENT } from '../modals/BudgetRuleModal'
+import { plansOf, planOf, payBackStart } from '../loanPlan'
+import { liveBalances } from '../balances'
+import { TransactionModal } from '../modals/TransactionModal'
 import { adviseGoal, ifFound, type Advice, type Move } from '../goalAdvice'
 import { C } from '@/lib/palette'
 import { DEFAULT_GOAL_ICON } from '@/lib/glyphs'
@@ -342,7 +346,9 @@ function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onG
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function GoalsScreen(_props?: any) {
-  const { goals, accounts, transactions, categories, currentYear, upsertGoal, removeGoal } = useFinanceStore()
+  const { goals, accounts, transactions, categories, currentYear, upsertGoal, removeGoal, upsertTransaction } = useFinanceStore()
+  // Paying a lender back starts here too, with the instalment already in it.
+  const [payingBack, setPayingBack] = useState<string | null>(null)
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [bufferMonths, setBufferMonths] = useState(() => {
@@ -410,10 +416,20 @@ export function GoalsScreen(_props?: any) {
   const flatCapacity = useMemo(
     () => capacityFrom(accounts, transactions, bufferMonths, undefined, goals),
     [accounts, transactions, bufferMonths, goals])
+  // A loan's payment plan is a budget rule, so the plan on this screen has to
+  // follow the Budget: the rules are held in state, and a rule written while
+  // this is open replaces them and redraws everything that reads them.
+  const [rules, setRules] = useState(loadRules)
+  useEffect(() => {
+    const on = () => setRules(loadRules())
+    window.addEventListener(BUDGET_RULES_EVENT, on)
+    return () => window.removeEventListener(BUDGET_RULES_EVENT, on)
+  }, [])
+  const loanPlans = useMemo(() => plansOf(rules, accounts), [rules, accounts])
   const forecast = useMemo(() => buildForecast({
-    accounts, transactions, categories, budgets: loadRules(),
+    accounts, transactions, categories, budgets: rules,
     capacity: flatCapacity, state: forecastState,
-  }), [accounts, transactions, categories, flatCapacity, forecastState])
+  }), [accounts, transactions, categories, rules, flatCapacity, forecastState])
   // Everything below plans on the forecast's capacity, not the flat one — the
   // buffer, the cash rule and any figure you corrected are all in it.
   const capacity = forecast.capacity
@@ -425,11 +441,11 @@ export function GoalsScreen(_props?: any) {
     [capacity, forecast, transactions, currentYear])
 
   const allGoals = useMemo(
-    () => [...goals, ...debtGoals(accounts, transactions, debtRanks)],
-    [goals, accounts, transactions, debtRanks])
+    () => [...goals, ...debtGoals(accounts, transactions, debtRanks, loanPlans)],
+    [goals, accounts, transactions, debtRanks, loanPlans])
   const debts = allGoals.length - goals.length
   const runOpts = useMemo(
-    () => ({ policy, surplusAt: forecast.surplusAt, outflowAt: forecast.outflowAt }),
+    () => ({ policy, surplusAt: forecast.surplusAt, outflowAt: forecast.outflowAt, fixed: forecast.fixed }),
     [policy, forecast])
   const plans = useMemo(
     () => planGoals(allGoals, capacity, runOpts),
@@ -673,7 +689,9 @@ export function GoalsScreen(_props?: any) {
   // decoration. What is applied, what you corrected, and the one thing a flat
   // monthly figure could never have said.
   const applied = forecast.rules.filter(r => r.on && !r.dormant)
-  const datedNextYear = forecast.datedYearly + forecast.lumpyYearly
+  // Three things leave on a date of their own: budgets you wrote with dates,
+  // costs read out of the ledger, and a loan's payment plan.
+  const datedNextYear = forecast.datedYearly + forecast.lumpyYearly + forecast.loansYearly
   const yours = forecast.rules.filter(r => r.yours).length
   const forecastLine = [
     `${applied.length} of ${forecast.rules.length} forecast rules applied`,
@@ -797,9 +815,11 @@ export function GoalsScreen(_props?: any) {
               {forecastLine}
             </span>
             <button onClick={() => {
-              const el = document.getElementById('sb-forecast-rules') as HTMLDetailsElement | null
+              const el = document.getElementById('sb-forecast-rules')
               if (!el) return
-              el.open = true
+              // The id is on a wrapper; the thing that opens is the <details> inside it.
+              const card = el.querySelector('details')
+              if (card) card.open = true
               el.scrollIntoView({ behavior: 'smooth', block: 'center' })
             }}
               style={{
@@ -951,6 +971,8 @@ export function GoalsScreen(_props?: any) {
             schedule={schedule}
             advice={advice}
             sooner={sooner}
+            loan={accounts.find(a => a.id === debtAccountId(selected.goal))?.accountType === 'loan'}
+            onPayBack={g => setPayingBack(debtAccountId(g))}
             onChange={g => void upsertGoal(g)}
             onDelete={g => {
               void removeGoal(g.id)
@@ -983,6 +1005,22 @@ export function GoalsScreen(_props?: any) {
           <OwnRulesCard state={forecastState} onChange={putForecast} currency={cur} />
         </div>
       </div>
+
+      {payingBack && (() => {
+        const loanAccount = accounts.find(a => a.id === payingBack)
+        if (!loanAccount) return null
+        const owed = Math.max(0, -(liveBalances(accounts, transactions).balances.get(loanAccount.id) ?? loanAccount.balance))
+        return (
+          <TransactionModal
+            transaction={null}
+            initial={payBackStart(loanAccount, accounts, transactions, planOf(rules, loanAccount.id), owed, todayISO())}
+            accounts={accounts}
+            categories={categories}
+            history={transactions}
+            onSave={tx => { void upsertTransaction(tx); setPayingBack(null) }}
+            onClose={() => setPayingBack(null)} />
+        )
+      })()}
     </div>
   )
 }
@@ -1084,7 +1122,7 @@ function WhatWouldChangeIt({ advice, sooner, money }: {
 
 // ─── The open goal ────────────────────────────────────────────────────────────
 
-function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedule, advice, sooner, onChange, onDelete }: {
+function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedule, advice, sooner, loan, onPayBack, onChange, onDelete }: {
   plan: GoalPlan
   place: number
   policy: Policy
@@ -1097,6 +1135,10 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
   /** 'YYYY-MM' the money first reaches it, when it is still in the queue. */
   startMonth: string | null
   schedule: Schedule
+  /** The debt is a loan rather than a card. */
+  loan?: boolean
+  /** Start paying it back. Only offered for a loan. */
+  onPayBack?: (g: Goal) => void
   onChange: (g: Goal) => void
   onDelete: (g: Goal) => void
 }) {
@@ -1277,12 +1319,29 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
         <div style={card}>
           <span style={EYEBROW}>The card itself</span>
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink3, lineHeight: 1.6, marginTop: 8 }}>
-            This is {g.name.replace(/^Clear /, '')}'s balance as the ledger has it, {g.sub}. Every
-            payment recorded against the card brings the target down; <b>Settle</b> on its row in
-            Balances clears it in one transfer, and the goal goes with it. Drag it in the ranking
-            to decide what it waits behind — by default a card comes first, because its interest
-            outruns anything a goal below it would earn.
+            {loan ? (
+              <>
+                This is what you still owe {g.name.replace(/^(Clear|Repay) /, '')}, as the ledger has it — {g.sub}.
+                Every payment recorded against the loan brings the target down; <b>Pay back</b> records
+                one, settling the instalment the plan has waiting if there is one, and the goal goes
+                when the loan is cleared. A plan is paid first whatever the ranking says; dragging it
+                decides only what spare cash reaches first.
+              </>
+            ) : (
+              <>
+                This is {g.name.replace(/^(Clear|Repay) /, '')}'s balance as the ledger has it, {g.sub}. Every
+                payment recorded against the card brings the target down; <b>Settle</b> on its row in
+                Balances clears it in one transfer, and the goal goes with it. Drag it in the ranking
+                to decide what it waits behind — by default a card comes first, because its interest
+                outruns anything a goal below it would earn.
+              </>
+            )}
           </div>
+          {loan && onPayBack && (
+            <Button variant="primary" onClick={() => onPayBack(g)} style={{ marginTop: 12, marginRight: 8 }}>
+              Pay back
+            </Button>
+          )}
           {/* Naming the account and leaving you to find it is most of the way
               to an answer and none of the use. This is the rest of it. */}
           <button
@@ -1294,7 +1353,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
               color: C.ink2, cursor: 'pointer', fontFamily: 'inherit',
               fontSize: 'var(--sb-t-meta)', fontWeight: 600,
             }}>
-            Open {g.name.replace(/^Clear /, '')} in Balances
+            Open {g.name.replace(/^(Clear|Repay) /, '')} in Balances
             <ArrowRight size={ICON.sm} strokeWidth={STROKE.rest} />
           </button>
         </div>

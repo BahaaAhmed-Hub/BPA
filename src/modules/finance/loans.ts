@@ -74,6 +74,77 @@ export function isRepayment(tx: Pick<Transaction, 'type' | 'accountId' | 'toAcco
   return isLoan(to) && !!from && !isLoan(from)
 }
 
+/** Whether an entry is money out of (or into) an envelope of this kind.
+ *
+ *  An envelope holds what has come out of it, and an entry says so with its
+ *  type matching the category's. A repayment is the exception that is not one:
+ *  paying a lender back is a **transfer** — it moves money into a debt rather
+ *  than spending it, so no report counts it as an expense — but it is filed
+ *  under the loan's budget category, and that envelope has to hold it or its
+ *  "spent" would never move. A transfer carries a category nowhere else (the
+ *  entry form drops it), so a transfer with one is exactly this. Only the
+ *  budget envelopes ask this question; everything that totals spending still
+ *  reads `type === 'expense'`. */
+export const spendsEnvelope = (
+  tx: Pick<Transaction, 'type' | 'categoryId'>,
+  wanted: 'income' | 'expense',
+): boolean => tx.type === wanted || (wanted === 'expense' && tx.type === 'transfer' && !!tx.categoryId)
+
+/**
+ * What is filed to go into this loan later this month and not yet paid, in the
+ * loan's own currency.
+ *
+ * The goal planner starts at *next* month: this month's money is the spare cash
+ * and what is already spoken for. A plan's instalment due on the 29th is an
+ * unpaid entry in the ledger — committed — and not part of any schedule, yet the
+ * loan's balance still owes it. A goal asking for the whole balance would ask for
+ * an instalment no month ever pays, and never land. So the goal asks for the
+ * balance **less this**, and the forecast schedules what is left; the two read
+ * the same ledger figure so they cannot disagree.
+ *
+ * Only entries dated from today to the end of this month: an overdue one is not
+ * a later instalment, and later months are the schedule's own.
+ */
+export function dueThisMonth(
+  loan: Pick<Account, 'id' | 'currency'>,
+  txs: Pick<Transaction, 'type' | 'toAccountId' | 'paidAt' | 'date' | 'amount' | 'currency' | 'tags'>[],
+  today: string,
+): number {
+  let n = 0
+  for (const t of txs) {
+    if (t.type !== 'transfer' || t.toAccountId !== loan.id || t.paidAt) continue
+    if (t.date < today || t.date.slice(0, 7) !== today.slice(0, 7)) continue
+    n += txConvert(t, Math.abs(t.amount), loan.currency) ?? 0
+  }
+  return n
+}
+
+/** A budget wrote it and nobody has paid it: an instalment still waiting. */
+export const isPlannedInstalment = (
+  tx: Pick<Transaction, 'type' | 'toAccountId' | 'paidAt' | 'tags'>,
+  loanId: string,
+): boolean => tx.type === 'transfer' && tx.toAccountId === loanId && !tx.paidAt && !!tx.tags?.includes('budget')
+
+/**
+ * The planned instalment a payment on `onDate` settles, if there is one.
+ *
+ * Paying a lender back when the plan already filed an unpaid instalment for it
+ * is that instalment being paid — not a second payment beside it, which would
+ * leave the instalment dotted red and due for money that has already moved. The
+ * one it settles is the **earliest one that has come due by that month**: the
+ * month's own, or an older one nobody paid. A later month's is not due yet, and
+ * paying more than is due is a prepayment, which is its own entry.
+ */
+export function instalmentFor<T extends Pick<Transaction, 'type' | 'toAccountId' | 'paidAt' | 'tags' | 'date'>>(
+  txs: T[],
+  loanId: string,
+  onDate: string,
+): T | undefined {
+  return txs
+    .filter(t => isPlannedInstalment(t, loanId) && t.date.slice(0, 7) <= onDate.slice(0, 7))
+    .sort((a, b) => a.date.localeCompare(b.date))[0]
+}
+
 /** How much was borrowed in these entries, in `base`. The cash-flow views show
  *  it beside "In" and never inside it: it came in, and it is not income. An
  *  entry in a currency with no rate is left out rather than added at face
