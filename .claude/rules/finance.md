@@ -717,6 +717,104 @@ written before this reads unchanged):
   dates, and leaving a day set would write a second entry every month beside the
   instalments.
 
+## Finance — an entry keeps the exchange rate of the day it was added
+`txRates.ts`. `fx.ts` holds one rate per currency, so changing USD from 48 to 50
+re-priced every USD entry already in the ledger: July's rent, paid at 48, read as
+50 in every total. A flow of money is a past event.
+- **The rate is a tag on the entry** — `fx:USD/EGP=48` — as a budget entry carries
+  `budget`: it travels with the row, needs no column and no sync key, and goes
+  when the entry does. It names the currency **and the base**, so a stamp against
+  another base (the base was changed) is ignored. An entry with no stamp converts
+  at the current rate exactly as before, which is why nothing had to be migrated.
+- **Stamped on the way into the ledger**: `upsertTransaction(s)` in the store runs
+  every entry through `stamped(tx, { note: true })`, so the entry panel, bulk
+  entry, a due-day budget's entries and the assistant are all covered by one
+  place. A base-currency entry, or a currency nobody gave a rate for, is left
+  alone — nothing is guessed. The rate is also written into the description
+  (`rate 29 Oct 2026: 1 USD = 48 EGP`; the feeds add the brackets), for whoever
+  reads the entry later. That text is a copy; the tag is what the arithmetic reads.
+- **`changeRate(currency, rate)` on the store is the one way a rate changes**
+  (Settings → Exchange rates and the assistant's `set_exchange_rate` both call
+  it). Before the new rate takes over, **every foreign entry with no rate of its
+  own is given the current one, in every year** (`loadEveryTransaction`, read in
+  pages — a plain select stops at 1,000 rows) and written in one request; their
+  notes are left alone. **If the ledger cannot be read the rate is not changed** —
+  "could not look" must not become "re-price all of history". This replaced a
+  load-time backfill: it does the same job at the only moment it matters, and
+  needs no flag to remember whether it ran.
+- **Every transaction-level total reads `txIn(tx, to)`** (and `txConvert(tx,
+  amount, to)` for a signed amount, in `balances.ts`): Today, Reports, Reflection,
+  Budget envelopes and drill-down, the budget panel, goals' normal month, months
+  ahead, card rewards, category review, the calendar's expenses box and the
+  assistant. Budgets and goals still convert by `toBase` — a budget is a plan,
+  not a past event.
+- **Balances are not flows.** A USD account or card is worth what a dollar costs
+  *now*, so `liveBalances` per-account totals, a card's debt and the Balance screen
+  keep converting at the current rate; an entry **inside** an account converts at
+  its own stamped rate. Unpaid entries are stamped the same way when added and stay
+  out of every total until paid, as before.
+- **Not covered**: `projects/projectLife.ts` sums linked entries through
+  `sumInBase` from a snapshot (`EntryMeta`) that carries no tags, so a project's
+  USD totals still use the current rate. There is no field to edit an entry's rate
+  (paying at a different rate than the day it was added is not representable yet).
+  The Telegram bot and Siri cannot add ledger entries, so nothing to keep in step.
+- `node scripts/tx-rates.mjs` (21 cases, no browser) and `scripts/tx-rate-frozen.mjs
+  [change|assistant|unreadable]` (the real store against a stub that keeps what it
+  is sent and can refuse reads). Control, the harness on the code before: the July
+  entry reads **5,000 instead of 4,800**, nothing is written, and the new entry
+  carries no rate (5 failures).
+
+## Finance — a budget keeps the amount it had
+`budgetSteps.ts` (pure, no React). A rule held one `amount`, so raising rent from
+10,000 to 13,000 rewrote July too: 12,000 spent, over its limit at the time,
+read as comfortably inside the new one. Now `amount` is the **base** — what every
+month before the first change had — and `steps: [{ from: 'YYYY-MM', amount }]`
+records each change with the month it took effect. A rule that never changed has
+no `steps` and reads exactly as it always did; there is no migration, and the
+field rides inside the `finance-budget-rules` prefSync value.
+- **The rule, with no UI for it.** Typing a new amount in the panel applies it
+  from **this month on**; every earlier month keeps what it had. There is no
+  scope toggle and no timeline — it was drawn up and thrown out as more than the
+  question needs. `withAmount(rule, n, monthOnScreen)` is the one function that
+  records a change, and both the panel and the assistant's `set_budget_envelope`
+  call it, so the two cannot differ.
+- **Never earlier than this month.** `editMonth` is the later of today's month
+  and the month on screen: looking back at July and typing a number must not
+  rewrite July. The panel's amount field shows `amountFor(rule, editMonth)` —
+  what an edit would change — so while looking at a past month the field reads
+  the current figure and the "of X this month" line above it reads that month's.
+- **The field saves on every keystroke**, so a change in the same month as the
+  last one **replaces** it (1, 13, 130 … 13,000 is one change, and a typo
+  corrected within the month leaves no trace); a change that lands on what the
+  month already had is not recorded; and changes planned for later months are
+  dropped, since "from now on" covers them. A rule that never had an amount is
+  simply set — a first budget still runs every month, as a new one always did.
+- **Only the amount is versioned, and only for a `repeat` budget.** Frequency,
+  currency, bucket and due day stay global; `once` and `custom` carry their own
+  dates and are written as before. There is no "all months" option: correcting
+  an old month's budget is not possible from the panel. If that is wanted it
+  belongs behind Settings, not in the everyday flow.
+- **Read a month through `amountFor` / `monthlyAmount(rule, monthKey)`.** With no
+  month `amountFor` means *now*, which is what the callers that never had a month
+  in hand always meant. This sharpens the unqualified claim in the three-shapes
+  section that `monthlyAmount` without a month is the year's average: that holds
+  for the dated shapes; for a `repeat` rule it is this month's figure.
+  `budgetEntries.occurrencesFor` writes each instalment at **its own month's**
+  figure (weekly ones too), `reminderTitle` passes its month, the assistant's
+  range totals sum each month's own budget (23,000 over a 10,000 and a 13,000
+  month, not 26,000), and ShoppingScreen's envelope reads the current one.
+- **The bots are not involved.** Telegram and Siri cannot read or set budgets
+  (the Telegram prompt says so), so there is nothing to keep in step with the
+  three-doors rule.
+- `node scripts/budget-steps.mjs` — the pure rules, 32 cases, no browser.
+  `scripts/budget-keeps-old-amount.mjs [edit|stored]` — the panel: typing 13,000
+  records one change and last month still reads 10,000. `scripts/budget-steps-
+  readers.mjs` — the entries, the assistant and the range totals. Controls, the
+  same harnesses on the code before: the edit overwrites the base and last month
+  reads 13,000 (5 failures); November's entry is written at 10,000, the
+  assistant's write has no history, last month reads 13,000 and the range 26,000
+  (7 failures).
+
 ## Finance — a budget belongs to one of four
 `BUCKETS` / `bucketOf` in `BudgetRuleModal.tsx`. **Kind** used to be *fixed* or
 *flexible*, which only ever answered whether one line could be moved — about one

@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, GripVertical
 import { useFinanceStore, txFromRow } from '../financeStore'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
-import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
+import { baseCurrency, currenciesNeedingRates } from '../fx'
 import { acct, outflow, group } from '../format'
 import { findDuplicates } from '../duplicates'
 import { loadAcks, acknowledge, forgetAllAcks, isAcknowledged, ACKS_EVENT } from '../duplicateAcks'
@@ -19,6 +19,7 @@ import { loadTransactionsSpan, loadYearBounds } from '../financeDb'
 import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
 import { notify } from '@/lib/undo'
+import { txIn } from '../txRates'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -630,7 +631,7 @@ export function ReflectionScreen(_props?: any) {
           // This added the raw figure whatever it was in, so a salary in USD
           // was counted as though it were the same number of pounds. Converted
           // now; something with no rate is left out and said so below.
-          .reduce((s, tx) => s + (toBase(Math.abs(tx.amount), tx.currency, base) ?? 0), 0)
+          .reduce((s, tx) => s + (txIn(tx, base) ?? 0), 0)
       })
     }
 
@@ -655,7 +656,7 @@ export function ReflectionScreen(_props?: any) {
     const monthly = (type: 'income' | 'expense') => MONTHS_SHORT.map((_, mi) => {
       const prefix = `${year}-${String(mi + 1).padStart(2,'0')}`
       return yearTx.filter(tx => tx.type === type && filedIn(tx, prefix))
-        .reduce((s, tx) => s + (toBase(Math.abs(tx.amount), tx.currency, base) ?? 0), 0)
+        .reduce((s, tx) => s + (txIn(tx, base) ?? 0), 0)
     })
     const monthlyIncome  = monthly('income')
     const monthlyExpense = monthly('expense')
@@ -956,7 +957,7 @@ export function ReflectionScreen(_props?: any) {
     for (const tx of drillTx) {
       const d = filedOn(tx)
       if (!d) continue
-      const v = toBase(Math.abs(tx.amount), tx.currency, base)
+      const v = txIn(tx, base)
       if (v === null) continue
       const y = d.slice(0, 4)
       acc.set(y, (acc.get(y) ?? 0) + (tx.type === 'income' ? v : -v))
@@ -1559,7 +1560,7 @@ export function ReflectionScreen(_props?: any) {
                 {loadingSpan ? 'reading the other years…' : <>
                   {drillTx.length} {drillTx.length === 1 ? 'entry' : 'entries'} ·{' '}
                   {acct(drillTx.reduce((n, t) => {
-                    const v = toBase(Math.abs(t.amount), t.currency, base) ?? 0
+                    const v = txIn(t, base) ?? 0
                     return n + (t.type === 'income' ? v : -v)
                   }, 0), { currency: base })}
                 </>}

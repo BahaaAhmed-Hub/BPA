@@ -171,6 +171,23 @@ export async function loadTransactions(year: number): Promise<TransactionRow[]> 
   return data as TransactionRow[]
 }
 
+/** Every entry the ledger holds, in every year. Read in pages: a plain select
+ *  stops at 1,000 rows, and a freeze that silently skipped the rest would leave
+ *  them to be re-priced. Null when a page could not be read — "could not look"
+ *  is not "there is nothing". */
+export async function loadEveryTransaction(): Promise<TransactionRow[] | null> {
+  const userId = await uid()
+  const out: TransactionRow[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from('finance_transactions').select('*').eq('user_id', userId)
+      .order('date', { ascending: true }).range(from, from + 999)
+    if (error || !data) return null
+    out.push(...(data as TransactionRow[]))
+    if (data.length < 1000) return out
+  }
+}
+
 /** A span of years, in one query.
  *
  *  `loadTransactions` fetches one year because the store holds one year — a

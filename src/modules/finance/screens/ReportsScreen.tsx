@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react'
 import { PALETTE } from '@/lib/palettes'
 import { useFinanceStore } from '../financeStore'
 import { settled, whenPaid } from '../unpaid'
-import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
+import { baseCurrency, currenciesNeedingRates } from '../fx'
 import { Segmented } from '@/components/ui'
 import { compact } from '../format'
 import { C } from '@/lib/palette'
+import { txIn } from '../txRates'
 
 // ─── Donut chart helpers ───────────────────────────────────────────────────────
 
@@ -148,7 +149,7 @@ export function ReportsScreen(_props?: any) {
   expTxns.forEach(tx => {
     // A dollar is not a pound. Anything with no rate behind it is left out and
     // named under the total rather than added at face value.
-    const v = toBase(Math.abs(tx.amount), tx.currency, base)
+    const v = txIn(tx, base)
     if (v === null) return
     const key = tx.categoryId ?? '__none__'
     byCategory.set(key, (byCategory.get(key) ?? 0) + v)

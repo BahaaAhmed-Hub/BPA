@@ -30,6 +30,7 @@ import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
 import { GLYPH, DEFAULT_CATEGORY_ICON } from '@/lib/glyphs'
 import { askConfirm } from '@/lib/confirm'
+import { txIn } from '../txRates'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -1177,7 +1178,7 @@ export function BudgetScreen(_props?: any) {
         if (!whenPaid(tx).startsWith(prefix)) continue
         // Converted, not added at face value: 3,500 USD is not 3,500 EGP, and
         // a rate nobody has given is left out rather than invented.
-        const v = toBase(Math.abs(tx.amount), tx.currency, currency)
+        const v = txIn(tx, currency)
         if (v === null) continue
         if (tx.type === 'income')  income  += v
         if (tx.type === 'expense') expense += v
@@ -1239,7 +1240,7 @@ export function BudgetScreen(_props?: any) {
         const lastMonth = on.startsWith(prevKey)
         const dayIndex  = dayKeys.indexOf(on)
         if (!thisMonth && !lastMonth && dayIndex < 0) continue
-        const v = toBase(Math.abs(tx.amount), tx.currency, currency)
+        const v = txIn(tx, currency)
         if (v === null) { if (thisMonth) currencies.add(tx.currency); continue }  // no rate — say so, never guess
         if (lastMonth) prevBase += v
         if (dayIndex >= 0) dayBase[dayIndex] += v
@@ -1851,7 +1852,7 @@ export function BudgetScreen(_props?: any) {
         }
 
         // Converted, like every other total on this screen.
-        const inBase = (tx: Transaction) => toBase(Math.abs(tx.amount), tx.currency, currency) ?? 0
+        const inBase = (tx: Transaction) => txIn(tx, currency) ?? 0
         const totalSpend = settled(drillTxs).reduce((s: number, tx: Transaction) => s + inBase(tx), 0)
         const excludedSpend = settled(drillTxs)
           .filter((tx: Transaction) => txFlags[tx.id] === 'excluded')

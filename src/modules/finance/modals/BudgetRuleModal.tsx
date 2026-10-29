@@ -5,10 +5,11 @@ import type { AccountType, Category, Transaction } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { MoneyInput } from '../components/MoneyInput'
-import { toBase } from '../fx'
+import { amountFor, editMonth, withAmount, type AmountStep } from '../budgetSteps'
 import { settled, whenPaid } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
 import { openPicker } from '@/lib/nativePicker'
+import { txIn } from '../txRates'
 
 // ─── What an envelope is set to ──────────────────────────────────────────────
 // This was a whole right-hand column: an amount, a fixed-or-flexible pair, five
@@ -52,7 +53,12 @@ export interface BudgetRule {
   /** `custom`: whether those dates come round again next year. School fees do;
    *  a one-off set of build payments does not. */
   linesRepeat?: boolean
+  /** What the budget was before its first change — every month earlier than
+   *  `steps[0]` — or simply what it is, for a rule that has never changed.
+   *  Read it through `amountFor`, never directly, for a month. */
   amount: number
+  /** Each change of amount and the month it took effect. See `budgetSteps.ts`. */
+  steps?: AmountStep[]
   frequency: Frequency
   rollover: boolean
   warn80: boolean
@@ -301,8 +307,11 @@ export function monthlyAmount(rule?: BudgetRule, monthKey?: string): number {
       .reduce((n, l) => n + l.amount, 0)
   }
 
-  if (!rule.amount) return 0
-  return rule.amount * (FREQ_OPTS.find(f => f.v === rule.frequency)?.per ?? 1)
+  // The amount the budget had *in that month* — a raise made in November does
+  // not reach back and rewrite July.
+  const amount = amountFor(rule, monthKey)
+  if (!amount) return 0
+  return amount * (FREQ_OPTS.find(f => f.v === rule.frequency)?.per ?? 1)
 }
 
 const PILL: React.CSSProperties = {
@@ -603,7 +612,7 @@ export function BudgetRuleModal({
   let spent = 0
   const othersSet = new Set<string>()
   for (const tx of mine) {
-    const v = toBase(Math.abs(tx.amount), tx.currency, cur)
+    const v = txIn(tx, cur)
     if (v === null) othersSet.add(tx.currency)
     else spent += v
   }
@@ -802,9 +811,12 @@ export function BudgetRuleModal({
                   </select>
                 </span>
                 <MoneyInput
-                  value={rule.amount || 0}
+                  value={(scheduleOf(rule) === 'repeat' ? amountFor(rule, editMonth(monthKey)) : rule.amount) || 0}
                   min={0}
-                  onChange={n => onChange({ ...rule, amount: n })}
+                  /* A changed amount is a change from this month on; the
+                     months before it keep the budget they had. A one-off
+                     payment has a date of its own and no months to keep. */
+                  onChange={n => onChange(scheduleOf(rule) === 'repeat' ? withAmount(rule, n, monthKey) : { ...rule, amount: n })}
                   placeholder="0"
                   style={{
                     flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
@@ -1066,7 +1078,7 @@ export function BudgetRuleModal({
           const subSpend = settled(transactions)
             .filter(tx => tx.categoryId === sub.id
               && whenPaid(tx).startsWith(monthKey))
-            .reduce((s, tx) => s + (toBase(Math.abs(tx.amount), tx.currency, cur) ?? 0), 0)
+            .reduce((s, tx) => s + (txIn(tx, cur) ?? 0), 0)
           return (
             <button key={sub.id} onClick={() => onEditSub(sub)}
               style={{

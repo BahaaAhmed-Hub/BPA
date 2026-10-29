@@ -33,7 +33,7 @@ import { useShoppingStore } from '@/modules/finance/shopping/shoppingStore'
 import { supabase } from '@/lib/supabase'
 import { isLocked } from '@/modules/finance/lock'
 import { liveBalances } from '@/modules/finance/balances'
-import { toBase, baseCurrency, loadRates, setRate, rateFor } from '@/modules/finance/fx'
+import { toBase, baseCurrency, loadRates, rateFor } from '@/modules/finance/fx'
 import { settled, whenPaid, isUnpaid } from '@/modules/finance/unpaid'
 import {
   pointsFor, schemeFor, isDormant, loadRewardSettings, type CardPoints,
@@ -54,6 +54,8 @@ import {
   loadRules, saveRules, defaultRule, monthlyAmount, activeIn, scheduleOf,
   type BudgetRule,
 } from '@/modules/finance/modals/BudgetRuleModal'
+import { amountFor, withAmount } from '@/modules/finance/budgetSteps'
+import { txIn } from '@/modules/finance/txRates'
 import { todayISO } from '@/modules/finance/dates'
 import type { Account, Category, Currency, Goal, Transaction, TxType } from '@/modules/finance/types'
 import { notify } from '@/lib/undo'
@@ -105,12 +107,6 @@ async function ensureYear(from?: string, to?: string): Promise<string | null> {
 const money = (n: number) => Math.round(n * 100) / 100
 const monthOf = (iso: string) => iso.slice(0, 7)
 
-/** Every figure the assistant reports is converted, and says when it could
- *  not be — the same rule the screens follow. */
-function inBase(amount: number, currency: string): number | null {
-  return toBase(Math.abs(amount), currency, baseCurrency())
-}
-
 function catName(id: string | undefined, cats: Category[]): string {
   return cats.find(c => c.id === id)?.name ?? 'Uncategorised'
 }
@@ -142,7 +138,7 @@ function txOut(tx: Transaction, cats: Category[], accts: Account[]) {
     payee: tx.payee,
     amount: tx.amount,
     currency: tx.currency,
-    in_base: inBase(tx.amount, tx.currency),
+    in_base: txIn(tx, baseCurrency()),
     category: catName(tx.categoryId, cats),
     account: acctName(tx.accountId, accts),
     ...(tx.toAccountId ? { to_account: acctName(tx.toAccountId, accts) } : {}),
@@ -358,12 +354,13 @@ export const FINANCE_TOOLS: Anthropic.Tool[] = [
       'Set or change what a category is allowed. Use it whenever the user says to budget, cap, raise, lower or re-plan a '
       + "category — the envelope is the budget, there is nothing else to edit. Only what is named is changed; everything "
       + 'else on the envelope stays as it was, so raising an amount does not silently drop its due day or its bucket. '
+      + 'A changed amount applies from this month on — past months keep what they had, and the result says so. '
       + 'It cannot set instalments on their own dates (school fees) — say so and point at Budget for those.',
     input_schema: {
       type: 'object' as const,
       properties: {
         category:  { type: 'string', description: 'The category or sub-category, by name' },
-        amount:    { type: 'number', description: 'What it is allowed, per `frequency`. Positive. Omit to leave it alone.' },
+        amount:    { type: 'number', description: 'What it is allowed, per `frequency`. Positive. Omit to leave it alone. A new figure applies from the current month on; earlier months keep the amount they had, so say "from this month" when you report it.' },
         frequency: { type: 'string', enum: ['weekly', 'monthly', 'quarterly', 'yearly'], description: 'How often that amount is allowed. Defaults to monthly on a new envelope.' },
         currency:  { type: 'string', description: 'What the figure is in, and therefore which entries it counts. Defaults to the base currency.' },
         bucket:    { type: 'string', enum: ['fixed', 'investment', 'savings', 'guiltfree'], description: 'Fixed costs, investments, savings, or guilt-free spending.' },
@@ -525,7 +522,7 @@ export async function executeFinanceTool(
       let inMonth = 0, outMonth = 0
       const perCat = new Map<string, number>()
       for (const t of paid) {
-        const v = inBase(t.amount, t.currency)
+        const v = txIn(t, baseCurrency())
         if (v === null) continue
         if (t.type === 'income') inMonth += v
         if (t.type === 'expense') {
@@ -536,7 +533,7 @@ export async function executeFinanceTool(
       }
 
       const owedRows = transactions.filter(isUnpaid)
-      const owedTotal = owedRows.reduce((n, t) => n + (t.type === 'expense' ? (inBase(t.amount, t.currency) ?? 0) : 0), 0)
+      const owedTotal = owedRows.reduce((n, t) => n + (t.type === 'expense' ? (txIn(t, baseCurrency()) ?? 0) : 0), 0)
 
       const rules = loadRules()
       const over = Object.entries(rules)
@@ -546,7 +543,7 @@ export async function executeFinanceTool(
           const kids = categories.filter(c => c.parentId === id).map(c => c.id)
           const spent = paid
             .filter(t => t.type === 'expense' && (t.categoryId === id || kids.includes(t.categoryId ?? '')))
-            .reduce((n, t) => n + (inBase(t.amount, t.currency) ?? 0), 0)
+            .reduce((n, t) => n + (txIn(t, baseCurrency()) ?? 0), 0)
           return { category: cat.name, budget: money(monthlyAmount(r, month)), spent: money(spent), left: money(monthlyAmount(r, month) - spent) }
         })
         .filter(e => e.left < 0)
@@ -650,22 +647,28 @@ export async function executeFinanceTool(
       const per = new Map<string, number>()
       const missed = new Set<string>()
       for (const t of rows) {
-        const v = inBase(t.amount, t.currency)
+        const v = txIn(t, baseCurrency())
         if (v === null) { missed.add(t.currency); continue }
         const k = catName(t.categoryId, cur.categories)
         per.set(k, (per.get(k) ?? 0) + v)
       }
       const rules = loadRules()
       const total = [...per.values()].reduce((a, b) => a + b, 0)
-      const months = Math.max(1, (Number(to.slice(0, 4)) - Number(from.slice(0, 4))) * 12
-        + (Number(to.slice(5, 7)) - Number(from.slice(5, 7))) + 1)
+      // The months the range covers, each with its own budget: a raise made in
+      // November is not what July was held to.
+      const monthKeys: string[] = []
+      const last = Number(to.slice(0, 4)) * 12 + Number(to.slice(5, 7)) - 1
+      for (let i = Number(from.slice(0, 4)) * 12 + Number(from.slice(5, 7)) - 1; i <= last; i++) {
+        monthKeys.push(`${Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}`)
+      }
       return {
         period: { from, to }, currency: base, kind, total: money(total),
         ...(missed.size ? { not_counted: [...missed], note: 'No exchange rate — use set_exchange_rate.' } : {}),
         categories: [...per.entries()].sort((a, b) => b[1] - a[1]).map(([nm, v]) => {
           const cat = cur.categories.find(c => c.name === nm)
           const rule = cat ? rules[cat.id] : undefined
-          const budget = rule && monthlyAmount(rule) > 0 ? monthlyAmount(rule) * months : null
+          const budgeted = rule ? monthKeys.reduce((n, mk) => n + (activeIn(rule, mk) ? monthlyAmount(rule, mk) : 0), 0) : 0
+          const budget = budgeted > 0 ? budgeted : null
           return {
             category: nm, spent: money(v), share: `${Math.round((v / (total || 1)) * 100)}%`,
             ...(budget !== null ? { budget: money(budget), difference: money(budget - v) } : {}),
@@ -685,7 +688,7 @@ export async function executeFinanceTool(
         if (!cat || !activeIn(rule, month) || monthlyAmount(rule, month) <= 0) continue
         const kids = cur.categories.filter(c => c.parentId === id).map(c => c.id)
         const spent = paid.filter(t => t.categoryId === id || kids.includes(t.categoryId ?? ''))
-          .reduce((n, t) => n + (inBase(t.amount, t.currency) ?? 0), 0)
+          .reduce((n, t) => n + (txIn(t, baseCurrency()) ?? 0), 0)
         const budget = monthlyAmount(rule, month)
         out.push({
           category: cat.name, budget: money(budget), spent: money(spent), left: money(budget - spent),
@@ -912,9 +915,11 @@ export async function executeFinanceTool(
       if (!cur) return { error: 'Which currency?' }
       if (!rate || rate <= 0) return { error: 'A rate is what one unit is worth in the base currency, above zero.' }
       if (cur === base.toUpperCase()) return { error: `${base} is the base currency — it is always worth one of itself.` }
-      setRate(cur, rate)
+      // Through the store, which gives every entry already in the ledger the
+      // rate it had before this one replaces it.
+      if (!(await store().changeRate(cur, rate))) return { error: 'The ledger could not be read, so the rate was left as it was.' }
       notify(`1 ${cur} = ${rate} ${base}`)
-      return { ok: true, rates: loadRates(), base, note: `Totals now count ${cur}.` }
+      return { ok: true, rates: loadRates(), base, note: `Totals now count ${cur}. Entries already in the ledger keep the rate they were added at.` }
     }
 
     // ── Budgets ───────────────────────────────────────────────────────────
@@ -929,18 +934,22 @@ export async function executeFinanceTool(
       if (isErr(cat)) return cat
       const rules = loadRules()
       const had = rules[cat.hit.id]
-      const rule: BudgetRule = { ...(had ?? defaultRule()) }
+      let rule: BudgetRule = { ...(had ?? defaultRule()) }
+      const month = monthOf(today)
 
       const amount = num('amount')
       if (amount !== undefined) {
         // A budget is a limit, and a negative limit is not one. Filing an
         // envelope at -6,000 would read as "spend six thousand more".
         if (amount < 0) return { error: 'A budget is a positive figure — it is what the category is allowed, not a movement.' }
-        rule.amount = amount
+        // A new figure applies from this month on and the months before it
+        // keep the budget they had, exactly as editing it on the Budget screen
+        // does — through the same function, so the two cannot differ.
+        rule = withAmount(rule, amount, month, new Date(`${today}T12:00:00`))
       }
       if (had && amount === undefined && !isDatedRule(rule)) {
         // Nothing to change and nothing set: the honest answer is a question.
-        if (Object.keys(input).length === 1) return { error: `${cat.hit.name} already allows ${had.amount} ${had.currency ?? base}. What should it be?` }
+        if (Object.keys(input).length === 1) return { error: `${cat.hit.name} already allows ${amountFor(had, month)} ${had.currency ?? base}. What should it be?` }
       }
 
       // A rule with instalments on their own dates cannot be reduced to one
@@ -990,18 +999,18 @@ export async function executeFinanceTool(
       if (rule.starts && rule.ends && rule.ends < rule.starts) {
         return { error: `It cannot end (${rule.ends}) before it starts (${rule.starts}).` }
       }
-      if (rule.amount <= 0) return { error: 'What should the budget be? A budget of nothing is the same as having none — use remove_budget_envelope for that.' }
+      if (amountFor(rule, month) <= 0) return { error: 'What should the budget be? A budget of nothing is the same as having none — use remove_budget_envelope for that.' }
 
       saveRules({ ...rules, [cat.hit.id]: rule })
-      const month = monthOf(today)
       const perMonth = monthlyAmount(rule, month)
-      notify(`${cat.hit.name}: ${rule.amount} ${rule.currency ?? base} ${freqWord(rule.frequency)}`)
+      const nowAmount = amountFor(rule, month)
+      notify(`${cat.hit.name}: ${nowAmount} ${rule.currency ?? base} ${freqWord(rule.frequency)}`)
       return {
         ok: true,
         category: cat.hit.name,
-        was: had ? { amount: had.amount, frequency: had.frequency, currency: had.currency ?? base, due_day: had.dueDay ?? null } : null,
+        was: had ? { amount: amountFor(had, month), frequency: had.frequency, currency: had.currency ?? base, due_day: had.dueDay ?? null } : null,
         now: {
-          amount: rule.amount, frequency: rule.frequency, currency: rule.currency ?? base,
+          amount: nowAmount, frequency: rule.frequency, currency: rule.currency ?? base,
           bucket: rule.bucket ?? 'guiltfree',
           due_day: rule.dueDay ?? null,
           due_account: rule.dueAccountId ? acctName(rule.dueAccountId, accounts) : null,
@@ -1009,6 +1018,9 @@ export async function executeFinanceTool(
           ends: rule.ends ?? 'runs on',
           rollover: rule.rollover,
         },
+        ...(amount !== undefined && had && amountFor(had, month) !== nowAmount
+          ? { applies_from: month, note_history: `The new figure applies from ${month} on. Earlier months keep ${amountFor(had, month)} ${had.currency ?? base}.` }
+          : {}),
         a_month: money(perMonth),
         applies_this_month: activeIn(rule, month),
         note: rule.dueDay
@@ -1025,7 +1037,7 @@ export async function executeFinanceTool(
       if (!had) return { error: `${cat.hit.name} has no budget to take off.` }
       if (bool('confirm') !== true) {
         return {
-          error: `That would take the ${had.amount} ${had.currency ?? base} budget off ${cat.hit.name}`
+          error: `That would take the ${amountFor(had, monthOf(today))} ${had.currency ?? base} budget off ${cat.hit.name}`
                + `${had.dueDay ? `, and delete the unpaid future entries it was writing on the ${had.dueDay}th` : ''}`
                + '. Ask, then call again with confirm: true.',
         }

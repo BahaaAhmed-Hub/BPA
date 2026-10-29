@@ -9,6 +9,8 @@ import { rememberGoalPlanning, forgetGoalPlanning, withLocalPlanning } from './g
 import { setPaidAtSupported } from './unpaid'
 import { isDebtGoal } from './goalPlan'
 import { todayISO } from './dates'
+import { stamped } from './txRates'
+import { loadRates, setRate } from './fx'
 
 // ─── A stored debt goal is always wrong ──────────────────────────────────────
 //
@@ -31,7 +33,7 @@ function dropStoredDebtGoals(rows: GoalRow[] | null): GoalRow[] | null {
 import {
   loadAccounts, saveAccount, deleteAccount as dbDeleteAccount,
   loadCategories, saveCategory, deleteCategory as dbDeleteCategory,
-  loadTransactions, loadUnpaidTransactions, loadPaidInFuture, saveTransaction, saveTransactionsBulk,
+  loadTransactions, loadEveryTransaction, loadUnpaidTransactions, loadPaidInFuture, saveTransaction, saveTransactionsBulk,
   deleteTransaction as dbDeleteTransaction,
   loadPlans, savePlan,
   loadActualsOverride, saveActualOverride, deleteActualOverride,
@@ -82,6 +84,8 @@ interface FinanceState {
   /** Give every entry with no payment date its own due date as the day it was
    *  paid, in every year, and say how many that was. Asked for, never
    *  automatic. */
+  /** Change an exchange rate without re-pricing history. False = not changed. */
+  changeRate: (currency: string, rate: number | null) => Promise<boolean>
   markAllPaidOnDueDate: () => Promise<number>
   /** Undo a payment date that is still in the future. Returns how many. */
   unmarkPaidInFuture: () => Promise<number>
@@ -457,7 +461,10 @@ export const useFinanceStore = create<FinanceState>()(
 
       // ─── Transactions CRUD ───────────────────────────────────────────────────
 
-      upsertTransaction: async (tx: Transaction) => {
+      upsertTransaction: async (entry: Transaction) => {
+        // Today's exchange rate goes on a foreign entry as it is written, and
+        // into its description — see txRates.ts.
+        const tx = stamped(entry, { note: true })
         // Held here as well, so a transfer is not left landing nowhere on the
         // next load when the column it belongs in does not exist yet.
         rememberTarget(tx.id, tx.type === 'transfer' ? tx.toAccountId : undefined)
@@ -479,8 +486,9 @@ export const useFinanceStore = create<FinanceState>()(
        *  change, coming back to the tab — replaces the list with what the
        *  server has *so far*, dropping every row still in flight. One request
        *  cannot be caught half-written. */
-      upsertTransactions: async (txs: Transaction[]) => {
-        if (txs.length === 0) return
+      upsertTransactions: async (entries: Transaction[]) => {
+        if (entries.length === 0) return
+        const txs = entries.map(e => stamped(e, { note: true }))
         for (const tx of txs) rememberTarget(tx.id, tx.type === 'transfer' ? tx.toAccountId : undefined)
         const ids = new Set(txs.map(t => t.id))
         set(s => ({
@@ -490,6 +498,27 @@ export const useFinanceStore = create<FinanceState>()(
         if (!userId) return
         await saveTransactionsBulk(txs.map(tx => txToRow(tx, userId))).catch(console.warn)
         await get().followYearOf(txs)
+      },
+
+      /** The one way a rate changes. An entry with no rate of its own converts
+       *  at the current one, so changing it first would re-price all of
+       *  history. Every foreign entry is given today's rate (in every year,
+       *  not just the loaded one) and only then does the new one take over —
+       *  and if the ledger cannot be read to do that, the rate is left alone. */
+      changeRate: async (currency: string, rate: number | null) => {
+        if ((loadRates()[currency.toUpperCase()] ?? null) === rate) return true
+        const userId = await getUserId()
+        if (userId) {
+          const rows = await loadEveryTransaction()
+          if (!rows) return false
+          const frozen = rows.map(txFromRow).flatMap(t => { const s = stamped(t); return s === t ? [] : [s] })
+          if (frozen.length) {
+            await saveTransactionsBulk(frozen.map(t => txToRow(t, userId)))
+            await get().loadFromDB()
+          }
+        }
+        setRate(currency, rate)
+        return true
       },
 
       /** The repair that used to happen on every load, as something a person

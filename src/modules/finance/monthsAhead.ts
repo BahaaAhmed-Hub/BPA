@@ -46,9 +46,9 @@
 import type { Transaction } from './types'
 import type { Capacity } from './goalPlan'
 import type { Forecast } from './forecast'
-import { toBase } from './fx'
 import { settled, whenPaid } from './unpaid'
 import { todayISO } from './dates'
+import { txIn } from './txRates'
 
 const monthKey = (iso: string) => iso.slice(0, 7)
 
@@ -154,7 +154,7 @@ function regularByPayee(
     if (tx.type !== 'expense') continue
     const key = monthKey(whenPaid(tx))
     if (!live.has(key)) continue
-    const v = toBase(Math.abs(tx.amount), tx.currency, base)
+    const v = txIn(tx, base)
     if (v === null) continue
     const name = normalisePayee(tx.payee)
     if (!name) continue
@@ -202,7 +202,7 @@ export function monthsAhead(input: MonthsAheadInput): MonthsAhead {
   let unconvertible = 0
   for (const tx of transactions) {
     if (tx.paidAt || tx.date <= today) continue
-    if (toBase(Math.abs(tx.amount), tx.currency, base) === null) unconvertible++
+    if (txIn(tx, base) === null) unconvertible++
   }
 
   const months: AheadMonth[] = []
