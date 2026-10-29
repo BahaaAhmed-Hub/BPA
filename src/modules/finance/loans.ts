@@ -184,3 +184,30 @@ export function borrowingEnds(
     arrives: txConvert(tx, amount, into.currency),
   }
 }
+
+/** What a lender is called when the description names nobody. */
+export const AUTO_LENDER_NAME = 'Borrowed money'
+
+// "from Ahmed", "borrowed from Ahmed Ali", "loan from my brother Omar",
+// "Ahmed lent me", "Ahmed's loan". A name is one to three capitalised words; a
+// lower-case word after "from" is a thing ("from the bank" is not a person), so
+// nothing is guessed from it.
+const NAME = String.raw`\p{Lu}[\p{L}'’-]*(?:\s+\p{Lu}[\p{L}'’-]*){0,2}`
+const FROM = new RegExp(String.raw`\b(?:borrowed|loan(?:ed)?|lent|got|received|advance)?\s*\bfrom\s+(?:my\s+\w+\s+)?(${NAME})`, 'u')
+const LENT = new RegExp(String.raw`(${NAME})\s+(?:lent|loaned|gave)\s+me\b`, 'u')
+const POSSESSIVE = new RegExp(String.raw`(${NAME})['’]s\s+(?:loan|money|advance)\b`, 'u')
+const NOT_A_PERSON = /^(?:The|My|A|An|Bank|Work|Home|Savings)$/u
+
+/** The person named in a description of borrowed money, or `null`. Only a name
+ *  it can see: with none, the caller says "Borrowed money" and the person
+ *  renames it on Balances. */
+export function lenderFromText(text: string | undefined | null): string | null {
+  const s = (text ?? '').trim()
+  if (!s) return null
+  for (const re of [LENT, POSSESSIVE, FROM]) {
+    const m = s.match(re)
+    const name = m?.[1]?.trim()
+    if (name && !NOT_A_PERSON.test(name)) return name
+  }
+  return null
+}

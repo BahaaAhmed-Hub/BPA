@@ -72,7 +72,7 @@ function formatBalance(bal: number, currency = 'EGP'): string {
   return acct(bal, { currency })
 }
 
-function AccountRow({ account, balance, unconverted, pending, ahead, points, showPointsMoney, selected, hovered, onSelect, onHover, onEdit, onSettle, onPayBack, onIcon }: {
+function AccountRow({ account, balance, unconverted, pending, ahead, points, showPointsMoney, selected, hovered, onSelect, onHover, onEdit, onSettle, onPayBack, onIcon, onRename }: {
   account: Account
   balance: number
   /** Currencies filed against this account that nothing could convert. */
@@ -99,7 +99,15 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
   /** Lenders only: start a payment back. */
   onPayBack: (a: Account, owed: number) => void
   onIcon:  (a: Account, emoji: string) => void
+  /** Lenders only: the name was made from the description, so it is changed here. */
+  onRename: (a: Account, name: string) => void
 }) {
+  const [renaming, setRenaming] = useState<string | null>(null)
+  const commitName = () => {
+    const next = (renaming ?? '').trim()
+    if (next && next !== account.name) onRename(account, next)
+    setRenaming(null)
+  }
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: account.id })
   const isNeg = balance < 0
@@ -167,7 +175,37 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
         )}
       />
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 'min-content' }}>
-        <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{account.name}</span>
+        {renaming !== null ? (
+          <input
+            autoFocus
+            aria-label={`Rename ${account.name}`}
+            value={renaming}
+            onChange={e => setRenaming(e.target.value)}
+            onClick={e => e.stopPropagation()}
+            onKeyDown={e => {
+              e.stopPropagation()
+              if (e.key === 'Enter') commitName()
+              if (e.key === 'Escape') setRenaming(null)
+            }}
+            onBlur={commitName}
+            style={{
+              fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', background: 'var(--sb-field)',
+              border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)', padding: '2px 6px', width: 140, outline: 'none',
+            }} />
+        ) : (
+          <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            {account.name}
+            {account.accountType === 'loan' && (
+              <button
+                onClick={e => { e.stopPropagation(); setRenaming(account.name) }}
+                title={`Rename ${account.name}`}
+                aria-label={`Rename ${account.name}`}
+                style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex' }}>
+                <Pencil size={ICON.sm} />
+              </button>
+            )}
+          </span>
+        )}
         <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
           {account.accountType === 'loan' ? (account.bank || 'Loan') : (account.bank ?? account.accountType)}{account.last4 ? ` · ···· ${account.last4}` : ''}
         </span>
@@ -635,6 +673,7 @@ export function BalanceScreen() {
                         onSettle={(a, owed) => setSettling({ card: a, owed })}
                         onPayBack={(a, owed) => setPayingBack({ loan: a, owed })}
                         onIcon={(a, emoji) => void upsertAccount({ ...a, emoji })}
+                        onRename={(a, name) => void upsertAccount({ ...a, name })}
                       />
                     ))}
                   </div>
