@@ -109,13 +109,15 @@ if (MODE === 'new') {
   await openAdd()
   await page.getByRole('button', { name: 'Borrowed', exact: true }).click()
   ok('Borrowed is the selected kind', (await page.getByRole('button', { name: 'Borrowed', exact: true }).getAttribute('aria-pressed')) === 'true')
-  ok('with no lender yet the form asks for a name', await page.getByLabel('Who lent it').isVisible())
+  ok('nobody makes a lender by hand: the form reads it from the description', await page.locator('[data-lender-auto]').isVisible())
+  ok('…and with nothing written says what it will be called', /“Borrowed money”/.test(await page.locator('[data-lender-auto]').innerText()))
   ok('there is no Category row — a borrowing is not spending', !(await page.getByText('Category', { exact: true }).isVisible().catch(() => false)))
   const save = page.getByRole('button', { name: 'Add transaction' })
-  ok('nothing is savable yet', await save.isDisabled())
-  await page.getByLabel('Who lent it').fill('Ahmed')
+  ok('nothing is savable yet (no amount)', await save.isDisabled())
+  await page.getByPlaceholder('anything', { exact: false }).or(page.getByPlaceholder('e.g. borrowed from Ahmed')).first().fill('borrowed from Ahmed for the deposit')
+  ok('the name is read from the description', /“Ahmed”/.test(await page.locator('[data-lender-auto]').innerText()), await page.locator('[data-lender-auto]').innerText())
   await page.getByPlaceholder('0').fill('10000')
-  ok('a lender and an amount make it savable', await save.isEnabled())
+  ok('an amount is all it needs', await save.isEnabled())
   await save.click()
   await page.getByText('LOANS OWED').waitFor({ timeout: 5000 }).catch(() => {})
   await until(() => writes.some(w => w.table === 'finance_transactions'))
@@ -129,6 +131,7 @@ if (MODE === 'new') {
   ok('the entry is a transfer out of the lender into CIB', txRow?.tx_type === 'transfer' && txRow?.account_id === loanRow?.id && txRow?.to_account_id === 'a1', JSON.stringify([txRow?.tx_type, txRow?.account_id, txRow?.to_account_id]))
   ok('…of 10,000, with no category and not income', txRow?.amount === 10000 && !txRow?.category_id, JSON.stringify([txRow?.amount, txRow?.category_id]))
   ok('…named for the lender', /Ahmed/.test(txRow?.payee ?? ''), txRow?.payee)
+  ok('the description is kept as the note', /deposit/.test(txRow?.note ?? ''), txRow?.note)
 
   const after = await text()
   ok('Balances gains the loans group', /LOANS OWED/.test(after))
@@ -165,6 +168,19 @@ if (MODE === 'new') {
   await page.getByText('Repay Ahmed').first().waitFor({ timeout: 5000 }).catch(() => {})
   ok('Goals offers "Repay Ahmed"', (await text()).includes('Repay Ahmed'))
 
+  // The name was made from the description, so it is changed on the row.
+  await tab('Balance')
+  ok('before: nothing named "Ahmed Ali" has been written', !writes.some(w => w.table === 'finance_accounts' && w.row.name === 'Ahmed Ali'))
+  await page.getByRole('button', { name: 'Rename Ahmed', exact: true }).first().click()
+  const box = page.getByLabel('Rename Ahmed')
+  ok('the pencil opens the name in place', await box.isVisible())
+  await box.fill('Ahmed Ali')
+  await box.press('Enter')
+  await until(() => writes.some(w => w.table === 'finance_accounts' && w.row.name === 'Ahmed Ali'))
+  const renamed = writes.find(w => w.table === 'finance_accounts' && w.row.name === 'Ahmed Ali')?.row
+  ok('the rename is written to the same lender account', !!renamed && renamed.id === loanRow?.id && renamed.account_type === 'loan', JSON.stringify(renamed))
+  ok('the row shows the new name and still owes 10,000', /Ahmed Ali[\s\S]{0,80}\(EGP 10,000\)/.test(await text()))
+
   // The account window.
   await tab('Balance')
   await page.getByRole('button', { name: /Add account/ }).click()
@@ -177,7 +193,7 @@ if (MODE === 'new') {
 if (MODE === 'rate' || MODE === 'norate') {
   await openAdd()
   await page.getByRole('button', { name: 'Borrowed', exact: true }).click()
-  await pickFrom('Who lent it?', 'Omar')
+  await pickFrom('From the description', 'Omar')
   await page.getByPlaceholder('0').fill('500')
   const body = await text()
   const save = page.getByRole('button', { name: 'Add transaction' })

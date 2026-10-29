@@ -1208,6 +1208,17 @@ read as a loss that was never a gain.
   Sunlit's positive group total (`EGP 20,000`, `--sb-positive` on `--sb-field`) is
   3.86, and Evergreen's `--sb-negative` is 4.31–4.43 on its card at 13–14.5px —
   every owed balance, a loan's or a card's. Both want a token decision.
+- **Nobody makes a lender by hand.** In Borrowed the lender starts on *From the
+  description* (`lenderId === ''`): `lenderFromText` reads the **notes** (or the
+  payee) — "from Ahmed", "Ahmed lent me", "Mona's loan", "loan from my brother
+  Omar" — and an existing lender of that name is that lender, otherwise a new line
+  is made on save. Only a capitalised name counts: "from the bank" names nobody, and
+  with no name the line is **Borrowed money** (`AUTO_LENDER_NAME`), which the form
+  says in advance. It is renamed on Balances: a pencil on a lender's row edits the
+  name in place (`onRename` → `upsertAccount`). Picking a lender or *Someone new…*
+  still overrides it. `scripts/loans.mjs` (57) holds the detector with controls
+  (no name, a place, empty); `loans-ui.mjs new` reads the name off the note and
+  renames the row — the same run on the old form fails at the first step.
 - **Not built yet** (the plan's chunks 4–10): a payment plan on the loan and its
   budget line, funding the instalment first, Pay back from the goal or the
   balance row, optional interest, and borrowing/repaying through the assistant,

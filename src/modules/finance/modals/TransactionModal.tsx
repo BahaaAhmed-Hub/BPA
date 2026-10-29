@@ -17,7 +17,7 @@ import { baseCurrency, rateFor, convert } from '../fx'
 import { frozenRate, isFxTag, withRate, txConvert } from '../txRates'
 import { useFinanceStore } from '../financeStore'
 import {
-  isLoan, spendingAccounts, findLender, newLender, isBorrowing, borrowingEnds, instalmentFor,
+  isLoan, spendingAccounts, findLender, newLender, lenderFromText, AUTO_LENDER_NAME, isBorrowing, borrowingEnds, instalmentFor,
 } from '../loans'
 import { loadRules } from './BudgetRuleModal'
 import { planOf, planIssue, type LoanPlan } from '../loanPlan'
@@ -115,8 +115,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   // Which lender: an existing one, or a new one typed below. With none yet
   // there is nothing to choose between, so it starts on the typed name.
   const [lenderId, setLenderId] = useState<string>(
-    transaction && isBorrowing(transaction, accounts) ? transaction.accountId
-      : lenders.length === 0 ? NEW_LENDER : '')
+    transaction && isBorrowing(transaction, accounts) ? transaction.accountId : '')
   const [lenderName, setLenderName] = useState('')
   const [saving, setSaving] = useState(false)
   // Paying a lender back settles the instalment the plan filed for it, unless
@@ -227,7 +226,13 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   // The lender this entry is for, if it is an existing one — chosen from the
   // list, or typed as a name that already is one (so "ahmed" and "Ahmed" are
   // one person, not two accounts).
-  const typedLender = lenderId === NEW_LENDER ? findLender(accounts, lenderName) : undefined
+  // With nobody chosen the lender is read from what was written: "from Ahmed"
+  // in the payee or the note. A name that already is a lender is that lender;
+  // otherwise a new line is made for them, so nobody makes an account by hand.
+  const lenderIsAuto = lenderId === ''
+  const guess = lenderIsAuto ? (lenderFromText(payee) ?? lenderFromText(note)) : null
+  const typedName = lenderId === NEW_LENDER ? lenderName : lenderIsAuto ? (guess ?? AUTO_LENDER_NAME) : ''
+  const typedLender = typedName ? findLender(accounts, typedName) : undefined
   const lender = lenderId && lenderId !== NEW_LENDER ? accounts.find(a => a.id === lenderId) : typedLender
   const landing = accounts.find(a => a.id === toAccountId)
   const landsIn = accounts.filter(a => LANDS_IN.includes(a.accountType))
@@ -280,7 +285,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       setSaving(true)
       let from = lender
       if (!from) {
-        from = newLender(lenderName, currency, 0)
+        from = newLender(typedName, currency, 0)
         await useFinanceStore.getState().upsertAccount(from)
       }
       fromId = from.id
@@ -388,7 +393,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   // would be silently left out of its balance.
   const canSave = borrowed
     ? amount > 0 && !!landing && !unrated && !saving
-        && (lenderId === NEW_LENDER ? !!lenderName.trim() : !!lender)
+        && (lenderId === NEW_LENDER ? !!lenderName.trim() : lenderIsAuto || !!lender)
         && (!plan || !planIssue(plan))
     : amount > 0 && !!accountId && (type !== 'transfer' || !!toAccountId)
 
@@ -540,8 +545,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                     setPlan(l ? planOf(loadRules(), l.id) : null)
                     setPlanTouched(false)
                   }}
-                  placeholder="Who lent it?"
+                  placeholder={lenderIsAuto ? 'From the description' : 'Who lent it?'}
                   options={[
+                    { id: '', label: 'From the description', glyph: 'lucide:Sparkles' },
                     ...lenders.map(a => ({
                       id: a.id, label: a.name, glyph: a.emoji, tint: a.color, hint: accountHint(a),
                     })),
@@ -557,6 +563,16 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                     placeholder="Ahmed, or the bank"
                     aria-label="Who lent it"
                     style={{ ...PILL, flex: 1, cursor: 'text', outline: 'none' }} />
+                </div>
+              )}
+              {lenderIsAuto && (
+                <div style={ROW}>
+                  <span style={LABEL} />
+                  <span data-lender-auto style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
+                    {typedLender
+                      ? `${typedLender.name} is already a lender — this adds to what you owe them.`
+                      : `Recorded as a new line, “${typedName}”${guess ? '' : ' — add a name in the description, or rename it on Balances'}.`}
+                  </span>
                 </div>
               )}
               {lenderId === NEW_LENDER && typedLender && (
@@ -886,7 +902,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
           <div style={{ ...ROW, alignItems: 'flex-start' }}>
               <span style={{ ...LABEL, paddingTop: 11 }}>Notes</span>
               <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
-                placeholder="Anything worth remembering…"
+                placeholder={borrowed ? 'e.g. borrowed from Ahmed' : 'Anything worth remembering…'}
                 style={{
                   flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
                   background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',

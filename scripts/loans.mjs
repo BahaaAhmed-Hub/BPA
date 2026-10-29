@@ -194,5 +194,22 @@ eq('an expense is neither', L.isBorrowing(tx({ type: 'expense', accountId: 'ahme
     [aed], [cash, acc({ id: 'aed-l', name: 'K', accountType: 'loan', currency: 'AED' })], 'EGP'), 0)
 }
 
+// ── the lender is read from what was written ───────────────────────────────
+{
+  const n = L.lenderFromText
+  eq('"borrowed from Ahmed"', n('borrowed from Ahmed'), 'Ahmed')
+  eq('"Loan from my brother Omar Ali for rent"', n('Loan from my brother Omar Ali for rent'), 'Omar Ali')
+  eq('"Ahmed lent me"', n('Ahmed lent me for the deposit'), 'Ahmed')
+  eq('"Mona\'s loan"', n("Mona's loan"), 'Mona')
+  eq('the name is found anywhere in the sentence', n('Got 5,000 cash from Youssef today'), 'Youssef')
+  // Controls: a sentence naming nobody, or only a place, must not invent a person.
+  eq('no name -> null', n('borrowed some money'), null)
+  eq('"from the bank" is a thing, not a person', n('loan from the bank'), null)
+  eq('"from Bank" is not a person', n('advance from Bank'), null)
+  eq('empty -> null', n(''), null)
+  eq('undefined -> null', n(undefined), null)
+  eq('fallback name', L.AUTO_LENDER_NAME, 'Borrowed money')
+}
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)
