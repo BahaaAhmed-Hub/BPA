@@ -216,5 +216,46 @@ eq('…and one with no end', L.planPhrase(plan({ frequency: 'quarterly' }), 'USD
   eq('income counts in an income envelope', L.spendsEnvelope({ type: 'income', categoryId: 'c' }, 'income'), true)
 }
 
+// ── paying a lender back settles the instalment that is waiting ──────────────
+{
+  const inst = (id, date, o = {}) => ({ id, type: 'transfer', accountId: 'cib', toAccountId: 'ahmed', amount: 2000, currency: 'EGP', date,
+    paidAt: undefined, isCleared: false, tags: ['budget'], categoryId: 'ahmed', ...o })
+  const ledger = [
+    inst('oct', '2026-10-29'), inst('nov', '2026-11-29'), inst('dec', '2026-12-29'),
+    inst('paid', '2026-09-29', { paidAt: '2026-09-29', isCleared: true }),
+    inst('typed', '2026-08-01', { tags: undefined }),                 // someone typed it: not the plan's
+    inst('other', '2026-07-01', { toAccountId: 'omar' }),             // another lender's
+  ]
+  const pick = (txs, d) => L.instalmentFor(txs, 'ahmed', d)?.id
+  eq('a payment in the month an instalment is due settles it', pick(ledger, '2026-10-29'), 'oct')
+  eq('…and so does one made earlier in that month', pick(ledger, '2026-10-02'), 'oct')
+  eq('one made before it is due settles nothing (that is a prepayment, its own entry)', pick(ledger, '2026-09-30'), undefined)
+  eq('an older instalment nobody paid is settled before a newer one: the earliest due', pick(ledger, '2026-11-30'), 'oct')
+  eq('control — with October paid, the same November payment settles November', pick(ledger.map(t => t.id === 'oct' ? { ...t, paidAt: '2026-10-29' } : t), '2026-11-30'), 'nov')
+  eq('a paid entry is never the one settled', ledger.filter(t => L.isPlannedInstalment(t, 'ahmed')).map(t => t.id).includes('paid'), false)
+  eq('an entry someone typed (no budget tag) is not the plan\'s', L.isPlannedInstalment(ledger.find(t => t.id === 'typed'), 'ahmed'), false)
+  eq('another lender\'s instalment is not this one\'s', L.isPlannedInstalment(ledger.find(t => t.id === 'other'), 'ahmed'), false)
+  eq('control — it is that lender\'s own', L.isPlannedInstalment(ledger.find(t => t.id === 'other'), 'omar'), true)
+}
+
+// ── what Pay back starts with ────────────────────────────────────────────────
+{
+  const lender = { id: 'ahmed', name: 'Ahmed', currency: 'EGP' }
+  const accounts = [{ id: 'sav', accountType: 'asset' }, { id: 'cib', accountType: 'payment' }, { id: 'wal', accountType: 'wallet' }, { id: 'ahmed', accountType: 'loan' }]
+  const due = [{ type: 'transfer', toAccountId: 'ahmed', paidAt: undefined, tags: ['budget'], date: '2026-10-29', amount: 2500 }]
+  const P = plan({ payFromId: 'wal' })
+  const t = '2026-10-29'
+  const a = L.payBackStart(lender, accounts, due, P, 10000, t)
+  eq('it opens as a transfer into the lender, named for the payment, in the lender\'s currency', [a.type, a.toAccountId, a.payee, a.currency], ['transfer', 'ahmed', 'Payment to Ahmed', 'EGP'])
+  eq('for the instalment that is due (2,500), not the plan\'s figure', a.amount, 2500)
+  eq('…from the plan\'s account', a.accountId, 'wal')
+  eq('with nothing due it is the plan\'s own amount', L.payBackStart(lender, accounts, [], P, 10000, t).amount, 2000)
+  eq('with no plan it is the whole debt', L.payBackStart(lender, accounts, [], null, 10000, t).amount, 10000)
+  eq('never more than is owed: 1,500 left on a plan of 2,000', L.payBackStart(lender, accounts, [], P, 1500, t).amount, 1500)
+  eq('a plan paid from an account that is gone falls back to the first you can pay from', L.payBackStart(lender, accounts, [], plan({ payFromId: 'gone' }), 5000, t).accountId, 'cib')
+  eq('a plan paid from the lender itself does too', L.payBackStart(lender, accounts, [], plan({ payFromId: 'ahmed' }), 5000, t).accountId, 'cib')
+  eq('an asset is not somewhere you pay from, whatever order they come in', L.payBackStart(lender, [{ id: 'sav', accountType: 'asset' }, { id: 'cib', accountType: 'payment' }], [], null, 5000, t).accountId, 'cib')
+}
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

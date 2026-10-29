@@ -48,6 +48,7 @@ import { startAutomation } from './lib/automation'
 import { runBudgetEntries } from './modules/finance/budgetEntries'
 import { liveBalances } from './modules/finance/balances'
 import { isLoan } from './modules/finance/loans'
+import { retireSettledPlans } from './modules/finance/loanPlanSave'
 import { loadRules } from './modules/finance/modals/BudgetRuleModal'
 import { SyncGapBanner } from './modules/shell/SyncGapBanner'
 import { UndoBar } from './components/UndoBar'
@@ -1348,6 +1349,9 @@ function App() {
       // A load in flight means the list on hand is about to be replaced;
       // deciding what is missing from it now is deciding from stale data.
       if (fs.loading) return
+      // A loan that has been paid back takes its plan with it. Its rule is gone
+      // before the next line reads the rules, so the writer does not see it.
+      void retireSettledPlans()
       // What is owed on each loan: a loan's payment plan is a budget whose
       // category is the loan, and it schedules repayments only while there is a
       // debt to repay.

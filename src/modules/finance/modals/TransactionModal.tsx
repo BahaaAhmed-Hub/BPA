@@ -17,7 +17,7 @@ import { baseCurrency, rateFor, convert } from '../fx'
 import { frozenRate, isFxTag, withRate, txConvert } from '../txRates'
 import { useFinanceStore } from '../financeStore'
 import {
-  isLoan, spendingAccounts, findLender, newLender, isBorrowing, borrowingEnds,
+  isLoan, spendingAccounts, findLender, newLender, isBorrowing, borrowingEnds, instalmentFor,
 } from '../loans'
 import { loadRules } from './BudgetRuleModal'
 import { planOf, planIssue, type LoanPlan } from '../loanPlan'
@@ -45,6 +45,9 @@ interface Props {
     /** Where a transfer lands, and how much — used by Balances to start a card
      *  settlement off with the figure already in it. */
     toAccountId?: string; amount?: number; payee?: string
+    /** The currency the amount is in, where it is not the account's own — paying
+     *  a dollar lender back from a pound account is an amount in dollars. */
+    currency?: Currency
     /** Open on Borrowed rather than Expense. */
     borrowed?: boolean
   }
@@ -92,6 +95,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   const [currencyTouched, setCurrencyTouched] = useState(false)
   const [currency, setCurrencyOnly] = useState<Currency>(
     transaction?.currency
+      ?? initial?.currency
       ?? accounts.find(a => a.id === (initial?.accountId ?? accounts[0]?.id))?.currency
       ?? 'EGP',
   )
@@ -115,6 +119,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       : lenders.length === 0 ? NEW_LENDER : '')
   const [lenderName, setLenderName] = useState('')
   const [saving, setSaving] = useState(false)
+  // Paying a lender back settles the instalment the plan filed for it, unless
+  // that is said not to be what this is.
+  const [separate, setSeparate] = useState(false)
   // The plan to repay it by, if there is one. It is the lender's budget line,
   // so an existing lender comes with the plan they already have, and unticking
   // it on a lender who has one takes it away.
@@ -225,6 +232,21 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   const landing = accounts.find(a => a.id === toAccountId)
   const landsIn = accounts.filter(a => LANDS_IN.includes(a.accountType))
 
+  // ── Paying a lender back ───────────────────────────────────────────────────
+  // A transfer whose destination is a lender. If the plan has already filed an
+  // unpaid instalment for them that has come due, this payment *is* that
+  // instalment: it is settled in place, not entered beside it (which would leave
+  // the instalment dotted red for money that has moved). It is also filed under
+  // the loan's budget category when the loan has a plan, because that is what
+  // lets its envelope see the payment.
+  const payingLoan = !borrowed && type === 'transfer' ? accounts.find(a => a.id === toAccountId && isLoan(a)) : undefined
+  const settles = !transaction && payingLoan && !separate
+    ? instalmentFor(history, payingLoan.id, (isCleared ? (paidAt || date) : date))
+    : undefined
+  const repaymentCategory = payingLoan
+    ? (transaction?.categoryId ?? settles?.categoryId ?? (loadRules()[payingLoan.id] ? payingLoan.id : undefined))
+    : undefined
+
   // What each end of a borrowing comes to, in that account's own currency. A
   // new lender is made in the currency being borrowed, so only an existing one
   // can differ from it. `null` is a currency nobody gave a rate for.
@@ -268,30 +290,34 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       if (plan) await saveLoanPlan(from, plan)
       else if (planTouched && planOf(loadRules(), from.id)) await saveLoanPlan(from, null)
     }
+    // Settling an instalment keeps what the plan made it: its id, the day it was
+    // due, its tags (so it is still the budget's), and that it comes round again.
+    const tags = settles ? [...new Set([...(settles.tags ?? []), ...savedTags])] : savedTags
     onSave({
-      id,
+      id:          settles?.id ?? id,
       accountId:   fromId,
       toAccountId: type === 'transfer' ? (toAccountId || undefined) : undefined,
       amount,
       currency,
       type,
-      payee:       payeeText,
+      payee:       payeeText || settles?.payee || '',
       // A transfer is money moving between two accounts. Filing it under a
-      // spending category would count it as spending as well as moving it.
-      categoryId:  type === 'transfer' ? undefined : (categoryId || undefined),
-      date,
+      // spending category would count it as spending as well as moving it —
+      // except paying a lender back, whose budget envelope has to hold it.
+      categoryId:  type === 'transfer' ? repaymentCategory : (categoryId || undefined),
+      date:        settles?.date ?? date,
       paidAt:      isCleared ? (paidAt || date) : undefined,
       note:        note.trim() || undefined,
       attachments: attachments.length > 0 ? attachments : undefined,
-      tags:        savedTags.length > 0 ? savedTags : undefined,
+      tags:        tags.length > 0 ? tags : undefined,
       isCleared,
-      isRecurring,
-      createdAt:   transaction?.createdAt   ?? new Date().toISOString(),
+      isRecurring: settles?.isRecurring ?? isRecurring,
+      createdAt:   settles?.createdAt ?? transaction?.createdAt ?? new Date().toISOString(),
     })
     // The writer reads the ledger, and the borrowing it needs to see — a plan on
     // a loan nothing has been borrowed on yet has nothing to repay — is in the
     // store now. Ask it to look again.
-    if (borrowed && (plan || planTouched)) window.dispatchEvent(new Event('professor:moneyRemindersChanged'))
+    if ((borrowed && (plan || planTouched)) || payingLoan) window.dispatchEvent(new Event('professor:moneyRemindersChanged'))
     // Docked, the form can outlive the save; a stuck flag would lock Save.
     setSaving(false)
   }
@@ -644,6 +670,45 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 placeholder={cards.length > 0 ? 'Which card or account' : 'Which account'}
                 options={accounts.filter(a => a.id !== accountId)
                   .map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color, hint: accountHint(a) }))} />
+            </div>
+          )}
+
+          {/* A lender at the other end: what is still owed, and — when the plan
+              has an instalment waiting — that this is the one being paid. */}
+          {payingLoan && (
+            <div style={{ ...ROW, alignItems: 'flex-start' }} data-paying-lender>
+              <span style={LABEL} />
+              <span style={{
+                flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6,
+                padding: '9px 12px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)',
+                fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.5,
+              }}>
+                <span>
+                  Paying <b style={{ fontWeight: 600 }}>{payingLoan.name}</b> back —{' '}
+                  {balanceOf(payingLoan.id) < -0.5
+                    ? <><b style={{ fontWeight: 600 }}>{acct(-balanceOf(payingLoan.id), { currency: payingLoan.currency })}</b> still owed.</>
+                    : 'nothing is owed on this loan.'}
+                </span>
+                {settles && (
+                  <span data-settles>
+                    This is the instalment due <b style={{ fontWeight: 600 }}>{new Date(settles.date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</b>
+                    {' '}({acct(settles.amount, { currency: settles.currency })}): it will be marked paid.{' '}
+                    <button type="button" onClick={() => setSeparate(true)}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', color: 'var(--sb-ink-2)', textDecoration: 'underline' }}>
+                      Record it separately
+                    </button>
+                  </span>
+                )}
+                {separate && !transaction && (
+                  <span>
+                    Recorded on its own — the plan's instalment stays due.{' '}
+                    <button type="button" onClick={() => setSeparate(false)}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', color: 'var(--sb-ink-2)', textDecoration: 'underline' }}>
+                      Undo
+                    </button>
+                  </span>
+                )}
+              </span>
             </div>
           )}
 

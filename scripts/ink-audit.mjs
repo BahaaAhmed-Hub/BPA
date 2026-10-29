@@ -869,7 +869,7 @@ for (const theme of THEMES) {
     await page.getByRole('button', { name: /paid back/ }).click({ timeout: 2000 })
     // The account it landed in, so the feed reads the move as money coming in.
     await page.getByText('CIB', { exact: true }).first().click()
-  }, 40, ['LOANS OWED', 'Borrowed', 'Repaid', 'paid back', '(EGP 6,000)', '(EGP 10,000)'])
+  }, 40, ['LOANS OWED', 'Borrowed', 'Repaid', 'paid back', 'Pay back', '(EGP 6,000)', '(EGP 10,000)'])
   await visit('Finance · loans (Today)', async () => {
     await financeTab('Today')
     await page.getByText('Borrowed', { exact: true }).first().waitFor({ timeout: 6000 })
@@ -885,7 +885,7 @@ for (const theme of THEMES) {
     await financeTab('Goals')
     await page.getByText('Repay Ahmed').first().waitFor({ timeout: 6000 })
     await page.getByText('See the rules').first().click()
-  }, 40, ['Repay Ahmed', 'loan ·', '/mo', 'payment plan is paid first'])
+  }, 40, ['Repay Ahmed', 'loan ·', '/mo', 'Pay back', 'payment plan is paid first'])
   if (loansFixture) {
     loansFixture = false
     await page.reload({ waitUntil: 'domcontentloaded' })

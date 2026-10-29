@@ -4,6 +4,8 @@ import { loadRules, saveRules } from './modals/BudgetRuleModal'
 import { LOAN_PARENT_NAME, ruleFromPlan, planFromRule, planIssue, type LoanPlan } from './loanPlan'
 import { withAmount, monthKeyOf } from './budgetSteps'
 import { LOAN_ICON } from './components/LoanMark'
+import { liveBalances } from './balances'
+import { isLoan, isSettled } from './loans'
 
 // ─── Writing a plan down: its rule, and the category the rule hangs on ───────
 //
@@ -89,4 +91,33 @@ export async function saveLoanPlan(loan: Account, plan: LoanPlan | null): Promis
     : fresh
   saveRules(rules)
   return {}
+}
+
+/**
+ * A loan that has been paid back has no plan to keep. Left in, its budget line
+ * would say "2,000 a month" for a debt that is gone, and the Budget would plan
+ * around money nobody owes.
+ *
+ * **Settled means paid back, not "has nothing owed".** A loan whose plan has just
+ * been written, before the borrowing it is for has been saved, also owes nothing —
+ * and retiring it then would delete a plan the moment it was made. So only a loan
+ * something has actually happened on counts: a balance it opened with, or an entry
+ * to or from it.
+ *
+ * What is paid stays: `saveLoanPlan(null)` keeps the category when a repayment was
+ * paid under it, so the history still says what it was for.
+ */
+export async function retireSettledPlans(): Promise<number> {
+  const st = useFinanceStore.getState()
+  const rules = loadRules()
+  const balances = liveBalances(st.accounts, st.transactions).balances
+  let n = 0
+  for (const a of st.accounts) {
+    if (!isLoan(a) || !rules[a.id]) continue
+    const touched = a.balance !== 0 || st.transactions.some(t => t.accountId === a.id || t.toAccountId === a.id)
+    if (!touched || !isSettled(balances.get(a.id) ?? a.balance)) continue
+    await saveLoanPlan(a, null)
+    n++
+  }
+  return n
 }

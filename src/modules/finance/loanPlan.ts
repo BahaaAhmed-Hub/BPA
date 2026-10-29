@@ -1,6 +1,6 @@
-import type { Account } from './types'
+import type { Account, Currency, Transaction, TxType } from './types'
 import type { BudgetRule } from './modals/BudgetRuleModal'
-import { isLoan } from './loans'
+import { isLoan, instalmentFor, SETTLED_BELOW } from './loans'
 import { amountFor } from './budgetSteps'
 
 // ─── A payment plan is the loan's budget, stored once ────────────────────────
@@ -179,4 +179,36 @@ export function planPhrase(plan: LoanPlan, currency: string): string {
   const every = PLAN_FREQUENCIES.find(f => f.v === plan.frequency)?.every ?? ''
   return `${grouped(plan.amount)} ${currency} ${every}, from ${dayPhrase(plan.start)}`
     + (plan.ends ? `, until ${monthPhrase(plan.ends)}` : '')
+}
+
+/**
+ * What "Pay back" opens the entry window with: a transfer into this lender,
+ * for the instalment that is due (or the plan's amount, or all of it when there
+ * is no plan), never more than is owed, from the plan's account.
+ *
+ * Both the Balances row and the goal start here, so they cannot offer different
+ * sums for the same debt. The window itself decides whether the payment settles
+ * a waiting instalment — this only says what is probably being paid.
+ */
+export function payBackStart(
+  loan: Pick<Account, 'id' | 'name' | 'currency'>,
+  accounts: Pick<Account, 'id' | 'accountType'>[],
+  txs: Pick<Transaction, 'type' | 'toAccountId' | 'paidAt' | 'tags' | 'date' | 'amount'>[],
+  plan: LoanPlan | null,
+  owed: number,
+  today: string,
+): { type: TxType; toAccountId: string; amount: number; payee: string; accountId?: string; currency: Currency } {
+  const due = instalmentFor(txs, loan.id, today)
+  const ask = due ? Math.abs(due.amount) : plan ? plan.amount : owed
+  const amount = Math.round(Math.min(ask, Math.max(owed, 0)) * 100) / 100
+  const payFrom = (plan?.payFromId && accounts.find(a => a.id === plan.payFromId && !isLoan(a)))
+    || accounts.find(a => a.accountType === 'payment' || a.accountType === 'wallet')
+  return {
+    type: 'transfer',
+    toAccountId: loan.id,
+    amount: amount > SETTLED_BELOW ? amount : Math.round(Math.max(owed, 0) * 100) / 100,
+    payee: `Payment to ${loan.name}`,
+    accountId: payFrom ? payFrom.id : undefined,
+    currency: loan.currency as Currency,
+  }
 }

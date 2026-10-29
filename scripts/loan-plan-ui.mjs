@@ -25,7 +25,11 @@ import { settled, watchTraffic } from './settled.mjs'
 
 const args = process.argv.slice(2)
 const port = args.find(a => /^\d+$/.test(a)) ?? '5199'
-const MODE = args.find(a => ['borrow', 'edit', 'envelope', 'goals'].includes(a)) ?? 'borrow'
+const MODES = ['borrow', 'edit', 'envelope', 'goals', 'payback', 'separate', 'settle', 'goal']
+const MODE = args.find(a => MODES.includes(a)) ?? 'borrow'
+// The fixtures that are a loan with a plan, owed from before and with cash behind the account.
+const PAY = ['payback', 'separate', 'settle', 'goal'].includes(MODE)
+const WITH_PLAN = ['edit', 'goals'].includes(MODE) || PAY
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
 let failed = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) failed++ }
@@ -57,10 +61,10 @@ const planRule = (amount = 2000) => ({
 
 const DB = {
   finance_accounts: [
-    acc({ id: 'a1', name: 'CIB', account_type: 'payment', currency: 'EGP' }),
+    acc({ id: 'a1', name: 'CIB', account_type: 'payment', currency: 'EGP', balance: PAY ? 20000 : 0 }),
     ...(MODE === 'borrow' ? [] : [acc({ id: LOAN, name: 'Ahmed', account_type: 'loan', currency: 'EGP', emoji: '🤝', sort_order: 1,
       // goals: owed from before, with no cash held — so nothing can finish it today and the plan is what pays it.
-      balance: MODE === 'goals' ? -10000 : 0 })]),
+      balance: MODE === 'goals' || PAY ? (MODE === 'settle' ? -2000 : -10000) : 0 })]),
   ],
   finance_categories: [
     cat({ id: 'c1', name: 'Food', icon: 'lucide:Utensils', is_system: false }),
@@ -69,7 +73,7 @@ const DB = {
       cat({ id: LOAN, name: 'Ahmed', parent_id: PARENT }),
     ]),
   ],
-  finance_transactions: MODE === 'borrow' ? [] : (MODE === 'edit' || MODE === 'goals') ? [
+  finance_transactions: MODE === 'borrow' ? [] : WITH_PLAN ? [
     ...(MODE === 'edit' ? [txRow({ id: 'b0', account_id: LOAN, to_account_id: 'a1', amount: 10000, payee: 'Borrowed from Ahmed', tx_type: 'transfer', date: plusMonths(-1), paid_at: plusMonths(-1) })] : []),
     ...expectedDates.slice(0, 2).map((d, i) => txRow({ id: `plan${i}`, account_id: 'a1', to_account_id: LOAN, category_id: LOAN, amount: 2000, payee: 'Payment to Ahmed',
       tx_type: 'transfer', date: d, paid_at: null, is_cleared: false, is_recurring: true, tags: ['budget'] })),
@@ -254,6 +258,78 @@ if (MODE === 'goals') {
   const withRules = await text()
   if (process.env.PEEK) console.log(JSON.stringify(withRules.slice(withRules.indexOf('forecast rules') - 100, withRules.indexOf('forecast rules') + 700)))
   ok('the forecast lists it as a rule: a loan\'s payment plan is paid first', /payment plan is paid first, on its dates/.test(withRules))
+}
+
+if (PAY) {
+  const payBtn = page.getByRole('button', { name: 'Pay back', exact: true })
+  // exact: a substring match finds a goal field whose placeholder is "8,000"
+  const amountIn = () => page.getByPlaceholder('0', { exact: true }).first()
+  const asyncUntil = async (fn, ms = 8000) => { const end = Date.now() + ms; while (Date.now() < end) { if (await fn()) return true; await new Promise(r => setTimeout(r, 80)) } return fn() }
+  const day = new Date(today + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const paidInto = () => DB.finance_transactions.filter(t => t.to_account_id === LOAN && t.paid_at)
+
+  if (MODE === 'goal') {
+    await tab('Goals')
+    await page.getByText('Repay Ahmed').first().waitFor({ timeout: 8000 })
+    ok('the goal offers Pay back (positive: there is one)', await payBtn.count() === 1)
+    await payBtn.click()
+  } else {
+    await tab('Balance')
+    await payBtn.first().waitFor({ timeout: 8000 })
+    ok('the lender\'s row offers Pay back (positive: one button)', await payBtn.count() === 1)
+    ok('control — no Settle: that is a card\'s button', await page.getByRole('button', { name: 'Settle', exact: true }).count() === 0)
+    await payBtn.click()
+  }
+
+  await amountIn().waitFor()
+  const expected = MODE === 'settle' ? '2,000' : '2,000'
+  ok(`it opens with the instalment already in it: ${expected}`, (await amountIn().inputValue()) === expected, await amountIn().inputValue())
+  const owedText = MODE === 'settle' ? 'EGP 2,000' : 'EGP 10,000'
+  const lender = await page.locator('[data-paying-lender]').innerText()
+  ok(`it says who, and what is still owed: ${owedText}`, /Paying Ahmed back/.test(lender) && lender.includes(owedText), lender.replace(/\n/g, ' | '))
+  const settles = await page.locator('[data-settles]').innerText().catch(() => '')
+  ok(`it says it is the instalment due ${day}, and will be marked paid`, settles.includes(day) && /marked paid/.test(settles), settles)
+
+  if (MODE === 'separate') {
+    await page.getByRole('button', { name: 'Record it separately' }).click()
+    ok('"Record it separately" takes the claim back and says so', (await page.locator('[data-settles]').count()) === 0 && /Recorded on its own/.test(await page.locator('[data-paying-lender]').innerText()))
+  }
+
+  await page.getByRole('button', { name: 'Add transaction' }).click()
+  await asyncUntil(() => paidInto().length > 0)
+  const before = paidInto()
+
+  if (MODE === 'separate') {
+    ok('a new entry was made, not the instalment', before.length === 1 && before[0].id !== 'plan0', before.map(t => t.id).join(','))
+    ok('…filed under the loan\'s category so its envelope sees it', before[0].category_id === LOAN)
+    ok('the plan\'s instalment is still waiting, unpaid', DB.finance_transactions.find(t => t.id === 'plan0')?.paid_at == null)
+  } else {
+    const row = DB.finance_transactions.find(t => t.id === 'plan0')
+    ok('the instalment itself was settled: paid today, 2,000, still the budget\'s and under the loan\'s category',
+      row?.paid_at === today && row.amount === 2000 && (row.tags ?? []).includes('budget') && row.category_id === LOAN, JSON.stringify(row && [row.paid_at, row.amount, row.tags, row.category_id]))
+    ok('and it is the only payment: no second entry beside it', before.length === 1 && before[0].id === 'plan0', before.map(t => t.id).join(','))
+    ok('the due day it was written for is kept', row?.date === today)
+  }
+  ok('the server refused nothing', !writes.some(w => w.refused))
+
+  if (MODE === 'settle') {
+    // The last of the debt: it is paid back, so its plan goes and what was paid stays.
+    ok('the plan is retired: its rule is gone', await asyncUntil(async () => (await rules())[LOAN] === undefined))
+    ok('…and so are the instalments still waiting', await asyncUntil(() => DB.finance_transactions.filter(t => (t.tags ?? []).includes('budget') && !t.paid_at && t.to_account_id === LOAN).length === 0))
+    ok('what was paid stays, and with it the category it was paid under', paidInto().length === 1 && !writes.some(w => w.table === 'finance_categories' && w.method === 'DELETE' && w.id === LOAN))
+    await tab('Balance')
+    ok('the loan folds away as paid back', await asyncUntil(async () => /Show 1 paid back/.test(await text())))
+  } else {
+    await tab('Balance')
+    const owed = MODE === 'goal' || MODE === 'payback' || MODE === 'separate' ? '(EGP 8,000)' : ''
+    ok(`Ahmed is owed 2,000 less: ${owed}`, await asyncUntil(async () => (await text()).includes(owed)))
+    ok('…and CIB holds 2,000 less: 18,000', /CIB[\s\S]{0,120}EGP 18,000/.test(await text()))
+    if (MODE === 'payback') {
+      await tab('Budget')
+      await page.getByText('Loan repayments').first().waitFor({ timeout: 6000 }).catch(() => {})
+      ok('the loan\'s envelope holds it: 2,000 spent', /Loan repayments\s+2,000/.test(await text()), (await text()).match(/Loan repayments[\s\S]{0,30}/)?.[0])
+    }
+  }
 }
 
 await br.close()

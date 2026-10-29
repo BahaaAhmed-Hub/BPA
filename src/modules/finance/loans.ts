@@ -119,6 +119,32 @@ export function dueThisMonth(
   return n
 }
 
+/** A budget wrote it and nobody has paid it: an instalment still waiting. */
+export const isPlannedInstalment = (
+  tx: Pick<Transaction, 'type' | 'toAccountId' | 'paidAt' | 'tags'>,
+  loanId: string,
+): boolean => tx.type === 'transfer' && tx.toAccountId === loanId && !tx.paidAt && !!tx.tags?.includes('budget')
+
+/**
+ * The planned instalment a payment on `onDate` settles, if there is one.
+ *
+ * Paying a lender back when the plan already filed an unpaid instalment for it
+ * is that instalment being paid — not a second payment beside it, which would
+ * leave the instalment dotted red and due for money that has already moved. The
+ * one it settles is the **earliest one that has come due by that month**: the
+ * month's own, or an older one nobody paid. A later month's is not due yet, and
+ * paying more than is due is a prepayment, which is its own entry.
+ */
+export function instalmentFor<T extends Pick<Transaction, 'type' | 'toAccountId' | 'paidAt' | 'tags' | 'date'>>(
+  txs: T[],
+  loanId: string,
+  onDate: string,
+): T | undefined {
+  return txs
+    .filter(t => isPlannedInstalment(t, loanId) && t.date.slice(0, 7) <= onDate.slice(0, 7))
+    .sort((a, b) => a.date.localeCompare(b.date))[0]
+}
+
 /** How much was borrowed in these entries, in `base`. The cash-flow views show
  *  it beside "In" and never inside it: it came in, and it is not income. An
  *  entry in a currency with no rate is left out rather than added at face
