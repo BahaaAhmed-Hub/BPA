@@ -285,11 +285,15 @@ textarea:focus,
    caret is the indicator for a field you are typing in; a button, link, select,
    checkbox or any other Tab stop keeps the ink ring. `!important` because 72
    controls carry an inline `outline: none` that the rule above re-asserts. */
-textarea:focus-visible,
-[contenteditable=""]:focus-visible,
-[contenteditable="true"]:focus-visible,
-input:not([type]):focus-visible,
-input:is([type="text"], [type="search"], [type="number"], [type="email"], [type="password"],
+/* `:root` is there for specificity: the inline-`outline: none` rule above is
+   (0,2,0) and also `!important`, so a bare `textarea:focus-visible` (0,1,1)
+   lost to it — the assistant's message box, which carries an inline
+   `outline: none`, wore the black ring. (0,2,1) beats it. */
+:root textarea:focus-visible,
+:root [contenteditable=""]:focus-visible,
+:root [contenteditable="true"]:focus-visible,
+:root input:not([type]):focus-visible,
+:root input:is([type="text"], [type="search"], [type="number"], [type="email"], [type="password"],
          [type="tel"], [type="url"], [type="date"], [type="time"], [type="datetime-local"],
          [type="month"], [type="week"]):focus-visible {
   outline: none !important;
