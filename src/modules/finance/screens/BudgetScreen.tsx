@@ -30,7 +30,7 @@ import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
 import { GLYPH, DEFAULT_CATEGORY_ICON } from '@/lib/glyphs'
 import { askConfirm } from '@/lib/confirm'
-import { txIn } from '../txRates'
+import { txIn, unpaidRateNote } from '../txRates'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -1986,6 +1986,7 @@ export function BudgetScreen(_props?: any) {
                         amount={tx.amount}
                         currency={tx.currency ?? currency}
                         unpaid={isUnpaid(tx)}
+                        rateNote={isUnpaid(tx) ? unpaidRateNote(tx) : null}
                         faded={flag === 'excluded'}
                         struck={flag === 'excluded'}
                         hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}

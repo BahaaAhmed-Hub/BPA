@@ -31,6 +31,7 @@ import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
 import { ICON } from '@/lib/type'
 import { TxRow, txDate as fmtTxDate } from '../components/TxRow'
 import { GLYPH, FALLBACK_INCOME_ICON, FALLBACK_EXPENSE_ICON } from '@/lib/glyphs'
+import { unpaidRateNote, debtsByCurrency } from '../txRates'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -453,6 +454,14 @@ export function BalanceScreen() {
     [accounts, transactions],
   )
 
+  // What is owed in another currency, in that currency — due by now and not
+  // paid. The EGP figure is at the rate each entry was added at (what every
+  // total uses), with today's beside it: what settling it now would cost.
+  const debts = useMemo(
+    () => debtsByCurrency(transactions.filter(t => isUnpaid(t) && t.type === 'expense' && t.date <= todayISO)),
+    [transactions, todayISO],
+  )
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden' }}>
       {/* Header */}
@@ -503,6 +512,14 @@ export function BalanceScreen() {
           <span style={{ fontSize: 'var(--sb-t-meta)', opacity: 0.65, display: 'block', marginTop: 4 }}>
             EGP {totalHeld.toLocaleString('en-US')} held · EGP {totalOwed.toLocaleString('en-US')} owed
           </span>
+          {debts.map(d => (
+            <span key={d.currency} data-unpaid-debt={d.currency}
+              style={{ fontSize: 'var(--sb-t-meta)', opacity: 0.65, display: 'block', marginTop: 4 }}>
+              Unpaid: {d.currency} {group(d.amount)} ({d.count})
+              {d.atAdded !== null && <> = {base} {group(d.atAdded)} at the rates added</>}
+              {d.atToday !== null && d.atToday !== d.atAdded && <> · {base} {group(d.atToday)} at today's {d.todayRate}</>}
+            </span>
+          ))}
         </div>
         {/* Held/Owed bar */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -754,6 +771,7 @@ export function BalanceScreen() {
                   currency={tx.currency}
                   direction={moveDir}
                   unpaid={isUnpaid(tx)}
+                  rateNote={isUnpaid(tx) ? unpaidRateNote(tx) : null}
                   hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}
                   onClick={() => setTxModal({ open: true, tx })}
                 />
