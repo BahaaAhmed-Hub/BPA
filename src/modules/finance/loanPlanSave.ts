@@ -2,7 +2,7 @@ import type { Account, Category } from './types'
 import { useFinanceStore } from './financeStore'
 import { loadRules, saveRules } from './modals/BudgetRuleModal'
 import { LOAN_PARENT_NAME, ruleFromPlan, planFromRule, planIssue, type LoanPlan } from './loanPlan'
-import { withAmount, monthKeyOf } from './budgetSteps'
+import { withChange, ruleAt, monthKeyOf, type Change } from './budgetSteps'
 import { LOAN_ICON } from './components/LoanMark'
 import { liveBalances } from './balances'
 import { isLoan, isSettled } from './loans'
@@ -81,14 +81,26 @@ export async function saveLoanPlan(loan: Account, plan: LoanPlan | null): Promis
   }
   await st.upsertCategory(child)
 
-  // A budget keeps the amount it had (budgetSteps.ts): raising the instalment
-  // is recorded from this month on and every earlier month stays as it was.
-  // Anything else about the plan — its dates, its account — is the plan's now.
+  // A budget keeps what it was (budgetSteps.ts): raising the instalment, or
+  // moving from monthly to quarterly, is recorded from this month on and every
+  // earlier month stays as it was. Anything else about the plan — its dates, its
+  // account — only decides what is written from now on, so it is the plan's now.
   const fresh = ruleFromPlan(plan, loan)
   const prev = rules[loan.id]
-  rules[loan.id] = prev && planFromRule(prev)
-    ? { ...fresh, ...withAmount({ amount: prev.amount, steps: prev.steps }, plan.amount, monthKeyOf()) }
-    : fresh
+  if (prev && planFromRule(prev)) {
+    const now = ruleAt(prev)
+    const change: Change = {}
+    if (plan.amount !== now.amount) change.amount = plan.amount
+    if (plan.frequency !== now.frequency) change.frequency = plan.frequency
+    rules[loan.id] = {
+      ...withChange(prev, change, monthKeyOf()),
+      starts: fresh.starts, ends: fresh.ends, dueDay: fresh.dueDay, dueAccountId: fresh.dueAccountId,
+    }
+  } else {
+    // Born this month: a typo corrected in the same month is simply set, with no
+    // ghost of the first figure left in a step.
+    rules[loan.id] = { ...fresh, born: monthKeyOf() }
+  }
   saveRules(rules)
   return {}
 }

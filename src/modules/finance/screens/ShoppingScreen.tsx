@@ -11,7 +11,7 @@ import { ItemFields, type EnvelopeRow } from '../shopping/ItemFields'
 import { StoresTab } from '../shopping/StoresTab'
 import { BoardView, NO_LIST } from '../shopping/BoardView'
 import { loadRules } from '../modals/BudgetRuleModal'
-import { amountFor } from '../budgetSteps'
+import { ruleAt } from '../budgetSteps'
 import { Segmented } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import { notify } from '@/lib/undo'
@@ -877,8 +877,8 @@ export function ShoppingScreen() {
     return Object.entries(rules).map(([catId, rule]) => ({
       id: catId,
       name: catId,
-      remaining: amountFor(rule) ?? 0,
-      currency: rule.currency ?? 'EGP',
+      remaining: ruleAt(rule).amount ?? 0,
+      currency: ruleAt(rule).currency ?? 'EGP',
       dueAccountName: rule.dueAccountId ? accountNameById.get(rule.dueAccountId) : undefined,
     }))
   }, [accountNameById])

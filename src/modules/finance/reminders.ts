@@ -1,6 +1,7 @@
 import type { Task } from '@/types'
 import type { Category } from './types'
 import { loadRules, monthlyAmount, activeIn, type BudgetRule } from './modals/BudgetRuleModal'
+import { ruleAt } from './budgetSteps'
 import { group } from './format'
 import { isoDate, shiftDaysISO } from './dates'
 
@@ -77,7 +78,7 @@ export function reminderTitle(cat: Category | undefined, rule?: BudgetRule, mont
   const name = cat?.name ?? 'money'
   const amount = rule && monthKey && activeIn(rule, monthKey) ? monthlyAmount(rule, monthKey) : 0
   const kind = cat?.txType === 'income' ? 'Collect' : 'Pay'
-  return amount > 0 ? `${kind} ${name} · ${rule?.currency ?? 'EGP'} ${group(amount)}` : `${kind} ${name}`
+  return amount > 0 ? `${kind} ${name} · ${(rule && monthKey ? ruleAt(rule, monthKey).currency : rule?.currency) ?? 'EGP'} ${group(amount)}` : `${kind} ${name}`
 }
 
 const MARK = 'money-reminder'

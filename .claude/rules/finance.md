@@ -793,52 +793,88 @@ re-priced every USD entry already in the ledger: July's rent, paid at 48, read a
 `budgetSteps.ts` (pure, no React). A rule held one `amount`, so raising rent from
 10,000 to 13,000 rewrote July too: 12,000 spent, over its limit at the time,
 read as comfortably inside the new one. Now `amount` is the **base** — what every
-month before the first change had — and `steps: [{ from: 'YYYY-MM', amount }]`
-records each change with the month it took effect. A rule that never changed has
-no `steps` and reads exactly as it always did; there is no migration, and the
-field rides inside the `finance-budget-rules` prefSync value.
+month before the first change had — and `steps: [{ from: 'YYYY-MM', ...fields }]`
+records each change with the month it took effect, carrying **only the fields
+that changed**. A rule that never changed has no `steps` and reads exactly as it
+always did; there is no migration, and the field rides inside the
+`finance-budget-rules` prefSync value. A step written when only the amount could
+change (`{ from, amount }`) still reads.
 - **The rule, with no UI for it.** Typing a new amount in the panel applies it
   from **this month on**; every earlier month keeps what it had. There is no
   scope toggle and no timeline — it was drawn up and thrown out as more than the
-  question needs. `withAmount(rule, n, monthOnScreen)` is the one function that
-  records a change, and both the panel and the assistant's `set_budget_envelope`
-  call it, so the two cannot differ.
+  question needs. `changeRule(rule, change, monthOnScreen)` (over `withChange`) is
+  the one function that records a change, and both the panel and the assistant's
+  `set_budget_envelope` call it, so the two cannot differ.
 - **Never earlier than this month.** `editMonth` is the later of today's month
   and the month on screen: looking back at July and typing a number must not
-  rewrite July. The panel's amount field shows `amountFor(rule, editMonth)` —
-  what an edit would change — so while looking at a past month the field reads
-  the current figure and the "of X this month" line above it reads that month's.
+  rewrite July. The panel's controls show `ruleAt(rule, editMonth)` — what an
+  edit would change — so while looking at a past month the field reads the
+  current figure and the "of X this month" line above it reads that month's
+  (`at` against `view` in `BudgetRuleModal`).
 - **The field saves on every keystroke**, so a change in the same month as the
   last one **replaces** it (1, 13, 130 … 13,000 is one change, and a typo
   corrected within the month leaves no trace); a change that lands on what the
-  month already had is not recorded; and changes planned for later months are
-  dropped, since "from now on" covers them. A rule that never had an amount is
-  simply set — a first budget still runs every month, as a new one always did.
-- **Only the amount is versioned, and only for a `repeat` budget.** Frequency,
-  currency, bucket and due day stay global; `once` and `custom` carry their own
-  dates and are written as before. There is no "all months" option: correcting
-  an old month's budget is not possible from the panel. If that is wanted it
-  belongs behind Settings, not in the everyday flow.
-- **Read a month through `amountFor` / `monthlyAmount(rule, monthKey)`.** With no
-  month `amountFor` means *now*, which is what the callers that never had a month
-  in hand always meant. This sharpens the unqualified claim in the three-shapes
+  month already had is not recorded; and a change planned for a later month is
+  dropped **only if it is to the same field** — changing the bucket now leaves a
+  planned raise in March alone. Two fields changed in one month **merge** into
+  one step, so a currency changed this morning survives the amount changed this
+  afternoon. A rule with nothing in it, or still **in the month it was made**
+  (`born`), is simply set: a first budget still runs every month, and a school
+  fee built one instalment at a time leaves no ghost of the first in the months
+  before it. A rule from before `born` existed is treated as having a past.
+- **What is versioned:** the **amount, currency, frequency, bucket, and the
+  instalments of a school fee that comes round every year** (`lines` with
+  `linesRepeat`). Raise the fee and last year's same month still reads the old
+  set — a set is read by the month it falls in, which is also how
+  `occurrencesFor` decides which set an upcoming date belongs to. **Not
+  versioned:** due day and account (they only decide the entries written from
+  now on), and a budget with **dates of its own** — a one-off payment, or
+  instalments that do not repeat (`hasOwnDates`) — whose dates are already their
+  history and where a step would hide a missed instalment added later for a
+  month gone. Those are changed in place. There is no "all months" option:
+  correcting an old month's budget is not possible from the panel, and removing
+  a budget removes its history.
+- **A frequency change restarts the cycle from the month it changes in**, as
+  far as the phase goes: `occurrencesFor` counts a quarterly rule's months from
+  its `starts` (or from today when it has none — an older quirk this leaves
+  alone), so monthly-then-quarterly from November writes October, then January.
+- **`linesRepeat` has to be true to repeat, and the checkbox used to say it was
+  when it was not.** Nothing ever set it, the engine reads `rule.linesRepeat`
+  truthy, and the box showed `!== false` — ticked for a school fee that did not
+  come round again. The box now shows what the engine does. A school fee set up
+  before this reads as not repeating until the box is ticked once.
+- **Read a month through `ruleAt(rule, monthKey)` / `monthlyAmount(rule, monthKey)`.**
+  With no month `ruleAt` means *now*, which is what the callers that never had a
+  month in hand always meant. This sharpens the unqualified claim in the three-shapes
   section that `monthlyAmount` without a month is the year's average: that holds
   for the dated shapes; for a `repeat` rule it is this month's figure.
   `budgetEntries.occurrencesFor` writes each instalment at **its own month's**
-  figure (weekly ones too), `reminderTitle` passes its month, the assistant's
-  range totals sum each month's own budget (23,000 over a 10,000 and a 13,000
-  month, not 26,000), and ShoppingScreen's envelope reads the current one.
+  amount, frequency, currency and set of dates (weekly ones too; an occurrence
+  now carries its `currency`, which the writer and the forecast use),
+  `reminderTitle` passes its month, the Budget screen reads each envelope's
+  currency and its bucket split by the month on screen, the calendar expenses
+  box reads the month's currency, the assistant's range totals sum each month's
+  own budget (23,000 over a 10,000 and a 13,000 month, not 26,000), and
+  ShoppingScreen's envelope and category review's split read the current one
+  (a review spans months and sorts spending by category, so it uses today's).
 - **The bots are not involved.** Telegram and Siri cannot read or set budgets
   (the Telegram prompt says so), so there is nothing to keep in step with the
   three-doors rule.
-- `node scripts/budget-steps.mjs` — the pure rules, 32 cases, no browser.
+- `node scripts/budget-steps.mjs` — the pure rules, 57 cases, no browser.
   `scripts/budget-keeps-old-amount.mjs [edit|stored]` — the panel: typing 13,000
-  records one change and last month still reads 10,000. `scripts/budget-steps-
-  readers.mjs` — the entries, the assistant and the range totals. Controls, the
-  same harnesses on the code before: the edit overwrites the base and last month
-  reads 13,000 (5 failures); November's entry is written at 10,000, the
-  assistant's write has no history, last month reads 13,000 and the range 26,000
-  (7 failures).
+  records one change and last month still reads 10,000.
+  `scripts/budget-keeps-old-shape.mjs [fees-stored|fees-edit|currency|bucket]` —
+  the same for a school fee (the base set kept, one change from this month, last
+  month 45,000, the same month a year ago 45,000 and next year 50,000), a
+  currency moved to USD, and a bucket moved to Savings. `scripts/budget-steps-
+  readers.mjs` — the entries (currency, frequency and school-fee sets per month),
+  the assistant and the range totals. Controls, the same harnesses on the code
+  before: the edit overwrites the base and last month reads 13,000 (5 failures);
+  November's entry is written at 10,000, the assistant's write has no history,
+  last month reads 13,000 and the range 26,000 (7); a school fee edit rewrites
+  last year and a year ago (5); a currency edit leaves last month in USD (3); a
+  bucket edit overwrites the base (2+); last month's Rent reads USD 3,333 at 360%
+  used (6).
 
 ## Finance — a budget belongs to one of four
 `BUCKETS` / `bucketOf` in `BudgetRuleModal.tsx`. **Kind** used to be *fixed* or

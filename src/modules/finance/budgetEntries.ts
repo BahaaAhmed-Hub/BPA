@@ -1,7 +1,7 @@
 import type { Category, Transaction } from './types'
-import { activeIn, linesOf, scheduleOf, type BudgetRule } from './modals/BudgetRuleModal'
+import { activeIn, linesOf, scheduleOf, type BudgetLine, type BudgetRule } from './modals/BudgetRuleModal'
 import { baseCurrency } from './fx'
-import { amountFor } from './budgetSteps'
+import { ruleAt } from './budgetSteps'
 import { isoDate, shiftDaysISO } from './dates'
 import { SETTLED_BELOW } from './loans'
 
@@ -52,6 +52,9 @@ export interface Occurrence {
   date: string
   /** What lands on that date. A custom schedule gives each date its own. */
   amount: number
+  /** What it is in — the budget's currency in the month it falls in, which is
+   *  not always what it is now (budgetSteps.ts). */
+  currency?: string
 }
 
 export function occurrencesFor(
@@ -69,13 +72,18 @@ export function occurrencesFor(
   if (kind === 'once') {
     if (!rule.onDate || !(rule.amount > 0)) return []
     if (rule.onDate < today || rule.onDate > horizon) return []
-    return [{ date: rule.onDate, amount: rule.amount }]
+    return [{ date: rule.onDate, amount: rule.amount, currency: rule.currency }]
   }
 
   // Four instalments, four dates, four amounts — school fees, and everything
   // shaped like them. Repeating means the same month and day next year.
   if (kind === 'custom') {
-    for (const line of linesOf(rule)) {
+    // A set of instalments that comes round every year can be changed from a
+    // month on (budgetSteps.ts), so more than one set may be in play across the
+    // horizon. Every set the rule has carried is laid out, and a date is kept
+    // only if its own set is the one in force in the month it falls in.
+    const sets = [...new Set([rule.lines, ...(rule.steps ?? []).map(st => st.lines)].filter(Boolean) as BudgetLine[][])]
+    for (const set of sets) for (const line of linesOf({ lines: set })) {
       // How many years the horizon actually reaches. Fixed at +2, a forecast
       // asking for ten years of instalments got three and read as a school
       // that stops charging in 2029.
@@ -87,8 +95,10 @@ export function occurrencesFor(
         const date = `${y}${line.date.slice(4)}`
         if (date < today || date > horizon) continue
         if (!activeIn(rule, date.slice(0, 7))) continue
+        const at = ruleAt(rule, date.slice(0, 7))
+        if (at.lines !== set) continue
         if (out.some(o => o.date === date)) continue
-        out.push({ date, amount: line.amount })
+        out.push({ date, amount: line.amount, currency: at.currency })
       }
     }
     return out.sort((a, b) => a.date.localeCompare(b.date))
@@ -96,37 +106,33 @@ export function occurrencesFor(
 
   if (rule.dueDay == null) return []
 
-  if (rule.frequency === 'weekly') {
-    let d = onDay(now.getFullYear(), now.getMonth(), rule.dueDay)
-    while (d < today) d = shiftDaysISO(d, 7)
-    const end = onDay(now.getFullYear(), now.getMonth() + monthsAhead, rule.dueDay)
-    while (d <= end) {
-      // The amount the budget has in the month this payment falls in — a raise
-      // from November must not be written onto October's instalments.
-      const amount = amountFor(rule, d.slice(0, 7))
-      if (amount > 0) out.push({ date: d, amount })
-      d = shiftDaysISO(d, 7)
-    }
-    return out
+  // Each date is read under the frequency, amount and currency the budget had in
+  // the month it falls in: a raise from November must not be written onto
+  // October's instalments, and a rule that went from weekly to monthly changes
+  // shape at the month it did.
+  let d = onDay(now.getFullYear(), now.getMonth(), rule.dueDay)
+  while (d < today) d = shiftDaysISO(d, 7)
+  const end = onDay(now.getFullYear(), now.getMonth() + monthsAhead, rule.dueDay)
+  for (; d <= end; d = shiftDaysISO(d, 7)) {
+    const at = ruleAt(rule, d.slice(0, 7))
+    if (at.frequency === 'weekly' && at.amount > 0) out.push({ date: d, amount: at.amount, currency: at.currency })
   }
 
-  const step = monthsPer[rule.frequency] ?? 1
   // Which months the rule falls in, counted from its own start.
   const [sy, sm] = (rule.starts || today.slice(0, 7)).split('-').map(Number)
   const startIndex = sy * 12 + (sm - 1)
   for (let n = 0; n <= monthsAhead; n++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + n, 1)
-    const index = d.getFullYear() * 12 + d.getMonth()
+    const m = new Date(now.getFullYear(), now.getMonth() + n, 1)
+    const index = m.getFullYear() * 12 + m.getMonth()
     if (index < startIndex) continue
-    if ((index - startIndex) % step !== 0) continue
-    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const monthKey = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`
     if (!activeIn(rule, monthKey)) continue
-    const date = onDay(d.getFullYear(), d.getMonth(), rule.dueDay)
+    const at = ruleAt(rule, monthKey)
+    if (at.frequency === 'weekly') continue
+    if ((index - startIndex) % (monthsPer[at.frequency] ?? 1) !== 0) continue
+    const date = onDay(m.getFullYear(), m.getMonth(), rule.dueDay)
     if (date < today) continue
-    // The amount in force in *that* month, so the entry written for next
-    // month carries next month's budget and this month's keeps its own.
-    const amount = amountFor(rule, monthKey)
-    if (amount > 0) out.push({ date, amount })
+    if (at.amount > 0) out.push({ date, amount: at.amount, currency: at.currency })
   }
   return out
 }
@@ -265,13 +271,14 @@ export function runBudgetEntries(
       const amount = Math.min(occ.amount, left)
       if (!(amount > (loan ? SETTLED_BELOW : 0))) break
       left -= amount
-      const { date } = occ
+      // The currency each instalment is in: a budget keeps the one it had.
+      const { date, currency } = occ
       if (!date.startsWith(String(year))) continue
       wanted.set(`${categoryId}|${date}`, {
         categoryId,
         date,
         amount,
-        currency: rule.currency ?? base,
+        currency: currency ?? base,
         accountId,
         type: loan ? 'transfer' : cat.txType === 'income' ? 'income' : 'expense',
         toAccountId: loan ? categoryId : undefined,

@@ -1,7 +1,7 @@
 import type { Account, Currency, Transaction, TxType } from './types'
 import type { BudgetRule } from './modals/BudgetRuleModal'
 import { isLoan, instalmentFor, SETTLED_BELOW } from './loans'
-import { amountFor } from './budgetSteps'
+import { ruleAt } from './budgetSteps'
 
 // ─── A payment plan is the loan's budget, stored once ────────────────────────
 //
@@ -88,8 +88,12 @@ export function ruleFromPlan(plan: LoanPlan, loan: Pick<Account, 'currency'>): B
 /** The plan a budget rule describes, or null when it is not one: a weekly or
  *  two-monthly rule, a dated one, or one with no day cannot be put in a form
  *  that asks for an amount, a frequency and a first date. */
-export function planFromRule(rule: BudgetRule | undefined): LoanPlan | null {
-  if (!rule) return null
+export function planFromRule(stored: BudgetRule | undefined): LoanPlan | null {
+  if (!stored) return null
+  // The rule **as it is now**: a budget keeps what it was (`budgetSteps.ts`), so
+  // the amount, the frequency and the currency may each have changed since the
+  // rule was written, and the fields on it are only what every earlier month had.
+  const rule = ruleAt(stored)
   if (rule.schedule && rule.schedule !== 'repeat') return null
   const f = rule.frequency
   if (f !== 'monthly' && f !== 'quarterly' && f !== 'yearly') return null
@@ -97,9 +101,7 @@ export function planFromRule(rule: BudgetRule | undefined): LoanPlan | null {
   const [y, m] = rule.starts.split('-').map(Number)
   return {
     frequency: f,
-    // What the plan asks for now. `rule.amount` is only the base — what every
-    // month before the first change had (`budgetSteps.ts`).
-    amount: amountFor(rule),
+    amount: rule.amount,
     start: onDay(y, m - 1, rule.dueDay),
     ends: isMonth(rule.ends) ? rule.ends : undefined,
     payFromId: rule.dueAccountId || undefined,

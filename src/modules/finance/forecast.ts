@@ -224,10 +224,10 @@ export function buildForecast(input: ForecastInput): Forecast {
     const cat = input.categories.find(c => c.id === categoryId)
     if (!cat) continue
     const sign = cat.txType === 'income' ? 1 : -1
-    for (const { date, amount } of occurrencesFor(rule, now, months)) {
+    for (const { date, amount, currency } of occurrencesFor(rule, now, months)) {
       const m = monthsFrom(monthKey(today), monthKey(date))
       if (m < 0 || m > months) continue
-      const v = toBase(amount, rule.currency ?? base, base)
+      const v = toBase(amount, currency ?? base, base)
       if (v === null) continue
       dated[m] += sign * v
       if (m < 12) datedYearly += v

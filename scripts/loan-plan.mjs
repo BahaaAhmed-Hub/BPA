@@ -67,6 +67,11 @@ const plan = (o = {}) => ({ frequency: 'monthly', amount: 2000, start: '2026-11-
   const raised = { ...base, steps: [{ from: '2000-01', amount: 2500 }] }
   eq('a raise made earlier is the plan\'s amount now', L.planFromRule(raised).amount, 2500)
   eq('control — a raise planned for the far future is not yet', L.planFromRule({ ...base, steps: [{ from: '2099-01', amount: 2500 }] }).amount, 2000)
+  // A budget keeps its frequency as well as its amount, so the plan is read as the rule is now.
+  const quarterly = { ...base, steps: [{ from: '2000-01', frequency: 'quarterly' }] }
+  eq('a change of frequency made earlier is the plan\'s frequency now', L.planFromRule(quarterly).frequency, 'quarterly')
+  eq('control — one planned for the far future is not yet', L.planFromRule({ ...base, steps: [{ from: '2099-01', frequency: 'quarterly' }] }).frequency, 'monthly')
+  eq('a frequency the form cannot say, arrived at by a step, is not a plan', L.planFromRule({ ...base, steps: [{ from: '2000-01', frequency: 'weekly' }] }), null)
 }
 
 // ── what is not a plan ───────────────────────────────────────────────────────

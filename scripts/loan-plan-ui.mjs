@@ -213,6 +213,18 @@ if (MODE === 'edit') {
   ok('…and written again at 2,500 on the plan\'s dates', JSON.stringify(instalments().map(t => t.date).sort()) === JSON.stringify(expectedDates), instalments().map(t => `${t.date}:${t.amount}`).join(' '))
   ok('the server refused nothing', !writes.some(w => w.refused))
 
+  // Change how often. A budget keeps what it was, so this is a step too, merged into this month's.
+  await page.getByTitle('Edit Ahmed').click()
+  await page.getByRole('button', { name: 'Quarterly', exact: true }).click()
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await until(async () => true)
+  await new Promise(r => setTimeout(r, 400))
+  const q = (await rules())[LOAN]
+  ok('quarterly is a step from this month, and the base is still monthly (earlier months were lived monthly)',
+    q?.frequency === 'monthly' && q?.steps?.length === 1 && q.steps[0].frequency === 'quarterly' && q.steps[0].from === today.slice(0, 7), JSON.stringify([q?.frequency, q?.steps]))
+  ok('…alongside the raise, in the same step, and nothing about the old amount is lost', q?.amount === 2000 && q?.steps?.[0]?.amount === 2500)
+  ok('the form reads it back as quarterly', (await (async () => { await page.getByTitle('Edit Ahmed').click(); const on = await page.getByRole('button', { name: 'Quarterly', exact: true }).getAttribute('aria-pressed'); await page.getByRole('button', { name: 'Cancel', exact: true }).click(); return on })()) === 'true')
+
   // Take the plan away.
   await page.getByTitle('Edit Ahmed').click()
   const box = page.getByRole('checkbox').first()
