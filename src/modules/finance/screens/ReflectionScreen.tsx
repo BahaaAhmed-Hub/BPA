@@ -19,7 +19,7 @@ import { loadTransactionsSpan, loadYearBounds } from '../financeDb'
 import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
 import { notify } from '@/lib/undo'
-import { txIn } from '../txRates'
+import { txIn, unpaidRateNote } from '../txRates'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -1650,6 +1650,7 @@ export function ReflectionScreen(_props?: any) {
                     amount={tx.amount}
                     currency={tx.currency}
                     unpaid={isUnpaid(tx)}
+                    rateNote={isUnpaid(tx) ? unpaidRateNote(tx) : null}
                     hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : 'Open this entry'}
                     onClick={() => setOpenTx(tx)}
                     trailing={

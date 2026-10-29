@@ -13,7 +13,8 @@ import { MoneyInput } from '../components/MoneyInput'
 import { liveBalances } from '../balances'
 import { acct } from '../format'
 import { todayISO } from '../dates'
-import { convert } from '../fx'
+import { baseCurrency, rateFor, convert } from '../fx'
+import { frozenRate, isFxTag, withRate, txConvert } from '../txRates'
 import { useFinanceStore } from '../financeStore'
 import {
   isLoan, spendingAccounts, findLender, newLender, isBorrowing, borrowingEnds,
@@ -85,11 +86,13 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   // that way — nothing here converts it — and follows the account until the
   // currency is set by hand, after which the choice stands.
   const [currencyTouched, setCurrencyTouched] = useState(false)
-  const [currency, setCurrency] = useState<Currency>(
+  const [currency, setCurrencyOnly] = useState<Currency>(
     transaction?.currency
       ?? accounts.find(a => a.id === (initial?.accountId ?? accounts[0]?.id))?.currency
       ?? 'EGP',
   )
+  // A rate typed for one currency means nothing for another.
+  const setCurrency = (c: Currency) => { setCurrencyOnly(c); setRateStr('') }
   const [payee,       setPayee]       = useState(transaction?.payee ?? initial?.payee ?? '')
   const [note,        setNote]        = useState(transaction?.note                ?? '')
   const [accountId,   setAccountId]   = useState(transaction?.accountId           ?? initial?.accountId ?? (accounts[0]?.id ?? ''))
@@ -132,7 +135,10 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   )
   const [isRecurring, setIsRecurring] = useState(transaction?.isRecurring         ?? false)
   const [attachments, setAttachments] = useState<string[]>(transaction?.attachments ?? [])
-  const [tags,        setTags]        = useState<string[]>(transaction?.tags        ?? [])
+  // The exchange-rate stamp (txRates.ts) is edited in its own row below, so it
+  // is kept out of the chips — a tag that could be deleted by accident.
+  const [tags,        setTags]        = useState<string[]>(transaction?.tags?.filter(t => !isFxTag(t)) ?? [])
+  const [rateStr,     setRateStr]     = useState(() => (transaction ? frozenRate(transaction) : null)?.toString() ?? '')
   const [tagInput,    setTagInput]    = useState('')
 
   // The optional half of the form, folded away until asked for. Anything that
@@ -143,7 +149,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   // did not get written.
   const [openPanes, setOpenPanes] = useState<Record<string, boolean>>(() => ({
     payee:  !!(transaction?.payee ?? initial?.payee),
-    tags:   !!transaction?.tags?.length,
+    tags:   !!transaction?.tags?.some(t => !isFxTag(t)),
     files:  !!transaction?.attachments?.length,
     repeat: !!transaction?.isRecurring,
   }))
@@ -193,6 +199,14 @@ export function TransactionModal({ transaction, accounts, categories, history = 
     : type === 'expense' ? 'var(--sb-negative)' : type === 'income' ? 'var(--sb-positive)' : 'var(--sb-ink-1)'
   const amount = parseFloat(amountStr) || 0
 
+  // The rate this entry was actually at — what it was added at, or what it was
+  // paid at if that differed. Empty means today's, which the store stamps.
+  const baseCode = baseCurrency()
+  const foreign = currency.toUpperCase() !== baseCode.toUpperCase()
+  const rate = parseFloat(rateStr)
+  const savedTags = foreign && rate > 0 ? withRate(tags, currency, rate) : tags
+
+
   // The lender this entry is for, if it is an existing one — chosen from the
   // list, or typed as a name that already is one (so "ahmed" and "Ahmed" are
   // one person, not two accounts).
@@ -205,12 +219,14 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   // new lender is made in the currency being borrowed, so only an existing one
   // can differ from it. `null` is a currency nobody gave a rate for.
   const ends = borrowed && amount > 0 && landing
-    ? borrowingEnds(amount, currency, lender ?? { currency }, landing)
+    ? borrowingEnds(amount, currency, lender ?? { currency }, landing, savedTags)
     : null
   const unrated = !!ends && (ends.owed === null || ends.arrives === null)
+  // The rate the entry will carry: the one typed in the Rate row, else today's.
+  const typedRate = foreign && rate > 0
   const rateLine = (from: Currency, to: string) => {
-    const r = convert(1, from, to)
-    return r === null ? '' : `1 ${from} = ${Math.round(r * 10000) / 10000} ${to}`
+    const r = txConvert({ currency: from, tags: savedTags }, 1, to)
+    return r === null ? '' : `1 ${from} = ${Math.round(r * 10000) / 10000} ${to}${typedRate ? '' : ' today'}`
   }
 
   async function handleSave() {
@@ -253,7 +269,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       paidAt:      isCleared ? (paidAt || date) : undefined,
       note:        note.trim() || undefined,
       attachments: attachments.length > 0 ? attachments : undefined,
-      tags:        tags.length > 0 ? tags : undefined,
+      tags:        savedTags.length > 0 ? savedTags : undefined,
       isCleared,
       isRecurring,
       createdAt:   transaction?.createdAt   ?? new Date().toISOString(),
@@ -445,6 +461,23 @@ export function TransactionModal({ transaction, accounts, categories, history = 
 
         {/* Everything else hangs off one label column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* An entry keeps the rate of the day it was added (txRates.ts). Shown
+              only where it means something, and editable for the case where it
+              was paid at a different one. */}
+          {foreign && (
+            <div style={ROW}>
+              <span style={LABEL}>Rate</span>
+              <span style={{ ...PILL, flex: 1, gap: 8, cursor: 'text' }}>
+                <span style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }}>1 {currency} =</span>
+                <input type="number" min={0} step="0.0001" inputMode="decimal" aria-label={`Exchange rate, ${currency} to ${baseCode}`}
+                  value={rateStr} onChange={e => setRateStr(e.target.value)}
+                  placeholder={rateFor(currency)?.toString() ?? 'no rate set'}
+                  style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'inherit', fontSize: 'inherit', color: 'var(--sb-ink-1)', textAlign: 'right', padding: 0 }} />
+                <span style={{ color: 'var(--sb-ink-3)', flexShrink: 0 }}>{baseCode}</span>
+              </span>
+            </div>
+          )}
+
           {/* Borrowed: who lent it, and where it landed. The lender is an account
               of its own (one per person), made here the first time they are
               named, so the debt has somewhere to be owed. */}
@@ -517,13 +550,13 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                     {currency !== landing?.currency && landing && (
                       <div>
                         <b style={{ fontWeight: 600 }}>{acct(ends.arrives!, { currency: landing.currency })}</b> arrives in {landing.name}
-                        {' '}<span style={{ color: 'var(--sb-ink-3)' }}>({rateLine(currency, landing.currency)} today)</span>
+                        {' '}<span style={{ color: 'var(--sb-ink-3)' }}>({rateLine(currency, landing.currency)})</span>
                       </div>
                     )}
                     {lender && currency !== lender.currency && (
                       <div>
                         <b style={{ fontWeight: 600 }}>{acct(ends.owed!, { currency: lender.currency })}</b> added to what you owe {lender.name}
-                        {' '}<span style={{ color: 'var(--sb-ink-3)' }}>({rateLine(currency, lender.currency)} today)</span>
+                        {' '}<span style={{ color: 'var(--sb-ink-3)' }}>({rateLine(currency, lender.currency)})</span>
                       </div>
                     )}
                   </span>

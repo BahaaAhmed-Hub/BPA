@@ -14,7 +14,7 @@ import { isoDate } from '../dates'
 import { TxRow, txDate } from '../components/TxRow'
 import { C } from '@/lib/palette'
 import { FALLBACK_EXPENSE_ICON, FALLBACK_INCOME_ICON } from '@/lib/glyphs'
-import { txIn } from '../txRates'
+import { txIn, unpaidRateNote } from '../txRates'
 import { borrowedIn, isBorrowing, isRepayment } from '../loans'
 import { LoanMark, LOAN_ICON } from '../components/LoanMark'
 
@@ -320,6 +320,7 @@ export function TodayScreen() {
         currency={tx.currency}
         neutral={!!loanKind}
         unpaid={isUnpaid(tx)}
+        rateNote={isUnpaid(tx) ? unpaidRateNote(tx) : null}
         faded={isFuture}
         hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}
         onClick={() => setTxModal({ open: true, tx })}

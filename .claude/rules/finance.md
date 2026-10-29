@@ -755,10 +755,35 @@ re-priced every USD entry already in the ledger: July's rent, paid at 48, read a
   out of every total until paid, as before.
 - **Not covered**: `projects/projectLife.ts` sums linked entries through
   `sumInBase` from a snapshot (`EntryMeta`) that carries no tags, so a project's
-  USD totals still use the current rate. There is no field to edit an entry's rate
-  (paying at a different rate than the day it was added is not representable yet).
+  USD totals still use the current rate.
   The Telegram bot and Siri cannot add ledger entries, so nothing to keep in step.
-- `node scripts/tx-rates.mjs` (21 cases, no browser) and `scripts/tx-rate-frozen.mjs
+- **The rate is editable in the entry panel.** A **Rate** row (`1 USD = [48] EGP`)
+  under the amount, drawn only for an entry in a foreign currency, reading the rate
+  the entry was added at — not today's, which is only its placeholder. Change it
+  where the entry was paid at a different rate than the day it was added. Saved, it
+  replaces the stamp (`withRate`); the description is **not** rewritten, so the
+  rate the entry was added at stays there as the reference. Cleared, the stamp is
+  dropped and the store stamps today's. Changing the currency clears the field (a
+  rate typed for one currency is not for another), and the stamp is kept out of the
+  Tags chips (`isFxTag`) so it cannot be deleted by accident.
+- **An unpaid foreign entry says what it owes, in its own currency, with the rate.**
+  `unpaidRateNote(tx)` → `USD 100 @ 48 = EGP 4,800 · today 50 = EGP 5,000`: the amount
+  in the currency it is owed in, the rate it was added at, what that comes to, and —
+  only where today's rate differs — what settling it now would cost. An entry with no
+  stamp is at today's rate and says it once; the base currency, and a currency with no
+  rate at all, say nothing. It rides on `TxRow`'s `rateNote` prop (one prop covers the
+  Today, Balance, Budget and Reflection feeds) and only for an unpaid entry. **Balance's
+  hero** adds one line per foreign currency (`debtsByCurrency`): `Unpaid: USD 140 (2) =
+  EGP 6,800 at the rates added · EGP 7,000 at today's 50`. A debt there is **unpaid
+  spending due by now** — a budget's instalments dated ahead are plans and are not in
+  it — and a total is `null`, not guessed, where any entry has no rate. The assistant
+  has no unpaid-debts tool, so there is nothing to keep in step.
+  `scripts/unpaid-debts-in-usd.mjs [rows|total]`; control, the code before: the rows
+  carry no note and the hero has no line. **Not re-run:** the ink audit's stub serves no
+  finance data, so the new hero line is never on its screen — it uses the sibling line's
+  own style (size, 0.65 opacity) on the same dark ground, which that audit does cover.
+- `node scripts/tx-rates.mjs` (36 cases, no browser), `scripts/tx-rate-edit.mjs
+  [edit|shown|currency]` (the panel) and `scripts/tx-rate-frozen.mjs
   [change|assistant|unreadable]` (the real store against a stub that keeps what it
   is sent and can refuse reads). Control, the harness on the code before: the July
   entry reads **5,000 instead of 4,800**, nothing is written, and the new entry

@@ -1,6 +1,5 @@
 import type { Account, Currency, Transaction } from './types'
-import { convert } from './fx'
-import { txIn } from './txRates'
+import { txIn, txConvert } from './txRates'
 import { DEFAULT_LOAN_EMOJI } from '@/lib/glyphs'
 
 // ─── Money borrowed is cash in and debt out, and neither is income ───────────
@@ -104,9 +103,13 @@ export function borrowingEnds(
   currency: Currency,
   loan: Pick<Account, 'currency'>,
   into: Pick<Account, 'currency'>,
+  /** The entry's tags, which may carry the rate it is at (`fx:USD/EGP=50`). With
+   *  none the rate is today's, which is what the store will stamp on it. */
+  tags?: string[],
 ): { owed: number | null; arrives: number | null } {
+  const tx = { currency, tags }
   return {
-    owed:    convert(amount, currency, loan.currency),
-    arrives: convert(amount, currency, into.currency),
+    owed:    txConvert(tx, amount, loan.currency),
+    arrives: txConvert(tx, amount, into.currency),
   }
 }

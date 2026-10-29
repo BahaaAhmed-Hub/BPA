@@ -78,6 +78,7 @@ await page.addInitScript(([s, rates]) => {
   localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'finance', themeId: 'sunlit-bento' }, version: 0 }))
   localStorage.setItem('finance-fx-rates', JSON.stringify(rates))
+  localStorage.setItem('bpa-wizard-done', '1')   // the stub account is brand new; the setup guide would cover the screen
 }, [session, MODE === 'norate' ? {} : { USD: 48 }])
 const traffic = watchTraffic(page)
 await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })

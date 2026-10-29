@@ -13,13 +13,13 @@ globalThis.window = { dispatchEvent: () => true }
 globalThis.Event = class { constructor(t) { this.type = t } }
 
 const dir = mkdtempSync(join(tmpdir(), 'txrates-'))
-for (const f of ['fx', 'txRates']) {
+for (const f of ['fx', 'format', 'txRates']) {
   const src = readFileSync(new URL(`../src/modules/finance/${f}.ts`, import.meta.url), 'utf8')
   const out = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
-  writeFileSync(join(dir, `${f}.js`), out.replace(/from '\.\/fx'/g, "from './fx.js'"))
+  writeFileSync(join(dir, `${f}.js`), out.replace(/from '\.\/(fx|format)'/g, "from './$1.js'"))
 }
 const fx = await import(join(dir, 'fx.js'))
-const { frozenRate, txConvert, txIn, stamped } = await import(join(dir, 'txRates.js'))
+const { frozenRate, txConvert, txIn, stamped, withRate, isFxTag, unpaidRateNote, debtsByCurrency } = await import(join(dir, 'txRates.js'))
 
 let pass = 0, fail = 0
 const eq = (name, got, want) => {
@@ -55,6 +55,12 @@ eq('the rate goes into an empty description', stamped(tx(), { note: true, now: N
 eq('…after an existing note, which is kept', stamped(tx({ note: 'with Omar' }), { note: true, now: NOW }).note, 'with Omar rate 29 Oct 2026: 1 USD = 48 EGP')
 eq('freezing old entries leaves their notes alone', stamped(tx({ note: 'old' })).note, 'old')
 
+// ── editing the rate ─────────────────────────────────────────────────────────
+eq('withRate replaces the stamp and keeps the other tags', withRate(['a', 'fx:USD/EGP=48', 'b'], 'USD', 49.5), ['a', 'b', 'fx:USD/EGP=49.5'])
+eq('withRate on no tags', withRate(undefined, 'usd', 49.5), ['fx:USD/EGP=49.5'])
+eq('an edited stamp is the one that is read', txIn(tx({ tags: withRate([], 'USD', 49.5) })), 4950)
+eq('isFxTag tells a stamp from a tag a person wrote', [isFxTag('fx:USD/EGP=48'), isFxTag('fx:'), isFxTag('groceries')], [true, false, false])
+
 // ── reading ──────────────────────────────────────────────────────────────────
 eq('frozenRate reads the tag', frozenRate(tx({ tags: ['fx:USD/EGP=48.5'] })), 48.5)
 eq('a stamp for another currency is not this entry\'s', frozenRate(tx({ tags: ['fx:EUR/EGP=55'] })), null)
@@ -64,6 +70,24 @@ fx.setRate('EUR', 55)
 eq('into another currency: frozen base value over the current rate of the target',
   txConvert(tx({ tags: ['fx:USD/EGP=48'] }), 100, 'EUR'), 4800 / 55)
 eq('the sign of an amount is ignored by txIn', txIn(tx({ amount: 100, tags: ['fx:USD/EGP=48'] })), 4800)
+
+// ── unpaid debts, in the currency they are owed in ───────────────────────────
+fx.setRate('USD', 50)
+eq('a stamped entry says its rate and, where it differs, today\'s', unpaidRateNote(tx({ tags: ['fx:USD/EGP=48'] })), 'USD 100 @ 48 = EGP 4,800 · today 50 = EGP 5,000')
+eq('a stamp equal to today\'s says it once', unpaidRateNote(tx({ tags: ['fx:USD/EGP=50'] })), 'USD 100 @ 50 = EGP 5,000')
+eq('an entry with no stamp is at today\'s rate, and says so once', unpaidRateNote(tx()), 'USD 100 @ 50 = EGP 5,000')
+eq('an entry in the base currency has no note', unpaidRateNote(tx({ currency: 'EGP' })), null)
+eq('a currency with no rate and no stamp has no note', unpaidRateNote(tx({ currency: 'GBP' })), null)
+eq('cents are kept', unpaidRateNote(tx({ amount: -12.5, tags: ['fx:USD/EGP=48'] })), 'USD 12.50 @ 48 = EGP 600 · today 50 = EGP 625')
+const owed = debtsByCurrency([tx({ tags: ['fx:USD/EGP=48'] }), tx({ amount: -40 }), tx({ currency: 'EGP', amount: -300 })])
+eq('debts are grouped by foreign currency; the base is left out', owed.map(d => d.currency), ['USD'])
+eq('count and amount in that currency', [owed[0].count, owed[0].amount], [2, 140])
+eq('at the rates added: 100 at 48 + 40 at the then-current 50', owed[0].atAdded, 6800)
+eq('at today\'s rate', [owed[0].atToday, owed[0].todayRate], [7000, 50])
+fx.setRate('USD', null)
+const unrated = debtsByCurrency([tx({ tags: ['fx:USD/EGP=48'] }), tx()])
+eq('with no rate today, only the stamped one is priced: the total is unknown, not guessed', [unrated[0].atAdded, unrated[0].atToday], [null, null])
+fx.setRate('USD', 48)
 
 // ── a rate removed later does not un-price what was stamped ──────────────────
 fx.setRate('USD', null)

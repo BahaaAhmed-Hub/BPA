@@ -46,6 +46,9 @@ export interface TxRowProps {
   struck?: boolean
   onClick?: () => void
   hoverTitle?: string
+  /** For an unpaid entry in a foreign currency: its amount, the rate it was added at
+   *  and what that comes to (txRates.unpaidRateNote). */
+  rateNote?: string | null
   style?: CSSProperties
 }
 
@@ -94,7 +97,7 @@ export function txDate(iso: string): string {
 
 export function TxRow({
   icon, tone, title, marks, meta, type, amount, currency, direction,
-  trailing, unpaid, faded, struck, neutral, onClick, hoverTitle, style,
+  trailing, unpaid, faded, struck, neutral, onClick, hoverTitle, rateNote, style,
 }: TxRowProps) {
   const inkKeeping = useInkOnKeeping()
   const medallion = tone ?? (type === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)')
@@ -151,6 +154,7 @@ export function TxRow({
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {meta}
+          {rateNote && <span title={rateNote} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>· {rateNote}</span>}
         </span>
       </span>
 

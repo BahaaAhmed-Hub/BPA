@@ -68,6 +68,7 @@ await page.addInitScript(([s, rule]) => {
   localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'finance', themeId: 'sunlit-bento' }, version: 0 }))
   localStorage.setItem('finance-active-screen', 'budget')
+  localStorage.setItem('bpa-wizard-done', '1')   // the stub account is brand new; the setup guide would take the keystrokes
   localStorage.setItem('finance-budget-rules', JSON.stringify({ 'c-rent': rule }))
 }, [session, RULE])
 const traffic = watchTraffic(page)

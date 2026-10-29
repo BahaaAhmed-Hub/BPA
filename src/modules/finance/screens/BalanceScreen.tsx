@@ -33,6 +33,7 @@ import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
 import { ICON } from '@/lib/type'
 import { TxRow, txDate as fmtTxDate } from '../components/TxRow'
 import { GLYPH, FALLBACK_INCOME_ICON, FALLBACK_EXPENSE_ICON } from '@/lib/glyphs'
+import { unpaidRateNote, debtsByCurrency } from '../txRates'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -160,22 +161,22 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
           </div>
         )}
       />
-      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 'min-content' }}>
+        <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{account.name}</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
           {account.accountType === 'loan' ? (account.bank || 'Loan') : (account.bank ?? account.accountType)}{account.last4 ? ` · ···· ${account.last4}` : ''}
         </span>
       </div>
 
       {limit > 0 && (
-        <div style={{ width: 116, flexShrink: 0, marginLeft: 10 }} title={`${acct(-owed, { currency: account.currency })} of ${account.currency} ${Math.round(limit).toLocaleString('en-US')} used`}>
+        <div style={{ width: 160, minWidth: 0, flexShrink: 1, marginLeft: 10 }} title={`${acct(-owed, { currency: account.currency })} of ${account.currency} ${Math.round(limit).toLocaleString('en-US')} used`}>
           <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
             <div style={{
               width: `${Math.round(used * 100)}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
               background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? 'var(--sb-warning)' : 'var(--sb-ink-3)',
             }} />
           </div>
-          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 3, whiteSpace: 'nowrap' }}>
+          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 3 }}>
             {account.currency} {Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of {Math.round(limit).toLocaleString('en-US')}
           </span>
         </div>
@@ -468,6 +469,14 @@ export function BalanceScreen() {
     [accounts, transactions],
   )
 
+  // What is owed in another currency, in that currency — due by now and not
+  // paid. The EGP figure is at the rate each entry was added at (what every
+  // total uses), with today's beside it: what settling it now would cost.
+  const debts = useMemo(
+    () => debtsByCurrency(transactions.filter(t => isUnpaid(t) && t.type === 'expense' && t.date <= todayISO)),
+    [transactions, todayISO],
+  )
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden' }}>
       {/* Header */}
@@ -518,6 +527,14 @@ export function BalanceScreen() {
           <span style={{ fontSize: 'var(--sb-t-meta)', opacity: 0.65, display: 'block', marginTop: 4 }}>
             EGP {totalHeld.toLocaleString('en-US')} held · EGP {totalOwed.toLocaleString('en-US')} owed
           </span>
+          {debts.map(d => (
+            <span key={d.currency} data-unpaid-debt={d.currency}
+              style={{ fontSize: 'var(--sb-t-meta)', opacity: 0.65, display: 'block', marginTop: 4 }}>
+              Unpaid: {d.currency} {group(d.amount)} ({d.count})
+              {d.atAdded !== null && <> = {base} {group(d.atAdded)} at the rates added</>}
+              {d.atToday !== null && d.atToday !== d.atAdded && <> · {base} {group(d.atToday)} at today's {d.todayRate}</>}
+            </span>
+          ))}
         </div>
         {/* Held/Owed bar */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -790,6 +807,7 @@ export function BalanceScreen() {
                   direction={moveDir}
                   neutral={!!loanKind}
                   unpaid={isUnpaid(tx)}
+                  rateNote={isUnpaid(tx) ? unpaidRateNote(tx) : null}
                   hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}
                   onClick={() => setTxModal({ open: true, tx })}
                 />
