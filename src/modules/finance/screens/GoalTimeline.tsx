@@ -2,7 +2,10 @@ import { useMemo, useState } from 'react'
 import type { Goal } from '../types'
 import type { Schedule, MonthRow } from '../goalPlan'
 import { byRank, isDebtGoal } from '../goalPlan'
+import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
 import { acct, group } from '../format'
+import { convert } from '../fx'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── Every goal on one timeline ──────────────────────────────────────────────
 //
@@ -46,23 +49,29 @@ export function monthName(key: string): string {
   return `${MON[(m - 1) % 12]} ${y}`
 }
 
-/** A colour per goal, taken from the goal where it has one and spread around
- *  the wheel where it does not — two lanes of the same hue read as one goal. */
+/** One colour for a kind of lane, not one per goal. A rainbow of lanes says
+ *  nothing: the question the colour answers is *what is this* — money you owe
+ *  or money you are putting aside — and every debt is the first, every goal the
+ *  second. Semantic tokens, so each theme draws them on its own ground. */
+const DEBT_INK = 'var(--sb-negative)'
+const GOAL_INK = 'var(--sb-positive)'
 function colours(goals: Goal[]): Map<string, string> {
-  const out = new Map<string, string>()
-  goals.forEach((g, i) => {
-    const own = g.color && /^#/.test(g.color) ? g.color : null
-    out.set(g.id, own ?? `hsl(${(i * 67) % 360} 52% 46%)`)
-  })
-  return out
+  return new Map(goals.map(g => [g.id, isDebtGoal(g) ? DEBT_INK : GOAL_INK]))
 }
 
+/** The rule between one year and the next, drawn on the January column. */
+const YEAR_EDGE = 'var(--sb-border-width) solid var(--sb-border)'
+const COLLAPSED_KEY = 'finance-goals-timeline-collapsed'
+const MOVE: React.CSSProperties = {
+  width: 18, height: 14, padding: 0, border: 'none', background: 'none',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
+}
 interface Cell { row: MonthRow; into: Map<string, number>; total: number }
 
 // The lanes are years wide and they scroll, so anything that has to stay
 // readable belongs in the fixed name block. A "lands" column on the far right
 // is a column you never see without scrolling past everything it summarises.
-const NAME = 210, COL = 58
+const NAME = 250, COL = 58
 
 /** Debts first, then goals. Both are funded from the same pot and ranked in
  *  one list; they are drawn apart because they are answers to two different
@@ -72,7 +81,7 @@ const SECTIONS = [
   { key: 'goals', debts: false, title: 'Goals',          blurb: 'money you are putting aside' },
 ] as const
 
-export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }: {
+export function GoalTimeline({ schedule, goals, currency, surplus, months = 48, onMove }: {
   schedule: Schedule
   goals: Goal[]
   currency: string
@@ -83,8 +92,19 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
   surplus: number
   /** How many months to draw. The plan runs for ten years; nobody reads ten. */
   months?: number
+  /** Move a lane up or down among its own kind; the screen writes the ranks and
+   *  the whole plan is run again. */
+  onMove?: (id: string, dir: -1 | 1) => void
 }) {
   const [picked, setPicked] = useState<string | null>(null)
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '{}') as Record<string, boolean> } catch { return {} }
+  })
+  const toggle = (key: string) => setCollapsed(prev => {
+    const next = { ...prev, [key]: !prev[key] }
+    try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next)) } catch { /* private mode */ }
+    return next
+  })
 
   const ranked = useMemo(() => byRank(goals), [goals])
   const paint = useMemo(() => colours(ranked), [ranked])
@@ -112,7 +132,12 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
     const first = schedule.rows[0].month < thisMonth ? schedule.rows[0].month : thisMonth
     const lands = [...schedule.landsIn.values()]
     const lastKey = lands.length ? lands.reduce((a, b) => (a > b ? a : b)) : schedule.rows[schedule.rows.length - 1].month
-    const span = Math.max(6, Math.min(months, monthsBetween(first, lastKey) + 2))
+    // At least a year, and on to the December it ends in: an axis that stops in
+    // March beside a lane that ends in March says the plan is over, and the grey
+    // that is left of the box is not "later", it is nothing drawn.
+    const wanted = Math.max(12, monthsBetween(first, lastKey) + 2)
+    const endMonth = Number(addMonths(first, wanted - 1).slice(5))
+    const span = Math.min(months, wanted + (12 - endMonth))
 
     const out: Cell[] = []
     for (let i = 0; i < span; i++) {
@@ -182,7 +207,7 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
           {/* The months, once, above every lane */}
           <div style={{ display: 'flex', alignItems: 'flex-end', height: 26 }}>
             <span style={{ width: NAME, flexShrink: 0 }} />
-            {cells.map(c => {
+            {cells.map((c, i) => {
               const [y, m] = c.row.month.split('-').map(Number)
               const on = c.row.month === picked
               return (
@@ -193,6 +218,7 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
                     width: COL, flexShrink: 0, border: 'none', cursor: 'pointer', padding: '0 0 3px',
                     background: on ? 'var(--sb-accent-tint)' : 'transparent',
                     borderRadius: '4px 4px 0 0', fontFamily: 'var(--sb-font-num)',
+                    borderLeft: m === 1 && i > 0 ? YEAR_EDGE : undefined,
                     fontSize: 'var(--sb-t-meta)', fontWeight: m === 1 ? 700 : 600,
                     color: m === 1 ? 'var(--sb-ink-2)' : 'var(--sb-ink-3)',
                   }}>
@@ -212,14 +238,28 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
             if (lanes.length === 0) return null
             return (
             <div key={section.key} style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, paddingTop: 4 }}>
-                <span style={{
-                  width: NAME, flexShrink: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700,
-                  letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--sb-ink-3)',
-                }}>{section.title}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
+                {/* The arrow is beside the name it folds, and the whole name is the
+                    button — a 12px chevron alone is a target nobody hits. */}
+                <button
+                  onClick={() => toggle(section.key)}
+                  aria-expanded={!collapsed[section.key]}
+                  title={collapsed[section.key] ? `Show ${section.title.toLowerCase()}` : `Hide ${section.title.toLowerCase()}`}
+                  style={{
+                    width: NAME, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, padding: 0,
+                    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                    fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+                    letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--sb-ink-3)',
+                  }}>
+                  {collapsed[section.key]
+                    ? <ChevronRight size={ICON.sm} strokeWidth={STROKE.rest} />
+                    : <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} />}
+                  {section.title}
+                  <span style={{ fontWeight: 600, letterSpacing: 0 }}>({lanes.length})</span>
+                </button>
                 <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>{section.blurb}</span>
               </div>
-            {lanes.map(g => {
+            {!collapsed[section.key] && lanes.map((g, laneAt) => {
               const rank = ranked.indexOf(g)
               const per = cells.map(c => c.into.get(g.id) ?? 0)
               const most = Math.max(1, ...per)
@@ -228,17 +268,24 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
               const due = g.deadline ? g.deadline.slice(0, 7) : null
               const late = due && lands ? lands > due : false
               const colour = paint.get(g.id) ?? 'var(--sb-ink-3)'
+              // What it needs, in the money the plan is drawn in. The plan's
+              // figures are in the base currency and a debt's target is in its
+              // own, so 10,904 (pounds) was printed "of 2,500" (dollars). With
+              // no rate for it the target is shown as it is, and says what it is.
+              const asBase = convert(g.targetAmount, g.currency ?? currency, currency)
+              const need = asBase != null ? group(Math.round(asBase))
+                : `${group(Math.round(g.targetAmount))} ${g.currency ?? currency}`
 
               return (
                 <div key={g.id} style={{ display: 'flex', alignItems: 'stretch' }}>
                   {/* Who the lane belongs to */}
-                  <span style={{
+                  <span data-lane={g.name} style={{
                     width: NAME, flexShrink: 0, alignSelf: 'center', paddingRight: 10,
                     display: 'flex', alignItems: 'center', gap: 8, minWidth: 0,
                   }}>
-                    <span style={{
+                    <span data-lane-badge style={{
                       width: 18, height: 18, flexShrink: 0, borderRadius: 'var(--sb-r-chip)',
-                      background: colour, color: '#fff', display: 'flex', alignItems: 'center',
+                      background: colour, color: 'var(--sb-ink-on-fill)', display: 'flex', alignItems: 'center',
                       justifyContent: 'center', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
                     }}>{rank + 1}</span>
                     <span style={{ minWidth: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600, lineHeight: 1.25 }}>
@@ -255,9 +302,28 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
                           color: lands ? (late ? 'var(--sb-negative)' : 'var(--sb-positive)') : 'var(--sb-ink-3)',
                         }}>{lands ? monthName(lands) : (surplus <= 0 ? 'never, at this rate' : 'not in ten years')}</b>
                         {due ? ` · ${late ? 'due' : 'by'} ${monthName(due)}` : ''}
-                        {' · '}{group(Math.round(into))} of {group(Math.round(g.targetAmount))}
+                        {' · '}
+                        <span title={`What the plan puts into ${g.name} across the months drawn, out of what it needs — a plan, not a payment made.`}>
+                          planned {group(Math.round(into))} of {need}
+                        </span>
                       </span>
                     </span>
+                    {onMove && (
+                      <span style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, marginLeft: 'auto' }}>
+                        <button
+                          onClick={() => onMove(g.id, -1)} disabled={laneAt === 0}
+                          title={`Pay ${g.name} earlier in the order`} aria-label={`Move ${g.name} up`}
+                          style={{ ...MOVE, opacity: laneAt === 0 ? 0.3 : 1, cursor: laneAt === 0 ? 'default' : 'pointer' }}>
+                          <ChevronUp size={ICON.sm} strokeWidth={STROKE.rest} />
+                        </button>
+                        <button
+                          onClick={() => onMove(g.id, 1)} disabled={laneAt === lanes.length - 1}
+                          title={`Pay ${g.name} later in the order`} aria-label={`Move ${g.name} down`}
+                          style={{ ...MOVE, opacity: laneAt === lanes.length - 1 ? 0.3 : 1, cursor: laneAt === lanes.length - 1 ? 'default' : 'pointer' }}>
+                          <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} />
+                        </button>
+                      </span>
+                    )}
                   </span>
 
                   {/* The lane itself */}
@@ -288,6 +354,7 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
                             // end of a lane is visible without reading the
                             // figures along it.
                             borderRight: isLand ? `2px solid ${colour}` : isDue ? `2px dashed ${colour}` : undefined,
+                            borderLeft: c.row.month.endsWith('-01') && i > 0 ? YEAR_EDGE : undefined,
                             fontFamily: 'inherit',
                           }}>
                           {amt > 0 && (
@@ -335,13 +402,14 @@ export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }
                 background: 'var(--sb-negative-tint)', border: 'var(--sb-border-width) solid var(--sb-hairline)',
                 overflow: 'hidden',
               }}>
-                {cells.map(c => {
+                {cells.map((c, i) => {
                   const on = c.row.month === picked
                   return (
                     <button key={c.row.month} onClick={() => setPicked(on ? null : c.row.month)}
                       title={c.row.went > 0 ? `${monthName(c.row.month)} — ${money(c.row.went)} left on its own date` : monthName(c.row.month)}
                       style={{
                         width: COL, flexShrink: 0, cursor: 'pointer', padding: 0, border: 'none',
+                        borderLeft: c.row.month.endsWith('-01') && i > 0 ? YEAR_EDGE : undefined,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: on ? 'var(--sb-accent-tint)' : 'transparent', fontFamily: 'var(--sb-font-num)',
                         fontSize: 'var(--sb-t-meta)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',

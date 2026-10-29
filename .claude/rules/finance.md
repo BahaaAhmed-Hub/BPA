@@ -475,6 +475,28 @@ the app in. On one twelve-month ledger the same data reported anywhere between
   when it is really 23,800, the "then each month" line is wrong and so is every
   date read off it.
 
+## Finance — the timeline: one colour a kind, a figure in one currency, a whole year
+`GoalTimeline.tsx`. Four things were wrong with it at once.
+- **One colour per kind, not per goal.** Debts are `--sb-negative`, goals `--sb-positive`
+  (`colours()`), badge text `--sb-ink-on-fill`. A lane per hue said nothing: the colour
+  answers *what is this*, owed or put aside. The goal's own `color` is no longer read here.
+- **`planned N of M`, in one currency.** The plan's figures are in the base currency; a
+  debt's target is in its own, so a USD debt printed *10,904 of 2,500* (pounds against
+  dollars). The target is converted (`convert`) and, with no rate, shown with its own
+  currency. It says *planned* because it is what the plan puts in over the months drawn —
+  *150,000 of 150,000* on a lender is cash you hold covering it this month, not a payment
+  made, and read as one.
+- **A whole year, and a rule between years.** At least 12 months, on to the December the
+  axis ends in (it stopped at March beside a lane that ended in March, leaving grey that
+  looked like later). A hairline (`YEAR_EDGE`) on each January in the header and every lane.
+- **Each section folds** (`Debts to clear`, `Goals`; the chevron and the whole name are
+  one button, `aria-expanded`, kept in `finance-goals-timeline-collapsed`), and **each
+  lane moves** with up/down arrows. `moveRank` in `GoalsScreen` swaps with the neighbour
+  of its own kind — debts and goals share one ranking but are drawn in two sections — and
+  writes the same positions the drag does, so the plan is run again.
+`node scripts/goal-timeline.mjs 5199 [colour|figure|year|fold|move]` — read from computed
+styles, rects and the stored ranks; each mode fails when its one property is reverted.
+
 ## Finance — the open goal is one panel, not five cards
 `GoalDetail` used to be five white cards loose on the page ground, each
 spacing itself with a `marginBottom`. It is now **the calendar composer's
