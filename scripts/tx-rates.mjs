@@ -19,7 +19,7 @@ for (const f of ['fx', 'txRates']) {
   writeFileSync(join(dir, `${f}.js`), out.replace(/from '\.\/fx'/g, "from './fx.js'"))
 }
 const fx = await import(join(dir, 'fx.js'))
-const { frozenRate, txConvert, txIn, stamped } = await import(join(dir, 'txRates.js'))
+const { frozenRate, txConvert, txIn, stamped, withRate, isFxTag } = await import(join(dir, 'txRates.js'))
 
 let pass = 0, fail = 0
 const eq = (name, got, want) => {
@@ -54,6 +54,12 @@ eq('a stale stamp for another currency is replaced, not stacked', stamped(tx({ c
 eq('the rate goes into an empty description', stamped(tx(), { note: true, now: NOW }).note, 'rate 29 Oct 2026: 1 USD = 48 EGP')
 eq('…after an existing note, which is kept', stamped(tx({ note: 'with Omar' }), { note: true, now: NOW }).note, 'with Omar rate 29 Oct 2026: 1 USD = 48 EGP')
 eq('freezing old entries leaves their notes alone', stamped(tx({ note: 'old' })).note, 'old')
+
+// ── editing the rate ─────────────────────────────────────────────────────────
+eq('withRate replaces the stamp and keeps the other tags', withRate(['a', 'fx:USD/EGP=48', 'b'], 'USD', 49.5), ['a', 'b', 'fx:USD/EGP=49.5'])
+eq('withRate on no tags', withRate(undefined, 'usd', 49.5), ['fx:USD/EGP=49.5'])
+eq('an edited stamp is the one that is read', txIn(tx({ tags: withRate([], 'USD', 49.5) })), 4950)
+eq('isFxTag tells a stamp from a tag a person wrote', [isFxTag('fx:USD/EGP=48'), isFxTag('fx:'), isFxTag('groceries')], [true, false, false])
 
 // ── reading ──────────────────────────────────────────────────────────────────
 eq('frozenRate reads the tag', frozenRate(tx({ tags: ['fx:USD/EGP=48.5'] })), 48.5)
