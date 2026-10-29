@@ -72,6 +72,12 @@ function formatBalance(bal: number, currency = 'EGP'): string {
   return acct(bal, { currency })
 }
 
+/** Every account row is this tall, whatever it holds — a card's limit bar, a
+ *  loan's Pay back, a second line of "due to you" — so the groups read as one
+ *  list. It used to be a minimum, and a name wrapping to three lines made a card
+ *  half as tall again as the account above it. */
+const ROW_HEIGHT = 56
+
 function AccountRow({ account, balance, unconverted, pending, ahead, points, showPointsMoney, selected, hovered, onSelect, onHover, onEdit, onSettle, onPayBack, onIcon, onRename }: {
   account: Account
   balance: number
@@ -127,8 +133,8 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(account) } }}
       title={selected ? `Showing ${account.name} — click again for everything` : `Show only ${account.name}`}
       style={{
-        display: 'flex', alignItems: 'center', gap: 11,
-        minHeight: 46, padding: '0 12px 0 6px', borderRadius: 'var(--sb-r-nav)',
+        display: 'flex', alignItems: 'center', gap: 9,
+        height: ROW_HEIGHT, padding: '0 12px 0 6px', borderRadius: 'var(--sb-r-nav)',
         background: selected ? 'var(--sb-accent-tint)' : hovered ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
         border: `var(--sb-border-width) solid ${selected ? 'var(--sb-accent)' : hovered ? 'var(--sb-border)' : 'var(--sb-hairline)'}`,
         boxSizing: 'border-box', position: 'relative', cursor: 'pointer',
@@ -174,7 +180,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
           </div>
         )}
       />
-      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 'min-content' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flexShrink: 1 }}>
         {renaming !== null ? (
           <input
             autoFocus
@@ -193,8 +199,8 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
               border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)', padding: '2px 6px', width: 140, outline: 'none',
             }} />
         ) : (
-          <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            {account.name}
+          <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
+            <span title={account.name} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
             {account.accountType === 'loan' && (
               <button
                 onClick={e => { e.stopPropagation(); setRenaming(account.name) }}
@@ -206,22 +212,22 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
             )}
           </span>
         )}
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
-          {account.accountType === 'loan' ? (account.bank || 'Loan') : (account.bank ?? account.accountType)}{account.last4 ? ` · ···· ${account.last4}` : ''}
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {account.accountType === 'loan' ? (account.bank || 'Loan') : (account.bank ?? account.accountType)}{account.last4 ? ` · ···· ${account.last4}` : ''}{limit > 0 ? ` · ${account.currency} ${Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of ${Math.round(limit).toLocaleString('en-US')}` : ''}
         </span>
       </div>
 
+      {/* How much of the ceiling is used is a hairline along the row's own bottom
+          edge, not a block between the name and the balance: that block took 160px
+          from the name and made a card the one row that did not fit. */}
       {limit > 0 && (
-        <div style={{ width: 160, minWidth: 0, flexShrink: 1, marginLeft: 10 }} title={`${acct(-owed, { currency: account.currency })} of ${account.currency} ${Math.round(limit).toLocaleString('en-US')} used`}>
-          <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
-            <div style={{
-              width: `${Math.round(used * 100)}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
-              background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? 'var(--sb-warning)' : 'var(--sb-ink-3)',
-            }} />
-          </div>
-          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 3 }}>
-            {account.currency} {Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of {Math.round(limit).toLocaleString('en-US')}
-          </span>
+        <div
+          title={`${acct(-owed, { currency: account.currency })} of ${account.currency} ${Math.round(limit).toLocaleString('en-US')} used`}
+          style={{ position: 'absolute', left: 14, right: 14, bottom: 3, height: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', pointerEvents: 'none' }}>
+          <div style={{
+            width: `${Math.round(used * 100)}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
+            background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? 'var(--sb-warning)' : 'var(--sb-ink-3)',
+          }} />
         </div>
       )}
 

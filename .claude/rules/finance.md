@@ -299,6 +299,17 @@ figure is added to something denominated differently:
   currency is set by hand — after which the choice stands.
 
 ## Finance — Balances screen
+- **Every account row is one size, and its name is all there.** `ROW_HEIGHT` (56) is a
+  fixed height, not a minimum, and the name column is `min-width: 0` with the name on
+  one line (`title` carries it if a column is ever too narrow). The row was a minimum
+  with a `min-content` name beside a 160px limit block, so "World Platinum Signature
+  CC" wrapped to three lines and a card read half as tall again as the account above
+  it. A card's use of its limit is now a 3px hairline along the row's bottom edge, and
+  *X left of Y* is the caption under the name. Not asserted: a 276px list column (a
+  ~760px window, where the list sits beside the feed) still ellipsises long names —
+  that is the page's two-column layout, not the row.
+  `node scripts/balance-rows-same-size.mjs 5199 [wide|narrow]`; control on the old
+  code: heights 46.5 / 46 / 68.
 - **A card has a ceiling.** `Account.creditLimit` (`20260008`, `credit_limit`) drives the
   usage bar and "X left of Y" on the row. `saveAccount` drops the column and retries if
   the migration has not run.
