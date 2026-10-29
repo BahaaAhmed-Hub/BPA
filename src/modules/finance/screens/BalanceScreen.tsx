@@ -640,8 +640,8 @@ export function BalanceScreen() {
             { label: 'PAYMENT ACCOUNTS', accounts: paymentAccounts, total: paymentTotal, totalColor: 'var(--sb-positive)', owed: false },
             { label: 'CARDS OWED', accounts: creditCards, total: creditTotal, totalColor: 'var(--sb-negative)', owed: true },
             { label: 'OTHER ASSETS', accounts: otherAssets, total: assetTotal, totalColor: 'var(--sb-ink-1)', owed: false },
-            { label: 'LOANS OWED', accounts: loanRows, total: loanTotal, totalColor: 'var(--sb-negative)', owed: true },
-          ].map(group => (group.accounts.length > 0 || (group.label === 'LOANS OWED' && settledCount > 0)) && (
+            { label: 'BORROWED & LOANS OWED', accounts: loanRows, total: loanTotal, totalColor: 'var(--sb-negative)', owed: true },
+          ].map(group => (group.accounts.length > 0 || (group.label === 'BORROWED & LOANS OWED' && settledCount > 0)) && (
             <div key={group.label} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', marginBottom: 7, boxSizing: 'border-box' as const }}>
                 <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{group.label}</span>
@@ -679,7 +679,7 @@ export function BalanceScreen() {
                   </div>
                 </SortableContext>
               </DndContext>
-              {group.label === 'LOANS OWED' && settledCount > 0 && (
+              {group.label === 'BORROWED & LOANS OWED' && settledCount > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowSettled(v => !v)}

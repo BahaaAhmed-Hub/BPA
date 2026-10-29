@@ -1180,7 +1180,7 @@ read as a loss that was never a gain.
 - **The debt becomes a goal by itself.** `debtGoals` takes loans (`CAN_OWE`):
   "Repay Ahmed", target what is owed, ranked like a card. Under half a unit
   (`SETTLED_BELOW`, shared with Balances) is settled and has no goal.
-- **Balances** gains **LOANS OWED** (and a *Loans* filter pill). A loan paid back
+- **Balances** gains **BORROWED & LOANS OWED** (and a *Loans* filter pill). A loan paid back
   stays in the ledger and folds behind "Show N paid back"; the heading's total is
   only what is owed. The account window has a **Loan** type: *Lender* for *Name*,
   no bank or card digits, and the opening figure is entered as what you owe
