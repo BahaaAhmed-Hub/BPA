@@ -32,6 +32,7 @@ import { group } from '@/modules/finance/format'
 import { isUnpaid, settled, whenPaid } from '@/modules/finance/unpaid'
 import { loadRules, activeIn, monthlyAmount, isDated } from '@/modules/finance/modals/BudgetRuleModal'
 import { txIn } from '@/modules/finance/txRates'
+import { ruleAt } from '@/modules/finance/budgetSteps'
 import { spendingAccounts } from '@/modules/finance/loans'
 import { baseCurrency } from '@/modules/finance/fx'
 import {
@@ -80,7 +81,7 @@ function envelopeFor(
     if (!rule || isDated(rule) || !activeIn(rule, monthKey)) continue
     const budget = monthlyAmount(rule, monthKey)
     if (!(budget > 0)) continue
-    const cur = rule.currency ?? baseCurrency()
+    const cur = ruleAt(rule, monthKey).currency ?? baseCurrency()
     const ids = new Set([cat.id, ...categories.filter(c => c.parentId === cat.id).map(c => c.id)])
     let spent = 0
     for (const t of settled(txs)) {

@@ -6,7 +6,7 @@ import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { MoneyInput } from '../components/MoneyInput'
 import { spendingAccounts } from '../loans'
-import { amountFor, editMonth, withAmount, type AmountStep } from '../budgetSteps'
+import { ruleAt, editMonth, withChange, type Change, type RuleStep } from '../budgetSteps'
 import { settled, whenPaid } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
 import { openPicker } from '@/lib/nativePicker'
@@ -56,10 +56,15 @@ export interface BudgetRule {
   linesRepeat?: boolean
   /** What the budget was before its first change — every month earlier than
    *  `steps[0]` — or simply what it is, for a rule that has never changed.
-   *  Read it through `amountFor`, never directly, for a month. */
+   *  Read a month through `ruleAt`, never the rule's own fields directly: the
+   *  amount, currency, frequency, bucket and the repeating instalments are the
+   *  ones a change can carry. */
   amount: number
-  /** Each change of amount and the month it took effect. See `budgetSteps.ts`. */
-  steps?: AmountStep[]
+  /** Each change and the month it took effect. See `budgetSteps.ts`. */
+  steps?: RuleStep[]
+  /** The month the rule first had anything in it; changes made in that month
+   *  are part of making it and leave no history. */
+  born?: string
   frequency: Frequency
   rollover: boolean
   warn80: boolean
@@ -241,18 +246,21 @@ export const isDated = (r?: Pick<BudgetRule, 'schedule'>): boolean =>
  */
 export function budgetTotal(rule?: BudgetRule, year?: string): number {
   if (!rule) return 0
-  const kind = scheduleOf(rule)
+  // The budget as it stood at the end of the year asked about, or as it is now.
+  const r = ruleAt(rule, year ? `${year}-12` : undefined)
+  const kind = scheduleOf(r)
   if (kind === 'once') {
-    if (!(rule.amount > 0)) return 0
-    return !year || rule.onDate?.slice(0, 4) === year ? rule.amount : 0
+    if (!(r.amount > 0)) return 0
+    return !year || r.onDate?.slice(0, 4) === year ? r.amount : 0
   }
   if (kind === 'custom') {
-    const lines = linesOf(rule)
+    const lines = linesOf(r)
     // A set that comes round every year is that set, whichever year is asked
     // for; one that does not is only in its own.
-    if (!year || rule.linesRepeat) return lines.reduce((n, l) => n + l.amount, 0)
+    if (!year || r.linesRepeat) return lines.reduce((n, l) => n + l.amount, 0)
     return lines.filter(l => l.date.slice(0, 4) === year).reduce((n, l) => n + l.amount, 0)
   }
+  // A repeating rule's figure is its month — this one, as it is now.
   return monthlyAmount(rule)
 }
 
@@ -285,34 +293,49 @@ export function activeIn(rule: Pick<BudgetRule, 'starts' | 'ends'> | undefined, 
  *  month's spending as though it were 12,000 a month. */
 export function monthlyAmount(rule?: BudgetRule, monthKey?: string): number {
   if (!rule) return 0
-  const kind = scheduleOf(rule)
+  // The budget as it was *in that month* — a raise made in November does not
+  // reach back and rewrite July, and neither does a new set of school fees
+  // rewrite last year's.
+  const r = ruleAt(rule, monthKey)
+  const kind = scheduleOf(r)
 
   if (kind === 'once') {
-    if (!(rule.amount > 0)) return 0
+    if (!(r.amount > 0)) return 0
     // With a month in hand the answer is exact: the whole amount in the month
     // it falls, nothing in any other. Without one it is the year's average,
     // which is what an envelope is "worth" over twelve months.
-    if (!monthKey) return rule.amount / 12
-    return rule.onDate?.slice(0, 7) === monthKey ? rule.amount : 0
+    if (!monthKey) return r.amount / 12
+    return r.onDate?.slice(0, 7) === monthKey ? r.amount : 0
   }
 
   if (kind === 'custom') {
-    const lines = linesOf(rule)
+    const lines = linesOf(r)
     if (lines.length === 0) return 0
     if (!monthKey) return lines.reduce((n, l) => n + l.amount, 0) / 12
     return lines
       // A repeating set comes round every year, so only the month and day matter.
-      .filter(l => rule.linesRepeat
+      .filter(l => r.linesRepeat
         ? l.date.slice(5, 7) === monthKey.slice(5, 7)
         : l.date.slice(0, 7) === monthKey)
       .reduce((n, l) => n + l.amount, 0)
   }
 
-  // The amount the budget had *in that month* — a raise made in November does
-  // not reach back and rewrite July.
-  const amount = amountFor(rule, monthKey)
-  if (!amount) return 0
-  return amount * (FREQ_OPTS.find(f => f.v === rule.frequency)?.per ?? 1)
+  if (!r.amount) return 0
+  return r.amount * (FREQ_OPTS.find(f => f.v === r.frequency)?.per ?? 1)
+}
+
+/** A budget whose dates are its own history: a one-off payment, or instalments
+ *  that do not come round again. Each date already says when it was, so there
+ *  is no month for a change to start in — and starting one would hide a missed
+ *  instalment added later for a month already gone. */
+export const hasOwnDates = (r: Pick<BudgetRule, 'schedule' | 'linesRepeat'>): boolean =>
+  scheduleOf(r) === 'once' || (scheduleOf(r) === 'custom' && !r.linesRepeat)
+
+/** Change what a budget says, from this month on — or in place for a budget
+ *  that has dates of its own. The panel and the assistant both come here, so
+ *  the two cannot disagree about what a change does to the past. */
+export function changeRule(rule: BudgetRule, change: Change, monthKey: string, today?: Date): BudgetRule {
+  return hasOwnDates(rule) ? { ...rule, ...change } as BudgetRule : withChange(rule, change, monthKey, today)
 }
 
 const PILL: React.CSSProperties = {
@@ -341,13 +364,15 @@ const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 1
  * one of those things, so it said the wrong one: a quarter of the year's total
  * on an evenly spaced day. These are the dates as they actually are.
  */
-function LinesEditor({ rule, cur, onChange }: {
+function LinesEditor({ rule, cur, onLines, onRepeat }: {
+  /** The budget as an edit would change it. */
   rule: BudgetRule
   cur: string
-  onChange: (r: BudgetRule) => void
+  onLines: (lines: BudgetLine[]) => void
+  onRepeat: (repeats: boolean) => void
 }) {
   const lines = rule.lines ?? []
-  const set = (next: BudgetLine[]) => onChange({ ...rule, lines: next })
+  const set = (next: BudgetLine[]) => onLines(next)
   const total = linesOf(rule).reduce((n, l) => n + l.amount, 0)
   const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 0 })
 
@@ -427,8 +452,8 @@ function LinesEditor({ rule, cur, onChange }: {
           }}>
             <input
               type="checkbox"
-              checked={rule.linesRepeat !== false}
-              onChange={e => onChange({ ...rule, linesRepeat: e.target.checked })}
+              checked={!!rule.linesRepeat}
+              onChange={e => onRepeat(e.target.checked)}
               style={{ width: 16, height: 16, accentColor: 'var(--sb-positive)' }} />
             the same dates every year
           </label>
@@ -589,9 +614,15 @@ export function BudgetRuleModal({
 
   const payFrom = accounts.find(a => a.id === rule.dueAccountId)
   // A card cannot be the source of money set aside: see the note by the row.
+  // The budget as it was in the month on screen (every figure here), and as an
+  // edit would change it (every control): from this month on, never earlier.
+  const at   = ruleAt(rule, monthKey)
+  const view = ruleAt(rule, editMonth(monthKey))
+  const edit = (change: Change) => onChange(changeRule(rule, change, monthKey))
   const cardSaving = payFrom?.accountType === 'credit_card'
-    && (bucketOf(rule) === 'savings' || bucketOf(rule) === 'investment')
-  const cur = rule.currency ?? currency
+    && (bucketOf(view) === 'savings' || bucketOf(view) === 'investment')
+  const cur = at.currency ?? currency
+  const curEdit = view.currency ?? currency
   const wanted = category.txType === 'income' ? 'income' : 'expense'
   const ids = new Set([category.id, ...subs.map(s => s.id)])
   // The month on screen, whatever shape the budget is — a dated budget is
@@ -790,7 +821,7 @@ export function BudgetRuleModal({
             <div style={{ ...ROW, alignItems: 'flex-start' }}>
               <span style={{ ...LABEL, paddingTop: 11 }}>Dates</span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <LinesEditor rule={rule} cur={cur} onChange={onChange} />
+                <LinesEditor rule={view} cur={curEdit} onLines={lines => edit({ lines })} onRepeat={linesRepeat => onChange({ ...rule, linesRepeat })} />
               </span>
             </div>
           ) : (
@@ -803,21 +834,21 @@ export function BudgetRuleModal({
               }}>
                 <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                   <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                    {cur}<ChevronDown size={ICON.sm} strokeWidth={STROKE.active} style={{ color: 'var(--sb-ink-3)' }} />
+                    {curEdit}<ChevronDown size={ICON.sm} strokeWidth={STROKE.active} style={{ color: 'var(--sb-ink-3)' }} />
                   </span>
-                  <select value={cur} onChange={e => onChange({ ...rule, currency: e.target.value })}
+                  <select value={curEdit} onChange={e => edit({ currency: e.target.value })}
                     title="What this budget is in"
                     style={{ position: 'absolute', inset: -6, opacity: 0, width: 'calc(100% + 12px)', height: 'calc(100% + 12px)', cursor: 'pointer', border: 'none' }}>
                     {['EGP', 'USD', 'AED'].map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </span>
                 <MoneyInput
-                  value={(scheduleOf(rule) === 'repeat' ? amountFor(rule, editMonth(monthKey)) : rule.amount) || 0}
+                  value={view.amount || 0}
                   min={0}
-                  /* A changed amount is a change from this month on; the
-                     months before it keep the budget they had. A one-off
-                     payment has a date of its own and no months to keep. */
-                  onChange={n => onChange(scheduleOf(rule) === 'repeat' ? withAmount(rule, n, monthKey) : { ...rule, amount: n })}
+                  /* A change is from this month on; the months before it keep
+                     the budget they had. A one-off payment has a date of its
+                     own and no months to keep (changeRule). */
+                  onChange={n => edit({ amount: n })}
                   placeholder="0"
                   style={{
                     flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
@@ -837,7 +868,7 @@ export function BudgetRuleModal({
                     color: 'var(--sb-ink-1)', fontFamily: DISPLAY, fontSize: 'var(--sb-t-body-s)',
                   }} />
               ) : (
-                <IntervalPicker value={rule.frequency} onChange={f => onChange({ ...rule, frequency: f })} />
+                <IntervalPicker value={view.frequency} onChange={f => edit({ frequency: f })} />
               )}
             </span>
           </div>
@@ -853,14 +884,14 @@ export function BudgetRuleModal({
             </div>
           )}
 
-          {budget > 0 && (scheduleOf(rule) !== 'repeat' || rule.frequency !== 'monthly') && (
+          {budget > 0 && (scheduleOf(rule) !== 'repeat' || at.frequency !== 'monthly') && (
             <div style={{ ...ROW, marginTop: -4 }}>
               <span style={LABEL} />
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                 {scheduleOf(rule) === 'repeat'
                   ? `${cur} ${fmt(budget)} a month, which is what the envelope is measured against`
-                  : `${cur} ${fmt(budget)} in total across ${linesOf(rule).length || 1} `
-                    + `${(linesOf(rule).length || 1) === 1 ? 'date' : 'dates'} — measured over the whole year, `
+                  : `${cur} ${fmt(budget)} in total across ${linesOf(at).length || 1} `
+                    + `${(linesOf(at).length || 1) === 1 ? 'date' : 'dates'} — measured over the whole year, `
                     + `not divided into months it never leaves in`}
               </span>
             </div>
@@ -904,9 +935,9 @@ export function BudgetRuleModal({
             <span style={LABEL}>Kind</span>
             <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               {BUCKETS.map(b => {
-                const on = bucketOf(rule) === b.id
+                const on = bucketOf(view) === b.id
                 return (
-                  <button key={b.id} onClick={() => onChange({ ...rule, bucket: b.id, fixedType: undefined })}
+                  <button key={b.id} onClick={() => edit({ bucket: b.id })}
                     title={`${b.name} — ${b.help}`}
                     style={{
                       ...PILL, flex: '1 1 auto', justifyContent: 'center', gap: 3,
@@ -933,7 +964,7 @@ export function BudgetRuleModal({
           <div style={{ ...ROW, marginTop: -4, alignItems: 'flex-start' }}>
             <span style={LABEL} />
             <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
-              {bucketMeta(bucketOf(rule)).name} — {bucketMeta(bucketOf(rule)).help}
+              {bucketMeta(bucketOf(view)).name} — {bucketMeta(bucketOf(view)).help}
             </p>
           </div>
 
@@ -991,7 +1022,7 @@ export function BudgetRuleModal({
           </div>
           {rule.dueDay != null && (
             <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5, margin: '-2px 0 8px' }}>
-              An entry is written for that day, {freqPhrase(rule.frequency)}, marked
+              An entry is written for that day, {freqPhrase(view.frequency)}, marked
               unpaid until you tick it — so it is owed rather than spent, and in no
               balance or total until the money moves.
             </div>
@@ -1011,7 +1042,7 @@ export function BudgetRuleModal({
               <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 2, color: 'var(--sb-negative)' }} />
               <span>
                 <b style={{ fontWeight: 600 }}>{payFrom?.name}</b> is a credit card, and this is
-                a {bucketMeta(bucketOf(rule)).name.toLowerCase()} budget. Money that leaves a card
+                a {bucketMeta(bucketOf(view)).name.toLowerCase()} budget. Money that leaves a card
                 is borrowed until the card is paid, so nothing is put aside by this —
                 pick the account the money actually comes out of.
               </span>
@@ -1024,7 +1055,7 @@ export function BudgetRuleModal({
               {scheduleOf(rule) === 'once'
                 ? 'One entry is written for that date, marked unpaid until you tick it.'
                 : `An entry is written for each date above, for its own amount, marked unpaid `
-                  + `until you tick it${rule.linesRepeat !== false ? ' — and the same dates come round next year' : ''}.`}
+                  + `until you tick it${rule.linesRepeat ? ' — and the same dates come round next year' : ''}.`}
               {' '}Until then it is owed rather than spent, and in no balance or total.
             </div>
           )}

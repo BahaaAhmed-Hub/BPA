@@ -19,6 +19,7 @@ import {
   isDated, budgetTotal,
   type BudgetRule, type Bucket,
 } from '../modals/BudgetRuleModal'
+import { ruleAt } from '../budgetSteps'
 import type { Category, Transaction } from '../types'
 import { acct } from '../format'
 import { findDuplicates } from '../duplicates'
@@ -672,13 +673,15 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
   )
 }
 
-function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty, dragging, rules, style }: {
+function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty, dragging, rules, monthKey, style }: {
   title: string
   rows: EnvelopeRow[]
   /** Which of the four views Settings has chosen. */
   style: EnvelopeStyle
   /** Only for the day a budget carries; everything else is on the row. */
   rules: Record<string, BudgetRule>
+  /** The month on screen: a budget's bucket is read as it was in it. */
+  monthKey: string
   color: string
   selectedId: string | null
   onPick: (id: string) => void
@@ -707,13 +710,13 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
       const whole = parts.reduce((n, c) => n + (c.inEnvelope ?? 0), 0)
       if (whole > 0) {
         for (const c of parts) {
-          const b = bucketOf(rules[c.cat.id])
+          const b = bucketOf(ruleAt(rules[c.cat.id], monthKey))
           split.set(b, (split.get(b) ?? 0) + amt * ((c.inEnvelope ?? 0) / whole))
         }
         continue
       }
     }
-    const b = bucketOf(rules[r.cat.id])
+    const b = bucketOf(ruleAt(rules[r.cat.id], monthKey))
     split.set(b, (split.get(b) ?? 0) + amt)
   }
   const parts = BUCKETS.map(b => ({ ...b, amt: split.get(b.id) ?? 0 })).filter(p => p.amt > 0)
@@ -1211,7 +1214,7 @@ export function BudgetScreen(_props?: any) {
     })
     const build = (cat: Category) => {
       const rule = rules[cat.id]
-      const cur  = rule?.currency ?? currency
+      const cur  = ruleAt(rule, monthKey)?.currency ?? currency
       const rate = rateFor(cur, currency)
       const ids = new Set([cat.id, ...categories.filter(c => c.parentId === cat.id).map(c => c.id)])
       const wanted = cat.txType === 'income' ? 'income' : 'expense'
@@ -1274,7 +1277,7 @@ export function BudgetScreen(_props?: any) {
         const kidRuns  = activeIn(r, monthKey)
         const own      = kidRuns ? monthlyAmount(r, monthKey) : 0
         const ownMonth = own
-        const childCur = r?.currency ?? cur
+        const childCur = ruleAt(r, monthKey)?.currency ?? cur
         const inBase   = own === 0 ? 0 : toBase(own, childCur, currency)
         const inBaseM  = ownMonth === 0 ? 0 : toBase(ownMonth, childCur, currency)
         if (own > 0 && (inBase === null || rate === null)) currencies.add(childCur)
@@ -1378,7 +1381,7 @@ export function BudgetScreen(_props?: any) {
       ...transactions.filter(t => whenPaid(t).startsWith(monthKey)),
       ...Object.values(rules)
         .filter(r => r && monthlyAmount(r, monthKey) > 0)
-        .map(r => ({ currency: r.currency })),
+        .map(r => ({ currency: ruleAt(r, monthKey).currency })),
     ], currency),
     [transactions, monthKey, currency, rules, fxTick],
   )
@@ -1654,12 +1657,12 @@ export function BudgetScreen(_props?: any) {
             <EnvelopeGroup
               title="Spending" rows={envelopes.spending} color={RUST}
               selectedId={selectedId} onPick={pickCategory} currency={currency} dragging={dragging}
-              rules={rules} style={envStyle}
+              rules={rules} monthKey={monthKey} style={envStyle}
               empty="No spending categories yet — add one and its envelope appears here." />
             <EnvelopeGroup
               title="Earning" rows={envelopes.earning} color={OLIVE}
               selectedId={selectedId} onPick={pickCategory} currency={currency} dragging={dragging}
-              rules={rules} style={envStyle}
+              rules={rules} monthKey={monthKey} style={envStyle}
               empty="No income categories yet." />
             </div>
             <DragOverlay dropAnimation={null}>
