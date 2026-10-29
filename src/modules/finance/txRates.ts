@@ -15,6 +15,7 @@
 // *now*, so those keep converting by `toBase`, and only entries come here.
 
 import { baseCurrency, convert, rateFor } from './fx'
+import { group } from './format'
 import type { Transaction } from './types'
 
 type Rated = Pick<Transaction, 'currency' | 'tags'>
@@ -71,4 +72,61 @@ export function stamped<T extends Transaction>(tx: T, opts: { note?: boolean; no
   const day = (opts.now ?? new Date()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   const aside = `rate ${day}: 1 ${cur} = ${rate} ${base}`
   return { ...tx, tags, note: tx.note ? `${tx.note} ${aside}` : aside }
+}
+
+// ─── Unpaid money in the currency it is owed in ──────────────────────────────
+
+const figure = (n: number): string => group(n, Number.isInteger(n) ? 0 : 2)
+
+/**
+ * What an unpaid foreign entry is, in words: its own currency, the rate it was
+ * added at, what that comes to, and — where today's rate is different — what it
+ * would come to if it were settled now. Null for an entry in the base currency,
+ * and where there is no rate at all.
+ */
+export function unpaidRateNote(tx: Pick<Transaction, 'amount' | 'currency' | 'tags'>): string | null {
+  const base = baseCurrency()
+  const cur = (tx.currency || base).toUpperCase()
+  if (cur === base.toUpperCase()) return null
+  const n = Math.abs(tx.amount)
+  const added = frozenRate(tx, base)
+  const today = rateFor(cur, base)
+  const rate = added ?? today
+  if (rate === null) return null
+  const head = `${cur} ${figure(n)} @ ${rate} = ${base} ${figure(n * rate)}`
+  return added !== null && today !== null && today !== added ? `${head} · today ${today} = ${base} ${figure(n * today)}` : head
+}
+
+export interface Debt {
+  currency: string
+  count: number
+  /** In that currency. */
+  amount: number
+  /** What it comes to at the rates the entries were added at. Null if any has none. */
+  atAdded: number | null
+  /** What it comes to at today's rate. Null where there is none. */
+  atToday: number | null
+  /** Today's rate, for the line that says it. */
+  todayRate: number | null
+}
+
+/** What is owed, by foreign currency. The caller says which entries are debts
+ *  (unpaid, spending, due by now); this only adds them up. */
+export function debtsByCurrency(txs: Pick<Transaction, 'amount' | 'currency' | 'tags'>[]): Debt[] {
+  const base = baseCurrency().toUpperCase()
+  const by = new Map<string, Debt>()
+  for (const tx of txs) {
+    const cur = (tx.currency || base).toUpperCase()
+    if (cur === base) continue
+    const todayRate = rateFor(cur, base)
+    const d = by.get(cur) ?? { currency: cur, count: 0, amount: 0, atAdded: 0, atToday: todayRate === null ? null : 0, todayRate }
+    const n = Math.abs(tx.amount)
+    const added = txIn(tx)
+    d.count += 1
+    d.amount += n
+    d.atAdded = d.atAdded === null || added === null ? null : d.atAdded + added
+    d.atToday = d.atToday === null || todayRate === null ? null : d.atToday + n * todayRate
+    by.set(cur, d)
+  }
+  return [...by.values()]
 }
