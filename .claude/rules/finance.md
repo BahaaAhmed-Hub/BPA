@@ -755,10 +755,19 @@ re-priced every USD entry already in the ledger: July's rent, paid at 48, read a
   out of every total until paid, as before.
 - **Not covered**: `projects/projectLife.ts` sums linked entries through
   `sumInBase` from a snapshot (`EntryMeta`) that carries no tags, so a project's
-  USD totals still use the current rate. There is no field to edit an entry's rate
-  (paying at a different rate than the day it was added is not representable yet).
+  USD totals still use the current rate.
   The Telegram bot and Siri cannot add ledger entries, so nothing to keep in step.
-- `node scripts/tx-rates.mjs` (21 cases, no browser) and `scripts/tx-rate-frozen.mjs
+- **The rate is editable in the entry panel.** A **Rate** row (`1 USD = [48] EGP`)
+  under the amount, drawn only for an entry in a foreign currency, reading the rate
+  the entry was added at — not today's, which is only its placeholder. Change it
+  where the entry was paid at a different rate than the day it was added. Saved, it
+  replaces the stamp (`withRate`); the description is **not** rewritten, so the
+  rate the entry was added at stays there as the reference. Cleared, the stamp is
+  dropped and the store stamps today's. Changing the currency clears the field (a
+  rate typed for one currency is not for another), and the stamp is kept out of the
+  Tags chips (`isFxTag`) so it cannot be deleted by accident.
+- `node scripts/tx-rates.mjs` (25 cases, no browser), `scripts/tx-rate-edit.mjs
+  [edit|shown|currency]` (the panel) and `scripts/tx-rate-frozen.mjs
   [change|assistant|unreadable]` (the real store against a stub that keeps what it
   is sent and can refuse reads). Control, the harness on the code before: the July
   entry reads **5,000 instead of 4,800**, nothing is written, and the new entry

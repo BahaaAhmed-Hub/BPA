@@ -32,6 +32,12 @@ export function frozenRate(tx: Rated, base = baseCurrency()): number | null {
   return null
 }
 
+export const isFxTag = (tag: string): boolean => TAG.test(tag)
+
+/** The tags with this rate on them in place of any other. */
+export const withRate = (tags: string[] | undefined, currency: string, rate: number, base = baseCurrency()): string[] =>
+  [...(tags ?? []).filter(t => !t.startsWith('fx:')), `fx:${currency.toUpperCase()}/${base.toUpperCase()}=${rate}`]
+
 /** An amount of this entry's, in `to` (the base by default). Null when it
  *  cannot be known, as `convert` and `toBase` say. */
 export function txConvert(tx: Rated, amount: number, to = baseCurrency()): number | null {
@@ -60,7 +66,7 @@ export function stamped<T extends Transaction>(tx: T, opts: { note?: boolean; no
   if (cur === base || frozenRate(tx, base) !== null) return tx
   const rate = rateFor(cur, base)
   if (rate === null) return tx
-  const tags = [...(tx.tags ?? []).filter(t => !t.startsWith('fx:')), `fx:${cur}/${base}=${rate}`]
+  const tags = withRate(tx.tags, cur, rate, base)
   if (!opts.note) return { ...tx, tags }
   const day = (opts.now ?? new Date()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   const aside = `rate ${day}: 1 ${cur} = ${rate} ${base}`
