@@ -157,22 +157,22 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
           </div>
         )}
       />
-      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 'min-content' }}>
+        <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{account.name}</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
           {account.bank ?? account.accountType}{account.last4 ? ` · ···· ${account.last4}` : ''}
         </span>
       </div>
 
       {limit > 0 && (
-        <div style={{ width: 116, flexShrink: 0, marginLeft: 10 }} title={`${acct(-owed, { currency: account.currency })} of ${account.currency} ${Math.round(limit).toLocaleString('en-US')} used`}>
+        <div style={{ width: 160, minWidth: 0, flexShrink: 1, marginLeft: 10 }} title={`${acct(-owed, { currency: account.currency })} of ${account.currency} ${Math.round(limit).toLocaleString('en-US')} used`}>
           <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
             <div style={{
               width: `${Math.round(used * 100)}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
               background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? 'var(--sb-warning)' : 'var(--sb-ink-3)',
             }} />
           </div>
-          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 3, whiteSpace: 'nowrap' }}>
+          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 3 }}>
             {account.currency} {Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of {Math.round(limit).toLocaleString('en-US')}
           </span>
         </div>
