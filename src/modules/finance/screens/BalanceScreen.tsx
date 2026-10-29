@@ -25,6 +25,7 @@ import { isUnpaid, UNPAID_TITLE } from '../unpaid'
 import { liveBalances } from '../balances'
 import { isLoan, isSettled, isBorrowing, isRepayment } from '../loans'
 import { LoanMark, LOAN_ICON } from '../components/LoanMark'
+import { saveLoanPlan } from '../loanPlanSave'
 import {
   schemeFor, isDormant, pointsFor, loadRewardSettings, type CardPoints,
 } from '../cardRewards'
@@ -822,7 +823,12 @@ export function BalanceScreen() {
         <AccountModal
           account={accountModal.account}
           onSave={a => { upsertAccount(a); setAccountModal({ open: false, account: null }) }}
-          onDelete={id => { removeAccount(id); setAccountModal({ open: false, account: null }) }}
+          onDelete={id => {
+            // A lender's plan is its budget line; it goes with the lender.
+            const gone = accounts.find(a => a.id === id)
+            if (gone && isLoan(gone)) void saveLoanPlan(gone, null)
+            removeAccount(id); setAccountModal({ open: false, account: null })
+          }}
           onClose={() => setAccountModal({ open: false, account: null })}
         />
       )}

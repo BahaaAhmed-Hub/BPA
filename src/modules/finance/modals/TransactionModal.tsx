@@ -19,6 +19,10 @@ import { useFinanceStore } from '../financeStore'
 import {
   isLoan, spendingAccounts, findLender, newLender, isBorrowing, borrowingEnds,
 } from '../loans'
+import { loadRules } from './BudgetRuleModal'
+import { planOf, planIssue, type LoanPlan } from '../loanPlan'
+import { saveLoanPlan } from '../loanPlanSave'
+import { LoanPlanFields } from '../components/LoanPlanFields'
 import { ICON, STROKE } from '@/lib/type'
 import { openPicker } from '@/lib/nativePicker'
 import {
@@ -111,6 +115,12 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       : lenders.length === 0 ? NEW_LENDER : '')
   const [lenderName, setLenderName] = useState('')
   const [saving, setSaving] = useState(false)
+  // The plan to repay it by, if there is one. It is the lender's budget line,
+  // so an existing lender comes with the plan they already have, and unticking
+  // it on a lender who has one takes it away.
+  const [plan, setPlan] = useState<LoanPlan | null>(() =>
+    transaction && isBorrowing(transaction, accounts) ? planOf(loadRules(), transaction.accountId) : null)
+  const [planTouched, setPlanTouched] = useState(false)
   const [date, setDate] = useState(transaction?.date ?? initial?.date ?? todayStr)
   function pickDate(next: string) {
     setDate(next)
@@ -245,14 +255,18 @@ export function TransactionModal({ transaction, accounts, categories, history = 
     let fromId = accountId
     let payeeText = payee.trim()
     if (borrowed) {
+      setSaving(true)
       let from = lender
       if (!from) {
         from = newLender(lenderName, currency, 0)
-        setSaving(true)
         await useFinanceStore.getState().upsertAccount(from)
       }
       fromId = from.id
       payeeText = payeeText || `Borrowed from ${from.name}`
+      // The plan is the lender's budget: its category and rule are written
+      // before the entry, so the first instalment is there to be filed.
+      if (plan) await saveLoanPlan(from, plan)
+      else if (planTouched && planOf(loadRules(), from.id)) await saveLoanPlan(from, null)
     }
     onSave({
       id,
@@ -274,6 +288,10 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       isRecurring,
       createdAt:   transaction?.createdAt   ?? new Date().toISOString(),
     })
+    // The writer reads the ledger, and the borrowing it needs to see — a plan on
+    // a loan nothing has been borrowed on yet has nothing to repay — is in the
+    // store now. Ask it to look again.
+    if (borrowed && (plan || planTouched)) window.dispatchEvent(new Event('professor:moneyRemindersChanged'))
     // Docked, the form can outlive the save; a stuck flag would lock Save.
     setSaving(false)
   }
@@ -345,6 +363,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   const canSave = borrowed
     ? amount > 0 && !!landing && !unrated && !saving
         && (lenderId === NEW_LENDER ? !!lenderName.trim() : !!lender)
+        && (!plan || !planIssue(plan))
     : amount > 0 && !!accountId && (type !== 'transfer' || !!toAccountId)
 
   // The form itself, drawn once. It used to be handed to a `Shell` component
@@ -491,6 +510,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                     setLenderId(id)
                     const l = accounts.find(a => a.id === id)
                     if (l && !transaction && !currencyTouched) setCurrency(l.currency)
+                    // A lender who already has a plan brings it.
+                    setPlan(l ? planOf(loadRules(), l.id) : null)
+                    setPlanTouched(false)
                   }}
                   placeholder="Who lent it?"
                   options={[
@@ -580,6 +602,16 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   </span>
                 </div>
               )}
+
+              {/* How it will be paid back, if there is a plan. Optional: a
+                  loan without one is a debt with a goal, and nothing scheduled. */}
+              <LoanPlanFields
+                value={plan}
+                onChange={p => { setPlan(p); setPlanTouched(true) }}
+                currency={lender?.currency ?? currency}
+                owed={Math.max(0, lender ? -balanceOf(lender.id) : 0) + (ends?.owed ?? amount)}
+                payFrom={landsIn}
+                defaultPayFromId={toAccountId} />
             </>
           )}
 

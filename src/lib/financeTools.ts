@@ -40,7 +40,7 @@ import {
 } from '@/modules/finance/cardRewards'
 import { findDuplicates } from '@/modules/finance/duplicates'
 import { capacityFrom, planGoals, debtGoals, isDebtGoal, type Policy } from '@/modules/finance/goalPlan'
-import { isLoan } from '@/modules/finance/loans'
+import { isLoan, spendsEnvelope } from '@/modules/finance/loans'
 import { adviseGoal } from '@/modules/finance/goalAdvice'
 
 /** The split the Goals screen is set to. Reading it here means the assistant
@@ -543,7 +543,7 @@ export async function executeFinanceTool(
           const cat = categories.find(c => c.id === id)!
           const kids = categories.filter(c => c.parentId === id).map(c => c.id)
           const spent = paid
-            .filter(t => t.type === 'expense' && (t.categoryId === id || kids.includes(t.categoryId ?? '')))
+            .filter(t => spendsEnvelope(t, 'expense') && (t.categoryId === id || kids.includes(t.categoryId ?? '')))
             .reduce((n, t) => n + (txIn(t, baseCurrency()) ?? 0), 0)
           return { category: cat.name, budget: money(monthlyAmount(r, month)), spent: money(spent), left: money(monthlyAmount(r, month) - spent) }
         })
@@ -682,7 +682,7 @@ export async function executeFinanceTool(
       const month = str('month') ?? monthOf(today)
       const cur = store()
       const rules = loadRules()
-      const paid = settled(cur.transactions).filter(t => monthOf(whenPaid(t)) === month && t.type === 'expense')
+      const paid = settled(cur.transactions).filter(t => monthOf(whenPaid(t)) === month && spendsEnvelope(t, 'expense'))
       const out = []
       for (const [id, rule] of Object.entries(rules)) {
         const cat = cur.categories.find(c => c.id === id)

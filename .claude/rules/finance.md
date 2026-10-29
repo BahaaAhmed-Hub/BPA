@@ -1176,3 +1176,68 @@ read as a loss that was never a gain.
   budget line, funding the instalment first, Pay back from the goal or the
   balance row, optional interest, and borrowing/repaying through the assistant,
   Telegram and Siri — the three doors must get it in one change.
+
+## Finance — a loan's payment plan is its budget line, stored once
+`loanPlan.ts` (pure), `loanPlanSave.ts` (the one writer), `LoanPlanFields`. "2,000
+every month from the 1st" is a budget — an amount, a frequency, a day, a first and
+a last month — so the plan **is** the loan's `BudgetRule`, not a second record that
+could drift from it.
+- **The loan's id is its budget category's id.** Different tables, so no collision,
+  and nothing to map: `rules[loan.id]` is the plan, `isLoanCategory(id, accounts)`
+  asks whether a line is a loan's. The parent, **Loan repayments**, is a system
+  category found by name — a category id is global, so a fixed one would collide
+  between two people. The rule is `repeat`, `bucket: 'fixed'` (a loan is the
+  example the Fixed bucket's own help gives), in the loan's currency, on the first
+  payment's day, from `starts` to an optional `ends`, paid from `dueAccountId`.
+  Monthly, quarterly and annual only: a weekly or dated rule is not something the
+  form can say, so `planFromRule` answers null for it.
+- **Offered where it is asked for.** *Set a payment plan* on the Borrowed form
+  (off by default; a lender who already has one brings it, and unticking it on
+  them takes it away) and in the account window of a loan. Save is disabled while
+  the plan is incomplete. The form says what it comes to — *Clears 10,000 in 5
+  payments, the last on 28 Feb 2027*, or by how much a plan that ends first would
+  fall short. `scheduleDates` is the form's own date generator and a harness holds
+  it to the writer's dates (`occurrencesFor`) for four plans.
+- **Saving writes in dependency order**: the lender's account, then the plan's
+  categories and rule, then the borrowing. **A raise is a step**, never an
+  overwrite (`withAmount`): the old amount stays the base and every earlier month
+  keeps it, as every budget does. `planFromRule` therefore reads `amountFor(rule)`,
+  not `rule.amount`.
+- **Removing a plan removes the rule**, and the writer removes the unpaid
+  instalments it made on its next pass. The category goes with it **unless a
+  repayment was actually paid under it** — history is what was paid; unpaid
+  instalments are the plan's scaffolding, and a category kept alive for them is an
+  empty line in the Budget. The empty parent goes with its last child. Deleting a
+  lender removes its plan.
+- **The instalments are unpaid transfers into the lender**, not expenses
+  (`runBudgetEntries` takes `loans`, what is owed on each). Paying one lowers the
+  debt; filed as an expense it would have left the lender untouched. They are filed
+  under the loan's category, so the writer's "an entry already filed on that day is
+  the entry" guard still works. **What is owed is a ceiling**: 3,000 owed on a plan
+  of 2,000 is 2,000 and then 1,000, and a loan with nothing owed schedules nothing
+  and loses its unpaid future instalments. The fallback pay-from account skips a
+  lender (accounts[0] could have been one).
+- **A repayment is spent from its envelope and from nothing else.** A repayment
+  is a transfer, so no report counts it as an expense — and the budget envelope,
+  which only ever matched `type` to the category's, would never have seen it.
+  `spendsEnvelope(tx, wanted)` is the one test (a transfer carrying a category is
+  exactly this: the entry form drops it everywhere else), used by the Budget
+  screen's envelopes and drill-down, the panel, the calendar's *N left of M*, and
+  the assistant's two budget readers. Reports, Financials and the year chart still
+  read `type === 'expense'`.
+- **`MoneyInput` forwards `aria-label`.** A hyphenated attribute is accepted by the
+  type checker on any component and silently never reached the DOM, so a field
+  labelled only by its placeholder had no name.
+- `node scripts/loan-plan.mjs` (67, no browser) — controls: the same rule with no
+  loans map writes an *expense* naming no lender; a loan still owed schedules and a
+  cleared one does not; a raise made earlier is the amount now and one planned for
+  2099 is not. `node scripts/loan-plan-ui.mjs 5199 [borrow|edit|envelope]` — the
+  stub refuses a transaction whose account is not there: borrow writes
+  account → categories → borrowing in order, the rule is at `rules[lenderId]`, three
+  unpaid transfers land on the plan's dates, the Budget shows *Loan repayments → 0 /
+  2,000 → Ahmed* under Fixed costs 100%; edit opens with the plan filled in, a raise
+  to 2,500 is a step and the seeded instalments are replaced, unticking removes the
+  rule, the instalments and the unused categories; envelope shows 2,000 of 2,000
+  while a plain 700 moved between accounts is in no envelope.
+- **Not built yet**: the forecast charging instalments, the goal planner funding
+  them first, Pay back, and the assistant/Telegram/Siri.

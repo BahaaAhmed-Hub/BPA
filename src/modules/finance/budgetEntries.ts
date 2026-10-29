@@ -3,6 +3,7 @@ import { activeIn, linesOf, scheduleOf, type BudgetRule } from './modals/BudgetR
 import { baseCurrency } from './fx'
 import { amountFor } from './budgetSteps'
 import { isoDate, shiftDaysISO } from './dates'
+import { SETTLED_BELOW } from './loans'
 
 // ─── A budget with a day on it writes the entry, not a task ──────────────────
 //
@@ -135,6 +136,11 @@ export interface EntryApi {
   remove: (id: string) => void
 }
 
+/** What is still owed on a loan, in the loan's own currency. A budget whose
+ *  category id is a loan's is that loan's payment plan, and its entries are
+ *  repayments rather than spending. */
+export interface LoanLine { owed: number }
+
 /**
  *  What this session has already written, as `${categoryId}|${date}`.
  *
@@ -201,6 +207,10 @@ export function runBudgetEntries(
   year: number,
   api: EntryApi,
   now = new Date(),
+  /** Loan id → what is owed on it. A category with a loan's id is that loan's
+   *  plan: its entries are **transfers** into the loan, so the debt goes down
+   *  when one is paid, and nothing is scheduled once there is nothing owed. */
+  loans: Record<string, LoanLine> = {},
 ): { made: number; dropped: number } {
   const today = isoDate(now)
   const base = baseCurrency()
@@ -217,7 +227,9 @@ export function runBudgetEntries(
   interface Want {
     categoryId: string; date: string
     amount: number; currency: string; accountId: string
-    type: 'income' | 'expense'; payee: string
+    type: 'income' | 'expense' | 'transfer'; payee: string
+    /** A repayment: where it lands. */
+    toAccountId?: string
   }
   /** What identifies one entry *as written*: the day and the money on it. Keyed
    *  without the amount, a correction made in the same session was blocked by
@@ -241,7 +253,19 @@ export function runBudgetEntries(
     // has nothing to fall back on writes nothing, rather than guessing.
     const accountId = rule.dueAccountId ?? fallbackAccountId
     if (!accountId) continue
-    for (const { date, amount } of occurrencesFor(rule, now)) {
+    // A loan's line schedules repayments, and there is nothing to repay once it
+    // is cleared. What is owed is also a ceiling: a debt of 3,000 on a plan of
+    // 2,000 a month is 2,000 and then 1,000, not a third payment of 2,000 into
+    // a loan that is already gone.
+    const loan = loans[categoryId]
+    if (loan && !(loan.owed > SETTLED_BELOW)) continue
+    if (loan && accountId === categoryId) continue
+    let left = loan ? loan.owed : Infinity
+    for (const occ of occurrencesFor(rule, now)) {
+      const amount = Math.min(occ.amount, left)
+      if (!(amount > (loan ? SETTLED_BELOW : 0))) break
+      left -= amount
+      const { date } = occ
       if (!date.startsWith(String(year))) continue
       wanted.set(`${categoryId}|${date}`, {
         categoryId,
@@ -249,8 +273,9 @@ export function runBudgetEntries(
         amount,
         currency: rule.currency ?? base,
         accountId,
-        type: cat.txType === 'income' ? 'income' : 'expense',
-        payee: cat.name,
+        type: loan ? 'transfer' : cat.txType === 'income' ? 'income' : 'expense',
+        toAccountId: loan ? categoryId : undefined,
+        payee: loan ? `Payment to ${cat.name}` : cat.name,
       })
     }
   }
@@ -308,6 +333,7 @@ export function runBudgetEntries(
     fresh.push({
       id: crypto.randomUUID(),
       accountId: want.accountId,
+      ...(want.toAccountId ? { toAccountId: want.toAccountId } : {}),
       amount: want.amount,
       currency: want.currency as Transaction['currency'],
       type: want.type,

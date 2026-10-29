@@ -32,7 +32,7 @@ import { group } from '@/modules/finance/format'
 import { isUnpaid, settled, whenPaid } from '@/modules/finance/unpaid'
 import { loadRules, activeIn, monthlyAmount, isDated } from '@/modules/finance/modals/BudgetRuleModal'
 import { txIn } from '@/modules/finance/txRates'
-import { spendingAccounts } from '@/modules/finance/loans'
+import { spendingAccounts, spendsEnvelope } from '@/modules/finance/loans'
 import { baseCurrency } from '@/modules/finance/fx'
 import {
   biometricName, checkPassword, loadLock, loadPasskey, markActive, verifyPasskey,
@@ -84,7 +84,7 @@ function envelopeFor(
     const ids = new Set([cat.id, ...categories.filter(c => c.parentId === cat.id).map(c => c.id)])
     let spent = 0
     for (const t of settled(txs)) {
-      if (t.type !== 'expense' || !t.categoryId || !ids.has(t.categoryId)) continue
+      if (!spendsEnvelope(t, 'expense') || !t.categoryId || !ids.has(t.categoryId)) continue
       if (whenPaid(t).slice(0, 7) !== monthKey) continue
       const v = txIn(t, cur)
       if (v === null) return null // a rate nobody gave: say nothing rather than add it wrong

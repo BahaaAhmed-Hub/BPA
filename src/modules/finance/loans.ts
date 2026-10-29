@@ -74,6 +74,22 @@ export function isRepayment(tx: Pick<Transaction, 'type' | 'accountId' | 'toAcco
   return isLoan(to) && !!from && !isLoan(from)
 }
 
+/** Whether an entry is money out of (or into) an envelope of this kind.
+ *
+ *  An envelope holds what has come out of it, and an entry says so with its
+ *  type matching the category's. A repayment is the exception that is not one:
+ *  paying a lender back is a **transfer** — it moves money into a debt rather
+ *  than spending it, so no report counts it as an expense — but it is filed
+ *  under the loan's budget category, and that envelope has to hold it or its
+ *  "spent" would never move. A transfer carries a category nowhere else (the
+ *  entry form drops it), so a transfer with one is exactly this. Only the
+ *  budget envelopes ask this question; everything that totals spending still
+ *  reads `type === 'expense'`. */
+export const spendsEnvelope = (
+  tx: Pick<Transaction, 'type' | 'categoryId'>,
+  wanted: 'income' | 'expense',
+): boolean => tx.type === wanted || (wanted === 'expense' && tx.type === 'transfer' && !!tx.categoryId)
+
 /** How much was borrowed in these entries, in `base`. The cash-flow views show
  *  it beside "In" and never inside it: it came in, and it is not income. An
  *  entry in a currency with no rate is left out rather than added at face

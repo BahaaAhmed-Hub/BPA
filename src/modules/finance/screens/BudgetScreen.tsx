@@ -25,6 +25,7 @@ import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { BudgetMark } from '../components/BudgetMark'
 import { isBudgetEntry } from '../budgetEntries'
+import { spendsEnvelope } from '../loans'
 import { isUnpaid, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
@@ -1234,7 +1235,7 @@ export function BudgetScreen(_props?: any) {
       // due has taken nothing out of it yet.
       for (const tx of settled(transactions)) {
         if (!tx.categoryId || !ids.has(tx.categoryId)) continue
-        if (tx.type !== wanted) continue
+        if (!spendsEnvelope(tx, wanted)) continue
         const on = whenPaid(tx)
         const thisMonth = on.startsWith(monthKey)
         const lastMonth = on.startsWith(prevKey)
@@ -1834,7 +1835,7 @@ export function BudgetScreen(_props?: any) {
         const thisCatIds = new Set([selectedId!, ...subs(selectedId!).map(s => s.id)])
         const drillTxs = transactions
           .filter((tx: Transaction) =>
-            tx.type === 'expense' &&
+            spendsEnvelope(tx, 'expense') &&
             tx.categoryId && thisCatIds.has(tx.categoryId) &&
             whenPaid(tx) >= cutoff
           )
