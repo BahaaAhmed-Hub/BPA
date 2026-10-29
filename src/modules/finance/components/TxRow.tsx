@@ -36,6 +36,10 @@ export interface TxRowProps {
   trailing?: ReactNode
   /** Dotted red edge: filed, but nothing has been paid. */
   unpaid?: boolean
+  /** A loan moving, either way. The money arriving in the account is not
+   *  earned and the money leaving it is not spent, so the amount keeps its sign
+   *  and loses the green and the red. */
+  neutral?: boolean
   /** Planned, excluded — present but not counted. */
   faded?: boolean
   /** Excluded from a total: the name is struck out and the figure goes grey. */
@@ -47,21 +51,24 @@ export interface TxRowProps {
 
 /** The amount as a soft pill: a tint of its own colour with the figure in that
  *  colour, never white text on a slab. Out is bracketed by `acct`. */
-export function AmountPill({ type, amount, currency, direction, muted }: {
+export function AmountPill({ type, amount, currency, direction, muted, neutral }: {
   type: 'expense' | 'income' | 'transfer'
   amount: number
   currency?: string
   direction?: 'out' | 'in'
   /** Not counted in anything, so it does not carry a colour either. */
   muted?: boolean
+  /** A loan: signed, but neither green nor red. */
+  neutral?: boolean
 }) {
   const out = type === 'expense' || (type === 'transfer' && direction === 'out')
   const inn = type === 'income'  || (type === 'transfer' && direction === 'in')
-  const bg = muted ? 'var(--sb-field)'
+  const bg = muted || neutral ? 'var(--sb-field)'
     : out ? 'color-mix(in srgb, var(--sb-negative) 12%, transparent)'
     : inn ? 'color-mix(in srgb, var(--sb-positive) 12%, transparent)'
     : 'var(--sb-field)'
   const color = muted ? 'var(--sb-ink-4)'
+    : neutral ? 'var(--sb-ink-2)'
     : out ? 'var(--sb-negative)' : inn ? 'var(--sb-positive)' : 'var(--sb-ink-3)'
   return (
     <span style={{
@@ -87,7 +94,7 @@ export function txDate(iso: string): string {
 
 export function TxRow({
   icon, tone, title, marks, meta, type, amount, currency, direction,
-  trailing, unpaid, faded, struck, onClick, hoverTitle, style,
+  trailing, unpaid, faded, struck, neutral, onClick, hoverTitle, style,
 }: TxRowProps) {
   const inkKeeping = useInkOnKeeping()
   const medallion = tone ?? (type === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)')
@@ -147,7 +154,7 @@ export function TxRow({
         </span>
       </span>
 
-      <AmountPill type={type} amount={amount} currency={currency} direction={direction} muted={struck} />
+      <AmountPill type={type} amount={amount} currency={currency} direction={direction} muted={struck} neutral={neutral} />
       {trailing}
     </div>
   )

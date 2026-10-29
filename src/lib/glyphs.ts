@@ -8,6 +8,7 @@
 export const DEFAULT_HABIT_EMOJI    = '🎯'
 export const DEFAULT_GOAL_ICON      = '🎯'
 export const DEFAULT_ACCOUNT_EMOJI  = '🏦'
+export const DEFAULT_LOAN_EMOJI     = '🤝'
 export const DEFAULT_CATEGORY_ICON  = '📁'
 export const DEFAULT_SHOP_ICON      = '🛒'
 export const FALLBACK_BOARD_ICON    = '📥'

@@ -36,6 +36,11 @@ export function frozenRate(tx: Rated, base = baseCurrency()): number | null {
  *  cannot be known, as `convert` and `toBase` say. */
 export function txConvert(tx: Rated, amount: number, to = baseCurrency()): number | null {
   const base = baseCurrency()
+  // An amount already in the currency asked for needs no rate. Going by way of
+  // the base anyway multiplied by the rate it was stamped with and divided by
+  // today's, so 500 USD on a USD account read 480 once the dollar moved from
+  // 48 to 50 — a debt and a balance that shrank for no reason.
+  if ((tx.currency || base).toUpperCase() === to.toUpperCase()) return amount
   const rate = frozenRate(tx, base)
   if (rate === null) return convert(amount, tx.currency, to)
   const inBase = amount * rate

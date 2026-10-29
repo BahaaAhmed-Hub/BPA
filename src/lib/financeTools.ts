@@ -40,6 +40,7 @@ import {
 } from '@/modules/finance/cardRewards'
 import { findDuplicates } from '@/modules/finance/duplicates'
 import { capacityFrom, planGoals, debtGoals, isDebtGoal, type Policy } from '@/modules/finance/goalPlan'
+import { isLoan } from '@/modules/finance/loans'
 import { adviseGoal } from '@/modules/finance/goalAdvice'
 
 /** The split the Goals screen is set to. Reading it here means the assistant
@@ -774,6 +775,11 @@ export async function executeFinanceTool(
         ? pick('account', accounts, str('account'))
         : accounts[0] ? { hit: accounts[0] } : { error: 'There are no accounts yet.' }
       if (isErr(acc)) return acc
+      // A lender is somewhere money is owed, not somewhere it is spent from or
+      // paid into. Borrowing and paying back are transfers.
+      if (type !== 'transfer' && isLoan(acc.hit)) {
+        return { error: `${acc.hit.name} is a loan, so it cannot be spent from or paid into. Borrowing from it, or paying it back, is a transfer.` }
+      }
 
       let toAccountId: string | undefined
       if (type === 'transfer') {

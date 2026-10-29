@@ -192,7 +192,37 @@ const OUTCOME = (() => {
   }
 })()
 
-const AUDIT = () => {
+// Loans: a lender owed part of what was borrowed, a second lender paid back in full
+// (so the "paid back" fold has something in it), and the entries that make them —
+// a borrowing, a repayment and a salary beside them. Served for the loans screens
+// only (`loansFixture`), for the same reason as the outcome window's.
+const LOANS = (() => {
+  const pad = n => String(n).padStart(2, '0')
+  const now = new Date()
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  const U = 'u1', T0 = '2026-01-01T00:00:00.000Z'
+  const acc = (id, name, type, cur, extra = {}) => ({ id, user_id: U, name, bank: '', account_type: type, currency: cur, balance: 0, emoji: '💵', color: '#0C8140', sort_order: 0, is_active: true, created_at: T0, ...extra })
+  const tx = (id, over) => ({ id, user_id: U, account_id: 'la1', to_account_id: null, category_id: 'lc1', amount: 100, currency: 'EGP',
+    tx_type: 'expense', payee: id, date: today, paid_at: today, note: null, is_cleared: true, is_recurring: false, tags: [], attachments: [], created_at: T0, ...over })
+  return {
+    finance_accounts: [
+      acc('la1', 'CIB', 'payment', 'EGP'),
+      acc('la2', 'Ahmed', 'loan', 'EGP', { emoji: '🤝', sort_order: 1 }),
+      acc('la3', 'Omar', 'loan', 'EGP', { emoji: '🤝', sort_order: 2 }),
+    ],
+    finance_categories: [{ id: 'lc1', user_id: U, name: 'Salary', icon: 'lucide:Wallet', color: '#0C8140', tx_type: 'both', sort_order: 0, is_system: false, created_at: T0, parent_id: null }],
+    finance_transactions: [
+      tx('Salary', { type: 'income', tx_type: 'income', amount: 20000 }),
+      tx('Borrowed from Ahmed', { tx_type: 'transfer', account_id: 'la2', to_account_id: 'la1', category_id: null, amount: 10000 }),
+      tx('Paid back Ahmed', { tx_type: 'transfer', account_id: 'la1', to_account_id: 'la2', category_id: null, amount: 4000 }),
+      tx('Borrowed from Omar', { tx_type: 'transfer', account_id: 'la3', to_account_id: 'la1', category_id: null, amount: 500 }),
+      tx('Paid back Omar', { tx_type: 'transfer', account_id: 'la1', to_account_id: 'la3', category_id: null, amount: 500 }),
+    ],
+  }
+})()
+let loansFixture = false
+
+const AUDIT = (probe = []) => {
   // Chrome computes color-mix() to `color(srgb 0.9 0.8 0.7)` — 0..1, not
   // 0..255. Read as 0..255 every mix audits as near-black.
   const px = c => {
@@ -236,6 +266,7 @@ const AUDIT = () => {
   }
 
   const out = []
+  const probed = []
   for (const el of document.querySelectorAll('*')) {
     // Only elements that draw text of their own.
     const own = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())
@@ -270,10 +301,16 @@ const AUDIT = () => {
     // WCAG "large text": 18.66px bold, or 24px.
     const large = size >= 24 || (size >= 18.66 && weight >= 700)
     const need = svg ? 3 : large ? 3 : 4.5
-    if (cr >= need) continue
-
     const txt = svg ? `<svg ${el.getAttribute('class') || ''}>`
       : [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join(' ').slice(0, 34)
+    // A probe is an element the caller named, reported whether it passes or not:
+    // the audit only lists failures, so "nothing listed" cannot say that a thing
+    // was measured at all. It is what turns a quiet screen into a measured one.
+    if (probe.some(p => txt.includes(p))) {
+      probed.push({ text: txt, ratio: Math.round(cr * 100) / 100, need, probe: true, ok: cr >= need })
+    }
+    if (cr >= need) continue
+
     out.push({
       text: txt,
       ratio: Math.round(cr * 100) / 100,
@@ -292,7 +329,7 @@ const AUDIT = () => {
     if (p) { p.n += 1; if (f.text.length > p.text.length) p.text = f.text }
     else seen.set(k, { ...f, n: 1 })
   }
-  return [...seen.values()].sort((a, b) => a.ratio - b.ratio)
+  return [...[...seen.values()].sort((a, b) => a.ratio - b.ratio), ...probed]
 }
 
 // Shopping has a screen, a board and a stores page, all of which draw text on
@@ -455,7 +492,7 @@ for (const t of THEMES) {
     process.exit(2)
   }
 }
-const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] })
+const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] })
 
 for (const theme of THEMES) {
   const page = await (await br.newContext({ viewport: { width: 1500, height: 1050 }, timezoneId: 'Africa/Cairo', locale: 'en-GB' })).newPage()
@@ -476,6 +513,7 @@ for (const theme of THEMES) {
     const t = /\/rest\/v1\/([a-z_]+)/.exec(u)?.[1]
     const GET = r.request().method() === 'GET'
     if (outcomeFixture && t && OUTCOME[t] && GET) return r.fulfill({ json: OUTCOME[t] })
+    if (loansFixture && t && LOANS[t] && GET) return r.fulfill({ json: LOANS[t] })
     if (projectsFixture && t && PROJECTS[t] && GET) return r.fulfill({ json: PROJECTS[t] })
     if (t && SHOPPING[t] && GET) return r.fulfill({ json: SHOPPING[t] })
     if (t && LIBRARY[t] && GET) return r.fulfill({ json: LIBRARY[t] })
@@ -581,7 +619,7 @@ for (const theme of THEMES) {
   // suits the app's own screens, every one of which is dense; a deliberately
   // lean page — the stranger's booking page is 32 elements and all of them
   // real — says its own floor rather than being reported as never opened.
-  const visit = async (label, go, floor = 40) => {
+  const visit = async (label, go, floor = 40, probe = []) => {
     // INK_ONLY=<text>[|<text>…] runs only the screens whose name contains one of them: a screen
     // being worked on does not need the other forty re-measured each time.
     if (process.env.INK_ONLY && !process.env.INK_ONLY.split('|').some(t => label.includes(t))) return
@@ -589,7 +627,9 @@ for (const theme of THEMES) {
     try { await go() } catch (e) { opened = false; seen.push({ label, pairs: 0, why: String(e).split('\n')[0].slice(0, 70) }) }
     if (!opened) return
     await page.waitForTimeout(1500)
-    const rows = await page.evaluate(AUDIT)
+    const all = await page.evaluate(AUDIT, probe)
+    const rows = all.filter(r => !r.probe)
+    for (const p of all.filter(r => r.probe)) console.log(`   · probe [${label}] "${p.text}" ${p.ratio} (need ${p.need}) ${p.ok ? 'ok' : 'FAILS'}`)
     // `AUDIT` returns only the FAILING pairs, so it cannot say whether a screen
     // was measured at all. Count the text it actually looked at as well: a
     // screen that never opened reports 0 failures over 0 nodes, which reads
@@ -810,6 +850,32 @@ for (const theme of THEMES) {
     await page.getByRole('tab', { name: 'Week', exact: true }).click().catch(() => {})
     projectsFixture = false
     await page.evaluate(() => { for (const k of ['professor-tasks', 'professor-projects', 'professor-ui']) if (k !== 'professor-ui') localStorage.removeItem(k) })
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(2500)
+  }
+  // Money borrowed: the Loans group on Balances (one owed, one paid back and
+  // folded open), the Borrowed / Repaid marks and the neutral amount in the feed
+  // from the account it landed in, and Today's Borrowed chip and cash-flow line.
+  // None of it exists without a lender, so the fixture is switched on for these
+  // two visits and the page reloaded either side of them.
+  const financeTab = name => page.locator('nav[aria-label="Finance sections"]').getByRole('button', { name, exact: true }).click()
+  await visit('Finance · loans (Balances)', async () => {
+    loansFixture = true
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(2500)
+    await page.locator('[data-side-rail] button[aria-label="Finance"]').click()
+    await financeTab('Balance')
+    await page.getByText('LOANS OWED').waitFor({ timeout: 6000 })
+    await page.getByRole('button', { name: /paid back/ }).click({ timeout: 2000 })
+    // The account it landed in, so the feed reads the move as money coming in.
+    await page.getByText('CIB', { exact: true }).first().click()
+  }, 40, ['LOANS OWED', 'Borrowed', 'Repaid', 'paid back', '(EGP 6,000)', '(EGP 10,000)'])
+  await visit('Finance · loans (Today)', async () => {
+    await financeTab('Today')
+    await page.getByText('Borrowed', { exact: true }).first().waitFor({ timeout: 6000 })
+  }, 40, ['Borrowed', 'Net leaves out'])
+  if (loansFixture) {
+    loansFixture = false
     await page.reload({ waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(2500)
   }

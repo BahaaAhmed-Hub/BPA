@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
 import { TransactionModal } from '../modals/TransactionModal'
-import type { Transaction } from '../types'
+import type { Account, Transaction } from '../types'
 import { POSITIVE, NEGATIVE, POSITIVE_DEEP, NEGATIVE_DEEP, POSITIVE_TINT, NEGATIVE_TINT } from '../../../lib/moneyColors'
 import { acct, group, compact } from '../format'
 import { baseCurrency, currenciesNeedingRates } from '../fx'
@@ -15,6 +15,8 @@ import { TxRow, txDate } from '../components/TxRow'
 import { C } from '@/lib/palette'
 import { FALLBACK_EXPENSE_ICON, FALLBACK_INCOME_ICON } from '@/lib/glyphs'
 import { txIn } from '../txRates'
+import { borrowedIn, isBorrowing, isRepayment } from '../loans'
+import { LoanMark, LOAN_ICON } from '../components/LoanMark'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -53,6 +55,7 @@ function MoneyCalendar({
   year, month,
   selectedDay,
   transactions,
+  accounts,
   onSelectDay,
   onPrevMonth,
   onNextMonth,
@@ -61,6 +64,7 @@ function MoneyCalendar({
   month: number
   selectedDay: string | null
   transactions: Transaction[]
+  accounts: Account[]
   onSelectDay: (d: string) => void
   onPrevMonth: () => void
   onNextMonth: () => void
@@ -111,6 +115,8 @@ function MoneyCalendar({
   const monthTxs = settled(transactions).filter(t => whenPaid(t).startsWith(monthPrefix))
   const monthOut = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + inBase(t), 0)
   const monthIn  = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + inBase(t), 0)
+  // Borrowed money came in too, and is shown beside In — never inside it.
+  const monthBorrowed = borrowedIn(monthTxs, accounts, base)
   const unrated  = currenciesNeedingRates(monthTxs, base)
 
   const ROUND_BTN = {
@@ -145,6 +151,11 @@ function MoneyCalendar({
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           {chip('Out', monthOut > 0 ? acct(-monthOut) : '–', NEGATIVE_DEEP, NEGATIVE_TINT)}
           {chip('In',  monthIn  > 0 ? acct(monthIn)   : '–', POSITIVE_DEEP, POSITIVE_TINT)}
+          {monthBorrowed > 0 && (
+            <span title="Money you borrowed this month. It is not income, so it is not in In — and you will pay it back.">
+              {chip('Borrowed', acct(monthBorrowed), 'var(--sb-ink-1)', 'var(--sb-field)')}
+            </span>
+          )}
           {unrated.length > 0 && (
             <span title={`No rate set for ${unrated.join(', ')}, so it is not counted in these totals`}
               style={{
@@ -271,15 +282,17 @@ export function TodayScreen() {
     const acct = tx.accountId  ? accounts.find(a => a.id === tx.accountId)    : null
     const isExp    = tx.type === 'expense'
     const isFuture = whenPaid(tx) > todayStr
+    const loanKind = isBorrowing(tx, accounts) ? 'borrowed' : isRepayment(tx, accounts) ? 'repaid' : null
     return (
       <TxRow
         key={tx.id}
-        icon={cat?.icon ?? acct?.emoji ?? (isExp ? FALLBACK_EXPENSE_ICON : FALLBACK_INCOME_ICON)}
+        icon={loanKind ? LOAN_ICON : (cat?.icon ?? acct?.emoji ?? (isExp ? FALLBACK_EXPENSE_ICON : FALLBACK_INCOME_ICON))}
         tone={acct ? acct.color : isExp ? RED : GREEN}
         title={tx.payee?.trim() || cat?.name || 'Transaction'}
         marks={<>
           <DuplicateMark scope={dupes.get(tx.id)} />
           <BudgetMark on={isBudgetEntry(tx)} />
+          <LoanMark kind={loanKind} />
           {isFuture && (
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.7 }}>
               <title>Planned (not yet paid)</title>
@@ -305,6 +318,7 @@ export function TodayScreen() {
         type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'}
         amount={tx.amount}
         currency={tx.currency}
+        neutral={!!loanKind}
         unpaid={isUnpaid(tx)}
         faded={isFuture}
         hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}
@@ -349,6 +363,7 @@ export function TodayScreen() {
           month={viewMonth}
           selectedDay={selectedDay}
           transactions={transactions}
+          accounts={accounts}
           onSelectDay={setSelectedDay}
           onPrevMonth={prevMonth}
           onNextMonth={nextMonth}
@@ -397,6 +412,9 @@ export function TodayScreen() {
             const inc = moved.filter(t => t.type === 'income').reduce((s, t) => s + conv(t), 0)
             const exp = moved.filter(t => t.type === 'expense').reduce((s, t) => s + conv(t), 0)
             const net = inc - exp
+            // Came in, and has to be paid back. Shown on its own line and kept
+            // out of Net: Net is what you earned less what you spent.
+            const borrowed = borrowedIn(moved, accounts, base)
             const waiting = feed.length - moved.length
             const line = (label: string, value: string, color: string, strong = false) => (
               <div style={{
@@ -419,8 +437,14 @@ export function TodayScreen() {
             return (
               <div style={{ marginTop: 16, paddingTop: 12, borderTop: `var(--sb-border-width) solid ${C.border}` }}>
                 {line('In',  acct(inc, { currency: base }), GREEN)}
+                {borrowed > 0 && line('Borrowed', acct(borrowed, { currency: base }), 'var(--sb-ink-2)')}
                 {line('Out', acct(-exp, { currency: base }), RED)}
                 {line('Net', acct(net, { currency: base }), net >= 0 ? GREEN : RED, true)}
+                {borrowed > 0 && (
+                  <div style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, marginTop: 7, textAlign: 'right' }}>
+                    Net leaves out the {acct(borrowed, { currency: base })} borrowed — it is not income.
+                  </div>
+                )}
                 {waiting > 0 && (
                   <div style={{ fontSize: 'var(--sb-t-meta)', color: RED, marginTop: 7, textAlign: 'right' }}>
                     {waiting} not paid yet, so not counted
