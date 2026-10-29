@@ -33,7 +33,7 @@ import { useShoppingStore } from '@/modules/finance/shopping/shoppingStore'
 import { supabase } from '@/lib/supabase'
 import { isLocked } from '@/modules/finance/lock'
 import { liveBalances } from '@/modules/finance/balances'
-import { toBase, baseCurrency, loadRates, setRate, rateFor } from '@/modules/finance/fx'
+import { toBase, baseCurrency, loadRates, rateFor } from '@/modules/finance/fx'
 import { settled, whenPaid, isUnpaid } from '@/modules/finance/unpaid'
 import {
   pointsFor, schemeFor, isDormant, loadRewardSettings, type CardPoints,
@@ -55,6 +55,7 @@ import {
   type BudgetRule,
 } from '@/modules/finance/modals/BudgetRuleModal'
 import { amountFor, withAmount } from '@/modules/finance/budgetSteps'
+import { txIn } from '@/modules/finance/txRates'
 import { todayISO } from '@/modules/finance/dates'
 import type { Account, Category, Currency, Goal, Transaction, TxType } from '@/modules/finance/types'
 import { notify } from '@/lib/undo'
@@ -106,12 +107,6 @@ async function ensureYear(from?: string, to?: string): Promise<string | null> {
 const money = (n: number) => Math.round(n * 100) / 100
 const monthOf = (iso: string) => iso.slice(0, 7)
 
-/** Every figure the assistant reports is converted, and says when it could
- *  not be — the same rule the screens follow. */
-function inBase(amount: number, currency: string): number | null {
-  return toBase(Math.abs(amount), currency, baseCurrency())
-}
-
 function catName(id: string | undefined, cats: Category[]): string {
   return cats.find(c => c.id === id)?.name ?? 'Uncategorised'
 }
@@ -143,7 +138,7 @@ function txOut(tx: Transaction, cats: Category[], accts: Account[]) {
     payee: tx.payee,
     amount: tx.amount,
     currency: tx.currency,
-    in_base: inBase(tx.amount, tx.currency),
+    in_base: txIn(tx, baseCurrency()),
     category: catName(tx.categoryId, cats),
     account: acctName(tx.accountId, accts),
     ...(tx.toAccountId ? { to_account: acctName(tx.toAccountId, accts) } : {}),
@@ -527,7 +522,7 @@ export async function executeFinanceTool(
       let inMonth = 0, outMonth = 0
       const perCat = new Map<string, number>()
       for (const t of paid) {
-        const v = inBase(t.amount, t.currency)
+        const v = txIn(t, baseCurrency())
         if (v === null) continue
         if (t.type === 'income') inMonth += v
         if (t.type === 'expense') {
@@ -538,7 +533,7 @@ export async function executeFinanceTool(
       }
 
       const owedRows = transactions.filter(isUnpaid)
-      const owedTotal = owedRows.reduce((n, t) => n + (t.type === 'expense' ? (inBase(t.amount, t.currency) ?? 0) : 0), 0)
+      const owedTotal = owedRows.reduce((n, t) => n + (t.type === 'expense' ? (txIn(t, baseCurrency()) ?? 0) : 0), 0)
 
       const rules = loadRules()
       const over = Object.entries(rules)
@@ -548,7 +543,7 @@ export async function executeFinanceTool(
           const kids = categories.filter(c => c.parentId === id).map(c => c.id)
           const spent = paid
             .filter(t => t.type === 'expense' && (t.categoryId === id || kids.includes(t.categoryId ?? '')))
-            .reduce((n, t) => n + (inBase(t.amount, t.currency) ?? 0), 0)
+            .reduce((n, t) => n + (txIn(t, baseCurrency()) ?? 0), 0)
           return { category: cat.name, budget: money(monthlyAmount(r, month)), spent: money(spent), left: money(monthlyAmount(r, month) - spent) }
         })
         .filter(e => e.left < 0)
@@ -652,7 +647,7 @@ export async function executeFinanceTool(
       const per = new Map<string, number>()
       const missed = new Set<string>()
       for (const t of rows) {
-        const v = inBase(t.amount, t.currency)
+        const v = txIn(t, baseCurrency())
         if (v === null) { missed.add(t.currency); continue }
         const k = catName(t.categoryId, cur.categories)
         per.set(k, (per.get(k) ?? 0) + v)
@@ -693,7 +688,7 @@ export async function executeFinanceTool(
         if (!cat || !activeIn(rule, month) || monthlyAmount(rule, month) <= 0) continue
         const kids = cur.categories.filter(c => c.parentId === id).map(c => c.id)
         const spent = paid.filter(t => t.categoryId === id || kids.includes(t.categoryId ?? ''))
-          .reduce((n, t) => n + (inBase(t.amount, t.currency) ?? 0), 0)
+          .reduce((n, t) => n + (txIn(t, baseCurrency()) ?? 0), 0)
         const budget = monthlyAmount(rule, month)
         out.push({
           category: cat.name, budget: money(budget), spent: money(spent), left: money(budget - spent),
@@ -920,9 +915,11 @@ export async function executeFinanceTool(
       if (!cur) return { error: 'Which currency?' }
       if (!rate || rate <= 0) return { error: 'A rate is what one unit is worth in the base currency, above zero.' }
       if (cur === base.toUpperCase()) return { error: `${base} is the base currency — it is always worth one of itself.` }
-      setRate(cur, rate)
+      // Through the store, which gives every entry already in the ledger the
+      // rate it had before this one replaces it.
+      if (!(await store().changeRate(cur, rate))) return { error: 'The ledger could not be read, so the rate was left as it was.' }
       notify(`1 ${cur} = ${rate} ${base}`)
-      return { ok: true, rates: loadRates(), base, note: `Totals now count ${cur}.` }
+      return { ok: true, rates: loadRates(), base, note: `Totals now count ${cur}. Entries already in the ledger keep the rate they were added at.` }
     }
 
     // ── Budgets ───────────────────────────────────────────────────────────

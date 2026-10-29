@@ -4,7 +4,7 @@ import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
 import { POSITIVE, NEGATIVE, POSITIVE_DEEP, NEGATIVE_DEEP, POSITIVE_TINT, NEGATIVE_TINT } from '../../../lib/moneyColors'
 import { acct, group, compact } from '../format'
-import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
+import { baseCurrency, currenciesNeedingRates } from '../fx'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { BudgetMark } from '../components/BudgetMark'
@@ -14,6 +14,7 @@ import { isoDate } from '../dates'
 import { TxRow, txDate } from '../components/TxRow'
 import { C } from '@/lib/palette'
 import { FALLBACK_EXPENSE_ICON, FALLBACK_INCOME_ICON } from '@/lib/glyphs'
+import { txIn } from '../txRates'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -90,7 +91,7 @@ function MoneyCalendar({
     // worse than either choice.
     const day = whenPaid(tx)
     if (!day.startsWith(monthPrefix)) return
-    const v = toBase(Math.abs(tx.amount), tx.currency, base)
+    const v = txIn(tx, base)
     if (v === null) return
     const prev = dayNetMap.get(day) ?? 0
     const delta = tx.type === 'income' ? v : -v
@@ -106,7 +107,7 @@ function MoneyCalendar({
   while (cells.length % 7 !== 0) cells.push(null)
 
   // Monthly totals
-  const inBase = (t: Transaction) => toBase(Math.abs(t.amount), t.currency, base) ?? 0
+  const inBase = (t: Transaction) => txIn(t, base) ?? 0
   const monthTxs = settled(transactions).filter(t => whenPaid(t).startsWith(monthPrefix))
   const monthOut = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + inBase(t), 0)
   const monthIn  = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + inBase(t), 0)
@@ -314,7 +315,7 @@ export function TodayScreen() {
 
   const todayTx = settled(transactions).filter(tx => whenPaid(tx) === todayStr)
   const base = baseCurrency()
-  const conv = (t: Transaction) => toBase(Math.abs(t.amount), t.currency, base) ?? 0
+  const conv = (t: Transaction) => txIn(t, base) ?? 0
   const todayExp = todayTx.filter(t => t.type === 'expense').reduce((s, t) => s + conv(t), 0)
   const todayInc = todayTx.filter(t => t.type === 'income').reduce((s, t) => s + conv(t), 0)
 

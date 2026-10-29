@@ -5,6 +5,7 @@ import { settled, whenPaid } from './unpaid'
 import { isBudgetEntry } from './budgetEntries'
 import { todayISO } from './dates'
 import { FALLBACK_EXPENSE_ICON } from '@/lib/glyphs'
+import { txIn } from './txRates'
 
 // ─── Can this goal actually happen? ──────────────────────────────────────────
 //
@@ -232,7 +233,7 @@ export function typicalMonth(
   for (const tx of settled(transactions)) {
     const k = monthKey(whenPaid(tx))
     if (!inBy.has(k)) continue
-    const v = toBase(Math.abs(tx.amount), tx.currency, base)
+    const v = txIn(tx, base)
     if (v === null) continue
     if (tx.type === 'income') inBy.set(k, inBy.get(k)! + v)
     else if (tx.type === 'expense') outBy.set(k, outBy.get(k)! + v)
@@ -340,7 +341,7 @@ export function capacityFrom(
   for (const tx of transactions) {
     if (tx.paidAt) continue
     if (tx.date <= today) continue
-    const v = toBase(Math.abs(tx.amount), tx.currency, base)
+    const v = txIn(tx, base)
     if (v === null) continue
     if (tx.type === 'expense') committed += v
     if (tx.type === 'income')  committed -= v

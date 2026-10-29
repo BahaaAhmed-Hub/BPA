@@ -27,11 +27,11 @@
 // ten minutes from the ones worth none.
 
 import type { Category, Transaction } from './types'
-import { toBase } from './fx'
 import { settled, whenPaid } from './unpaid'
 import { todayISO } from './dates'
 import { foldText } from '@/lib/pickSearch'
 import { bucketOf, BUCKETS, type Bucket, type BudgetRule } from './modals/BudgetRuleModal'
+import { txIn } from './txRates'
 
 export type FindingKind =
   | 'unfiled'      // spending with no category at all
@@ -145,7 +145,7 @@ export function reviewCategories(input: ReviewInput): Review {
 
   for (const t of rows) {
     if (t.type !== 'expense' && t.type !== 'income') continue
-    const v = toBase(Math.abs(t.amount), t.currency, base)
+    const v = txIn(t, base)
     if (v === null) continue
     const cid = t.categoryId
     if (t.type === 'expense') spend += v

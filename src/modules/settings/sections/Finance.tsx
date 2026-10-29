@@ -3,7 +3,8 @@ import { Button } from '@/components/ui'
 import { paidAtSupported } from '../../finance/unpaid'
 import { todayISO } from '../../finance/dates'
 import type { EnvelopeStyle as BudgetEnvelopeStyle } from '@/modules/finance/screens/BudgetScreen'
-import { loadRates, setRate } from '@/modules/finance/fx'
+import { loadRates } from '@/modules/finance/fx'
+import { notify } from '@/lib/undo'
 import { useFinanceStore } from '@/modules/finance/financeStore'
 import { loadRules } from '@/modules/finance/modals/BudgetRuleModal'
 import { loadReminders, saveReminders, defaultReminder, dueDatesFor, reminderTitle, type MoneyReminder } from '@/modules/finance/reminders'
@@ -226,7 +227,8 @@ export function FinanceSection() {
           <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2, marginBottom: 10, lineHeight: 1.5 }}>
             What one unit is worth in {currency}. Set by hand — there is no rate feed in here,
             and a stale one would be its own kind of wrong. A currency left blank stays out of
-            the totals rather than being guessed at.
+            the totals rather than being guessed at. A new rate applies to entries you add from
+            now on; the ones already in the ledger keep the rate they were added at.
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {['USD', 'EUR', 'GBP', 'AED', 'SAR', 'KWD', 'QAR', 'EGP']
@@ -243,8 +245,10 @@ export function FinanceSection() {
                     placeholder="—"
                     onBlur={e => {
                       const v = parseFloat(e.target.value)
-                      setRate(code, isFinite(v) && v > 0 ? v : null)
-                      setFxRates(loadRates())
+                      // Frozen first: entries already in the ledger keep the
+                      // rate they were added at (txRates.ts).
+                      void useFinanceStore.getState().changeRate(code, isFinite(v) && v > 0 ? v : null)
+                        .then(done => { if (!done) notify('Could not read the ledger, so the rate was not changed'); setFxRates(loadRates()) })
                     }}
                     style={{
                       width: 72, background: 'transparent', border: 'none', outline: 'none',

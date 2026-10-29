@@ -717,6 +717,53 @@ written before this reads unchanged):
   dates, and leaving a day set would write a second entry every month beside the
   instalments.
 
+## Finance — an entry keeps the exchange rate of the day it was added
+`txRates.ts`. `fx.ts` holds one rate per currency, so changing USD from 48 to 50
+re-priced every USD entry already in the ledger: July's rent, paid at 48, read as
+50 in every total. A flow of money is a past event.
+- **The rate is a tag on the entry** — `fx:USD/EGP=48` — as a budget entry carries
+  `budget`: it travels with the row, needs no column and no sync key, and goes
+  when the entry does. It names the currency **and the base**, so a stamp against
+  another base (the base was changed) is ignored. An entry with no stamp converts
+  at the current rate exactly as before, which is why nothing had to be migrated.
+- **Stamped on the way into the ledger**: `upsertTransaction(s)` in the store runs
+  every entry through `stamped(tx, { note: true })`, so the entry panel, bulk
+  entry, a due-day budget's entries and the assistant are all covered by one
+  place. A base-currency entry, or a currency nobody gave a rate for, is left
+  alone — nothing is guessed. The rate is also written into the description
+  (`rate 29 Oct 2026: 1 USD = 48 EGP`; the feeds add the brackets), for whoever
+  reads the entry later. That text is a copy; the tag is what the arithmetic reads.
+- **`changeRate(currency, rate)` on the store is the one way a rate changes**
+  (Settings → Exchange rates and the assistant's `set_exchange_rate` both call
+  it). Before the new rate takes over, **every foreign entry with no rate of its
+  own is given the current one, in every year** (`loadEveryTransaction`, read in
+  pages — a plain select stops at 1,000 rows) and written in one request; their
+  notes are left alone. **If the ledger cannot be read the rate is not changed** —
+  "could not look" must not become "re-price all of history". This replaced a
+  load-time backfill: it does the same job at the only moment it matters, and
+  needs no flag to remember whether it ran.
+- **Every transaction-level total reads `txIn(tx, to)`** (and `txConvert(tx,
+  amount, to)` for a signed amount, in `balances.ts`): Today, Reports, Reflection,
+  Budget envelopes and drill-down, the budget panel, goals' normal month, months
+  ahead, card rewards, category review, the calendar's expenses box and the
+  assistant. Budgets and goals still convert by `toBase` — a budget is a plan,
+  not a past event.
+- **Balances are not flows.** A USD account or card is worth what a dollar costs
+  *now*, so `liveBalances` per-account totals, a card's debt and the Balance screen
+  keep converting at the current rate; an entry **inside** an account converts at
+  its own stamped rate. Unpaid entries are stamped the same way when added and stay
+  out of every total until paid, as before.
+- **Not covered**: `projects/projectLife.ts` sums linked entries through
+  `sumInBase` from a snapshot (`EntryMeta`) that carries no tags, so a project's
+  USD totals still use the current rate. There is no field to edit an entry's rate
+  (paying at a different rate than the day it was added is not representable yet).
+  The Telegram bot and Siri cannot add ledger entries, so nothing to keep in step.
+- `node scripts/tx-rates.mjs` (21 cases, no browser) and `scripts/tx-rate-frozen.mjs
+  [change|assistant|unreadable]` (the real store against a stub that keeps what it
+  is sent and can refuse reads). Control, the harness on the code before: the July
+  entry reads **5,000 instead of 4,800**, nothing is written, and the new entry
+  carries no rate (5 failures).
+
 ## Finance — a budget keeps the amount it had
 `budgetSteps.ts` (pure, no React). A rule held one `amount`, so raising rent from
 10,000 to 13,000 rewrote July too: 12,000 spent, over its limit at the time,

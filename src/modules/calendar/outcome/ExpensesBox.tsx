@@ -31,7 +31,8 @@ import { MoneyInput } from '@/modules/finance/components/MoneyInput'
 import { group } from '@/modules/finance/format'
 import { isUnpaid, settled, whenPaid } from '@/modules/finance/unpaid'
 import { loadRules, activeIn, monthlyAmount, isDated } from '@/modules/finance/modals/BudgetRuleModal'
-import { baseCurrency, convert } from '@/modules/finance/fx'
+import { txIn } from '@/modules/finance/txRates'
+import { baseCurrency } from '@/modules/finance/fx'
 import {
   biometricName, checkPassword, loadLock, loadPasskey, markActive, verifyPasskey,
 } from '@/modules/finance/lock'
@@ -84,7 +85,7 @@ function envelopeFor(
     for (const t of settled(txs)) {
       if (t.type !== 'expense' || !t.categoryId || !ids.has(t.categoryId)) continue
       if (whenPaid(t).slice(0, 7) !== monthKey) continue
-      const v = convert(Math.abs(t.amount), t.currency, cur)
+      const v = txIn(t, cur)
       if (v === null) return null // a rate nobody gave: say nothing rather than add it wrong
       spent += v
     }

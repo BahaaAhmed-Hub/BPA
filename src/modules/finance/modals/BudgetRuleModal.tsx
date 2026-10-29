@@ -5,11 +5,11 @@ import type { AccountType, Category, Transaction } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { MoneyInput } from '../components/MoneyInput'
-import { toBase } from '../fx'
 import { amountFor, editMonth, withAmount, type AmountStep } from '../budgetSteps'
 import { settled, whenPaid } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
 import { openPicker } from '@/lib/nativePicker'
+import { txIn } from '../txRates'
 
 // ─── What an envelope is set to ──────────────────────────────────────────────
 // This was a whole right-hand column: an amount, a fixed-or-flexible pair, five
@@ -612,7 +612,7 @@ export function BudgetRuleModal({
   let spent = 0
   const othersSet = new Set<string>()
   for (const tx of mine) {
-    const v = toBase(Math.abs(tx.amount), tx.currency, cur)
+    const v = txIn(tx, cur)
     if (v === null) othersSet.add(tx.currency)
     else spent += v
   }
@@ -1078,7 +1078,7 @@ export function BudgetRuleModal({
           const subSpend = settled(transactions)
             .filter(tx => tx.categoryId === sub.id
               && whenPaid(tx).startsWith(monthKey))
-            .reduce((s, tx) => s + (toBase(Math.abs(tx.amount), tx.currency, cur) ?? 0), 0)
+            .reduce((s, tx) => s + (txIn(tx, cur) ?? 0), 0)
           return (
             <button key={sub.id} onClick={() => onEditSub(sub)}
               style={{

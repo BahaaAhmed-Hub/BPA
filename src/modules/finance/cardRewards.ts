@@ -36,6 +36,7 @@
 import type { Account, Currency, Transaction } from './types'
 import { toBase } from './fx'
 import { settled, whenPaid } from './unpaid'
+import { txIn } from './txRates'
 
 /** Where the money was spent. The three the banks themselves distinguish. */
 export type SpendChannel = 'pos' | 'online' | 'cash'
@@ -279,14 +280,14 @@ export function pointsFor(
     if (!on.startsWith(from)) continue
 
     if (isCashUse(tx, cardIds)) {
-      const v = toBase(Math.abs(tx.amount), tx.currency, account.currency)
+      const v = txIn(tx, account.currency)
       if (v !== null) out.cashUse += v
       continue
     }
     // Money coming back — a refund, or the card being paid off — is not spend.
     if (tx.type !== 'expense') continue
 
-    const v = toBase(Math.abs(tx.amount), tx.currency, account.currency)
+    const v = txIn(tx, account.currency)
     if (v === null) continue
     const ch = channelOf(tx.id)
     if (ch === 'cash') { out.cashUse += v; continue }

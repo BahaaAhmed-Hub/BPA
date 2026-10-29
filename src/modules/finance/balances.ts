@@ -1,5 +1,5 @@
 import type { Account, Transaction } from './types'
-import { convert } from './fx'
+import { txConvert } from './txRates'
 import { isUnpaid } from './unpaid'
 import { todayISO } from './dates'
 
@@ -38,7 +38,7 @@ import { todayISO } from './dates'
  *  Null where there is no rate to convert by: the entry stays as it is and the
  *  balance says so rather than absorbing a wrong number. */
 export function deltaFor(account: Account, tx: Transaction): number | null {
-  const into = (amount: number) => convert(amount, tx.currency, account.currency)
+  const into = (amount: number) => txConvert(tx, amount, account.currency)
 
   // A transfer moves money: out of the account it is filed against, into the
   // account it names. Paying a card is the second half of that. Each end is
