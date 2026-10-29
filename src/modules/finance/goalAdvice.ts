@@ -2,6 +2,7 @@ import type { Category, Transaction } from './types'
 import type { Capacity, GoalPlan, Policy, ScheduleOptions } from './goalPlan'
 import { typicalMonth, isDebtGoal, scheduleGoals, byRank, commitOf, monthsUntil } from './goalPlan'
 import { bucketOf, type Bucket, type BudgetRule } from './modals/BudgetRuleModal'
+import { ruleAt } from './budgetSteps'
 import { todayISO } from './dates'
 
 // ─── "Never" is not an answer ────────────────────────────────────────────────
@@ -129,7 +130,7 @@ export function adviseGoal(input: AdviceInput): Advice {
         monthly: r.monthly,
         take: 0,
         share: gap / r.monthly,
-        bucket: rule ? bucketOf(rule) : null,
+        bucket: rule ? bucketOf(ruleAt(rule)) : null,
       }
     })
     .sort((a, b) => {

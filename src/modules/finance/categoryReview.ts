@@ -31,6 +31,7 @@ import { settled, whenPaid } from './unpaid'
 import { todayISO } from './dates'
 import { foldText } from '@/lib/pickSearch'
 import { bucketOf, BUCKETS, type Bucket, type BudgetRule } from './modals/BudgetRuleModal'
+import { ruleAt } from './budgetSteps'
 import { txIn } from './txRates'
 
 export type FindingKind =
@@ -359,7 +360,7 @@ function splitFinding(
   for (const [cid, v] of spendBy) {
     const rule = input.rules[cid]
     if (!rule) continue
-    tally[bucketOf(rule)] += v
+    tally[bucketOf(ruleAt(rule))] += v
     covered += v
   }
   const pct = (n: number) => (covered > 0 ? Math.round((n / covered) * 100) : 0)

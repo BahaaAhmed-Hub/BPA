@@ -112,6 +112,41 @@ const rentRow = asst.span.categories?.find(c => c.category === 'Rent')
 console.log('  two-month range:', JSON.stringify(rentRow))
 ok('a two-month range sums each month\'s own budget: 23,000, not 26,000', !!rentRow && /23,?000/.test(String(rentRow.budget)), JSON.stringify(rentRow))
 
+// ── 3. a budget that changed what it says: entries and the assistant ─────────
+const shape = await page.evaluate(async ([thisM, lastM]) => {
+  const { occurrencesFor } = await import('/BPA/src/modules/finance/budgetEntries.ts')
+  const { executeFinanceTool } = await import('/BPA/src/lib/financeTools.ts')
+  const at = new Date(2026, 9, 1)   // 1 Oct 2026, fixed
+  const mk = extra => ({ amount: 10000, frequency: 'monthly', rollover: false, warn80: false, dueDay: 5, currency: 'EGP', ...extra })
+  const usd = occurrencesFor(mk({ steps: [{ from: '2026-11', currency: 'USD' }] }), at, 3)
+  const quarterly = occurrencesFor(mk({ steps: [{ from: '2026-11', frequency: 'quarterly' }] }), at, 3)
+  const L45 = [{ id: 'a', date: '2026-10-20', amount: 45000 }, { id: 'b', date: '2027-01-15', amount: 45000 }]
+  const L50 = [{ id: 'a', date: '2026-10-20', amount: 50000 }, { id: 'b', date: '2027-01-15', amount: 50000 }]
+  const fees = occurrencesFor({ amount: 0, schedule: 'custom', linesRepeat: true, lines: L45, frequency: 'monthly', rollover: false, warn80: false, currency: 'EGP',
+    steps: [{ from: '2026-11', lines: L50 }] }, at, 3)
+  // the assistant: after the earlier call raised Rent to 13,000 from this month
+  const set = await executeFinanceTool('set_budget_envelope', { category: 'Rent', frequency: 'quarterly', currency: 'usd', bucket: 'savings' })
+  const rule = JSON.parse(localStorage.getItem('finance-budget-rules'))['c-rent']
+  const last = await executeFinanceTool('list_budget_envelopes', { month: lastM })
+  const cur = await executeFinanceTool('list_budget_envelopes', { month: thisM })
+  return { usd, quarterly, fees, set, rule, last: last.envelopes?.find(e => e.category === 'Rent'), cur: cur.envelopes?.find(e => e.category === 'Rent') }
+}, [thisMonth, lastMonth])
+const fmt = os => JSON.stringify(os.map(o => `${o.date}:${o.amount}:${o.currency}`))
+console.log('  currency change :', fmt(shape.usd)); console.log('  frequency change:', fmt(shape.quarterly)); console.log('  school fee      :', fmt(shape.fees))
+ok('currency: October is written in EGP, November onward in USD', shape.usd[0]?.currency === 'EGP' && shape.usd.slice(1).every(o => o.currency === 'USD') && shape.usd.length === 4, fmt(shape.usd))
+ok('frequency: monthly until the change, then every quarter (Oct, then Jan)', JSON.stringify(shape.quarterly.map(o => o.date)) === JSON.stringify(['2026-10-05', '2027-01-05']), fmt(shape.quarterly))
+ok('school fee: October\'s instalment at the old 45,000, January\'s at the new 50,000, none twice',
+  JSON.stringify(shape.fees.map(o => [o.date, o.amount])) === JSON.stringify([['2026-10-20', 45000], ['2027-01-15', 50000]]), fmt(shape.fees))
+console.log('  assistant →', JSON.stringify({ ok: shape.set.ok, from: shape.set.applies_from, note: shape.set.note_history, error: shape.set.error }))
+ok('the assistant records frequency, currency and bucket as ONE change merged with the raise, base untouched',
+  shape.rule?.amount === 10000 && shape.rule?.frequency === 'monthly' && shape.rule?.currency === 'EGP' && shape.rule?.bucket === 'fixed'
+  && shape.rule?.steps?.length === 1 && shape.rule.steps[0].from === thisMonth
+  && shape.rule.steps[0].amount === 13000 && shape.rule.steps[0].frequency === 'quarterly' && shape.rule.steps[0].currency === 'USD' && shape.rule.steps[0].bucket === 'savings',
+  JSON.stringify(shape.rule))
+ok('it says the change is from this month and what earlier months keep', shape.set.applies_from === thisMonth && /Earlier months keep 10000 EGP a month/.test(shape.set.note_history ?? ''), shape.set.note_history ?? '')
+ok('last month\'s envelope is still in EGP and 10,000', shape.last?.currency === 'EGP' && /10,?000/.test(String(shape.last?.budget)), JSON.stringify(shape.last))
+ok('this month\'s envelope is in USD', shape.cur?.currency === 'USD', JSON.stringify(shape.cur))
+
 await br.close()
 console.log(failed ? `\n${failed} FAILED` : '\nall passed')
 process.exit(failed ? 1 : 0)

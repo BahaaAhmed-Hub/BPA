@@ -51,10 +51,10 @@ function goalPolicy(): Policy {
   } catch { return 'ladder' }
 }
 import {
-  loadRules, saveRules, defaultRule, monthlyAmount, activeIn, scheduleOf,
+  loadRules, saveRules, defaultRule, monthlyAmount, activeIn, scheduleOf, changeRule, hasOwnDates,
   type BudgetRule,
 } from '@/modules/finance/modals/BudgetRuleModal'
-import { amountFor, withAmount } from '@/modules/finance/budgetSteps'
+import { monthKeyOf, ruleAt, type Change } from '@/modules/finance/budgetSteps'
 import { txIn } from '@/modules/finance/txRates'
 import { todayISO } from '@/modules/finance/dates'
 import type { Account, Category, Currency, Goal, Transaction, TxType } from '@/modules/finance/types'
@@ -694,7 +694,7 @@ export async function executeFinanceTool(
           category: cat.name, budget: money(budget), spent: money(spent), left: money(budget - spent),
           used: `${Math.round((spent / (budget || 1)) * 100)}%`,
           ...(rule.dueDay ? { due_day: rule.dueDay } : {}),
-          currency: rule.currency ?? base,
+          currency: ruleAt(rule, month).currency ?? base,
         })
       }
       return { month, currency: base, envelopes: out.sort((a, b) => a.left - b.left) }
@@ -936,20 +936,21 @@ export async function executeFinanceTool(
       const had = rules[cat.hit.id]
       let rule: BudgetRule = { ...(had ?? defaultRule()) }
       const month = monthOf(today)
+      // What this call changes among the things a budget can carry from a month
+      // on. Applied once, below, by the same function the Budget screen uses —
+      // so the two cannot disagree about what a change does to the past.
+      const change: Change = {}
 
       const amount = num('amount')
       if (amount !== undefined) {
         // A budget is a limit, and a negative limit is not one. Filing an
         // envelope at -6,000 would read as "spend six thousand more".
         if (amount < 0) return { error: 'A budget is a positive figure — it is what the category is allowed, not a movement.' }
-        // A new figure applies from this month on and the months before it
-        // keep the budget they had, exactly as editing it on the Budget screen
-        // does — through the same function, so the two cannot differ.
-        rule = withAmount(rule, amount, month, new Date(`${today}T12:00:00`))
+        change.amount = amount
       }
       if (had && amount === undefined && !isDatedRule(rule)) {
         // Nothing to change and nothing set: the honest answer is a question.
-        if (Object.keys(input).length === 1) return { error: `${cat.hit.name} already allows ${amountFor(had, month)} ${had.currency ?? base}. What should it be?` }
+        if (Object.keys(input).length === 1) return { error: `${cat.hit.name} already allows ${ruleAt(had, month).amount} ${ruleAt(had, month).currency ?? base}. What should it be?` }
       }
 
       // A rule with instalments on their own dates cannot be reduced to one
@@ -963,11 +964,11 @@ export async function executeFinanceTool(
       }
 
       const freq = str('frequency')
-      if (freq) rule.frequency = freq as BudgetRule['frequency']
+      if (freq) change.frequency = freq
       const cur = str('currency')
-      if (cur) rule.currency = cur.toUpperCase()
+      if (cur) change.currency = cur.toUpperCase()
       const bucket = str('bucket')
-      if (bucket) rule.bucket = bucket as NonNullable<BudgetRule['bucket']>
+      if (bucket) change.bucket = bucket
       const roll = bool('rollover')
       if (roll !== undefined) rule.rollover = roll
 
@@ -999,27 +1000,35 @@ export async function executeFinanceTool(
       if (rule.starts && rule.ends && rule.ends < rule.starts) {
         return { error: `It cannot end (${rule.ends}) before it starts (${rule.starts}).` }
       }
-      if (amountFor(rule, month) <= 0) return { error: 'What should the budget be? A budget of nothing is the same as having none — use remove_budget_envelope for that.' }
+      rule = changeRule(rule, change, month, new Date(`${today}T12:00:00`))
+      const wasAt = had ? ruleAt(had, month) : null
+      const nowAt = ruleAt(rule, month)
+      if (nowAt.amount <= 0) return { error: 'What should the budget be? A budget of nothing is the same as having none — use remove_budget_envelope for that.' }
 
       saveRules({ ...rules, [cat.hit.id]: rule })
       const perMonth = monthlyAmount(rule, month)
-      const nowAmount = amountFor(rule, month)
-      notify(`${cat.hit.name}: ${nowAmount} ${rule.currency ?? base} ${freqWord(rule.frequency)}`)
+      const nowAmount = nowAt.amount
+      notify(`${cat.hit.name}: ${nowAmount} ${nowAt.currency ?? base} ${freqWord(nowAt.frequency)}`)
+      const kept = (r: BudgetRule) => JSON.stringify([r.amount, r.currency, r.frequency, r.bucket])
+      // What the months before this one keep — not what this month had a moment
+      // ago, which may already be a change made earlier today.
+      const [ny, nm] = month.split('-').map(Number)
+      const earlier = had ? ruleAt(had, monthKeyOf(new Date(ny, nm - 2, 1))) : null
       return {
         ok: true,
         category: cat.hit.name,
-        was: had ? { amount: amountFor(had, month), frequency: had.frequency, currency: had.currency ?? base, due_day: had.dueDay ?? null } : null,
+        was: wasAt ? { amount: wasAt.amount, frequency: wasAt.frequency, currency: wasAt.currency ?? base, due_day: had?.dueDay ?? null } : null,
         now: {
-          amount: nowAmount, frequency: rule.frequency, currency: rule.currency ?? base,
-          bucket: rule.bucket ?? 'guiltfree',
+          amount: nowAmount, frequency: nowAt.frequency, currency: nowAt.currency ?? base,
+          bucket: nowAt.bucket ?? 'guiltfree',
           due_day: rule.dueDay ?? null,
           due_account: rule.dueAccountId ? acctName(rule.dueAccountId, accounts) : null,
           starts: rule.starts ?? 'every month',
           ends: rule.ends ?? 'runs on',
           rollover: rule.rollover,
         },
-        ...(amount !== undefined && had && amountFor(had, month) !== nowAmount
-          ? { applies_from: month, note_history: `The new figure applies from ${month} on. Earlier months keep ${amountFor(had, month)} ${had.currency ?? base}.` }
+        ...(wasAt && had && !hasOwnDates(had) && kept(wasAt) !== kept(nowAt)
+          ? { applies_from: month, note_history: `The change applies from ${month} on. Earlier months keep ${earlier!.amount} ${earlier!.currency ?? base} ${freqWord(earlier!.frequency)}.` }
           : {}),
         a_month: money(perMonth),
         applies_this_month: activeIn(rule, month),
@@ -1037,7 +1046,7 @@ export async function executeFinanceTool(
       if (!had) return { error: `${cat.hit.name} has no budget to take off.` }
       if (bool('confirm') !== true) {
         return {
-          error: `That would take the ${amountFor(had, monthOf(today))} ${had.currency ?? base} budget off ${cat.hit.name}`
+          error: `That would take the ${ruleAt(had, monthOf(today)).amount} ${ruleAt(had, monthOf(today)).currency ?? base} budget off ${cat.hit.name}`
                + `${had.dueDay ? `, and delete the unpaid future entries it was writing on the ${had.dueDay}th` : ''}`
                + '. Ask, then call again with confirm: true.',
         }
