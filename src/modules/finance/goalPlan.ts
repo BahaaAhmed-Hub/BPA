@@ -6,6 +6,7 @@ import { isBudgetEntry } from './budgetEntries'
 import { todayISO } from './dates'
 import { FALLBACK_EXPENSE_ICON } from '@/lib/glyphs'
 import { txIn } from './txRates'
+import { SETTLED_BELOW } from './loans'
 
 // ─── Can this goal actually happen? ──────────────────────────────────────────
 //
@@ -779,18 +780,19 @@ export const debtAccountId = (g: Pick<Goal, 'id'>): string => g.id.slice(DEBT_PR
  *  zero there reads as a settled account — and a goal for it is the two screens
  *  disagreeing about the same number. Half a unit of the currency is the line:
  *  below it, `acct()` prints 0. */
-const DEBT_FLOOR = 0.5
+const DEBT_FLOOR = SETTLED_BELOW
 
 /** Which accounts can carry a debt worth clearing.
  *
  *  `capacityFrom` counts only `SPENDABLE` accounts as cash and files everything
  *  else as an asset it will never spend. A credit card is neither — it is the
- *  thing that goes into the red in the first place — so the three of them
- *  together are what can owe money. **An asset cannot.** Gold or a flat below
+ *  thing that goes into the red in the first place — and a loan is the other
+ *  thing that does, so the four of them together are what can owe money.
+ *  **An asset cannot.** Gold or a flat below
  *  zero is a bookkeeping matter, not a plan to fund, and offering to "Clear
  *  Gold" put a goal in the ladder that the capacity ladder had already decided
  *  was not spendable money. */
-const CAN_OWE: AccountType[] = [...SPENDABLE, 'credit_card']
+const CAN_OWE: AccountType[] = [...SPENDABLE, 'credit_card', 'loan']
 
 /**
  * One goal per account in the red. `ranks` is where each was dragged to; one
@@ -819,14 +821,16 @@ export function debtGoals(
     if (!CAN_OWE.includes(a.accountType)) return
     if (toBase(bal, a.currency, base) === null) return
     const id = `${DEBT_PREFIX}${a.id}`
+    const loan = a.accountType === 'loan'
     out.push({
       id,
-      name: `Clear ${a.name}`,
+      // A card is cleared; a person is repaid.
+      name: loan ? `Repay ${a.name}` : `Clear ${a.name}`,
       icon: a.emoji || FALLBACK_EXPENSE_ICON,
       targetAmount: Math.round(-bal * 100) / 100,
       currentAmount: 0,
       color: a.color,
-      sub: `owed on ${a.bank}${a.last4 ? ` ·· ${a.last4}` : ''}`,
+      sub: loan ? 'money you borrowed' : `owed on ${a.bank}${a.last4 ? ` ·· ${a.last4}` : ''}`,
       rank: ranks[id] ?? -1000 + i,
       currency: a.currency,
     })

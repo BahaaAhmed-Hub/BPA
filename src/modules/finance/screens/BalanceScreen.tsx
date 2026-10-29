@@ -23,6 +23,8 @@ import { BudgetMark } from '../components/BudgetMark'
 import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, UNPAID_TITLE } from '../unpaid'
 import { liveBalances } from '../balances'
+import { isLoan, isSettled, isBorrowing, isRepayment } from '../loans'
+import { LoanMark, LOAN_ICON } from '../components/LoanMark'
 import {
   schemeFor, isDormant, pointsFor, loadRewardSettings, type CardPoints,
 } from '../cardRewards'
@@ -47,14 +49,15 @@ const RANGE_FIELD: React.CSSProperties = {
 // them did nothing at all. They filter by account type, which is the field the
 // group headings are already built from.
 
-type AccountFilter = 'Accounts' | 'Cards' | 'Cash'
+type AccountFilter = 'Accounts' | 'Cards' | 'Cash' | 'Loans'
 
 const ACCOUNT_FILTERS: Record<AccountFilter, (t: AccountType) => boolean> = {
   // Everything, which is what the screen showed before — so the default view
-  // is unchanged and the other two only ever narrow it.
+  // is unchanged and the other three only ever narrow it.
   Accounts: () => true,
   Cards:    t => t === 'credit_card',
   Cash:     t => t === 'wallet',
+  Loans:    t => t === 'loan',
 }
 
 // ─── One account, draggable ───────────────────────────────────────────────────
@@ -161,7 +164,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 'min-content' }}>
         <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{account.name}</span>
         <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
-          {account.bank ?? account.accountType}{account.last4 ? ` · ···· ${account.last4}` : ''}
+          {account.accountType === 'loan' ? (account.bank || 'Loan') : (account.bank ?? account.accountType)}{account.last4 ? ` · ···· ${account.last4}` : ''}
         </span>
       </div>
 
@@ -316,6 +319,10 @@ export function BalanceScreen() {
   const paymentAccounts  = shown.filter(a => a.accountType === 'payment' || a.accountType === 'wallet').sort(bySort)
   const creditCards      = shown.filter(a => a.accountType === 'credit_card').sort(bySort)
   const otherAssets      = shown.filter(a => a.accountType === 'asset').sort(bySort)
+  const loanAccounts     = shown.filter(isLoan).sort(bySort)
+  // A loan that has been paid back stays in the ledger — its entries are the
+  // record — but it is not a thing you owe, so it folds away behind a count.
+  const [showSettled, setShowSettled] = useState(false)
 
   // A mouse drags straight away; a finger has to hold first, or the gesture is
   // indistinguishable from the scroll it usually is. The handle carries
@@ -350,6 +357,7 @@ export function BalanceScreen() {
       group === paymentAccounts ? moved : paymentAccounts,
       group === creditCards     ? moved : creditCards,
       group === otherAssets     ? moved : otherAssets,
+      group === loanRows        ? moved : loanRows,
     ])
   }
 
@@ -374,6 +382,13 @@ export function BalanceScreen() {
   const paymentTotal = inBase(paymentAccounts)
   const creditTotal  = inBase(creditCards)
   const assetTotal   = inBase(otherAssets)
+
+  const openLoans    = loanAccounts.filter(a => !isSettled(balanceOf(a)))
+  const settledCount = loanAccounts.length - openLoans.length
+  // The rows drawn: what is owed, plus the settled ones when asked for. The
+  // heading's total is only ever what is owed.
+  const loanRows     = showSettled ? loanAccounts : openLoans
+  const loanTotal    = inBase(openLoans)
 
   // Sorted transactions desc
   // The pill above this list used to be two hardcoded dates with nothing behind
@@ -573,7 +588,8 @@ export function BalanceScreen() {
             { label: 'PAYMENT ACCOUNTS', accounts: paymentAccounts, total: paymentTotal, totalColor: 'var(--sb-positive)', owed: false },
             { label: 'CARDS OWED', accounts: creditCards, total: creditTotal, totalColor: 'var(--sb-negative)', owed: true },
             { label: 'OTHER ASSETS', accounts: otherAssets, total: assetTotal, totalColor: 'var(--sb-ink-1)', owed: false },
-          ].map(group => group.accounts.length > 0 && (
+            { label: 'LOANS OWED', accounts: loanRows, total: loanTotal, totalColor: 'var(--sb-negative)', owed: true },
+          ].map(group => (group.accounts.length > 0 || (group.label === 'LOANS OWED' && settledCount > 0)) && (
             <div key={group.label} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', marginBottom: 7, boxSizing: 'border-box' as const }}>
                 <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{group.label}</span>
@@ -609,6 +625,19 @@ export function BalanceScreen() {
                   </div>
                 </SortableContext>
               </DndContext>
+              {group.label === 'LOANS OWED' && settledCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowSettled(v => !v)}
+                  aria-expanded={showSettled}
+                  style={{
+                    marginTop: 7, height: 28, padding: '0 11px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
+                    background: 'transparent', border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-3)',
+                    fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 500,
+                  }}>
+                  {showSettled ? 'Hide' : 'Show'} {settledCount} paid back
+                </button>
+              )}
             </div>
           ))}
 
@@ -628,7 +657,9 @@ export function BalanceScreen() {
                   ? 'Add an account to get started.'
                   : filter === 'Cards'
                     ? `None of your ${accounts.length} accounts are set to Credit Card. Open one to change its type.`
-                    : `None of your ${accounts.length} accounts are set to Wallet. Open one to change its type.`}
+                    : filter === 'Loans'
+                      ? 'Nothing borrowed. Add a transaction and choose Borrowed — the lender gets an account here.'
+                      : `None of your ${accounts.length} accounts are set to Wallet. Open one to change its type.`}
               </div>
             </div>
           )}
@@ -741,6 +772,9 @@ export function BalanceScreen() {
               const isMove = tx.type === 'transfer'
               const moveDir: 'out' | 'in' | undefined =
                 !isMove || !focusId ? undefined : tx.toAccountId === focusId ? 'in' : 'out'
+              // Borrowing and paying back are transfers, but ones you should
+              // be able to tell from a move between your own accounts.
+              const loanKind = isBorrowing(tx, accounts) ? 'borrowed' : isRepayment(tx, accounts) ? 'repaid' : null
               const title = tx.payee?.trim()
                 || (isMove && to ? `Money moved to ${to.name}` : null)
                 || cat?.name || 'Transaction'
@@ -748,12 +782,13 @@ export function BalanceScreen() {
               return (
                 <TxRow
                   key={tx.id}
-                  icon={glyph}
-                  tone={tx.type === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)'}
+                  icon={loanKind ? LOAN_ICON : glyph}
+                  tone={loanKind ? 'var(--sb-ink-3)' : tx.type === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)'}
                   title={title}
                   marks={<>
                     <DuplicateMark scope={dupes.get(tx.id)} />
                     <BudgetMark on={isBudgetEntry(tx)} />
+                    <LoanMark kind={loanKind} />
                   </>}
                   meta={<>
                     <span style={{ flexShrink: 0 }}>{dateStr}</span>
@@ -770,6 +805,7 @@ export function BalanceScreen() {
                   amount={tx.amount}
                   currency={tx.currency}
                   direction={moveDir}
+                  neutral={!!loanKind}
                   unpaid={isUnpaid(tx)}
                   rateNote={isUnpaid(tx) ? unpaidRateNote(tx) : null}
                   hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}

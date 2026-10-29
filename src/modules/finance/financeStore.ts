@@ -414,7 +414,10 @@ export const useFinanceStore = create<FinanceState>()(
           is_active: true,
           created_at: new Date().toISOString(),
         }
-        saveAccount(row).catch(console.warn)
+        // Awaited: an entry filed against a new account (a lender made while
+        // borrowing) names it by foreign key, so the account has to be on the
+        // server before the entry is sent.
+        await saveAccount(row).catch(console.warn)
       },
 
       removeAccount: async (id: string) => {

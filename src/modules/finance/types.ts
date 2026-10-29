@@ -1,6 +1,8 @@
 export type TxType = 'expense' | 'income' | 'transfer' | 'asset_purchase' | 'asset_sale' | 'liability_acq' | 'liability_dis'
 export type Currency = 'EGP' | 'USD' | 'AED'
-export type AccountType = 'payment' | 'credit_card' | 'asset' | 'wallet'
+/** `loan` is money owed to a person or a lender. It sits below zero while it is
+ *  owed and is never somewhere you spend from — see `loans.ts`. */
+export type AccountType = 'payment' | 'credit_card' | 'asset' | 'wallet' | 'loan'
 
 export interface Account {
   id: string
