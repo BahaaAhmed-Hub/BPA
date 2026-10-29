@@ -13,8 +13,12 @@ import { MoneyInput } from '../components/MoneyInput'
 import { liveBalances } from '../balances'
 import { acct } from '../format'
 import { todayISO } from '../dates'
-import { baseCurrency, rateFor } from '../fx'
-import { frozenRate, isFxTag, withRate } from '../txRates'
+import { baseCurrency, rateFor, convert } from '../fx'
+import { frozenRate, isFxTag, withRate, txConvert } from '../txRates'
+import { useFinanceStore } from '../financeStore'
+import {
+  isLoan, spendingAccounts, findLender, newLender, isBorrowing, borrowingEnds,
+} from '../loans'
 import { ICON, STROKE } from '@/lib/type'
 import { openPicker } from '@/lib/nativePicker'
 import {
@@ -37,6 +41,8 @@ interface Props {
     /** Where a transfer lands, and how much — used by Balances to start a card
      *  settlement off with the figure already in it. */
     toAccountId?: string; amount?: number; payee?: string
+    /** Open on Borrowed rather than Expense. */
+    borrowed?: boolean
   }
   onSave: (tx: Transaction) => void
   onDelete?: (id: string) => void
@@ -52,11 +58,22 @@ interface Props {
   lead?: React.ReactNode
 }
 
-const TYPES: { id: TxType; label: string }[] = [
+/** Borrowed is not a fourth kind of entry — it is a transfer out of a lender's
+ *  account into one you hold, entered the way it is thought of: money came in,
+ *  from someone. Nothing downstream learns a new type, so no total can count it
+ *  as income (see `loans.ts`). */
+type Mode = TxType | 'borrowed'
+
+const TYPES: { id: Mode; label: string }[] = [
   { id: 'expense',  label: 'Expense' },
   { id: 'income',   label: 'Income' },
   { id: 'transfer', label: 'Transfer' },
+  { id: 'borrowed', label: 'Borrowed' },
 ]
+
+/** Where borrowed money can land: somewhere you hold it. */
+const LANDS_IN = ['payment', 'wallet']
+const NEW_LENDER = '__new'
 
 export function TransactionModal({ transaction, accounts, categories, history = [], initial, onSave, onDelete, onClose, docked, lead }: Props) {
   const isEdit = !!transaction
@@ -81,6 +98,19 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   const [accountId,   setAccountId]   = useState(transaction?.accountId           ?? initial?.accountId ?? (accounts[0]?.id ?? ''))
   const [categoryId,  setCategoryId]  = useState(transaction?.categoryId          ?? initial?.categoryId ?? '')
   const [toAccountId, setToAccountId] = useState(transaction?.toAccountId ?? initial?.toAccountId ?? '')
+
+  // ── Borrowed ──────────────────────────────────────────────────────────────
+  // An entry that already is a borrowing reopens as one.
+  const [borrowed, setBorrowed] = useState<boolean>(
+    transaction ? isBorrowing(transaction, accounts) : !!initial?.borrowed)
+  const lenders = useMemo(() => accounts.filter(isLoan), [accounts])
+  // Which lender: an existing one, or a new one typed below. With none yet
+  // there is nothing to choose between, so it starts on the typed name.
+  const [lenderId, setLenderId] = useState<string>(
+    transaction && isBorrowing(transaction, accounts) ? transaction.accountId
+      : lenders.length === 0 ? NEW_LENDER : '')
+  const [lenderName, setLenderName] = useState('')
+  const [saving, setSaving] = useState(false)
   const [date, setDate] = useState(transaction?.date ?? initial?.date ?? todayStr)
   function pickDate(next: string) {
     setDate(next)
@@ -163,7 +193,10 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   // A transfer *out of* a card. The other direction is paying it off.
   const cashAdvance = type === 'transfer' && spendAccount?.accountType === 'credit_card'
 
-  const typeColor = type === 'expense' ? 'var(--sb-negative)' : type === 'income' ? 'var(--sb-positive)' : 'var(--sb-ink-1)'
+  // A borrowing is neither earned nor spent, so it takes the neutral ink a
+  // transfer does — green would say "income", which it is not.
+  const typeColor = borrowed ? 'var(--sb-ink-1)'
+    : type === 'expense' ? 'var(--sb-negative)' : type === 'income' ? 'var(--sb-positive)' : 'var(--sb-ink-1)'
   const amount = parseFloat(amountStr) || 0
 
   // The rate this entry was actually at — what it was added at, or what it was
@@ -173,7 +206,31 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   const rate = parseFloat(rateStr)
   const savedTags = foreign && rate > 0 ? withRate(tags, currency, rate) : tags
 
-  function handleSave() {
+
+  // The lender this entry is for, if it is an existing one — chosen from the
+  // list, or typed as a name that already is one (so "ahmed" and "Ahmed" are
+  // one person, not two accounts).
+  const typedLender = lenderId === NEW_LENDER ? findLender(accounts, lenderName) : undefined
+  const lender = lenderId && lenderId !== NEW_LENDER ? accounts.find(a => a.id === lenderId) : typedLender
+  const landing = accounts.find(a => a.id === toAccountId)
+  const landsIn = accounts.filter(a => LANDS_IN.includes(a.accountType))
+
+  // What each end of a borrowing comes to, in that account's own currency. A
+  // new lender is made in the currency being borrowed, so only an existing one
+  // can differ from it. `null` is a currency nobody gave a rate for.
+  const ends = borrowed && amount > 0 && landing
+    ? borrowingEnds(amount, currency, lender ?? { currency }, landing, savedTags)
+    : null
+  const unrated = !!ends && (ends.owed === null || ends.arrives === null)
+  // The rate the entry will carry: the one typed in the Rate row, else today's.
+  const typedRate = foreign && rate > 0
+  const rateLine = (from: Currency, to: string) => {
+    const r = txConvert({ currency: from, tags: savedTags }, 1, to)
+    return r === null ? '' : `1 ${from} = ${Math.round(r * 10000) / 10000} ${to}${typedRate ? '' : ' today'}`
+  }
+
+  async function handleSave() {
+    if (saving) return
     // Remember who this went to, so it can be offered next time and typed the
     // same way rather than five slightly different ways.
     rememberPayee(payee)
@@ -181,15 +238,30 @@ export function TransactionModal({ transaction, accounts, categories, history = 
     // Kept against the entry rather than on it: `finance_transactions` has no
     // column for it, and a whole migration for a field only rewards cards read
     // is not worth the deploy. `pos` writes nothing at all.
-    setChannel(id, type === 'expense' ? channel : null)
+    setChannel(id, type === 'expense' && !borrowed ? channel : null)
+
+    // The lender's account has to exist before an entry names it: the entry
+    // refers to it by foreign key.
+    let fromId = accountId
+    let payeeText = payee.trim()
+    if (borrowed) {
+      let from = lender
+      if (!from) {
+        from = newLender(lenderName, currency, 0)
+        setSaving(true)
+        await useFinanceStore.getState().upsertAccount(from)
+      }
+      fromId = from.id
+      payeeText = payeeText || `Borrowed from ${from.name}`
+    }
     onSave({
       id,
-      accountId,
+      accountId:   fromId,
       toAccountId: type === 'transfer' ? (toAccountId || undefined) : undefined,
       amount,
       currency,
       type,
-      payee:       payee.trim(),
+      payee:       payeeText,
       // A transfer is money moving between two accounts. Filing it under a
       // spending category would count it as spending as well as moving it.
       categoryId:  type === 'transfer' ? undefined : (categoryId || undefined),
@@ -202,6 +274,8 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       isRecurring,
       createdAt:   transaction?.createdAt   ?? new Date().toISOString(),
     })
+    // Docked, the form can outlive the save; a stuck flag would lock Save.
+    setSaving(false)
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -236,9 +310,13 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   const balanceOf = (id: string) => before.get(id) ?? accounts.find(a => a.id === id)?.balance ?? 0
   const accountHint = (a: Account) => {
     const bal = balanceOf(a.id)
-    const kind = a.accountType === 'credit_card' ? 'Card' : a.accountType === 'wallet' ? 'Cash' : a.bank || 'Account'
-    if (a.accountType === 'credit_card') {
+    const kind = a.accountType === 'credit_card' ? 'Card' : a.accountType === 'wallet' ? 'Cash'
+      : a.accountType === 'loan' ? 'Loan' : a.bank || 'Account'
+    if (a.accountType === 'credit_card' || a.accountType === 'loan') {
       const owed = Math.max(0, -bal)
+      if (a.accountType === 'loan') {
+        return owed > 0 ? `${kind} · you owe ${acct(owed, { currency: a.currency })}` : `${kind} · paid back`
+      }
       return owed > 0 ? `${kind} · owes ${acct(owed, { currency: a.currency })}` : `${kind} · nothing owed`
     }
     return `${kind} · ${acct(bal, { currency: a.currency })}`
@@ -261,7 +339,13 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       ?? (cards.length === 1 ? cards[0] : cards[0])
   })()
 
-  const canSave = amount > 0 && !!accountId && (type !== 'transfer' || !!toAccountId)
+  // A borrowing needs someone who lent it and somewhere it landed — and both
+  // ends convertible: filed with a currency nobody has a rate for, one end
+  // would be silently left out of its balance.
+  const canSave = borrowed
+    ? amount > 0 && !!landing && !unrated && !saving
+        && (lenderId === NEW_LENDER ? !!lenderName.trim() : !!lender)
+    : amount > 0 && !!accountId && (type !== 'transfer' || !!toAccountId)
 
   // The form itself, drawn once. It used to be handed to a `Shell` component
   // declared inside this function — a new component *type* on every render, so
@@ -307,10 +391,25 @@ export function TransactionModal({ transaction, accounts, categories, history = 
           borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)',
         }}>
           {TYPES.map(t => {
-            const on = type === t.id
+            const on = borrowed ? t.id === 'borrowed' : type === t.id
             return (
               <button key={t.id}
-                onClick={() => { setType(t.id); if (t.id === 'transfer') setCategoryId('') }}
+                onClick={() => {
+                  if (t.id === 'borrowed') {
+                    setBorrowed(true); setType('transfer'); setCategoryId('')
+                    // Money lands in the first place you could hold it, and the
+                    // entry follows that account's currency until it is set by hand.
+                    if (!toAccountId || !landsIn.some(a => a.id === toAccountId)) {
+                      const first = landsIn[0]
+                      setToAccountId(first?.id ?? '')
+                      if (first && !transaction && !currencyTouched) setCurrency(lender?.currency ?? first.currency)
+                    }
+                    return
+                  }
+                  setBorrowed(false)
+                  setType(t.id)
+                  if (t.id === 'transfer') setCategoryId('')
+                }}
                 aria-pressed={on}
                 style={{
                   flex: 1, height: 32, borderRadius: 'var(--sb-r-pill)', border: 'none', fontFamily: 'inherit',
@@ -378,6 +477,113 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               </span>
             </div>
           )}
+
+          {/* Borrowed: who lent it, and where it landed. The lender is an account
+              of its own (one per person), made here the first time they are
+              named, so the debt has somewhere to be owed. */}
+          {borrowed && (
+            <>
+              <div style={ROW}>
+                <span style={LABEL}>Lender</span>
+                <PillPicker
+                  value={lenderId}
+                  onChange={id => {
+                    setLenderId(id)
+                    const l = accounts.find(a => a.id === id)
+                    if (l && !transaction && !currencyTouched) setCurrency(l.currency)
+                  }}
+                  placeholder="Who lent it?"
+                  options={[
+                    ...lenders.map(a => ({
+                      id: a.id, label: a.name, glyph: a.emoji, tint: a.color, hint: accountHint(a),
+                    })),
+                    { id: NEW_LENDER, label: 'Someone new…', glyph: 'lucide:Plus' },
+                  ]} />
+              </div>
+              {lenderId === NEW_LENDER && (
+                <div style={ROW}>
+                  <span style={LABEL} />
+                  <input
+                    value={lenderName}
+                    onChange={e => setLenderName(e.target.value)}
+                    placeholder="Ahmed, or the bank"
+                    aria-label="Who lent it"
+                    style={{ ...PILL, flex: 1, cursor: 'text', outline: 'none' }} />
+                </div>
+              )}
+              {lenderId === NEW_LENDER && typedLender && (
+                <div style={ROW}>
+                  <span style={LABEL} />
+                  <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
+                    {typedLender.name} is already a lender — this adds to what you owe them.
+                  </span>
+                </div>
+              )}
+              <div style={ROW}>
+                <span style={LABEL}>Into</span>
+                <PillPicker
+                  value={toAccountId}
+                  onChange={id => {
+                    setToAccountId(id)
+                    if (transaction || currencyTouched) return
+                    const a = accounts.find(x => x.id === id)
+                    if (a) setCurrency(lender?.currency ?? a.currency)
+                  }}
+                  placeholder={landsIn.length === 0 ? 'Add a payment account first' : 'Which account'}
+                  options={landsIn.map(a => ({
+                    id: a.id, label: a.name, glyph: a.emoji, tint: a.color, hint: accountHint(a),
+                  }))} />
+              </div>
+
+              {/* What each end comes to. A foreign amount is converted at
+                  today's rate — the rate the entry will carry — and an account
+                  in another currency from the amount shows what actually
+                  arrives in it. Nothing is guessed: with no rate the entry
+                  cannot be saved, because one end would be left out. */}
+              {ends && !unrated && (currency !== landing?.currency || (lender && currency !== lender.currency)) && (
+                <div style={{ ...ROW, alignItems: 'flex-start' }}>
+                  <span style={LABEL} />
+                  <span style={{
+                    flex: 1, minWidth: 0, padding: '9px 12px', borderRadius: 'var(--sb-r-nav)',
+                    background: 'var(--sb-field)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.5,
+                  }}>
+                    {currency !== landing?.currency && landing && (
+                      <div>
+                        <b style={{ fontWeight: 600 }}>{acct(ends.arrives!, { currency: landing.currency })}</b> arrives in {landing.name}
+                        {' '}<span style={{ color: 'var(--sb-ink-3)' }}>({rateLine(currency, landing.currency)})</span>
+                      </div>
+                    )}
+                    {lender && currency !== lender.currency && (
+                      <div>
+                        <b style={{ fontWeight: 600 }}>{acct(ends.owed!, { currency: lender.currency })}</b> added to what you owe {lender.name}
+                        {' '}<span style={{ color: 'var(--sb-ink-3)' }}>({rateLine(currency, lender.currency)})</span>
+                      </div>
+                    )}
+                  </span>
+                </div>
+              )}
+              {unrated && (
+                <div style={{ ...ROW, alignItems: 'flex-start' }}>
+                  <span style={LABEL} />
+                  <span style={{
+                    flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-start', gap: 8,
+                    padding: '9px 12px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-negative-tint)',
+                    fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.5,
+                  }}>
+                    <AlertTriangle size={ICON.sm} strokeWidth={STROKE.rest} aria-hidden style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span>
+                      There is no exchange rate between {currency} and {
+                        convert(1, currency, landing?.currency) === null ? landing?.currency : lender?.currency
+                      }, so one side of this would be left out of its balance. Set the
+                      rate in Settings → Exchange rates, or pick the other currency above.
+                    </span>
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
+          {!borrowed && (
           <div style={ROW}>
             <span style={LABEL}>{type === 'transfer' ? 'From' : 'Account'}</span>
             <PillPicker
@@ -389,14 +595,15 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 if (a) setCurrency(a.currency)
               }}
               placeholder="No account"
-              options={accounts.map(a => ({
+              options={(type === 'transfer' ? accounts : spendingAccounts(accounts)).map(a => ({
                 id: a.id, label: a.name, glyph: a.emoji, tint: a.color, hint: accountHint(a),
               }))} />
           </div>
+          )}
 
           {/* A transfer has two ends. Without the second one, paying a credit
               card looked the same as money leaving and arriving nowhere. */}
-          {type === 'transfer' && (
+          {type === 'transfer' && !borrowed && (
             <div style={ROW}>
               <span style={LABEL}>{cards.length > 0 ? 'To card' : 'To'}</span>
               <PillPicker
@@ -408,7 +615,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             </div>
           )}
 
-          {type !== 'transfer' && (
+          {type !== 'transfer' && !borrowed && (
           <div style={ROW}>
             <span style={LABEL}>Category</span>
             <PillPicker

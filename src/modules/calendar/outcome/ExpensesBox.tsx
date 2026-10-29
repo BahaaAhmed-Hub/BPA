@@ -32,6 +32,7 @@ import { group } from '@/modules/finance/format'
 import { isUnpaid, settled, whenPaid } from '@/modules/finance/unpaid'
 import { loadRules, activeIn, monthlyAmount, isDated } from '@/modules/finance/modals/BudgetRuleModal'
 import { txIn } from '@/modules/finance/txRates'
+import { spendingAccounts } from '@/modules/finance/loans'
 import { baseCurrency } from '@/modules/finance/fx'
 import {
   biometricName, checkPassword, loadLock, loadPasskey, markActive, verifyPasskey,
@@ -279,7 +280,7 @@ function ExpensesInner({ event, co, open, onToggle }: {
   const date = event.date ?? today
   const coKey = co?.id ?? 'personal'
 
-  const spendAccounts = useMemo(() => accounts.filter(a => a.accountType !== 'asset'), [accounts])
+  const spendAccounts = useMemo(() => spendingAccounts(accounts).filter(a => a.accountType !== 'asset'), [accounts])
   const expenseCats = useMemo(
     () => categories.filter(c => c.txType === 'expense' || c.txType === 'both'), [categories])
 

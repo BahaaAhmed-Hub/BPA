@@ -8,7 +8,7 @@ import { MoneyInput } from '../components/MoneyInput'
 import { schemeFor, setScheme, dormantWhy, returnRate, type RewardScheme } from '../cardRewards'
 import { lookUpRewards } from '../rewardLookup'
 import { inputStyle } from '@/lib/fields'
-import { DEFAULT_ACCOUNT_EMOJI } from '@/lib/glyphs'
+import { DEFAULT_ACCOUNT_EMOJI, DEFAULT_LOAN_EMOJI } from '@/lib/glyphs'
 
 const RED   = NEGATIVE
 const GREEN = POSITIVE
@@ -59,16 +59,35 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
     } finally { setLooking(false) }
   }
 
+  // A loan is a person or a lender rather than a bank: it has a name, a
+  // currency and what is still owed, and nothing else on this form applies.
+  const isLoanType = accountType === 'loan'
+
+  /** What is owed is stored below zero, but "−10,000" is not how anyone says
+   *  how much they owe. The field shows the amount owed; switching to or from
+   *  a loan flips the sign so the number on screen stays the number typed. */
+  function pickType(next: AccountType) {
+    if (next === 'loan' && accountType !== 'loan') {
+      setBalance(b => -Math.abs(Number(b)))
+      if (emoji === DEFAULT_ACCOUNT_EMOJI) setEmoji(DEFAULT_LOAN_EMOJI)
+    }
+    if (next !== 'loan' && accountType === 'loan') {
+      setBalance(b => Math.abs(Number(b)))
+      if (emoji === DEFAULT_LOAN_EMOJI) setEmoji(DEFAULT_ACCOUNT_EMOJI)
+    }
+    setAccountType(next)
+  }
+
   function handleSave() {
     const saved: Account = {
       id:          account?.id ?? crypto.randomUUID(),
       name:        name.trim(),
-      bank:        bank.trim(),
+      bank:        isLoanType ? '' : bank.trim(),
       accountType,
       creditLimit: accountType === 'credit_card' && creditLimit > 0 ? creditLimit : undefined,
       currency,
       balance:     Number(balance),
-      last4:       last4 || undefined,
+      last4:       isLoanType ? undefined : (last4 || undefined),
       emoji:       emoji || DEFAULT_ACCOUNT_EMOJI,
       color,
       sortOrder:   account?.sortOrder ?? 0,
@@ -149,27 +168,29 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
 
           {/* Name */}
           <div style={fieldStyle}>
-            <label style={labelStyle}>Name</label>
+            <label style={labelStyle}>{isLoanType ? 'Lender' : 'Name'}</label>
             <input
               style={inputStyle}
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="My Checking Account"
+              placeholder={isLoanType ? 'Ahmed, or the bank' : 'My Checking Account'}
             />
           </div>
 
           {/* Bank */}
-          <div style={fieldStyle}>
-            <label style={labelStyle}>Bank</label>
-            <input
-              style={inputStyle}
-              type="text"
-              value={bank}
-              onChange={e => setBank(e.target.value)}
-              placeholder="CIB / NBE / Other"
-            />
-          </div>
+          {!isLoanType && (
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Bank</label>
+              <input
+                style={inputStyle}
+                type="text"
+                value={bank}
+                onChange={e => setBank(e.target.value)}
+                placeholder="CIB / NBE / Other"
+              />
+            </div>
+          )}
 
           {/* Account Type */}
           <div style={fieldStyle}>
@@ -177,12 +198,13 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
             <select
               style={inputStyle}
               value={accountType}
-              onChange={e => setAccountType(e.target.value as AccountType)}
+              onChange={e => pickType(e.target.value as AccountType)}
             >
               <option value="payment">Payment</option>
               <option value="credit_card">Credit Card</option>
               <option value="asset">Asset</option>
               <option value="wallet">Wallet</option>
+              <option value="loan">Loan (money you borrowed)</option>
             </select>
           </div>
 
@@ -204,18 +226,31 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               rather than replacing it, so editing it here does not wipe out a
               year of transactions. */}
           <div style={fieldStyle}>
-            <label style={labelStyle}>Opening balance</label>
+            <label style={labelStyle}>{isLoanType ? 'Still owed from before' : 'Opening balance'}</label>
             <MoneyInput
               style={inputStyle}
-              value={balance}
-              onChange={setBalance}
+              min={isLoanType ? 0 : undefined}
+              value={isLoanType ? -balance : balance}
+              onChange={n => setBalance(isLoanType ? -n : n)}
             />
             <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 5, lineHeight: 1.45 }}>
-              Where this account stood <b style={{ fontWeight: 600 }}>before the year you are looking at</b>.
-              Entries move it from here — a card goes below zero as it is spent on, and
-              back towards zero as it is paid off. Nothing is read from earlier years,
-              so this figure is the whole of the past: keep it right and the balance is
-              right.
+              {isLoanType ? (
+                <>
+                  What you owed this lender <b style={{ fontWeight: 600 }}>before the year you are
+                  looking at</b> — leave it at nothing for a new loan. Borrowing more adds to it
+                  and paying back brings it towards zero; a loan you borrow through
+                  <b style={{ fontWeight: 600 }}> Add transaction → Borrowed</b> starts here at nothing
+                  and gets its debt from that entry.
+                </>
+              ) : (
+                <>
+                  Where this account stood <b style={{ fontWeight: 600 }}>before the year you are looking at</b>.
+                  Entries move it from here — a card goes below zero as it is spent on, and
+                  back towards zero as it is paid off. Nothing is read from earlier years,
+                  so this figure is the whole of the past: keep it right and the balance is
+                  right.
+                </>
+              )}
             </div>
           </div>
 
@@ -374,17 +409,19 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
           )}
 
           {/* Last 4 digits */}
-          <div style={fieldStyle}>
-            <label style={labelStyle}>Last 4 digits</label>
-            <input
-              style={inputStyle}
-              type="text"
-              value={last4}
-              onChange={e => setLast4(e.target.value.slice(0, 4))}
-              maxLength={4}
-              placeholder="1234"
-            />
-          </div>
+          {!isLoanType && (
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Last 4 digits</label>
+              <input
+                style={inputStyle}
+                type="text"
+                value={last4}
+                onChange={e => setLast4(e.target.value.slice(0, 4))}
+                maxLength={4}
+                placeholder="1234"
+              />
+            </div>
+          )}
 
           {/* Emoji / image icon */}
           <div style={fieldStyle}>

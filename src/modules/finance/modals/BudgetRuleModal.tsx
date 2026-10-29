@@ -5,6 +5,7 @@ import type { AccountType, Category, Transaction } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { MoneyInput } from '../components/MoneyInput'
+import { spendingAccounts } from '../loans'
 import { amountFor, editMonth, withAmount, type AmountStep } from '../budgetSteps'
 import { settled, whenPaid } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
@@ -979,7 +980,7 @@ export function BudgetRuleModal({
                       onChange={e => onChange({ ...rule, dueAccountId: e.target.value || undefined })}
                       style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
                       <option value="">which account?</option>
-                      {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      {spendingAccounts(accounts).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </label>
                   <button onClick={() => onChange({ ...rule, dueDay: undefined })}

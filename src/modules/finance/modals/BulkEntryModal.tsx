@@ -6,6 +6,7 @@ import { rememberPayee } from '../payees'
 import { acct } from '../format'
 import { todayISO, shiftDaysISO } from '../dates'
 import { baseCurrency } from '../fx'
+import { spendingAccounts } from '../loans'
 import { useFinanceStore } from '../financeStore'
 import { ICON, STROKE } from '@/lib/type'
 import {
@@ -329,7 +330,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
               onChange={setAllAccount}
               placeholder="Put every line on…"
               compact
-              options={accounts.map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
+              options={spendingAccounts(accounts).map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
           </span>
 
           <span style={{ position: 'relative', display: 'inline-flex' }}>
@@ -419,7 +420,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                   }}
                   placeholder="Which account?"
                   compact
-                  options={accounts.map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
+                  options={spendingAccounts(accounts).map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
               </span>
               <span style={CELL_BOX}>
               <MoneyInput

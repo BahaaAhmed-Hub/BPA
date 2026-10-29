@@ -1096,3 +1096,83 @@ captions go and the divider alone remains (`.fin-group-cap`). The row is one
   the one-line bar, the active tab moving; Shopping in the rail and in neither
   place when off (with the rest of the rail asserted present, so "absent" is not
   an empty rail); the lock gate. Control: the flat bar fails `groups`.
+
+## Finance — money borrowed is cash in and debt out, and neither is income
+`loans.ts` (pure, no React). Borrowing 10,000 puts 10,000 in an account you can
+spend from and 10,000 on a ledger you will have to clear; net worth does not
+move. Filed as income it inflated every "earned this month", and repaying it
+read as a loss that was never a gain.
+- **A lender is an account** (`accountType: 'loan'`, one per person, below zero
+  while owed — `account_type` is plain text, so no migration), and **borrowing is
+  a transfer** out of it into the account the money landed in. There is no new
+  `TxType`: every total in the module already reads `income` and `expense` only
+  (`typicalMonth`, `capacityFrom`), so a transfer is correct everywhere by
+  construction. `liability_acq` / `liability_dis` are declared in `TxType` and
+  used nowhere; they were left alone.
+- **"Borrowed" is the fourth segment of the add window, a mode and not a type.**
+  `TransactionModal` keeps `type: 'transfer'` and a `borrowed` flag; an entry
+  whose source is a loan reopens in Borrowed (`isBorrowing`). It shows **Lender**
+  (an existing one, or *Someone new…*, which makes the account on save — typed
+  names match an existing lender case-insensitively, so "ahmed" is not a second
+  account) and **Into** (payment accounts and wallets only). No Category row.
+- **The lender's account is written before the entry that names it.**
+  `finance_transactions.account_id` is a foreign key. `upsertAccount` used to
+  fire its write and return; it now awaits it. The harness's stub refuses a
+  transaction whose account is not there, as the server does.
+- **A lender is not somewhere to spend from.** `spendingAccounts()` keeps loans
+  out of the Expense/Income account picker, bulk entry, a budget's "pay from" and
+  the calendar's Expenses box; the assistant's `add_transaction` refuses an
+  expense or income against one. A **Transfer** still offers them — that is how
+  one is borrowed from and paid back.
+- **Currency.** The entry is in the currency typed; each end converts into its
+  own account's currency (`deltaFor`), and the form shows what actually arrives
+  (`borrowingEnds`: "EGP 24,000 arrives in CIB (1 USD = 48 EGP today)") and what
+  is added to what you owe. A new lender is made in the currency borrowed. **With
+  no rate for either currency the entry cannot be saved** — filed anyway, one end
+  would be left out of its balance.
+  *Known limit:* the rate is stamped on a non-base entry (`txRates`), so a USD
+  borrowing keeps its 24,000 for ever. An entry **in the base currency** into a
+  foreign account has no stamp and converts at today's rate, so that arrival
+  moves with the rate — as any such transfer already did. An explicit "received"
+  amount is the fix and is not built.
+- **`txConvert` returned the wrong figure for an amount already in the currency
+  asked for.** It always went by way of the base: stamped rate × amount, divided
+  by *today's* rate of the target. 500 USD on a USD account (or owed on a USD
+  lender) read 480 once the dollar moved from 48 to 50. Same currency now returns
+  the amount. This was an existing bug in every foreign-currency account; the
+  loan harness found it, and its three failures are the control.
+- **The debt becomes a goal by itself.** `debtGoals` takes loans (`CAN_OWE`):
+  "Repay Ahmed", target what is owed, ranked like a card. Under half a unit
+  (`SETTLED_BELOW`, shared with Balances) is settled and has no goal.
+- **Balances** gains **LOANS OWED** (and a *Loans* filter pill). A loan paid back
+  stays in the ledger and folds behind "Show N paid back"; the heading's total is
+  only what is owed. The account window has a **Loan** type: *Lender* for *Name*,
+  no bank or card digits, and the opening figure is entered as what you owe
+  (stored below zero).
+- **Shown beside In, never inside it.** Today's month chips and cash-flow column
+  get a neutral **Borrowed** figure (`borrowedIn`); **Net** is what you earned
+  less what you spent and says it leaves the borrowing out. Feed rows carry a
+  Borrowed / Repaid mark (`LoanMark`) and a line icon, and their amount keeps its
+  sign but is neither the green nor the red — including seen from the account the
+  money landed in, where a transfer is otherwise drawn as money coming in.
+- `node scripts/loans.mjs` (46, no browser: the real files bundled with rolldown).
+  Controls: the same 10,000 filed as income reads 15,000 in September; a loan not
+  yet repaid has a goal and one repaid does not; with the old `txConvert` three
+  assertions fail (480, 480.77, -480.77).
+  `node scripts/loans-ui.mjs 5199 [new|rate|norate|existing]` — the account is
+  written first and as a `loan`, the entry is a transfer with no category, the
+  amount colour is read from `getComputedStyle` on both sides, Today's In stays
+  at nothing; `norate` is the control for `rate` (Save disabled, nothing written).
+  `INK_ONLY=loans node scripts/ink-audit.mjs 5199` — two screens with a lender
+  owed, one paid back, a repayment and a salary; the audit now takes a **probe**
+  (names an element and reports its ratio whether or not it passes), because it
+  lists only failures and "nothing listed" cannot say a thing was measured. Every
+  element this feature added is ≥ 4.5 in all four themes.
+- **Found, not fixed (existing, shown up by a fixture with real balances):**
+  Sunlit's positive group total (`EGP 20,000`, `--sb-positive` on `--sb-field`) is
+  3.86, and Evergreen's `--sb-negative` is 4.31–4.43 on its card at 13–14.5px —
+  every owed balance, a loan's or a card's. Both want a token decision.
+- **Not built yet** (the plan's chunks 4–10): a payment plan on the loan and its
+  budget line, funding the instalment first, Pay back from the goal or the
+  balance row, optional interest, and borrowing/repaying through the assistant,
+  Telegram and Siri — the three doors must get it in one change.
