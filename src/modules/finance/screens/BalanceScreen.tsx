@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Button, Segmented } from '@/components/ui'
 import { GripVertical, Pencil, X } from 'lucide-react'
 import {
@@ -72,11 +72,20 @@ function formatBalance(bal: number, currency = 'EGP'): string {
   return acct(bal, { currency })
 }
 
-/** Every account row is this tall, whatever it holds — a card's limit bar, a
- *  loan's Pay back, a second line of "due to you" — so the groups read as one
- *  list. It used to be a minimum, and a name wrapping to three lines made a card
- *  half as tall again as the account above it. */
-const ROW_HEIGHT = 56
+/** Every account row is the same box: one height, and the same tracks in the
+ *  same order — handle, icon, name, [card ceiling], balance, action, edit. The
+ *  row used to be free-flowing flex with a `minHeight`, so a name that wrapped
+ *  ("Platinum CC") made it taller, and a bar, balance or button with no width
+ *  of its own put every edge a few pixels somewhere else on the next row. */
+const ROW_H = 58
+const COL_HANDLE = 18, COL_ICON = 28, COL_LIMIT = 170, COL_BALANCE = 160, COL_ACTION = 84, COL_EDIT = 26
+/** Below this the ceiling no longer has a column of its own: the bar sits along
+ *  the foot of the row and the figures join the line under the name, so the
+ *  tracks that remain never have to squeeze the name to nothing. */
+const COMPACT_BELOW = 660
+const rowColumns = (hasLimit: boolean) =>
+  [`${COL_HANDLE}px`, `${COL_ICON}px`, 'minmax(0, 1fr)', hasLimit ? `${COL_LIMIT}px` : null, `${COL_BALANCE}px`, `${COL_ACTION}px`, `${COL_EDIT}px`]
+    .filter(Boolean).join(' ')
 
 function AccountRow({ account, balance, unconverted, pending, ahead, points, showPointsMoney, selected, hovered, onSelect, onHover, onEdit, onSettle, onPayBack, onIcon, onRename }: {
   account: Account
@@ -116,6 +125,15 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
   }
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: account.id })
+  const [compact, setCompact] = useState(false)
+  const rowEl = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const el = rowEl.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setCompact(e.contentRect.width < COMPACT_BELOW))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   const isNeg = balance < 0
   // A card's ceiling: what is owed against what it is allowed to reach.
   const limit = account.accountType === 'credit_card' ? (account.creditLimit ?? 0) : 0
@@ -124,7 +142,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
 
   return (
     <div
-      ref={setNodeRef}
+      ref={el => { rowEl.current = el; setNodeRef(el) }}
       onMouseEnter={() => onHover(account.id)}
       onMouseLeave={() => onHover(null)}
       onClick={() => onSelect(account)}
@@ -133,8 +151,8 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(account) } }}
       title={selected ? `Showing ${account.name} — click again for everything` : `Show only ${account.name}`}
       style={{
-        display: 'flex', alignItems: 'center', gap: 9,
-        height: ROW_HEIGHT, padding: '0 12px 0 6px', borderRadius: 'var(--sb-r-nav)',
+        display: 'grid', gridTemplateColumns: rowColumns(limit > 0 && !compact), alignItems: 'center', columnGap: 11,
+        height: ROW_H, padding: '0 12px 0 6px', borderRadius: 'var(--sb-r-nav)',
         background: selected ? 'var(--sb-accent-tint)' : hovered ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
         border: `var(--sb-border-width) solid ${selected ? 'var(--sb-accent)' : hovered ? 'var(--sb-border)' : 'var(--sb-hairline)'}`,
         boxSizing: 'border-box', position: 'relative', cursor: 'pointer',
@@ -155,7 +173,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
         aria-label={`Reorder ${account.name}`}
         title="Drag to reorder"
         style={{
-          flexShrink: 0, width: 18, height: 30, padding: 0,
+          width: COL_HANDLE, height: 30, padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'none', border: 'none', borderRadius: 'var(--sb-r-chip)',
           color: hovered || isDragging ? 'var(--sb-ink-3)' : 'var(--sb-border)',
@@ -172,7 +190,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
           <div onClick={onClick} title="Click to change icon" style={{
             width: 28, height: 28, borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-hairline)', color: 'var(--sb-ink-3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, cursor: 'pointer', overflow: 'hidden', fontSize: 'var(--sb-t-h3)',
+            cursor: 'pointer', overflow: 'hidden', fontSize: 'var(--sb-t-h3)',
           }}>
             {account.emoji.startsWith('data:') || account.emoji.startsWith('http')
               ? <img src={account.emoji} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -180,7 +198,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
           </div>
         )}
       />
-      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flexShrink: 1 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {renaming !== null ? (
           <input
             autoFocus
@@ -200,7 +218,13 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
             }} />
         ) : (
           <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-            <span title={account.name} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
+            {/* Up to two lines, then the row's own fixed height still holds: a long
+                name ("World Platinum Signature CC") is shown whole rather than cut
+                at the width the money columns leave it. */}
+            <span title={account.name} style={{
+              minWidth: 0, lineHeight: 1.1, overflow: 'hidden', display: '-webkit-box',
+              WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'anywhere',
+            }}>{account.name}</span>
             {account.accountType === 'loan' && (
               <button
                 onClick={e => { e.stopPropagation(); setRenaming(account.name) }}
@@ -212,26 +236,37 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
             )}
           </span>
         )}
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {account.accountType === 'loan' ? (account.bank || 'Loan') : (account.bank ?? account.accountType)}{account.last4 ? ` · ···· ${account.last4}` : ''}{limit > 0 ? ` · ${account.currency} ${Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of ${Math.round(limit).toLocaleString('en-US')}` : ''}
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {limit > 0 && compact
+            ? `${Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of ${Math.round(limit).toLocaleString('en-US')}`
+            : <>{account.accountType === 'loan' ? (account.bank || 'Loan') : (account.bank ?? account.accountType)}{account.last4 ? ` · ···· ${account.last4}` : ''}</>}
         </span>
       </div>
 
-      {/* How much of the ceiling is used is a hairline along the row's own bottom
-          edge, not a block between the name and the balance: that block took 160px
-          from the name and made a card the one row that did not fit. */}
-      {limit > 0 && (
-        <div
-          title={`${acct(-owed, { currency: account.currency })} of ${account.currency} ${Math.round(limit).toLocaleString('en-US')} used`}
-          style={{ position: 'absolute', left: 14, right: 14, bottom: 3, height: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', pointerEvents: 'none' }}>
+      {limit > 0 && compact && (
+        <div aria-hidden style={{ position: 'absolute', left: 12, right: 12, bottom: 5, height: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
           <div style={{
-            width: `${Math.round(used * 100)}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
+            width: `${Math.round(used * 100)}%`, height: '100%',
             background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? 'var(--sb-warning)' : 'var(--sb-ink-3)',
           }} />
         </div>
       )}
 
-      <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
+      {limit > 0 && !compact && (
+        <div style={{ minWidth: 0 }} title={`${acct(-owed, { currency: account.currency })} of ${account.currency} ${Math.round(limit).toLocaleString('en-US')} used`}>
+          <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
+            <div style={{
+              width: `${Math.round(used * 100)}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
+              background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? 'var(--sb-warning)' : 'var(--sb-ink-3)',
+            }} />
+          </div>
+          <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {account.currency} {Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of {Math.round(limit).toLocaleString('en-US')}
+          </span>
+        </div>
+      )}
+
+      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', whiteSpace: 'nowrap' }}>
         <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: isNeg ? 'var(--sb-negative)' : 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
           {formatBalance(balance, account.currency)}
         </span>
@@ -292,27 +327,29 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
         )}
       </div>
 
-      {/* Settling a card belongs here, next to what it owes, rather than inside
-          the entry panel — that one records an amount, it does not clear a debt. */}
-      {limit >= 0 && account.accountType === 'credit_card' && owed > 0 && (
-        <Button variant="primary" onClick={e => { e.stopPropagation(); onSettle(account, owed) }} title={`Pay ${acct(owed, { currency: account.currency })} off ${account.name}`} style={{ flexShrink: 0, marginLeft: 8 }}>
-          Settle
-        </Button>
-      )}
-
-      {/* The same for a lender: paying back starts here, next to what is owed. */}
-      {account.accountType === 'loan' && !isSettled(balance) && owed > 0 && (
-        <Button variant="primary" onClick={e => { e.stopPropagation(); onPayBack(account, owed) }} title={`Pay ${account.name} back`} style={{ flexShrink: 0, marginLeft: 8 }}>
-          Pay back
-        </Button>
-      )}
+      {/* The action slot is always there, so Settle, Pay back and nothing line up
+          on one edge. Settling a card belongs here, next to what it owes, rather
+          than inside the entry panel — that one records an amount, it does not
+          clear a debt; paying a lender back starts here for the same reason. */}
+      <div style={{ minWidth: 0, display: 'flex' }}>
+        {limit >= 0 && account.accountType === 'credit_card' && owed > 0 && (
+          <Button variant="primary" onClick={e => { e.stopPropagation(); onSettle(account, owed) }} title={`Pay ${acct(owed, { currency: account.currency })} off ${account.name}`} style={{ width: '100%', justifyContent: 'center' }}>
+            Settle
+          </Button>
+        )}
+        {account.accountType === 'loan' && !isSettled(balance) && owed > 0 && (
+          <Button variant="primary" onClick={e => { e.stopPropagation(); onPayBack(account, owed) }} title={`Pay ${account.name} back`} style={{ width: '100%', justifyContent: 'center' }}>
+            Pay back
+          </Button>
+        )}
+      </div>
 
       {/* The row picks the account; this opens it. One gesture each. */}
       <button
         onClick={e => { e.stopPropagation(); onEdit(account) }}
         title={`Edit ${account.name}`}
         style={{
-          width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0, marginLeft: 4,
+          width: COL_EDIT, height: COL_EDIT, borderRadius: 'var(--sb-r-pill)', padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
           color: hovered || selected ? 'var(--sb-ink-3)' : 'var(--sb-border)', cursor: 'pointer',

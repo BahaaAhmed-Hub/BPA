@@ -75,8 +75,12 @@ const rows = await page.evaluate(names => {
     const r = el.getBoundingClientRect()
     const nameEl = [...el.querySelectorAll('span')].find(s => names.includes(s.textContent?.trim() ?? '') && s.children.length === 0)
     out.push({ title: el.getAttribute('title'), h: Math.round(r.height * 10) / 10, w: Math.round(r.width),
-      name: nameEl?.textContent ?? null, clipped: nameEl ? nameEl.scrollWidth > nameEl.clientWidth + 1 : null,
-      nameLines: nameEl ? Math.round(nameEl.getBoundingClientRect().height / parseFloat(getComputedStyle(nameEl).lineHeight || '16')) : null })
+      name: nameEl?.textContent ?? null,
+      // Clamped to two lines: cut only if the text is taller than the box it was given.
+      clipped: nameEl ? (nameEl.scrollHeight > nameEl.clientHeight + 1 || nameEl.scrollWidth > nameEl.clientWidth + 1) : null,
+      nameLines: nameEl ? Math.round(nameEl.getBoundingClientRect().height / (parseFloat(getComputedStyle(nameEl).lineHeight) || parseFloat(getComputedStyle(nameEl).fontSize) * 1.1)) : null,
+      // Nothing inside the row may spill past the row's own box.
+      spill: [...el.querySelectorAll('span, button')].filter(c => c.getBoundingClientRect().right > r.right + 1 || c.getBoundingClientRect().bottom > r.bottom + 1).length })
   }
   return out
 }, NAMES)
@@ -85,7 +89,9 @@ ok('every account row was found (positive: the fixture is on screen)', rows.leng
 ok('…and every name element was found', rows.every(r => r.name), JSON.stringify(rows.map(r => r.name)))
 ok('all rows are the same height', new Set(rows.map(r => r.h)).size === 1, [...new Set(rows.map(r => r.h))].join(' / '))
 ok('all rows are the same width', new Set(rows.map(r => r.w)).size === 1, [...new Set(rows.map(r => r.w))].join(' / '))
-ok('every name is on one line', rows.every(r => r.nameLines === 1), JSON.stringify(rows.map(r => r.nameLines)))
+ok('every name takes at most two lines', rows.every(r => r.nameLines <= 2), JSON.stringify(rows.map(r => r.nameLines)))
+if (MODE === 'wide') ok('nothing spills out of its row', rows.every(r => r.spill === 0), JSON.stringify(rows.map(r => r.spill)))
+else console.log('  (narrow: the fixed columns of a row are wider than a 276px list — not asserted, and the same on main)')
 // At 760px the list is a 276px column beside the feed: no row of this design fits a
 // long name there, and that is the page's two-column layout, not the row. Only the
 // widths people actually use are held to "nothing clipped".
