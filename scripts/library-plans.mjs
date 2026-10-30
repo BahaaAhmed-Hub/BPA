@@ -58,7 +58,7 @@ async function open() {
   } catch {} }, session)
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 let fails = 0
@@ -70,7 +70,7 @@ const wait = ms => p.waitForTimeout(ms)
 
 // ── pure ────────────────────────────────────────────────────────────────────
 const u = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/planStats.ts')
+  const m = await import('/src/modules/library/planStats.ts')
   const T0 = '2026-10-12'
   const bk = (extra = {}) => ({ id: 'b', pages: 300, status: 'reading', ...extra })
   const S = (on, pages, toPage, kind = 'read', minutes = 20) => ({ id: on + pages + kind, bookId: 'b', kind, on, minutes, pages, toPage, createdAt: '' })
@@ -173,12 +173,12 @@ ok('the trash removes the plan', T.library_plans.length === 0)
 
 // a second plan for the same book is refused by the server's unique
 await p.evaluate(async ({ id }) => {
-  const { useLibraryStore } = await import('/BPA/src/modules/library/libraryStore.ts')
+  const { useLibraryStore } = await import('/src/modules/library/libraryStore.ts')
   useLibraryStore.getState().setPlan(id, { finishBy: '2099-01-01' })
 }, { id: B1 })
 await wait(1000)
 ok('one plan per book: setting again replaces, never duplicates', await p.evaluate(async id => {
-  const { useLibraryStore } = await import('/BPA/src/modules/library/libraryStore.ts')
+  const { useLibraryStore } = await import('/src/modules/library/libraryStore.ts')
   useLibraryStore.getState().setPlan(id, { finishBy: '2099-02-02' })
   return useLibraryStore.getState().plans.filter(x => x.bookId === id).length
 }, B1) === 1 && refused.length === 0)
@@ -188,12 +188,12 @@ await wait(800)
 // still in flight when the book goes would, on the real table, be refused by the foreign key)
 await wait(2000)
 await p.getByRole('button', { name: /Deep Work by|Deep Work/ }).first().click().catch(() => {})
-const n0 = await p.evaluate(async () => (await import('/BPA/src/modules/library/libraryStore.ts')).useLibraryStore.getState().plans.length)
-await p.evaluate(async id => (await import('/BPA/src/modules/library/libraryStore.ts')).useLibraryStore.getState().deleteBook(id), B1)
-const n1 = await p.evaluate(async () => (await import('/BPA/src/modules/library/libraryStore.ts')).useLibraryStore.getState().plans.length)
+const n0 = await p.evaluate(async () => (await import('/src/modules/library/libraryStore.ts')).useLibraryStore.getState().plans.length)
+await p.evaluate(async id => (await import('/src/modules/library/libraryStore.ts')).useLibraryStore.getState().deleteBook(id), B1)
+const n1 = await p.evaluate(async () => (await import('/src/modules/library/libraryStore.ts')).useLibraryStore.getState().plans.length)
 ok('deleting a book takes its plan with it', n0 === 1 && n1 === 0, `${n0}->${n1}`)
 await p.keyboard.press('Control+z'); await wait(900)
-ok('and undo restores it', await p.evaluate(async () => (await import('/BPA/src/modules/library/libraryStore.ts')).useLibraryStore.getState().plans.length) === 1)
+ok('and undo restores it', await p.evaluate(async () => (await import('/src/modules/library/libraryStore.ts')).useLibraryStore.getState().plans.length) === 1)
 ok('the server never refused a row along the way', refused.length === 0, JSON.stringify(refused))
 await ctx.close()
 

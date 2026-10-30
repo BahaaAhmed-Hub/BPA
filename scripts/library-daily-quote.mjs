@@ -49,7 +49,7 @@ async function open({ quotes = QUOTES, settings = null, module = 'morning' } = {
   } catch {} }, [session, settings, module])
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(5000)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(5000)
   return { p, ctx }
 }
 let fails = 0
@@ -61,7 +61,7 @@ const card = () => p.getByRole('figure', { name: 'Quote of the day' })
 
 // ── pure ────────────────────────────────────────────────────────────────────
 const u = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/dailyQuote.ts')
+  const m = await import('/src/modules/library/dailyQuote.ts')
   const Q = (id, body, createdAt) => ({ id, body, createdAt })
   const pool = [Q('c', 'C', '2026-01-03'), Q('a', 'A', '2026-01-01'), Q('b', 'B', '2026-01-02')]
   const mixed = [Q('x', null, '2026-01-01'), ...pool, Q('y', '   ', '2026-01-02'), Q('z', '', '2026-01-02')]
@@ -138,7 +138,7 @@ await ctx.close()
 // ── the setting ─────────────────────────────────────────────────────────────
 ;({ p, ctx } = await open())
 const s = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/libraryPrefs.ts')
+  const m = await import('/src/modules/library/libraryPrefs.ts')
   const out = {}
   localStorage.removeItem('library-settings'); out.fresh = [m.loadLibrarySettings().dailyQuote, m.dailyQuoteWanted()]
   m.saveLibrarySettings({ enabled: true, dailyQuote: false }); out.off = [m.loadLibrarySettings().dailyQuote, m.dailyQuoteWanted(), localStorage.getItem('library-settings')]

@@ -67,7 +67,7 @@ await ctx.addInitScript(([s, start, proj, uid, warm]) => { try {
 const p = await ctx.newPage()
 const traffic = watchTraffic(p)
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await settled(p, traffic, 7000)
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await settled(p, traffic, 7000)
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  [${MODE}] ${n}${x ? '  ' + x : ''}`); if (!c) fails++ }
 const navHas = name => p.locator(`[data-side-rail] button[aria-label="${name}"]`).count()
@@ -105,7 +105,7 @@ if (MODE === 'lapsed') {
   ok('on at boot: the Projects tab is drawn', await navHas('Projects') === 1)
   const before = projReads()
   withProjects = false
-  await p.evaluate(async () => { const m = await import('/BPA/src/lib/entitlements.ts'); return m.fetchModules(JSON.parse(localStorage.getItem('sb-placeholder-auth-token')).user.id) })
+  await p.evaluate(async () => { const m = await import('/src/lib/entitlements.ts'); return m.fetchModules(JSON.parse(localStorage.getItem('sb-placeholder-auth-token')).user.id) })
   await p.waitForTimeout(600)
   ok('the plan changed under the open app: the tab goes', await navHas('Projects') === 0)
   // A sync wake (focus / online) is what would read the tables again.

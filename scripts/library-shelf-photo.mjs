@@ -63,15 +63,15 @@ await ctx.addInitScript(s => { try {
 } catch {} }, session)
 const p = await ctx.newPage()
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) fails++ }
 const wait = ms => p.waitForTimeout(ms)
 
 // ── pure ────────────────────────────────────────────────────────────────────
 const u = await p.evaluate(async () => {
-  const t = await import('/BPA/src/modules/library/shelfTiles.ts')
-  const s = await import('/BPA/src/modules/library/readShelf.ts')
+  const t = await import('/src/modules/library/shelfTiles.ts')
+  const s = await import('/src/modules/library/readShelf.ts')
   const covers = (w, h, rs) => {
     // every pixel column and row is inside some rect, and no rect leaves the image
     const inb = rs.every(r => r.x >= 0 && r.y >= 0 && r.x + r.w <= w && r.y + r.h <= h && r.w > 0 && r.h > 0)
@@ -91,7 +91,7 @@ const u = await p.evaluate(async () => {
     messy: s.parseSpines(JSON.stringify({ books: [{ title: '  Spaced   Out  ', author: '  ', sureness: 'certain' }, { title: '' }, { title: 5 }, null, 'str', { title: 'T'.repeat(500) }, { title: 'X', author: 'Y', sureness: 'medium' }], unreadable: -4 })),
     notBooks: s.parseSpines(JSON.stringify({ books: 'oops', unreadable: 'many' })),
     merged: s.mergeSpines([[{ title: 'Atomic Habits', sureness: 'low' }, { title: 'Dune', author: 'F. Herbert', sureness: 'high' }], [{ title: 'ATOMIC  habits!', author: 'James Clear', sureness: 'high' }, { title: 'dune', sureness: 'medium' }, { title: '!!!', sureness: 'high' }]]),
-    cat: await (async () => { const c = await import('/BPA/src/modules/library/shelfCategories.ts'); return { hit: c.resolveCategory('history', ['History', 'Science']), punct: c.resolveCategory('self  help', ['Self-Help']), fresh: c.resolveCategory('  Biography ', ['History']), none: [c.resolveCategory('', ['A']), c.resolveCategory(undefined, ['A']), c.resolveCategory('!!!', ['A'])], names: c.newCategoryNames(['Biography', 'biography!', 'history', '', 'Economics'], ['History']) } })(),
+    cat: await (async () => { const c = await import('/src/modules/library/shelfCategories.ts'); return { hit: c.resolveCategory('history', ['History', 'Science']), punct: c.resolveCategory('self  help', ['Self-Help']), fresh: c.resolveCategory('  Biography ', ['History']), none: [c.resolveCategory('', ['A']), c.resolveCategory(undefined, ['A']), c.resolveCategory('!!!', ['A'])], names: c.newCategoryNames(['Biography', 'biography!', 'history', '', 'Economics'], ['History']) } })(),
     catParse: s.parseSpines(JSON.stringify({ books: [{ title: 'A', category: '  Self   Help ' }, { title: 'B', category: 'x'.repeat(100) }, { title: 'C', category: 5 }, { title: 'D', category: '   ' }] })).books.map(b => b.category ?? null),
     catMerge: s.mergeSpines([[{ title: 'Dune', sureness: 'low', category: 'Fiction' }], [{ title: 'Dune', sureness: 'high' }], [{ title: 'Emma', sureness: 'high' }], [{ title: 'Emma', sureness: 'medium', category: 'Classics' }]]).map(b => b.category ?? null),
     capped: s.mergeSpines([Array.from({ length: 400 }, (_, i) => ({ title: 'Book ' + i, sureness: 'high' }))]).length,

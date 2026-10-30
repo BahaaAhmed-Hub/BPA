@@ -69,7 +69,7 @@ async function launch({ width = 1280, height = 900, stored = null } = {}) {
   }, [session, stored])
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e.stack || e).slice(0, 300)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' })
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' })
   await p.locator('[data-assistant-fab]').waitFor({ timeout: 20000 })
   await p.waitForTimeout(1500)
   return { p, ctx }

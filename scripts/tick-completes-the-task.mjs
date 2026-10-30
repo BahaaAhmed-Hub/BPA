@@ -47,7 +47,7 @@ const p = await ctx.newPage()
 
 const traffic = watchTraffic(p)
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 160)))
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' })
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' })
 await settled(p, traffic, 6500)
 
 let fails = 0

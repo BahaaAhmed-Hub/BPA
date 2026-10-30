@@ -77,7 +77,7 @@ async function open({ quotes, reviews }) {
   } catch {} }, session)
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 let fails = 0
@@ -89,8 +89,8 @@ const wait = ms => p.waitForTimeout(ms)
 
 // ── the scheduler, read off a table ─────────────────────────────────────────
 const u = await p.evaluate(async () => {
-  const s = await import('/BPA/src/modules/library/srs.ts')
-  const c = await import('/BPA/src/modules/library/cloze.ts')
+  const s = await import('/src/modules/library/srs.ts')
+  const c = await import('/src/modules/library/cloze.ts')
   const row = (st, g) => { const n = s.next(st, g); return [n.intervalDays, Math.round(n.ease * 100) / 100, n.reps, n.lapses] }
   const chain = (grades, st = null) => { const out = []; for (const g of grades) { st = s.next(st, g); out.push(st.intervalDays) } return out }
   const known = { intervalDays: 10, ease: 2.0, reps: 4, lapses: 1 }
@@ -228,7 +228,7 @@ await p.getByRole('button', { name: /^Start/ }).click(); await wait(300)
 ok('the sitting is 20 cards', /1 of 20/.test(await board()))
 // delete the quote on screen from "another device"
 const gone = await p.evaluate(async () => {
-  const st = (await import('/BPA/src/modules/library/libraryStore.ts')).useLibraryStore
+  const st = (await import('/src/modules/library/libraryStore.ts')).useLibraryStore
   const shown = document.querySelector('blockquote')?.textContent ?? ''
   const q = st.getState().quotes.find(x => shown.replace(/\s+/g, ' ').trim().length && x.body && x.body.split(' ').slice(0, 2).join(' ') === shown.split(' ').slice(0, 2).join(' '))
   const id = q?.id ?? st.getState().quotes[0].id

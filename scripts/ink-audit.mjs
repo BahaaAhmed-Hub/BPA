@@ -601,7 +601,7 @@ for (const theme of THEMES) {
   // A crash is the commonest way for a screen to measure nothing, and the
   // blindness warning says *that* it did, not *why*.
   page.on('pageerror', e => console.log('   [pageerror]', String(e).slice(0, 220)))
-  await page.goto(`http://localhost:${process.argv[2]}/BPA/`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`http://localhost:${process.argv[2]}/`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3400)
   // Measured, not assumed: a theme that did not apply is a run about another
   // theme's colours. `--sb-page` differs in all four, so it answers this.
@@ -1187,7 +1187,7 @@ for (const theme of THEMES) {
   // navigation rather than a click. It is measured last, because it leaves the
   // app behind — there is nothing to click afterwards.
   await visit('Booking · the public page', async () => {
-    await page.goto(`http://localhost:${process.argv[2]}/BPA/?book=bahaa`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`http://localhost:${process.argv[2]}/?book=bahaa`, { waitUntil: 'domcontentloaded' })
     // Wait for what the page is *for*, not for a guess at how long it takes:
     // the first measurement landed on an empty document and said so.
     await page.getByRole('button', { name: /Intro call/ }).first().waitFor({ timeout: 15000 })

@@ -37,7 +37,7 @@ const argv = process.argv.slice(2)
 const NARROW = argv.includes('--narrow')
 const BAD = argv.includes('--inject-bad')
 const PHASE = argv.find(a => a.startsWith('--phase='))?.slice(8) ?? 'adhoc'
-const BASE = `http://localhost:${port}/BPA/`
+const BASE = `http://localhost:${port}/`
 
 const ALL_THEMES = ['sunlit-bento', 'warm-minimal', 'glass-depth', 'evergreen']
 // Each theme's own `--sb-page`, as Chrome reports it (same table as ink-audit):

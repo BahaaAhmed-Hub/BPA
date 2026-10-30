@@ -71,7 +71,7 @@ await page.addInitScript(s => {
   localStorage.setItem('bpa-wizard-done', '1')
 }, session)
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000)
 await page.locator('nav[aria-label="Finance sections"]').getByRole('button', { name: 'Goals', exact: true }).click()
 await page.getByText('Every goal on one timeline').waitFor({ timeout: 8000 }).catch(() => {})

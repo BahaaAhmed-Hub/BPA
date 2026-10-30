@@ -65,7 +65,7 @@ async function page() {
   } catch {} }, session)
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 let fails = 0
@@ -77,7 +77,7 @@ const wait = ms => p.waitForTimeout(ms)
 
 // ── the pure module ─────────────────────────────────────────────────────────
 const u = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/followCheck.ts')
+  const m = await import('/src/modules/library/followCheck.ts')
   const cand = (key, title) => ({ title, authors: ['X'], source: 'openlibrary', sourceKey: key })
   return {
     a: m.authorQuery('OL123A'), badA: m.authorQuery('OL1A OR title:x'),

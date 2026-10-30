@@ -38,8 +38,8 @@ await ctx.route('**://placeholder.supabase.co/**', r => { const u = new URL(r.re
 await ctx.addInitScript(s => { try { localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s)); localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'morning', themeId: 'sunlit-bento' }, version: 0 }))
   localStorage.setItem('professor-ai-config', JSON.stringify({ provider: 'anthropic', anthropicKey: 'sk-ant-secret' })) } catch {} }, session)
 const p = await ctx.newPage(); p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
-const tool = (name, input = {}) => p.evaluate(async ([name, input]) => { const t = await import('/BPA/src/lib/assistantTools.ts'); return t.executeTool(name, input, { primaryEmail: 'a@x.com', accounts: [], tasks: [], habits: [], addTask() {}, updateTask() {}, deleteTask() {} }) }, [name, input])
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+const tool = (name, input = {}) => p.evaluate(async ([name, input]) => { const t = await import('/src/lib/assistantTools.ts'); return t.executeTool(name, input, { primaryEmail: 'a@x.com', accounts: [], tasks: [], habits: [], addTask() {}, updateTask() {}, deleteTask() {} }) }, [name, input])
 const ls = k => p.evaluate(k => localStorage.getItem(k), k)
 
 const topics = await tool('app_guide')
@@ -48,7 +48,7 @@ const lib = await tool('app_guide', { topic: 'library' })
 ok('with a topic it returns what the screen has', lib.id === 'library' && /Scan shelf/.test(JSON.stringify(lib.can)) && /Settings → Library/.test(lib.where))
 ok('an unknown topic is "no guide", telling it to say it is not sure', (await tool('app_guide', { topic: 'quantum physics' })).found === false)
 
-const tools = await p.evaluate(async () => (await import('/BPA/src/lib/assistantTools.ts')).ASSISTANT_TOOLS.map(t => [t.name, !!t.description, t.input_schema?.type]))
+const tools = await p.evaluate(async () => (await import('/src/lib/assistantTools.ts')).ASSISTANT_TOOLS.map(t => [t.name, !!t.description, t.input_schema?.type]))
 ok('every tool has a unique name, a description and a schema', new Set(tools.map(t => t[0])).size === tools.length && tools.every(t => t[1] && t[2] === 'object'), `${tools.length} tools`)
 ok('the modules the user asked for are covered: library, calendar editing, habit creation, settings, the guide', ['library_add_book', 'library_find_books', 'update_calendar_event', 'create_habit', 'update_habit', 'change_setting', 'get_settings', 'app_guide', 'mail_needs'].every(n => tools.some(t => t[0] === n)))
 

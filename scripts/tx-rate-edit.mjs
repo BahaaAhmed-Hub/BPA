@@ -73,7 +73,7 @@ await page.addInitScript(([s]) => {
   localStorage.setItem('finance-fx-rates', JSON.stringify({ USD: 50 }))
 }, [session])
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000)
 await page.getByText('Skip for now').first().click({ timeout: 800 }).catch(() => {})
 

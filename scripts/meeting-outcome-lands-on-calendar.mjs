@@ -100,7 +100,7 @@ const p = await ctx.newPage()
 const traffic = watchTraffic(p)
 p.on('dialog', d => d.accept())
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' })
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' })
 await settled(p, traffic, 6000)
 
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  [${MODE}] ${n}${x ? '  ' + x : ''}`); if (!c) process.exitCode = 1 }
@@ -155,7 +155,7 @@ const task = await p.evaluate(t => {
 }, TITLE)
 ok('the task was made', !!task, JSON.stringify(task)?.slice(0, 160))
 const target = await p.evaluate(async t => {
-  const m = await import('/BPA/src/lib/taskCalendar.ts')
+  const m = await import('/src/lib/taskCalendar.ts')
   return m.resolveTaskCalendar(t)
 }, task)
 

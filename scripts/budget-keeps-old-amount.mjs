@@ -72,7 +72,7 @@ await page.addInitScript(([s, rule]) => {
   localStorage.setItem('finance-budget-rules', JSON.stringify({ 'c-rent': rule }))
 }, [session, RULE])
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000)
 await page.getByText('Skip for now').first().click({ timeout: 800 }).catch(() => {})
 await page.getByRole('button', { name: /^Budget$/ }).first().click({ timeout: 3000 }).catch(() => {})

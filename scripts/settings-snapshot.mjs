@@ -59,7 +59,7 @@ await page.addInitScript(([s, th]) => {
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'settings', themeId: th }, version: 0 }))
 }, [session, theme])
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000, { want: 'text=Profile' })
 await page.getByText('Skip for now').first().click({ timeout: 800 }).catch(() => {})
 

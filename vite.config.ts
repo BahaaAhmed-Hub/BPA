@@ -11,7 +11,7 @@ const BUILD_SHA = (process.env.GITHUB_SHA ?? 'local').slice(0, 7)
 const BUILD_AT = new Date().toISOString()
 
 export default defineConfig({
-  base: '/BPA/',
+  base: '/',
   define: {
     __BUILD_SHA__: JSON.stringify(BUILD_SHA),
     __BUILD_AT__: JSON.stringify(BUILD_AT),

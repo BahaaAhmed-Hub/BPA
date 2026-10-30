@@ -19,7 +19,7 @@ await ctx.addInitScript(s=>{try{
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('professor-ui', JSON.stringify({state:{activeModule:'tasks',themeId:'sunlit-bento'},version:0}))}catch{}},session)
 const p = await ctx.newPage(); const traffic = watchTraffic(p)
-await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await settled(p, traffic, 8000)
+await p.goto('http://localhost:5199/',{waitUntil:'domcontentloaded'}); await settled(p, traffic, 8000)
 let fails=0
 const ok=(n,c,x='')=>{console.log(`${c?'PASS':'*** FAIL ***'}  ${n}${x?'  '+x:''}`); if(!c)fails++}
 // The poll's own tick is 15s of real time; give it one, after moving the clock.

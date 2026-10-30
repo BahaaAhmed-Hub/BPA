@@ -16,7 +16,7 @@ const FN = `${supabaseUrl}/functions/v1/book-me`
 // ─── The URL a stranger arrives on ──────────────────────────────────────────
 //
 // There is no router in this app and GitHub Pages has no SPA fallback, so a
-// query string is the only deep link that survives a hard load: `/BPA/book/x`
+// query string is the only deep link that survives a hard load: `/book/x`
 // would 404 before any JavaScript ran.
 
 export interface BookingRequest { handle: string; plan?: string; manage?: string }
@@ -33,7 +33,7 @@ export function bookingRequest(search = window.location.search): BookingRequest 
 }
 
 /** The link to send somebody. Built from where this build is actually served,
- *  never a hardcoded host — the app runs under /BPA/ on Pages and at / in dev. */
+ *  never a hardcoded host — the app is served from the site root. */
 export function bookingUrl(handle: string, plan?: string): string {
   const base = `${window.location.origin}${import.meta.env.BASE_URL}`
   return `${base}?book=${encodeURIComponent(handle)}${plan ? `&plan=${encodeURIComponent(plan)}` : ''}`

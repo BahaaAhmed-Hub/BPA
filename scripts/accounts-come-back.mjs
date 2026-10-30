@@ -60,7 +60,7 @@ await ctx.addInitScript(([s,MODE])=>{try{
 }catch{}},[session,MODE])
 const p=await ctx.newPage()
 p.on('pageerror',e=>console.log('  [pageerror]',String(e).slice(0,160)))
-await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(6000)
+await p.goto('http://localhost:5199/',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(6000)
 const got = await p.evaluate(()=>{ try { return JSON.parse(localStorage.getItem('professor-connected-accounts')||'null') } catch { return 'unparsable' } })
 console.log(`[${MODE}]`, JSON.stringify((got||[]).map?.(a=>({email:a.email,id:a.id,scopes:a.scopes?.length,tok:a.providerToken})) ?? got))
 if (wrote) console.log(`[${MODE}] wrote to users:`, wrote.slice(0,120))

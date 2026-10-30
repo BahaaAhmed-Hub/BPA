@@ -24,7 +24,7 @@ const anthropicReply = (t, u) => ev('message_start', { type: 'message_start', me
 
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] })
 
-async function launch(w, { config, module = 'morning', goto = 'http://localhost:5199/BPA/', anthropicUsage = { input: 12000, output: 800 }, groqUsage = { prompt_tokens: 3000, completion_tokens: 100 } } = {}) {
+async function launch(w, { config, module = 'morning', goto = 'http://localhost:5199/', anthropicUsage = { input: 12000, output: 800 }, groqUsage = { prompt_tokens: 3000, completion_tokens: 100 } } = {}) {
   const seen = { anthropic: [], groq: [], fn: [] }
   const ctx = await b.newContext({ viewport: { width: 1280, height: 1000 } })
   await ctx.route('**://placeholder.supabase.co/**', async r => {
@@ -162,7 +162,7 @@ const seed = (w, rows, convUpdated = iso()) => {
     { role: 'tool', content: 'list_habits', tool: 'list_habits', tool_state: 'done', tool_use_id: 'toolu_x', tool_result: '[]' },
     { role: 'assistant', content: 'You have none.', usage: { input: 1000, output: 12, cacheRead: 0, cacheWrite: 0, model: SONNET, provider: 'anthropic' } },
   ])
-  const { p, ctx } = await launch(w, { config: claude(), goto: 'http://localhost:5199/BPA/?c=' + cid })
+  const { p, ctx } = await launch(w, { config: claude(), goto: 'http://localhost:5199/?c=' + cid })
   await open(p)
   ok('the wordless step\'s tokens are in the total (900 + 30 + 1,000 + 12)', await until(async () => (await tokens(p)) === 1942, 10000), String(await tokens(p)))
   const bubbles = await win(p).locator('.ai-md').count()
@@ -174,7 +174,7 @@ const seed = (w, rows, convUpdated = iso()) => {
 {
   const w = makeWorld()
   const cid = seed(w, [{ role: 'user', content: 'q' }, { role: 'assistant', content: 'a', usage: { input: 5000, output: 10, cacheRead: 0, cacheWrite: 0, model: 'claude-fable-5-1', provider: 'anthropic' } }])
-  const { p, ctx } = await launch(w, { config: claude({ claudeModel: 'claude-fable-5-1' }), goto: 'http://localhost:5199/BPA/?c=' + cid })
+  const { p, ctx } = await launch(w, { config: claude({ claudeModel: 'claude-fable-5-1' }), goto: 'http://localhost:5199/?c=' + cid })
   await open(p)
   await until(async () => (await tokens(p)) === 5010, 10000)
   const t = await text(p); const tip = await p.locator('[data-model-badge]').first().getAttribute('title')
@@ -190,7 +190,7 @@ for (const [label, prices, want, wantTip] of [
 ]) {
   const w = makeWorld()
   const cid = seed(w, [{ role: 'user', content: 'q' }, { role: 'assistant', content: 'a', usage: { input: 1_000_000, output: 500_000, cacheRead: 0, cacheWrite: 0, model: SONNET, provider: 'anthropic' } }])
-  const { p, ctx } = await launch(w, { config: claude({ prices }), goto: 'http://localhost:5199/BPA/?c=' + cid })
+  const { p, ctx } = await launch(w, { config: claude({ prices }), goto: 'http://localhost:5199/?c=' + cid })
   await open(p)
   await until(async () => (await tokens(p)) === 1_500_000, 10000)
   const tip = await p.locator('[data-model-badge]').first().getAttribute('title')
@@ -202,7 +202,7 @@ for (const [label, prices, want, wantTip] of [
 {
   const w = makeWorld()
   const cid = seed(w, [{ role: 'user', content: 'q' }, { role: 'assistant', content: 'a', usage: { input: 123456, output: 7890, cacheRead: 0, cacheWrite: 0, model: LONG, provider: 'groq' } }])
-  const { p, ctx } = await launch(w, { config: groqC(LONG), goto: 'http://localhost:5199/BPA/?c=' + cid })
+  const { p, ctx } = await launch(w, { config: groqC(LONG), goto: 'http://localhost:5199/?c=' + cid })
   await open(p)
   await until(async () => (await tokens(p)) === 131346, 10000)
   const m = await p.evaluate(() => {

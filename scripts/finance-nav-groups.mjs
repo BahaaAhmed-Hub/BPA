@@ -53,7 +53,7 @@ async function open({ shopping, lock, module = 'finance' }) {
     sessionStorage.removeItem('finance-lock-session')
   }, [session, shopping, lock, module])
   const traffic = watchTraffic(page)
-  await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
   await settled(page, traffic, 9000)
   await page.getByText('Skip for now').first().click({ timeout: 800 }).catch(() => {})
   return { page, ctx }

@@ -71,7 +71,7 @@ await page.addInitScript(([s]) => {
   localStorage.setItem('finance-fx-rates', JSON.stringify({ USD: 48 }))
 }, [session])
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000)
 
 if (MODE === 'unreadable') refuseList = true
@@ -79,10 +79,10 @@ if (MODE === 'unreadable') refuseList = true
 // What an entry totals to. After this change that is txIn; before it, toBase — which is what
 // every total used, and why the control (the old code) reads 5,000.
 const result = await page.evaluate(async ([mode]) => {
-  const fx = await import('/BPA/src/modules/finance/fx.ts')
-  const { useFinanceStore } = await import('/BPA/src/modules/finance/financeStore.ts')
-  const mod = await import('/BPA/src/modules/finance/txRates.ts').catch(() => null)
-  const { executeFinanceTool } = await import('/BPA/src/lib/financeTools.ts')
+  const fx = await import('/src/modules/finance/fx.ts')
+  const { useFinanceStore } = await import('/src/modules/finance/financeStore.ts')
+  const mod = await import('/src/modules/finance/txRates.ts').catch(() => null)
+  const { executeFinanceTool } = await import('/src/lib/financeTools.ts')
   const deadline = Date.now() + 8000
   while (!useFinanceStore.getState().transactions.length && Date.now() < deadline) await new Promise(r => setTimeout(r, 50))
   const worth = t => mod ? mod.txIn(t) : fx.toBase(Math.abs(t.amount), t.currency)

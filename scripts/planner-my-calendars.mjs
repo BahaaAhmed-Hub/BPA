@@ -69,7 +69,7 @@ await ctx.addInitScript(([s,cache,dx])=>{try{
 }catch{}},[session,CACHE,DX])
 const p=await ctx.newPage()
 p.on('pageerror',e=>console.log('  [pageerror]',String(e).slice(0,160)))
-await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(5000)
+await p.goto('http://localhost:5199/',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(5000)
 let fails=0
 const ok=(n,c,x='')=>{console.log(`${c?'PASS':'*** FAIL ***'}  ${n}${x?'  '+x:''}`); if(!c)fails++}
 // Count only what the PLANNER asks for. The page behind it (Today's own

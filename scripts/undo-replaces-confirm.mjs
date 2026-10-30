@@ -92,7 +92,7 @@ await page.addInitScript(s => {
 let failed = 0
 const ok = (name, cond, detail = '') => { console.log(`${cond ? 'PASS' : '*** FAIL ***'}  ${name}${detail ? '  ' + detail : ''}`); if (!cond) failed++ }
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000)
 await page.getByText('Skip for now').first().click({ timeout: 1200 }).catch(() => {})
 
@@ -116,7 +116,7 @@ ok('goal: and the server got the restore (an upsert with the same id)', writes.s
 
 // ── The ConfirmDialog itself, driven through the app's own module ───────────
 const probe = await page.evaluate(async () => {
-  const m = await import('/BPA/src/lib/confirm.ts')
+  const m = await import('/src/lib/confirm.ts')
   window.__ask = { confirm: m.askConfirm, text: m.askText }
   return typeof m.askConfirm
 }).catch(e => String(e))

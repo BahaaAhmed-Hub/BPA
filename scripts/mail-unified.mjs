@@ -70,11 +70,11 @@ const go = mod => ctx.addInitScript(([s, m]) => { try { localStorage.setItem('sb
 await go('morning')
 const p = await ctx.newPage()
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(5000)
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(5000)
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) fails++ }
 const body = () => p.locator('body').innerText()
-const needs = () => p.evaluate(async email => { const t = await import('/BPA/src/lib/assistantTools.ts'); return t.executeTool('mail_needs', {}, { primaryEmail: email, accounts: [], tasks: [], habits: [], addTask() {}, updateTask() {}, deleteTask() {} }) }, ME)
+const needs = () => p.evaluate(async email => { const t = await import('/src/lib/assistantTools.ts'); return t.executeTool('mail_needs', {}, { primaryEmail: email, accounts: [], tasks: [], habits: [], addTask() {}, updateTask() {}, deleteTask() {} }) }, ME)
 
 // ── one list, three screens ──────────────────────────────────────────────────
 let t = await body()
@@ -110,7 +110,7 @@ gmailFail = false
 
 // ── RSVP: really on the calendar, really told to the organiser, marked on every screen ──
 const inv = { uid: 'u1', summary: 'Sync with Boss', startsAt: new Date().toISOString(), endsAt: new Date().toISOString(), organizer: 'boss@x.com', cancelled: false }
-const act = (answer) => p.evaluate(async ([invite, email, answer]) => { const m = await import('/BPA/src/lib/mailActions.ts'); const a = await import('/BPA/src/modules/inbox/mailAccounts.ts')
+const act = (answer) => p.evaluate(async ([invite, email, answer]) => { const m = await import('/src/lib/mailActions.ts'); const a = await import('/src/modules/inbox/mailAccounts.ts')
   const acc = a.mailAccounts(email)[0]; return m.answerInvitation(invite, acc, 'tD', answer) }, [inv, ME, answer])
 calFail = true; storePatches.length = 0; gmailCalls.length = 0
 let r = await act('accepted')
@@ -128,14 +128,14 @@ ok('an answered invitation is no longer "worth knowing" to the assistant either'
 
 
 // ── Today's chips follow the Mail page; the assistant can answer an invitation, for real ──
-const ask = await p.evaluate(async () => { const m = await import('/BPA/src/lib/mailNeeds.ts'); const f = m.askFor
+const ask = await p.evaluate(async () => { const m = await import('/src/lib/mailNeeds.ts'); const f = m.askFor
   return { analysedNoAction: f('fyi', false, 'reply'), attn: f('attention', false, 'decide'), actionRead: f('action', false, 'read'), actionDecide: f('action', false, 'decide'), actionNoBrief: f('action', false, undefined),
     notAnalysed: [f(undefined, false, 'decide'), f(undefined, false, undefined)], invited: [f('action', true, 'read'), f(undefined, true, undefined)] } })
 ok('a thread Mail files outside "action" is "to read" whatever the model said', ask.analysedNoAction === 'read' && ask.attn === 'read')
 ok('a thread Mail calls an action is never "to read": "to answer", or the model\'s sharper word', ask.actionRead === 'reply' && ask.actionDecide === 'decide' && ask.actionNoBrief === 'reply')
 ok('one Mail has not read keeps the model\'s word; an invitation is "to book"', ask.notAnalysed.join() === 'decide,read' && ask.invited.join() === 'schedule,schedule')
 
-const tool = (name, input) => p.evaluate(async ([name, input, email]) => { const t = await import('/BPA/src/lib/assistantTools.ts')
+const tool = (name, input) => p.evaluate(async ([name, input, email]) => { const t = await import('/src/lib/assistantTools.ts')
   try { return await t.executeTool(name, input, { primaryEmail: email, accounts: [], tasks: [], habits: [], addTask() {}, updateTask() {}, deleteTask() {} }) } catch (e) { return { threw: String(e.message ?? e) } } }, [name, input, ME])
 storePatches.length = 0; calCalls.length = 0
 let rv = await tool('rsvp_invitation', { thread_id: 'tI', answer: 'tentative' })
@@ -156,7 +156,7 @@ ok('an answer that is not one of the three is refused', /accepted, tentative or 
 const p2 = await ctx.newPage(); await go('inbox')
 p2.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
 await p2.addInitScript(() => { try { localStorage.setItem('mail-smart-view', 'action') } catch {} })
-await p2.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p2.waitForTimeout(5000)
+await p2.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p2.waitForTimeout(5000)
 const mt = await p2.locator('body').innerText()
 ok('the Mail page also shows no action left (A archived, B handled, C archived) and not the handled D', !/Answer A please|Handled B|Archived C/.test(mt), mt.slice(0, 0))
 

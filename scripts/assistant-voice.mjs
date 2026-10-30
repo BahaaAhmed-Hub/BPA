@@ -69,7 +69,7 @@ async function open({ persona = { name: 'Beau', asked: true }, speech = true } =
   const p = await ctx.newPage()
   p.on('console', m => { if (m.type() === 'error') console.log('  [console.error]', m.text().slice(0, 200)) })
   p.on('pageerror', e => console.log('  [pageerror]', String(e.stack || e).slice(0, 300)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 const lastUser = body => { const m = [...(body.messages ?? [])].reverse().find(x => x.role === 'user'); return typeof m?.content === 'string' ? m.content : (m?.content ?? []).map(c => c.text ?? '').join('') }

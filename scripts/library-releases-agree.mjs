@@ -35,12 +35,12 @@ const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', a
 const ctx = await b.newContext()
 await ctx.route('**://placeholder.supabase.co/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
 const p = await ctx.newPage()
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(3000)
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(3000)
 
 const res = await p.evaluate(async ([docs, seens, shelves]) => {
-  const app = await import('/BPA/src/modules/library/followCheck.ts')
-  const book = await import('/BPA/src/modules/library/bookLookup.ts')
-  const srv = await import('/BPA/supabase/functions/_shared/releases.ts')
+  const app = await import('/src/modules/library/followCheck.ts')
+  const book = await import('/src/modules/library/bookLookup.ts')
+  const srv = await import('/supabase/functions/_shared/releases.ts')
   const realFetch = window.fetch
   let url = ''
   window.fetch = async u => { url = String(u); return new Response(JSON.stringify({ docs }), { status: 200, headers: { 'content-type': 'application/json' } }) }
