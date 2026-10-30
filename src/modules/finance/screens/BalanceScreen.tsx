@@ -77,7 +77,7 @@ function formatBalance(bal: number, currency = 'EGP'): string {
  *  row used to be free-flowing flex with a `minHeight`, so a name that wrapped
  *  ("Platinum CC") made it taller, and a bar, balance or button with no width
  *  of its own put every edge a few pixels somewhere else on the next row. */
-const ROW_H = 58
+const ROW_H = 52
 const COL_HANDLE = 18, COL_ICON = 28, COL_LIMIT = 170, COL_BALANCE = 160, COL_ACTION = 84, COL_EDIT = 26
 /** Below this the ceiling no longer has a column of its own: the bar sits along
  *  the foot of the row and the figures join the line under the name, so the
@@ -236,7 +236,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
             )}
           </span>
         )}
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {limit > 0 && compact
             ? `${Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of ${Math.round(limit).toLocaleString('en-US')}`
             : <>{account.accountType === 'loan' ? (account.bank || 'Loan') : (account.bank ?? account.accountType)}{account.last4 ? ` · ···· ${account.last4}` : ''}</>}
@@ -244,7 +244,7 @@ function AccountRow({ account, balance, unconverted, pending, ahead, points, sho
       </div>
 
       {limit > 0 && compact && (
-        <div aria-hidden style={{ position: 'absolute', left: 12, right: 12, bottom: 5, height: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
+        <div aria-hidden style={{ position: 'absolute', left: 12, right: 12, bottom: 0, height: 2, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
           <div style={{
             width: `${Math.round(used * 100)}%`, height: '100%',
             background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? 'var(--sb-warning)' : 'var(--sb-ink-3)',
