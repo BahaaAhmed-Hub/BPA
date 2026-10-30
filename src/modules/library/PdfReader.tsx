@@ -208,7 +208,7 @@ export default function PdfReader({ book, onClose }: { book: Book; onClose: () =
           <Button variant="ghost" iconOnly title="Bookmarks and quotes" aria-label="Bookmarks and quotes" aria-expanded={marks} onClick={() => setMarks(m => !m)}><List size={ICON.md} /></Button>
           {marks && (
             <div role="menu" style={{
-              position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 5, width: 280, maxHeight: '60vh', overflowY: 'auto', padding: 8,
+              position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 5, width: 280, maxHeight: 'calc(60 * var(--vh))', overflowY: 'auto', padding: 8,
               background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-menu)',
             }}>
               {pageMarks.length === 0 && quotes.length === 0 && (

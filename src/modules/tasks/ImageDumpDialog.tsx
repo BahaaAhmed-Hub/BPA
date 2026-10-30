@@ -127,7 +127,7 @@ export function ImageDumpDialog({ onClose }: Props) {
         background: 'var(--sb-card)',
         borderRadius: 18, border: '1px solid var(--sb-border)',
         boxShadow: '0 24px 80px rgba(25,23,18,0.22)',
-        display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 48px)', overflow: 'hidden',
+        display: 'flex', flexDirection: 'column', maxHeight: 'calc(calc(100 * var(--vh)) - 48px)', overflow: 'hidden',
       }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 22px 14px', borderBottom: '1px solid var(--sb-hairline)' }}>

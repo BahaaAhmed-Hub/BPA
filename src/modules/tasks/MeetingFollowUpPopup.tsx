@@ -300,7 +300,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
       />
 
       {/* Modal */}
-      <Card style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1001, width: 560, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <Card style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1001, width: 560, maxWidth: 'calc(calc(100 * var(--vw)) - 32px)', maxHeight: 'calc(calc(100 * var(--vh)) - 64px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{

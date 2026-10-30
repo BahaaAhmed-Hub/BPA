@@ -117,8 +117,8 @@ export const BARE: React.CSSProperties = {
  */
 // 15% off every stop of the clamp, and off the expanded width with it — the
 // panel keeps its proportions rather than only its widest case shrinking.
-export const PANEL_W = 'clamp(289px, 30.6vw, 400px)'
-export const PANEL_W_WIDE = 'min(476px, 52.7vw)'
+export const PANEL_W = 'clamp(289px, calc(30.6 * var(--vw)), 400px)'
+export const PANEL_W_WIDE = 'min(476px, calc(52.7 * var(--vw)))'
 
 export function ComposerShell({ panelRef, onClose, expanded, children }: {
   panelRef: React.RefObject<HTMLDivElement | null>

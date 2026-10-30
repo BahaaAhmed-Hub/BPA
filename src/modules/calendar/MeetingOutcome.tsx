@@ -572,7 +572,7 @@ export function MeetingOutcome({ event, onClose, onFollowUp, calendar }: {
         aria-modal="true"
         aria-label={`What came out of ${event.title}`}
         style={{
-          width: 800, maxWidth: '100%', maxHeight: '92vh', boxSizing: 'border-box',
+          width: 800, maxWidth: '100%', maxHeight: 'calc(92 * var(--vh))', boxSizing: 'border-box',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
           background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)',
           borderRadius: 'var(--sb-r-frame, 28px)', boxShadow: 'var(--sb-shadow-menu)',

@@ -149,7 +149,7 @@ function Breakdown({ title, note, terms, onClose }: {
       aria-label={`Where ${title} comes from`}
       style={{
         position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 60,
-        width: 340, maxWidth: '84vw', boxSizing: 'border-box',
+        width: 340, maxWidth: 'calc(84 * var(--vw))', boxSizing: 'border-box',
         background: 'var(--sb-overlay)', border: `var(--sb-border-width) solid ${C.border}`,
         borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-frame)',
         padding: '12px 14px 13px', textAlign: 'left', cursor: 'default',

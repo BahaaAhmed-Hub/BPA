@@ -60,7 +60,7 @@ export function PosterView({ items, index, setIndex, onOpenBook }: {
           if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) setIndex(dx < 0 ? (at + 1) % n : (at - 1 + n) % n)
         }}
         style={{
-          margin: 0, width: 'min(760px, 100%)', minHeight: 'clamp(320px, 52vh, 560px)', boxSizing: 'border-box', padding: 'clamp(24px, 6vw, 56px)',
+          margin: 0, width: 'min(760px, 100%)', minHeight: 'clamp(320px, calc(52 * var(--vh)), 560px)', boxSizing: 'border-box', padding: 'clamp(24px, calc(6 * var(--vw)), 56px)',
           display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 22, position: 'relative', touchAction: 'pan-y',
           background: `color-mix(in srgb, ${colour} 16%, var(--sb-overlay))`,
           border: `var(--sb-border-width) solid color-mix(in srgb, ${colour} 40%, var(--sb-border))`,

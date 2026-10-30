@@ -278,12 +278,12 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
       style={{
         position: 'fixed', inset: 0, zIndex: 300,
         background: 'var(--sb-scrim)', backdropFilter: 'blur(2px)',
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '8vh 20px 20px',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 'calc(8 * var(--vh)) 20px 20px',
       }}>
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 760, maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+          width: '100%', maxWidth: 760, maxHeight: 'calc(80 * var(--vh))', display: 'flex', flexDirection: 'column',
           background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
           boxShadow: 'var(--sb-shadow-frame)',
         }}>
@@ -549,7 +549,7 @@ function DraftPopup({ row, brief, onClose, onSent, onRewrite, rewriting }: {
       style={{
         position: 'fixed', inset: 0, zIndex: 320,
         background: 'var(--sb-scrim)', backdropFilter: 'blur(2px)',
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '7vh 20px 20px', overflowY: 'auto',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 'calc(7 * var(--vh)) 20px 20px', overflowY: 'auto',
       }}>
       <div
         onClick={e => e.stopPropagation()}

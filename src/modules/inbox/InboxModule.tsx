@@ -2589,7 +2589,7 @@ export function InboxModule() {
              the larger half. */
           <div style={{
             display: 'grid', gap: 16,
-            gridTemplateColumns: `${railOpen ? 156 : 46}px ${visibleEmails.length > 0 ? 'clamp(340px, 36vw, 640px) ' : ''}1fr`,
+            gridTemplateColumns: `${railOpen ? 156 : 46}px ${visibleEmails.length > 0 ? 'clamp(340px, calc(36 * var(--vw)), 640px) ' : ''}1fr`,
           }}>
             {renderFolders()}
             {renderLeft()}

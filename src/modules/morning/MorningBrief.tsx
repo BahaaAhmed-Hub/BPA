@@ -352,7 +352,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
       <div
         ref={panelRef}
         style={{
-          width: 420, maxHeight: '80vh',
+          width: 420, maxHeight: 'calc(80 * var(--vh))',
           background: 'var(--sb-overlay)',
           border: `var(--sb-border-width) solid ${alpha(accentColor, 25.1)}`,
           borderTop: `3px solid ${accentColor}`,

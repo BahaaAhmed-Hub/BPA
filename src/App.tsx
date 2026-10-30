@@ -85,7 +85,7 @@ function LoginScreen() {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: 'calc(100 * var(--vh))',
       background: 'linear-gradient(160deg, var(--sb-page) 0%, var(--sb-accent-tint) 100%)',
       display: 'flex',
       alignItems: 'center',
@@ -284,7 +284,7 @@ function LoadingScreen() {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: '100vh',
+      minHeight: 'calc(100 * var(--vh))',
       background: 'linear-gradient(160deg, var(--sb-page) 0%, var(--sb-accent-tint) 100%)',
       gap: 16,
       fontFamily: 'var(--sb-font-ui)',
@@ -1445,7 +1445,7 @@ function App() {
 
   return (
     <div style={{
-      height: '100dvh',
+      height: 'calc(100 * var(--dvh))',
       overflow: 'hidden',
       background: 'var(--sb-page)',
       display: 'flex',

@@ -1,3 +1,5 @@
+// First, so nothing below reads a position before the app's two kinds of units agree.
+import './lib/zoomSpace'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'

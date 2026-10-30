@@ -52,7 +52,6 @@ const SHARED_KEYS = [
   'professor-wizard-done',       // the setup guide was finished or skipped — on any device
   'professor-week-start',        // which day your week starts on
   'professor-accent',            // the colour every highlight is drawn in
-  'professor-compact',
   'task-board-col-order',
   'task-board-type',
   'library-settings',            // whether the Library is on for you

@@ -206,7 +206,7 @@ export default function IdealWeekModal({ onClose, realEvents = [] }: Props) {
       {/* Main container */}
       <div style={{
         margin: 'auto',
-        width: 'min(98vw, 1280px)', height: 'min(96vh, 880px)',
+        width: 'min(calc(98 * var(--vw)), 1280px)', height: 'min(calc(96 * var(--vh)), 880px)',
         display: 'flex', flexDirection: 'column',
         background: 'var(--sb-overlay)',
         border: '1px solid var(--sb-border)',

@@ -175,7 +175,7 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
       transform: 'translate(-50%, -50%)',
       background: 'var(--sb-overlay)',
       border: 'var(--sb-border-width) solid var(--sb-border)',
-      borderRadius: 'var(--sb-r-card)', width: 340, maxHeight: '80vh', overflowY: 'auto',
+      borderRadius: 'var(--sb-r-card)', width: 340, maxHeight: 'calc(80 * var(--vh))', overflowY: 'auto',
       boxShadow: 'var(--sb-shadow-frame)',
     }}>
       {/* Color bar + title */}
@@ -980,7 +980,7 @@ export function SmartDayPlanner({ onClose, onOpenTask, inline = false }: SmartDa
         : { position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         {/* Modal */}
         <div style={{
-          background: 'var(--sb-info-tint)', borderRadius: 'var(--sb-r-card)', width: '100%', maxWidth: inline ? 'none' : 1000, maxHeight: inline ? 'calc(100vh - 150px)' : '90vh',
+          background: 'var(--sb-info-tint)', borderRadius: 'var(--sb-r-card)', width: '100%', maxWidth: inline ? 'none' : 1000, maxHeight: inline ? 'calc(calc(100 * var(--vh)) - 150px)' : 'calc(90 * var(--vh))',
           display: 'flex', flexDirection: 'column',
           boxShadow: 'var(--sb-shadow-frame)',
           animation: 'sdp-in 0.3s cubic-bezier(0.16,1,0.3,1)', overflow: 'hidden',

@@ -65,7 +65,7 @@ export function ExportDialog({ quotes, onClose }: { quotes: Quote[]; onClose: ()
     <div onMouseDown={e => { if (e.target === e.currentTarget) onClose() }} className="sb-above-modal"
       style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--sb-scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div role="dialog" aria-modal="true" aria-label="Export quotes" style={{
-        width: 'min(620px, 100%)', maxHeight: '94vh', display: 'flex', flexDirection: 'column',
+        width: 'min(620px, 100%)', maxHeight: 'calc(94 * var(--vh))', display: 'flex', flexDirection: 'column',
         background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-frame)', boxShadow: 'var(--sb-shadow-frame)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px 4px' }}>

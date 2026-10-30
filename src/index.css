@@ -46,6 +46,15 @@
 }
 
 :root {
+  /* The app is drawn at --app-scale (lib/accent.ts appScale(), set at boot; 1 on a phone). A page
+     zoom scales viewport units too, so 100vh would draw 90% of the window and leave
+     a strip along the bottom; these are one unit of each, divided back. Use
+     `calc(N * var(--vh))` where a length would say `Nvh`. */
+  --app-scale: 1;
+  --vh: calc(1vh / var(--app-scale));
+  --dvh: calc(1dvh / var(--app-scale));
+  --vw: calc(1vw / var(--app-scale));
+
   /* ══ THEME-DEPENDENT ═════════════════════════════════════════════════════
      Sunlit Bento's values. lib/themes.ts writes all of these, and only these. */
 
@@ -822,7 +831,7 @@ img { max-width: 100%; }
      own header: 1296px of grid with a 0px window onto it, and no way to scroll
      to the afternoon. The grid needs a definite height of its own down here,
      and the body's scroll is what reveals the rail below it. */
-  .cal-col { min-height: clamp(360px, calc(100vh - 262px), 680px); }
+  .cal-col { min-height: clamp(360px, calc(calc(100 * var(--vh)) - 262px), 680px); }
   /* The 100% row cap above is right for the wide layout, where the grid and
      the rail share ONE row and neither may stretch it. Stacked they are two
      rows, and capping each at the body's height while the column asks for more
