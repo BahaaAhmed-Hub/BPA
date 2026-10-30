@@ -757,3 +757,15 @@ a colleague's read-only one, a group calendar I own and a team one I do not:
 13 assertions. Mine shows three, and only those three are requested; off shows
 six and requests six. The control — the same files before the change — fails
 the default, both colleague cases and the team calendar.
+
+## Calendar — the Attendees field suggests people already on your calendar
+`lib/knownPeople.ts` (pure) ranks the guests and organisers of the loaded events by how many
+they share; `NewEventPanel` takes them as `knownPeople` and draws a listbox under the invitee
+input (ARIA combobox: ↑/↓, Enter takes the highlight, Esc closes, comma/blur still add what was
+typed). The look is the Mention Picker's — avatar, name, address, an Enter hint.
+- **Source is the loaded events only** — no Contacts scope, no new call. It is as wide as the
+  weeks you have opened. Self, rooms (`@resource.calendar.google.com`), the organiser and
+  anyone already invited are never offered.
+- **Options act on `mousedown`, prevented**: the input's `onBlur` adds the half-typed text, so a
+  `click` would add the fragment before the choice was heard.
+- Not driven in a browser yet; `scripts/known-people.mjs` covers the ranking and filters.
