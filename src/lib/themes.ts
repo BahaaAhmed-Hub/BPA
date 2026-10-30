@@ -13,7 +13,7 @@
 // win against the theme and a behavioural mode could win against both, in an
 // order that depended on which one happened to run last.
 
-import { accentById, accentTokens, loadAccent, APP_SCALE } from './accent'
+import { accentById, accentTokens, loadAccent, appScale } from './accent'
 import { resetInkCache } from '@/lib/ink'
 import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore'
 
@@ -396,13 +396,14 @@ export function applyAppearance(a: Appearance = {}): void {
   applyScale()
 }
 
-/** The size of the whole app: a page zoom of `APP_SCALE`, written once at boot and
- *  again with every appearance write so nothing can leave it behind. `zoom` and
- *  not `transform`: a transform would take the fixed-position panels and the
+/** The size of the whole app: a page zoom of `appScale()` (90%; 100% on a phone), written
+ *  once at boot and again with every appearance write so nothing can leave it behind.
+ *  `zoom` and not `transform`: a transform would take the fixed-position panels and the
  *  popovers out of alignment with what they are anchored to. */
 export function applyScale(): void {
-  document.documentElement.style.zoom = String(APP_SCALE)
-  document.documentElement.style.setProperty('--app-scale', String(APP_SCALE))
+  const k = appScale()
+  document.documentElement.style.zoom = k === 1 ? '' : String(k)
+  document.documentElement.style.setProperty('--app-scale', String(k))
 }
 
 /** Keep the document in step with the three things that move it. Called once,

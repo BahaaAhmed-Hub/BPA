@@ -16,6 +16,8 @@
  *          event at exactly those times
  *   popover a picker's list opens against its button, not 10% away from it
  *   dnd    an account row dragged below the next one (dnd-kit) lands there
+ *   phone  a phone (touch, short side < 600px) is drawn at 100% — the layer is not installed
+ *   tablet a tablet (touch, short side >= 600px) is drawn at 90%
  *   drag   a goal dragged to the top of the list lands there (pointer maths
  *          against a zoomed page)
  *   modal  the Add account window is centred in the window
@@ -26,7 +28,7 @@ import { settled, watchTraffic } from './settled.mjs'
 
 const args = process.argv.slice(2)
 const port = args.find(a => /^\d+$/.test(a)) ?? '5199'
-const MODE = args.find(a => ['fixed', 'size', 'fills', 'space', 'drag', 'modal', 'calendar', 'popover', 'dnd'].includes(a)) ?? 'fixed'
+const MODE = args.find(a => ['fixed', 'size', 'fills', 'space', 'drag', 'modal', 'calendar', 'popover', 'dnd', 'phone', 'tablet', 'print'].includes(a)) ?? 'fixed'
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
 let failed = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) failed++ }
@@ -52,7 +54,10 @@ const DB = {
 const USERROW = { id: U, email: session.user.email, schedule_rules: { shared_prefs: { 'professor-compact': '0', 'professor-accent': 'sky' } } }
 
 const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] })
-const ctx = await br.newContext({ viewport: { width: 1400, height: 900 }, timezoneId: 'Africa/Cairo', locale: 'en-GB', reducedMotion: 'reduce' })
+const DEVICE = MODE === 'phone' || MODE === 'print' ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }
+  : MODE === 'tablet' ? { viewport: { width: 820, height: 1180 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }
+  : { viewport: { width: 1400, height: 900 } }
+const ctx = await br.newContext({ ...DEVICE, timezoneId: 'Africa/Cairo', locale: 'en-GB', reducedMotion: 'reduce' })
 await ctx.route('**://placeholder.supabase.co/**', async r => {
   const req = r.request(), u = req.url(), m = req.method()
   if (m === 'OPTIONS') return r.fulfill({ status: 204, headers: CORS })
@@ -233,6 +238,54 @@ if (MODE === 'popover') {
       const above = (pb.y - (drawn.y + drawn.height))
       ok('…and directly below it or directly above it (within 14px)', (gap >= -2 && gap <= 14) || (above >= -2 && above <= 14), `below gap ${gap.toFixed(1)}, above gap ${above.toFixed(1)}`)
     }
+  }
+}
+
+if (MODE === 'print') {
+  // A fingerprint of a phone's layout: where every button, heading and input is, and how big.
+  // Run against origin/main and against this branch; the two files must be identical.
+  const out = {}
+  for (const t of ['Today', 'Balance', 'Budget', 'Goals', 'Financials', 'Reports']) {
+    await tab(t); await new Promise(r => setTimeout(r, 900))
+    out[t] = await page.evaluate(() => [...document.querySelectorAll('button, a, h1, h2, h3, input, select, textarea')]
+      .map(e => { const r = e.getBoundingClientRect(); return r.width && r.height ? `${e.tagName}|${(e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24)}|${r.left.toFixed(1)}|${r.top.toFixed(1)}|${r.width.toFixed(1)}|${r.height.toFixed(1)}` : null })
+      .filter(Boolean).sort())
+  }
+  const { writeFileSync } = await import('node:fs')
+  writeFileSync(process.env.OUT, JSON.stringify(out, null, 1))
+  console.log('  fingerprint of', Object.entries(out).map(([k, v]) => `${k}:${v.length}`).join(' '))
+}
+
+if (MODE === 'phone' || MODE === 'tablet') {
+  const phone = MODE === 'phone'
+  const r = await page.evaluate(() => ({
+    zoom: document.documentElement.style.zoom, scaleVar: document.documentElement.style.getPropertyValue('--app-scale'),
+    layer: window.__zoomSpace ?? null, innerW: innerWidth, innerH: innerHeight, screenW: screen.width, screenH: screen.height,
+    coarse: matchMedia('(pointer: coarse)').matches,
+    vh100: (() => { const d = document.createElement('div'); d.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:calc(100 * var(--vh))'; document.body.append(d); const h = d.offsetHeight; d.remove(); return h })(),
+  }))
+  console.log('  ', JSON.stringify(r))
+  ok('the device is what we emulate (positive: touch, ' + (phone ? 'short side < 600' : 'short side >= 600') + ')', r.coarse && (phone ? Math.min(r.screenW, r.screenH) < 600 : Math.min(r.screenW, r.screenH) >= 600), JSON.stringify([r.coarse, r.screenW, r.screenH]))
+  if (phone) {
+    ok('a phone is drawn at 100%: no page zoom', r.zoom === '', JSON.stringify(r.zoom))
+    ok('…the scale variable says 1', r.scaleVar === '1', JSON.stringify(r.scaleVar))
+    ok('…the geometry layer is not installed', r.layer === null, String(r.layer))
+    ok('…the window is read as it is (390 x 844)', r.innerW === 390 && r.innerH === 844, `${r.innerW} x ${r.innerH}`)
+    ok('…and 100 * var(--vh) is the window height', Math.abs(r.vh100 - 844) <= 1, String(r.vh100))
+    // The phone's shell ends where its own bottom bar begins (780 of 844 on origin/main as well —
+    // measured in a worktree of that commit), and the bar reaches the bottom of the screen.
+    const fill = await page.evaluate(() => {
+      const main = document.querySelector('main')?.getBoundingClientRect()
+      const bars = [...document.querySelectorAll('nav, [data-bottom-nav], [role="tablist"]')].map(n => n.getBoundingClientRect()).filter(r => r.width > 200 && r.bottom > innerHeight - 4 && r.top > (main?.bottom ?? 0) - 4)
+      return { mainBottom: main?.bottom ?? null, barTop: bars[0]?.top ?? null, barBottom: bars[0]?.bottom ?? null }
+    })
+    console.log('  ', JSON.stringify(fill))
+    ok('the shell ends where the phone\'s own bottom bar begins', fill.barTop !== null && Math.abs(fill.mainBottom - fill.barTop) <= 3, JSON.stringify(fill))
+    ok('…and that bar reaches the bottom of the screen', fill.barBottom !== null && Math.abs(fill.barBottom - 844) <= 3, JSON.stringify(fill))
+  } else {
+    ok('a tablet is drawn at 90%', r.zoom === '0.9' && r.scaleVar === '0.9', JSON.stringify([r.zoom, r.scaleVar]))
+    ok('…with the geometry layer installed', r.layer === 0.9, String(r.layer))
+    ok('…and the window read in the app\'s units (820/0.9 x 1180/0.9)', Math.abs(r.innerW - 820 / 0.9) <= 1 && Math.abs(r.innerH - 1180 / 0.9) <= 1, `${r.innerW.toFixed(0)} x ${r.innerH.toFixed(0)}`)
   }
 }
 

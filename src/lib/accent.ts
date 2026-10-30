@@ -126,3 +126,14 @@ export function saveAccent(id: string): void {
 // in the app is a pixel inside a style object, so scaling the page is the honest
 // way to size all of it at once — what a browser's own zoom does.
 export const APP_SCALE = 0.9
+
+/** A phone: a touch screen whose short side is under 600px, in either orientation. A phone
+ *  is drawn as it was designed — at 100% — because its controls are already as small as a
+ *  thumb allows. A tablet's short side is 744px and up, and any desktop window, however
+ *  narrow, has a fine pointer; both are drawn at APP_SCALE. */
+export function isPhone(): boolean {
+  try { return matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600 } catch { return false }
+}
+
+/** The scale this device is drawn at: 1 on a phone, APP_SCALE everywhere else. */
+export const appScale = (): number => (isPhone() ? 1 : APP_SCALE)

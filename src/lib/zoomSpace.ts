@@ -1,4 +1,4 @@
-import { APP_SCALE } from './accent'
+import { appScale } from './accent'
 
 // ─── One space for every position the app reads ──────────────────────────────
 //
@@ -99,7 +99,7 @@ function install(scale: number): void {
   }
 }
 
-install(APP_SCALE)
+install(appScale())
 
 /** For a test: has the layer been installed, and at what scale. */
 export const zoomSpaceScale = (): number | undefined => (typeof window === 'undefined' ? undefined : window.__zoomSpace)

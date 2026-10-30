@@ -73,7 +73,12 @@ Every claim in those files was measured, and the method is the point:
   wrong, and to anything in an edge function.
 
 ## The app is drawn at 90% — always, and not a setting
-`APP_SCALE` (`src/lib/accent.ts`, 0.9) is a page zoom written to `<html>` at boot. Nothing stores
+`appScale()` (`src/lib/accent.ts`: `APP_SCALE` 0.9, or **1 on a phone**) is a page zoom written to
+`<html>` at boot. A phone — a touch screen whose short side is under 600px, either orientation
+(`isPhone()`) — is drawn exactly as it was designed, at 100%, with the geometry layer below not
+installed; a tablet and any desktop window are at 90%. `app-is-at-90.mjs print` fingerprints a
+phone's layout so it can be diffed against another commit (416 elements, 0 differences against
+`origin/main`). Nothing stores
 it, syncs it or turns it off, so it cannot go missing on a new address or device (which is how
 it went missing: it was a synced "compact" toggle, off by default). A page zoom is **not** a
 browser zoom, so three rules keep it honest:

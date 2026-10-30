@@ -810,8 +810,8 @@ painted from an empty `localStorage` on an address the browser has never seen (a
 move to `www.be2.life`), so it re-reads the appearance on `professor:prefsRestored`.
 - **The page's size is not a preference.** It used to be `professor-compact`, a synced toggle,
   off by default — on a new address the app came up 11% bigger ("the fonts feel bigger, the whole
-  experience is different") until a second reload. It is `APP_SCALE` now, always; see the root
-  `CLAUDE.md`. The old key is read by nothing (a device may still hold `0` or `1`), and the
+  experience is different") until a second reload. It is `appScale()` now — 90%, or 100% on a
+  phone — always; see the root `CLAUDE.md`. The old key is read by nothing (a device may still hold `0` or `1`), and the
   `compact` column in the settings table is vestigial.
 - **Deliberately not synced, so they start from defaults on a new address:** the theme
   (`professor-ui`), the calendar's view (`cal-view`), and the finance passkey
