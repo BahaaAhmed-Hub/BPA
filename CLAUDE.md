@@ -72,6 +72,26 @@ Every claim in those files was measured, and the method is the point:
 - `npm run build` before pushing. It is blind to a colour that is simply
   wrong, and to anything in an edge function.
 
+## The app is drawn at 90% — always, and not a setting
+`APP_SCALE` (`src/lib/accent.ts`, 0.9) is a page zoom written to `<html>` at boot. Nothing stores
+it, syncs it or turns it off, so it cannot go missing on a new address or device (which is how
+it went missing: it was a synced "compact" toggle, off by default). A page zoom is **not** a
+browser zoom, so three rules keep it honest:
+- **Never write a raw `Nvh` / `Ndvh` / `Nvw`.** Zoom scales viewport units, so `100vh` draws 90%
+  of the window and leaves a strip along the bottom. Write `calc(N * var(--vh))` (`--dvh`,
+  `--vw`); `node scripts/ui-guard.mjs` fails a raw one (`viewport`).
+- **Do not compensate for the zoom at a call site.** `src/lib/zoomSpace.ts` (the first import
+  in `main.tsx`) turns every scaled reading — `getBoundingClientRect`, pointer `clientX/Y` and
+  `pageX/Y`, window scroll, `innerWidth/Height`, `elementFromPoint`, IntersectionObserver
+  rects — back into the units the CSS is written in. Without it the calendar draws 08:15–09:15
+  as 07:30–09:00 and a picker's list opens 59px from its button. Code reads positions the
+  ordinary way and mixes them with `offsetWidth`, `scrollTop` and CSS lengths freely.
+- **Sizes are snapped within 0.02px** (the browser lays out in 1/64px steps): a 36px control
+  reads 36, not 35.99, so every `>= 36` test still passes.
+`node scripts/app-is-at-90.mjs 5199 [fixed|size|fills|space|calendar|popover|dnd|drag|modal]`
+measures real pixels and real pointer actions; each of `space`, `calendar`, `popover` fails with
+the layer switched off.
+
 ## Stack
 - **React 19 + TypeScript + Vite + Zustand**
 - Branch: `claude/professor-web-app-dev-tnj0uk` (current dev branch; older work was on `claude/build-professor-ai-app-sDbyz`)

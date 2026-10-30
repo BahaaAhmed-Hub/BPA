@@ -153,7 +153,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
       {/* Panel */}
       <div style={{
         width: 460,
-        maxHeight: '90vh',
+        maxHeight: 'calc(90 * var(--vh))',
         overflowY: 'auto',
         background: 'var(--sb-card)',
         borderRadius: 'var(--sb-r-card)',

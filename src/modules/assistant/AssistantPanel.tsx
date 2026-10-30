@@ -1207,7 +1207,7 @@ export function AssistantPanel({ open, onClose, minimised = false, onMinimise, o
           position: 'fixed', zIndex: 150,
           right: `calc(${rightGap(vw)}px + env(safe-area-inset-right))`,
           bottom: 'calc(24px + 72px + 14px + env(safe-area-inset-bottom))',
-          width: winW, height: 'min(640px, calc(100dvh - 200px - env(safe-area-inset-bottom)))',
+          width: winW, height: 'min(640px, calc(calc(100 * var(--dvh)) - 200px - env(safe-area-inset-bottom)))',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
           // Opaque in every theme: it is drawn over the page, and a wash that is
           // legible only when a blur lands is how two panels once read as one.

@@ -77,7 +77,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
       <div style={{
-        width: 'clamp(320px, 94vw, 430px)', maxHeight: '90vh', overflowY: 'auto',
+        width: 'clamp(320px, calc(94 * var(--vw)), 430px)', maxHeight: 'calc(90 * var(--vh))', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
         background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: 'var(--sb-shadow-frame)', padding: '18px 20px 22px',

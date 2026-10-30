@@ -79,7 +79,7 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
 
   return (
     <aside aria-label={`${book.title} — details`} style={{
-      width: narrow ? '100%' : 'clamp(300px, 32vw, 420px)', flexShrink: 0, boxSizing: 'border-box', maxHeight: '100%', overflowY: 'auto',
+      width: narrow ? '100%' : 'clamp(300px, calc(32 * var(--vw)), 420px)', flexShrink: 0, boxSizing: 'border-box', maxHeight: '100%', overflowY: 'auto',
       display: 'flex', flexDirection: 'column', gap: 12, padding: 14, paddingBottom: 56,
       background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)',
       borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-panel)',

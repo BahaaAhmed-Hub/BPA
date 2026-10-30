@@ -84,7 +84,7 @@ function zoneLabel(tz: string): string {
 // ─── Small pieces of the page ───────────────────────────────────────────────
 
 const PAGE: React.CSSProperties = {
-  minHeight: '100vh', background: 'var(--sb-page)', color: 'var(--sb-ink-1)',
+  minHeight: 'calc(100 * var(--vh))', background: 'var(--sb-page)', color: 'var(--sb-ink-1)',
   display: 'flex', flexDirection: 'column', alignItems: 'center',
   padding: '32px 16px 56px', boxSizing: 'border-box',
 }

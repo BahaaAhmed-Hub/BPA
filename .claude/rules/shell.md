@@ -804,19 +804,19 @@ the module the app opened on.
   the doors. `supabase/functions/_shared/appGuide.ts` no longer lists Dashboard
   (an edge-function file: deploys with the functions workflow).
 
-## The look follows the account, not the address
-Density (`professor-compact`, a page zoom of 0.9) and the accent are **synced** preferences,
-and they arrive *after* boot: `initAppearance()` has already painted from an empty
-`localStorage` on an address the browser has never seen (a new device, the move to
-`www.be2.life`). Nothing re-applied them, so the app stayed ~11% bigger than you left it —
-"the fonts feel bigger, the whole experience is different" — until a second reload.
-`initAppearance` now listens for `professor:prefsRestored` and re-reads the appearance.
+## The look follows the account, not the address — and the size is not part of it
+The accent is a **synced** preference that arrives *after* boot: `initAppearance()` has already
+painted from an empty `localStorage` on an address the browser has never seen (a new device, the
+move to `www.be2.life`), so it re-reads the appearance on `professor:prefsRestored`.
+- **The page's size is not a preference.** It used to be `professor-compact`, a synced toggle,
+  off by default — on a new address the app came up 11% bigger ("the fonts feel bigger, the whole
+  experience is different") until a second reload. It is `APP_SCALE` now, always; see the root
+  `CLAUDE.md`. The old key is read by nothing (a device may still hold `0` or `1`), and the
+  `compact` column in the settings table is vestigial.
 - **Deliberately not synced, so they start from defaults on a new address:** the theme
   (`professor-ui`), the calendar's view (`cal-view`), and the finance passkey
   (`finance-lock-device`; a passkey is also bound to the address it was made on, so it is
-  re-registered there — Settings → Finance → Security). These are choices made *on a
-  device*; changing that is a decision, not a bug fix.
-- `node scripts/appearance-follows-prefs.mjs 5199 [density|accent|control]` — a fresh
-  origin whose account has compact saved: the page must reach zoom 0.9 with no reload.
-  Control: with nothing saved the page stays at 100%, and the same run on the code
-  before fails.
+  re-registered there — Settings → Finance → Security). These are choices made *on a device*;
+  changing that is a decision, not a bug fix.
+- `node scripts/appearance-follows-prefs.mjs 5199 [accent|control]` — a fresh origin whose account
+  has an accent saved must reach it with no reload; with nothing saved it stays amber.

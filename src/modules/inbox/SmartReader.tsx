@@ -250,7 +250,7 @@ export function SmartReader({
       // real message — a signature, three inline images, a quoted thread —
       // was read through a letterbox. `100dvh` because a phone's toolbar
       // changes what a viewport unit means as you scroll.
-      height: 'calc(100dvh - 118px)',
+      height: 'calc(calc(100 * var(--dvh)) - 118px)',
       minHeight: 420,
       display: 'flex', flexDirection: 'column',
       background: 'var(--sb-card)',

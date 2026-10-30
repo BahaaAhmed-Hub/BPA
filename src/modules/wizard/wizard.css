@@ -28,7 +28,7 @@
 /* ── The photograph, covering the window ────────────────────────────────── */
 .wz-stage {
   position: absolute; left: 50%; top: 50%;
-  width: max(100vw, calc(100vh * 1.7872));
+  width: max(calc(100 * var(--vw)), calc(calc(100 * var(--vh)) * 1.7872));
   aspect-ratio: 1344 / 752;
   transform: translate(-50%, -50%);
   background-color: #E9C98F; background-size: cover; background-position: center;
@@ -174,7 +174,7 @@
 .wz-slot { position: absolute; z-index: 7; left: 44px; top: 0; bottom: 0; display: flex; align-items: center; pointer-events: none; }
 .wz-panel {
   position: relative; pointer-events: auto;
-  width: 324px; max-width: calc(100vw - 88px); max-height: calc(100dvh - 150px); overflow-y: auto; overflow-x: hidden;
+  width: 324px; max-width: calc(calc(100 * var(--vw)) - 88px); max-height: calc(calc(100 * var(--dvh)) - 150px); overflow-y: auto; overflow-x: hidden;
   --wz-px: 24px; --wz-pb: 18px;
   box-sizing: border-box; padding: 24px var(--wz-px) var(--wz-pb); display: flex; flex-direction: column; gap: 14px;
   background: var(--sb-overlay); color: var(--sb-ink-1);
@@ -276,7 +276,7 @@
   .wz-x { margin-left: auto; }
   .wz-slot { left: 0; right: 0; justify-content: center; }
   .wz-halo { display: none; }
-  .wz-panel { width: min(420px, calc(100vw - 24px)); max-height: calc(100dvh - 90px); }
+  .wz-panel { width: min(420px, calc(calc(100 * var(--vw)) - 24px)); max-height: calc(calc(100 * var(--dvh)) - 90px); }
   .wz-scr { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {

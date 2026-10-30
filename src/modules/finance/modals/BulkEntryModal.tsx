@@ -276,7 +276,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 1100, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
+          width: '100%', maxWidth: 1100, maxHeight: 'calc(88 * var(--vh))', display: 'flex', flexDirection: 'column',
           background: 'var(--sb-header)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
           boxShadow: 'var(--sb-shadow-frame)', padding: '18px 20px 20px',
         }}>

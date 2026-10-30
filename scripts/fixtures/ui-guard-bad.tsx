@@ -21,6 +21,10 @@ export const Bad = () => (
     <p>Team seats (coming soon)</p>
     {/* expect: loading */}
     <p>Loading…</p>
+    {/* expect: viewport */}
+    <div style={{ height: '100vh' }} />
+    {/* allow: viewport */}
+    <div style={{ height: 'calc(100 * var(--vh))' }} />
   </div>
 )
 

@@ -87,7 +87,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
         background: 'var(--sb-scrim)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
       }}>
-      <Card style={{ width: 460, maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box', padding: '20px 22px 18px' }}>
+      <Card style={{ width: 460, maxHeight: 'calc(86 * var(--vh))', overflowY: 'auto', boxSizing: 'border-box', padding: '20px 22px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em' }}>

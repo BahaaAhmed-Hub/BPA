@@ -1215,7 +1215,7 @@ export function ReflectionScreen(_props?: any) {
               {dupesOpen && dupesAt && (
                 <Card className="sb-dupes-panel" style={{
                   position: 'fixed', top: dupesAt.top, right: dupesAt.right, zIndex: 60,
-                  width: 384, maxHeight: 'min(320px, calc(100vh - 120px))', overflowY: 'auto',
+                  width: 384, maxHeight: 'min(320px, calc(calc(100 * var(--vh)) - 120px))', overflowY: 'auto',
                   padding: 12, textAlign: 'left', boxShadow: 'var(--sb-shadow-pop, 0 10px 30px -12px rgba(25,23,18,.35))',
                 }}>
                   <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5, marginBottom: 10 }}>
@@ -1509,7 +1509,7 @@ export function ReflectionScreen(_props?: any) {
             // A card beside the table, not a wall bolted to its edge — the
             // calendar's panel is a rounded frame floating on the page ground
             // and this is the same object doing the same job.
-            width: 'clamp(320px, 31vw, 420px)', flexShrink: 0, display: 'flex', flexDirection: 'column',
+            width: 'clamp(320px, calc(31 * var(--vw)), 420px)', flexShrink: 0, display: 'flex', flexDirection: 'column',
             background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)',
             borderRadius: 'var(--sb-r-frame, var(--sb-r-card))',
             boxShadow: 'var(--sb-shadow-control, 0 1px 3px rgba(25,23,18,.10))',

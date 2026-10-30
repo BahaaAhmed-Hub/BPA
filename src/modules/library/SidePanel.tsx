@@ -36,7 +36,7 @@ export function SidePanel({ label, eyebrow, narrow, onClose, actions, footer, ch
 
   return (
     <aside aria-label={label} style={{
-      width: narrow ? '100%' : 'clamp(300px, 32vw, 420px)', flexShrink: 0, boxSizing: 'border-box', maxHeight: '100%', overflowY: 'auto', scrollbarGutter: 'stable',
+      width: narrow ? '100%' : 'clamp(300px, calc(32 * var(--vw)), 420px)', flexShrink: 0, boxSizing: 'border-box', maxHeight: '100%', overflowY: 'auto', scrollbarGutter: 'stable',
       // The assistant's button is fixed to the bottom-right corner of the window, so the panel stops above it
       // instead of reserving a stripe of its own footer for it: the footer is then one full-width row.
       marginBottom: 'calc(var(--ai-fab-clear) - 8px)',

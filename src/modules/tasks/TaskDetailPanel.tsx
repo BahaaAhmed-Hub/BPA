@@ -262,8 +262,8 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
 
   return (
     <aside style={{
-      width: 'clamp(300px, 32vw, 400px)', flexShrink: 0, alignSelf: 'flex-start',
-      maxHeight: 'calc(100vh - 212px)',
+      width: 'clamp(300px, calc(32 * var(--vw)), 400px)', flexShrink: 0, alignSelf: 'flex-start',
+      maxHeight: 'calc(calc(100 * var(--vh)) - 212px)',
       background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       display: 'flex', flexDirection: 'column', minWidth: 0,
       boxShadow: 'var(--sb-shadow-control)',

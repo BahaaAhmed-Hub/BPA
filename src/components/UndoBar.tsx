@@ -73,7 +73,7 @@ export function UndoBar() {
       background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', borderRadius: 'var(--sb-r-nav)',
       padding: isFlash ? '11px 18px' : '9px 9px 9px 18px',
       boxShadow: 'var(--sb-shadow-menu)',
-      fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', maxWidth: 'min(560px, 92vw)',
+      fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', maxWidth: 'min(560px, calc(92 * var(--vw)))',
     }}>
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{visible}</span>
       {!isFlash && (

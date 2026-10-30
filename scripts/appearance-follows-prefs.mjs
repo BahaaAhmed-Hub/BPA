@@ -1,19 +1,10 @@
 /**
- * "The fonts feel bigger, the whole experience is different."
+ * The synced half of the look follows the account, on an address the browser has
+ * never seen: the accent arrives after boot, so it has to be applied when it does.
+ * (The page's size is not part of this — it is fixed at 90% and read from nothing;
+ * see app-is-at-90.mjs.)
  *
- * Compact density is a page zoom of 0.9, and it is a *synced* preference. On an
- * address the browser has never seen (the move to a custom domain, a new device)
- * localStorage is empty, so boot paints at 100%; the saved setting then arrives
- * from the server and is written to localStorage — and nothing re-applied it.
- * Everything stayed 11% bigger until a second reload.
- *
- *   node scripts/appearance-follows-prefs.mjs 5199 [density|accent|control]
- *
- *   density  compact is on the server; a fresh browser must end up at zoom 0.9
- *            with no reload
- *   accent   an accent saved on the server must reach the page's accent token
- *   control  compact is NOT on the server: the page stays at 100% (so "0.9"
- *            above is the setting arriving, not a default)
+ *   node scripts/appearance-follows-prefs.mjs 5199 [accent|control]
  */
 import { chromium } from 'playwright-core'
 import { session } from './session.mjs'
@@ -21,13 +12,13 @@ import { settled, watchTraffic } from './settled.mjs'
 
 const args = process.argv.slice(2)
 const port = args.find(a => /^\d+$/.test(a)) ?? '5199'
-const MODE = args.find(a => ['density', 'accent', 'control'].includes(a)) ?? 'density'
+const MODE = args.find(a => ['accent', 'control'].includes(a)) ?? 'accent'
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
 let failed = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) failed++ }
 
 const U = session.user.id
-const shared = MODE === 'control' ? {} : MODE === 'accent' ? { 'professor-accent': 'sky' } : { 'professor-compact': '1' }
+const shared = MODE === 'control' ? {} : { 'professor-accent': 'sky' }
 const USERROW = { id: U, email: session.user.email, schedule_rules: { shared_prefs: shared } }
 
 const br = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] })
@@ -68,13 +59,6 @@ const read = () => page.evaluate(() => ({
 }))
 
 ok('the app is up (positive: the rail is on screen)', await page.locator('[data-side-rail]').count() > 0)
-if (MODE === 'density') {
-  await until(async () => (await read()).stored === '1')
-  const s = await read()
-  ok('the saved setting arrived from the server', s.stored === '1', JSON.stringify(s))
-  await until(async () => (await read()).zoom === '0.9')
-  ok('…and the page is at the compact zoom (0.9) with no reload', (await read()).zoom === '0.9', JSON.stringify(await read()))
-}
 if (MODE === 'accent') {
   // Sky is #7FA9D8; the unfixed page stays on the default amber #F5D14E.
   await until(async () => (await read()).accent != null)
@@ -85,7 +69,7 @@ if (MODE === 'accent') {
 if (MODE === 'control') {
   await new Promise(r => setTimeout(r, 1500))
   const s = await read()
-  ok('CONTROL: nothing saved on the server, so the page stays at 100%', s.zoom === '' && s.stored == null, JSON.stringify(s))
+  ok('CONTROL: nothing saved on the server, so the accent stays the default amber', s.token.toUpperCase() === '#F5D14E' && s.accent == null, JSON.stringify(s))
 }
 await br.close()
 console.log(failed ? `\n${failed} failed` : '\nall passed')

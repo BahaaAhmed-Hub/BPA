@@ -15,7 +15,6 @@ import type { SbToken } from './themes'
 
 const KEY = 'professor-accent'
 export const ACCENT_EVENT = 'professor:accentChanged'
-export const DENSITY_EVENT = 'professor:densityChanged'
 
 export interface Accent {
   id: string
@@ -119,19 +118,11 @@ export function saveAccent(id: string): void {
   window.dispatchEvent(new CustomEvent(ACCENT_EVENT, { detail: id }))
 }
 
-// ─── Density ─────────────────────────────────────────────────────────────────
-// Every spacing in this app is a pixel inside a style object, so the honest way
-// to tighten all of it at once is to scale the page — which is what a browser's
-// own zoom does, and what the setting means.
-
-const DENSITY_KEY = 'professor-compact'
-export const COMPACT_SCALE = 0.9
-
-export function loadCompact(): boolean {
-  try { return localStorage.getItem(DENSITY_KEY) === '1' } catch { return false }
-}
-
-export function saveCompact(on: boolean): void {
-  try { localStorage.setItem(DENSITY_KEY, on ? '1' : '0') } catch { /* private mode */ }
-  window.dispatchEvent(new CustomEvent(DENSITY_EVENT, { detail: on }))
-}
+// ─── Size ────────────────────────────────────────────────────────────────────
+// The app is drawn at this fraction of the size it is written at — always, as if
+// the browser were zoomed out to 90%. It is not a preference: nothing stores it,
+// nothing syncs it and nothing can turn it off, so it cannot go missing on a new
+// address or a new device (which is exactly how it went missing). Every spacing
+// in the app is a pixel inside a style object, so scaling the page is the honest
+// way to size all of it at once — what a browser's own zoom does.
+export const APP_SCALE = 0.9

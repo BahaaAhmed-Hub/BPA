@@ -11,7 +11,7 @@ export function PageShell({ children }: PageShellProps) {
         flex: 1,
         overflow: 'auto',
         background: 'var(--sb-page)',
-        height: '100vh',
+        height: 'calc(100 * var(--vh))',
       }}
     >
       {children}

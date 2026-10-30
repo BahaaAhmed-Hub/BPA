@@ -27,7 +27,7 @@ const SRC = join(ROOT, 'src')
 const FIXTURE = join(ROOT, 'scripts', 'fixtures', 'ui-guard-bad.tsx')
 
 /** Rules that fail a bare `node scripts/ui-guard.mjs`. Add one per phase. */
-const ENFORCED = new Set(['type', 'ink', 'hex', 'palette', 'quadrant', 'emoji', 'dialog', 'unfinished', 'loading'])
+const ENFORCED = new Set(['type', 'ink', 'hex', 'palette', 'quadrant', 'emoji', 'dialog', 'unfinished', 'loading', 'viewport'])
 
 const args = process.argv.slice(2)
 const flag = n => args.includes(`--${n}`)
@@ -102,6 +102,11 @@ const perLine = (ctx, test) => {
 }
 
 const RULES = {
+  viewport: {
+    why: 'a raw vh/dvh/vw unit — the app is drawn at 90% and a page zoom scales viewport units too, so it would leave a strip along the bottom; write calc(N * var(--vh)) (CLAUDE.md, "The app is drawn at 90%")',
+    check: ctx => ctx.rel === 'src/lib/zoomSpace.ts' ? [] : perLine(ctx, (l, raw) =>
+      /(?<![\w.\-])\d+(?:\.\d+)?(?:d?vh|vw)\b/.test(l) && !/ui-guard:\s*viewport-ok/.test(raw)),
+  },
   type: {
     why: 'font sizes under 14px must be a --sb-t-* token (docs §P0.1)',
     check: ctx => perLine(ctx, (l, raw) => {

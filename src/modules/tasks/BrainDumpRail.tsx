@@ -274,7 +274,7 @@ export function BrainDumpRail({ tasks, onOpen }: {
   return (
     <>
     <div style={{
-      width: 'clamp(240px, 26vw, 360px)', flexShrink: 0,
+      width: 'clamp(240px, calc(26 * var(--vw)), 360px)', flexShrink: 0,
       alignSelf: 'start',
       background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       display: 'flex', flexDirection: 'column',

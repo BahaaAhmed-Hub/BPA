@@ -60,7 +60,7 @@ export function Sidebar() {
         minWidth: sidebarCollapsed ? 64 : 220,
         background: 'var(--sb-header)',
         borderRight: `var(--sb-border-width) solid ${'var(--sb-border)'}`,
-        height: '100vh',
+        height: 'calc(100 * var(--vh))',
         display: 'flex',
         flexDirection: 'column',
         transition: 'width 0.2s ease, min-width 0.2s ease',

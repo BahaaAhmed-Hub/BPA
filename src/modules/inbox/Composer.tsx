@@ -147,7 +147,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
     <div className="sb-blur-surface" style={{
       background: C.card, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-nav)',
       boxShadow: 'var(--sb-shadow-menu)', overflow: 'hidden',
-      display: 'flex', flexDirection: 'column', maxHeight: '68vh',
+      display: 'flex', flexDirection: 'column', maxHeight: 'calc(68 * var(--vh))',
     }}>
       {/* Which of the four this is, and a way out */}
       <div style={{
@@ -214,7 +214,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
             document.execCommand('insertHTML', false, escapeHtml(text).replace(/\n/g, '<br>'))
           }}
           style={{
-            minHeight: 150, maxHeight: '32vh', overflowY: 'auto', marginTop: 3,
+            minHeight: 150, maxHeight: 'calc(32 * var(--vh))', overflowY: 'auto', marginTop: 3,
             padding: '10px 11px', borderRadius: 'var(--sb-r-chip)', background: C.field,
             border: `var(--sb-border-width) solid ${C.border}`, outline: 'none',
             fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', lineHeight: 1.55, color: C.ink1,

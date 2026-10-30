@@ -1078,7 +1078,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         style={{ display: 'none' }} onChange={handleFileChange} />
 
       <div style={{
-        width: 'clamp(320px, 94vw, 460px)', maxHeight: '90vh', overflowY: 'auto',
+        width: 'clamp(320px, calc(94 * var(--vw)), 460px)', maxHeight: 'calc(90 * var(--vh))', overflowY: 'auto',
         boxSizing: 'border-box',
         background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: 'var(--sb-shadow-frame)',

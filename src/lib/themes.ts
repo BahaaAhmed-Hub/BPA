@@ -13,7 +13,7 @@
 // win against the theme and a behavioural mode could win against both, in an
 // order that depended on which one happened to run last.
 
-import { accentById, accentTokens, loadAccent, loadCompact, COMPACT_SCALE } from './accent'
+import { accentById, accentTokens, loadAccent, APP_SCALE } from './accent'
 import { resetInkCache } from '@/lib/ink'
 import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore'
 
@@ -393,16 +393,16 @@ export function applyAppearance(a: Appearance = {}): void {
       : accentTokens(hex, theme.isDark)
 
   applyThemeVars(theme, overlay)
-  applyDensity()
+  applyScale()
 }
 
-/** Density is a page zoom rather than a token — every spacing in this app is a
- *  pixel inside a style object — but it is still a write to the document, and
- *  those all live here. */
-export function applyDensity(on: boolean = loadCompact()): void {
-  // `zoom` and not `transform`: a transform would take the fixed-position
-  // panels and the popovers out of alignment with what they are anchored to.
-  document.documentElement.style.zoom = on ? String(COMPACT_SCALE) : ''
+/** The size of the whole app: a page zoom of `APP_SCALE`, written once at boot and
+ *  again with every appearance write so nothing can leave it behind. `zoom` and
+ *  not `transform`: a transform would take the fixed-position panels and the
+ *  popovers out of alignment with what they are anchored to. */
+export function applyScale(): void {
+  document.documentElement.style.zoom = String(APP_SCALE)
+  document.documentElement.style.setProperty('--app-scale', String(APP_SCALE))
 }
 
 /** Keep the document in step with the three things that move it. Called once,
@@ -410,7 +410,6 @@ export function applyDensity(on: boolean = loadCompact()): void {
 export function initAppearance(): void {
   applyAppearance()
   window.addEventListener('professor:accentChanged', () => applyAppearance())
-  window.addEventListener('professor:densityChanged', () => applyDensity())
   // The synced half of this arrives *after* boot: a browser that has never seen
   // this address (a new device, a new domain) paints at its defaults, and the
   // account's saved density and accent land in localStorage a moment later with

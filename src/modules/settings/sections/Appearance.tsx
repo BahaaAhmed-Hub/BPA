@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { Check } from 'lucide-react'
-import { ACCENTS, loadAccent, saveAccent, loadCompact, saveCompact, COMPACT_SCALE } from '@/lib/accent'
+import { ACCENTS, loadAccent, saveAccent } from '@/lib/accent'
 import { useUIStore } from '@/store/uiStore'
 import { THEMES, resolveThemeId, applyAppearance } from '@/lib/themes'
 import { ICON, STROKE } from '@/lib/type'
 import { type AppSettings } from '../model'
-import { FieldRow, Toggle } from '../ui'
 
 // NotificationsSection merged into NotificationsMatrixSection (Push/Mail/Digest per event)
 // Legacy reminder fields (morning brief time, wind-down) are now in the AI / Schedule sections.
@@ -13,7 +12,6 @@ import { FieldRow, Toggle } from '../ui'
 export function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   const { setThemeId } = useUIStore()
   const [accent, setAccent] = useState(() => loadAccent())
-  const [compact, setCompact] = useState(() => loadCompact())
 
   function pickTheme(id: string) {
     set({ theme: id })
@@ -85,10 +83,6 @@ export function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial
           })}
         </div>
       </div>
-
-      <FieldRow label="Compact density" sub={`Everything ${Math.round((1 - COMPACT_SCALE) * 100)}% smaller, so more fits on screen`}>
-        <Toggle checked={compact} onChange={v => { setCompact(v); saveCompact(v); set({ compact: v }) }} />
-      </FieldRow>
 
       {/* ── Theme ────────────────────────────────────────────────────────────
           Each tile is the theme itself: its page behind, its card on top, its
