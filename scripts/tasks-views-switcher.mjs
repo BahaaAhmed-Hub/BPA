@@ -44,6 +44,7 @@ await ctx.route('**://placeholder.supabase.co/**', r => {
 await ctx.route('**://*.googleapis.com/**', r => r.fulfill({ json: { items: [], threads: [], labels: [] }, headers: CORS }))
 const page = await ctx.newPage()
 page.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 160)))
+await page.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
 await page.addInitScript(([s]) => {
   if (!sessionStorage.getItem('seeded')) {   // seed once: a reload must keep what the page itself wrote
     sessionStorage.setItem('seeded', '1')

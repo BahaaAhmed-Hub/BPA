@@ -6,6 +6,7 @@
  */
 import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
+import { readEvery } from '@/lib/readEvery'
 import type {
   Book, BookFormat, BookSource, BookStatus, Bookmark, BookmarkKind, LibList, ListBook, ListKind,
   Follow, FollowKind, FollowNews, Note, PlanPer, QuoteReview, ReadingGoal, GoalKind, ReadingPlan, ReadingSession, SessionKind, NoteScope, Quote, QuoteKind,
@@ -100,10 +101,11 @@ export interface LibraryData { books: Book[]; lists: LibList[]; links: ListBook[
  *  caller must keep what it has. `'missing'` means the tables are not there
  *  (migration 20260025 has not run), which deserves its own sentence. */
 export async function loadLibrary(): Promise<LibraryData | null | 'missing'> {
+  // Each read in pages: the server cuts one at 1,000 rows without saying so.
   const [b, l, k] = await Promise.all([
-    supabase.from('library_books').select('*').order('shelf_order').order('added_at'),
-    supabase.from('library_lists').select('*').order('sort_order').order('created_at'),
-    supabase.from('library_list_books').select('*'),
+    readEvery<BookRow>((x, y) => supabase.from('library_books').select('*').order('shelf_order').order('added_at').order('id').range(x, y), r => r.id),
+    readEvery<ListRow>((x, y) => supabase.from('library_lists').select('*').order('sort_order').order('created_at').order('id').range(x, y), r => r.id),
+    readEvery<LinkRow>((x, y) => supabase.from('library_list_books').select('*').order('list_id').order('book_id').range(x, y), r => `${r.list_id}|${r.book_id}`),
   ])
   for (const r of [b, l, k]) {
     if (r.error) {
@@ -225,9 +227,9 @@ export interface LibraryExtras { quotes: Quote[]; notes: Note[]; bookmarks: Book
  *  is not there yet. `null` is a failed read, which is not an empty answer. */
 export async function loadLibraryExtras(): Promise<LibraryExtras | null | 'missing'> {
   const [q, n, b] = await Promise.all([
-    supabase.from('library_quotes').select('*').order('created_at'),
-    supabase.from('library_notes').select('*').order('created_at'),
-    supabase.from('library_bookmarks').select('*').order('created_at'),
+    readEvery<QuoteRow>((x, y) => supabase.from('library_quotes').select('*').order('created_at').order('id').range(x, y), r => r.id),
+    readEvery<NoteRow>((x, y) => supabase.from('library_notes').select('*').order('created_at').order('id').range(x, y), r => r.id),
+    readEvery<BookmarkRow>((x, y) => supabase.from('library_bookmarks').select('*').order('created_at').order('id').range(x, y), r => r.id),
   ])
   for (const r of [q, n, b]) {
     if (r.error) return r.error.code === '42P01' || r.error.code === 'PGRST205' ? 'missing' : null
@@ -301,9 +303,11 @@ const fromSession = (s: ReadingSession, userId: string) => ({
 
 /** Read on its own like follows: without 20260030 the shelf is untouched. */
 export async function loadSessions(): Promise<ReadingSession[] | null | 'missing'> {
-  const r = await supabase.from('library_sessions').select('*').order('on_date', { ascending: false }).order('created_at', { ascending: false })
-  if (r.error) return r.error.code === '42P01' || r.error.code === 'PGRST205' ? 'missing' : null
-  return (r.data as SessionRow[]).map(toSession)
+  const r = await readEvery<SessionRow>((x, y) =>
+    supabase.from('library_sessions').select('*').order('on_date', { ascending: false }).order('created_at', { ascending: false }).order('id').range(x, y),
+    s => s.id)
+  if (r.error || !r.data) return r.error?.code === '42P01' || r.error?.code === 'PGRST205' ? 'missing' : null
+  return r.data.map(toSession)
 }
 export async function saveSession(s: ReadingSession): Promise<void> {
   markLocalWrite('library')

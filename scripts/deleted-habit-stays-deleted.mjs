@@ -50,7 +50,14 @@ await ctx.route('**://placeholder.supabase.co/**', r => { const q=r.request(); c
     if(!PUSH) return j({ message:'permission denied for table habits' }, 403)
     return j([])
   }
-  if(u.pathname.endsWith('/habit_logs')) return j(q.method()==='GET' ? logs : [])
+  if(u.pathname.endsWith('/habit_logs')){
+    if(q.method()!=='GET') return j([])
+    // The server pages: `limit`/`offset` are honoured and any one answer stops at 1,000 rows, as
+    // PostgREST's does. A stub that returned the same rows for every page would have the app asking
+    // for ever — and could not have shown it.
+    const off=Number(u.searchParams.get('offset')||0), lim=Number(u.searchParams.get('limit')||1e9)
+    return j(logs.slice(off, off+Math.min(lim,1000)))
+  }
   return j([]) })
 await ctx.addInitScript(s=>{try{
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))

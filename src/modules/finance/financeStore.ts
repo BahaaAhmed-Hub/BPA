@@ -241,7 +241,8 @@ export const useFinanceStore = create<FinanceState>()(
                  goals, budgets] = await Promise.all([
             loadAccounts().catch(() => [] as Awaited<ReturnType<typeof loadAccounts>>),
             loadCategories().catch(() => [] as Awaited<ReturnType<typeof loadCategories>>),
-            loadTransactions(year).catch(() => [] as Awaited<ReturnType<typeof loadTransactions>>),
+            // null means the read failed: keep the entries this device has rather than blanking the ledger.
+            loadTransactions(year).catch(() => null),
             loadPlans(year).catch(() => [] as Awaited<ReturnType<typeof loadPlans>>),
             loadActualsOverride(year).catch(() => [] as Awaited<ReturnType<typeof loadActualsOverride>>),
             loadCellComments(year).catch(() => [] as Awaited<ReturnType<typeof loadCellComments>>),
@@ -290,7 +291,8 @@ export const useFinanceStore = create<FinanceState>()(
           // not place any of it. Anything dated today or earlier is given its
           // own date as the day the money moved; anything dated ahead is left
           // alone, because that money genuinely has not moved yet.
-          const mappedTransactions: Transaction[] = transactions.map(txFromRow)
+          const txFailed = transactions === null
+          const mappedTransactions: Transaction[] = (transactions ?? []).map(txFromRow)
 
           // A transfer whose destination the server could not store keeps it
           // from here, or it lands nowhere and the card stops moving.
@@ -301,7 +303,7 @@ export const useFinanceStore = create<FinanceState>()(
           // Whether the server can hold a payment date at all. A row that came
           // back without the key means the column is not there yet, and no
           // entry can be said to be unpaid until it is.
-          setPaidAtSupported(transactions.length === 0 || transactions.some(r => 'paid_at' in r))
+          if (transactions) setPaidAtSupported(transactions.length === 0 || transactions.some(r => 'paid_at' in r))
 
           // Nothing is stamped paid on the way in any more.
           //
@@ -344,7 +346,7 @@ export const useFinanceStore = create<FinanceState>()(
           set({
             accounts: withLocalLimits(mappedAccounts),
             categories: mappedCategories,
-            transactions: mappedTransactions,
+            transactions: txFailed ? get().transactions : mappedTransactions,
             plans,
             overrides,
             comments,

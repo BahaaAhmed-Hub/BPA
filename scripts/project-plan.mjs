@@ -80,6 +80,7 @@ await ctx.route('**://api.anthropic.com/**', r => {
   if (status !== 200) return r.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify({ type: 'error', error: { type: 'api_error', message: 'overloaded' } }) })
   return r.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ id: 'm1', type: 'message', role: 'assistant', model: 'claude-x', stop_reason: 'end_turn', stop_sequence: null, content: [{ type: 'text', text }], usage: { input_tokens: 1, output_tokens: 1 } }) })
 })
+await ctx.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
 await ctx.addInitScript(([s, withKey]) => { try {
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'projects', themeId: 'sunlit-bento' }, version: 0 }))

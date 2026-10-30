@@ -62,6 +62,7 @@ await ctx.route('**://www.googleapis.com/**', r => {
 await ctx.route('**://oauth2.googleapis.com/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
 
 const START = MODE === 'calendar' ? 'calendar' : 'morning'
+await ctx.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
 await ctx.addInitScript(([s, cos, start]) => { try {
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: start, themeId: 'sunlit-bento' }, version: 0 }))

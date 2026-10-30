@@ -116,6 +116,7 @@ await ctx.route('**://*.googleapis.com/**', r => {
   return r.fulfill({ headers: cors, json: { items: [] } })
 })
 const CALS = [{ id: 'primary', summary: 'Work', backgroundColor: '#7F77DD', primary: true, accessRole: 'owner', accountEmail: 'a@x.com' }]
+await ctx.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
 await ctx.addInitScript(([s, start, view, cals]) => { try {
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: start, themeId: 'sunlit-bento' }, version: 0 }))

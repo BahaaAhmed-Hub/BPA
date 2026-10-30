@@ -52,6 +52,7 @@ await ctx.route('**://www.googleapis.com/**', r => {
   if (u.pathname.endsWith('/threads')) return j({ threads: [] })
   return j({})
 })
+await ctx.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
 await ctx.addInitScript(s=>{try{
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('professor-ui', JSON.stringify({state:{activeModule:'inbox',themeId:'sunlit-bento'},version:0}))

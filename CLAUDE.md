@@ -97,6 +97,35 @@ browser zoom, so three rules keep it honest:
 measures real pixels and real pointer actions; each of `space`, `calendar`, `popover` fails with
 the layer switched off.
 
+## A read of a table that grows must page — the server cuts a select at 1,000 rows, silently
+PostgREST answers any single read with at most 1,000 rows and says nothing when it has cut the
+answer short, so a plain `.select()` is correct **until the day the table passes 1,000 rows** and
+then returns the *oldest* 1,000. `habit_logs` did exactly that (six habits × 170 days): the record
+arrived five days short, and because `loadFromDB` replaces the device's own copy with the answer,
+a device that had the last five days lost them at the next sync — "I filled the habits till today
+and can't find the last 5 days". Nothing was deleted; the rows were on the server the whole time.
+- **`readEvery(page, keyOf?)` in `src/lib/dbSync.ts`** reads in pages, in an order that cannot
+  shuffle between pages (`order('date').order('habit_id')`), until a page is empty — or brings
+  nothing new (a server that ignores the range), or after 500 pages. Use it for any table a person
+  adds to every day.
+- **A failed read throws; it does not return `{}`.** The store's `catch` is "offline, keep local";
+  an empty result is what it writes over the device.
+- **Every table that grows now pages**: `habit_logs`; `finance_transactions` (the year, a span of
+  years, every entry, the unpaid ones, the paid-in-the-future ones); `tasks` (the load **and** the
+  save's stale-id check — past the ceiling a task deleted here could never be deleted there);
+  `mail_smart_threads`; `google_event_metadata`; `shopping_items` and `shopping_price_snapshots`
+  (the fastest to fill: a row per item per price check); the library's books, lists, links, quotes,
+  notes, bookmarks and reading sessions. Bounded tables (accounts, categories, goals, budgets, plans,
+  stores, groups, follows) stay plain selects.
+- **A failed page is an error, never "nothing"**: the ledger, habit logs and tasks throw or return
+  the empty the store already ignores; mail, shopping and the library return `null`. `financeStore`
+  keeps the entries it has when the year could not be read — it used to blank the ledger.
+- **`node scripts/reads-past-1000.mjs`** bundles the *real* loaders against a fake server that
+  enforces the ceiling, honours `range`/`order`/`in`/`eq`/`gte`/`lte`/`gt`/`is`/`not`, records every
+  delete and can fail a page — 27 claims, no browser. `SRC=<checkout>` runs it against other code:
+  on the code before paging, **25 of 27 fail** (every table cut to exactly 1,000).
+  **A new loader of a table a person adds to must use `readEvery` and get a line there.**
+
 ## Stack
 - **React 19 + TypeScript + Vite + Zustand**
 - Branch: `claude/professor-web-app-dev-tnj0uk` (current dev branch; older work was on `claude/build-professor-ai-app-sDbyz`)

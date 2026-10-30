@@ -662,7 +662,7 @@ for (const theme of THEMES) {
       const x = [...document.querySelectorAll('button')].find(e => /Mark done/i.test(e.getAttribute('aria-label') ?? e.title ?? ''))
       if (!x) return null
       const r = x.getBoundingClientRect()
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+      const S = window.__zoomSpace ?? 1; return { x: (r.x + r.width / 2) * S, y: (r.y + r.height / 2) * S }
     })
     if (!at) throw new Error('no done tick on the first event')
     await page.mouse.move(at.x, at.y); await page.waitForTimeout(120); await page.mouse.down(); await page.mouse.up()

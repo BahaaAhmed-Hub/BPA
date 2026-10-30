@@ -102,6 +102,7 @@ await ctx.addInitScript(s => { try {
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'calendar', themeId: 'sunlit-bento' }, version: 0 }))
   localStorage.setItem('google_provider_token', 'stub-token')
+  localStorage.setItem('bpa-wizard-done', '1')   // the setup guide (PR #62) covers a brand-new account's page
   localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
 } catch { /* quota */ } }, session)
 
@@ -149,10 +150,12 @@ if (MODE === 'inert') {
   const r = await box.boundingBox()
   ok('the box is on the grid', !!r)
   if (!r) { await b.close(); process.exit(1) }
+  // The page reports positions in the app's own units (lib/zoomSpace.ts); the mouse and boundingBox work in screen pixels.
+  const S = await p.evaluate(() => window.__zoomSpace ?? 1)
   const atCentre = await p.evaluate(({ x, y }) => {
     const el = document.elementFromPoint(x, y)
     return { tag: el?.tagName ?? null, open: !!el?.closest('[data-open-hours]') }
-  }, { x: r.x + r.width / 2, y: r.y + r.height / 2 })
+  }, { x: (r.x + r.width / 2) / S, y: (r.y + r.height / 2) / S })
   ok('out of the mode the box is not what the pointer hits',
      atCentre.open === false, JSON.stringify(atCentre))
 
@@ -167,7 +170,7 @@ if (MODE === 'inert') {
     const g = document.querySelector('[data-cal-cols]')?.parentElement
     return g ? { top: g.getBoundingClientRect().top, scroll: g.scrollTop } : { top: 0, scroll: 0 }
   })
-  const yOf = min => sc.top + (min / 60) * hourPx - sc.scroll
+  const yOf = min => S * (sc.top + (min / 60) * hourPx - sc.scroll)
   const x = col.x + col.width / 2
   await p.mouse.move(x, yOf(690))
   await p.mouse.down()

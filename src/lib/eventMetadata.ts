@@ -8,6 +8,7 @@
  */
 
 import { supabase } from './supabase'
+import { readEvery } from './readEvery'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,23 +63,25 @@ export async function upsertEventStatus(
 }
 
 export async function loadAllEventMetadata(): Promise<EventMetadataRow[]> {
-  const { data, error } = await supabase
-    .from('google_event_metadata')
-    .select('*')
-    .order('updated_at', { ascending: false })
+  // In pages: one row per event you ever annotated, and the server cuts one read at 1,000.
+  const { data, error } = await readEvery<EventMetadataRow>((a, b) =>
+    supabase.from('google_event_metadata').select('*')
+      .order('updated_at', { ascending: false }).order('event_id').range(a, b),
+    r => r.event_id as string)
 
   if (error) {
     console.warn('[eventMetadata] loadAll error:', error)
     return []
   }
-  return (data ?? []) as EventMetadataRow[]
+  return data ?? []
 }
 
 export async function loadEventStatusMap(): Promise<Record<string, EventStatus>> {
-  const { data, error } = await supabase
-    .from('google_event_metadata')
-    .select('event_id, status')
-    .not('status', 'is', null)
+  const { data, error } = await readEvery<{ event_id: string; status: string | null }>((a, b) =>
+    supabase.from('google_event_metadata').select('event_id, status')
+      .not('status', 'is', null)
+      .order('event_id').range(a, b),
+    r => r.event_id)
 
   if (error) {
     console.warn('[eventMetadata] loadStatusMap error:', error)

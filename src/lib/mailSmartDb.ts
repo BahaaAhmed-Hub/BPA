@@ -8,6 +8,7 @@
 //  re-analyse thirty days of mail every time the table was unreachable.
 
 import { supabase } from '@/lib/supabase'
+import { readEvery } from '@/lib/readEvery'
 import type { SmartSection, ReplyState } from '@/lib/mailSmart'
 import type { MailKind } from '@/lib/mailKinds'
 
@@ -59,15 +60,18 @@ export async function loadSmartThreads(
   if (tableMissing || accounts.length === 0) return null
   const userId = await uid()
   if (!userId) return null
-  const { data, error } = await supabase
-    .from('mail_smart_threads')
-    .select('*')
-    .eq('user_id', userId)
-    .in('account_email', accounts)
-    .gte('last_at', since.toISOString())
-    .order('last_at', { ascending: false })
+  // In pages: a busy mailbox holds more than the server's 1,000-row ceiling inside the window, and
+  // the answer is cut silently (newest first here, so the *oldest* threads would drop — but the
+  // order is only stable, and the cut only honest, if every page is read).
+  const { data, error } = await readEvery<SmartRow>((a, b) =>
+    supabase.from('mail_smart_threads').select('*')
+      .eq('user_id', userId)
+      .in('account_email', accounts)
+      .gte('last_at', since.toISOString())
+      .order('last_at', { ascending: false }).order('account_email').order('thread_id').range(a, b),
+    r => `${r.account_email}|${r.thread_id}`)
   if (error) { noteMissing(error); return null }
-  return (data ?? []) as SmartRow[]
+  return data ?? []
 }
 
 export async function saveSmartThreads(rows: Omit<SmartRow, 'analyzed_at'>[]): Promise<void> {

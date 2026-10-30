@@ -65,6 +65,7 @@ async function launch({ width = 1280, height = 900, stored = null } = {}) {
     localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'morning', themeId: 'sunlit-bento' }, version: 0 }))
     localStorage.setItem('professor-ai-config', JSON.stringify({ provider: 'anthropic', anthropicKey: 'sk-ant-test' }))
     localStorage.setItem('assistant-persona', JSON.stringify({ name: 'Beau', asked: true }))
+    localStorage.setItem('bpa-wizard-done', '1')   // the setup guide (PR #62) covers a brand-new account's page
     if (st && !localStorage.getItem('assistant-window-width')) localStorage.setItem('assistant-window-width', st)
   }, [session, stored])
   const p = await ctx.newPage()
@@ -85,8 +86,10 @@ async function say(p, text) {
 }
 async function drag(p, dx) {
   const g = await rect(p, '[role="separator"][aria-label="Resize the assistant"]')
-  const y = g.y + g.h / 2, x0 = g.x + 4
-  await p.mouse.move(x0, y); await p.mouse.down(); await p.mouse.move(x0 + dx / 2, y); await p.mouse.move(x0 + dx, y); await p.mouse.up()
+  // The page reports positions in the app's own units (lib/zoomSpace.ts); the mouse works in screen pixels.
+  const S = await p.evaluate(() => window.__zoomSpace ?? 1)
+  const y = (g.y + g.h / 2) * S, x0 = (g.x + 4) * S
+  await p.mouse.move(x0, y); await p.mouse.down(); await p.mouse.move(x0 + (dx / 2) * S, y); await p.mouse.move(x0 + dx * S, y); await p.mouse.up()
 }
 
 // ── 1 · the button ─────────────────────────────────────────────────────────
@@ -116,7 +119,9 @@ ok('pressing the button opens the window', (await shown(p)) === 'true')
 ok('…and open, it still is not one', await dialogs() === 0)
 const w = await rect(p, WIN), f2 = await rect(p, FAB)
 ok('it does not run top to bottom — there is page above it and the button below it', w.y > 120 && w.bottom < f2.y && w.h <= 640, `y=${w.y} h=${w.h} bottom=${w.bottom} button.y=${f2.y}`)
-ok('it sits in the corner with the button’s own margin', Math.abs(1280 - w.right - 24) <= 1, `gap ${1280 - w.right}`)
+// The page measures in the app's own units (lib/zoomSpace.ts), so the window's width is read from the page, not assumed.
+const vw = await p.evaluate(() => innerWidth)
+ok('it sits in the corner with the button’s own margin', Math.abs(vw - w.right - 24) <= 1, `gap ${vw - w.right}`)
 ok('it is the default width', Math.abs(w.w - 420) <= 1, `${w.w}`)
 ok('and it has all four edges — a card, not a column', await p.locator(WIN).evaluate(el => { const c = getComputedStyle(el); return c.borderLeftWidth !== '0px' && c.borderTopWidth !== '0px' && c.borderRightWidth !== '0px' && c.borderBottomWidth !== '0px' && c.borderTopLeftRadius !== '0px' }))
 ok('the page behind it is still there to be reached: its left half is the page, not the window', await p.evaluate(() => !document.elementFromPoint(300, 500)?.closest('[data-assistant-window]')))
@@ -176,10 +181,11 @@ await ctx.close(); delay = 0
 ;({ p, ctx } = await launch())
 await p.locator(FAB).click(); await wait(p, 600)
 const g0 = await rect(p, '[role="separator"][aria-label="Resize the assistant"]')
-ok('the handle is the window’s left edge, full height', Math.abs(g0.x - (await rect(p, WIN)).x) <= 1 && g0.h > 300, JSON.stringify(g0))
+// A 1px border is drawn as one whole device pixel at 90%, which is 1.11 app units; a browser zoomed to 90% does the same.
+ok('the handle is the window’s left edge, full height', Math.abs(g0.x - (await rect(p, WIN)).x) <= 1.5 && g0.h > 300, JSON.stringify(g0))
 await drag(p, -120); await wait(p, 200)
 ok('dragging its left edge 120px left widens it by 120px', Math.abs((await rect(p, WIN)).w - 540) <= 2, `${(await rect(p, WIN)).w}`)
-ok('the right edge did not move', Math.abs(1280 - (await rect(p, WIN)).right - 24) <= 1)
+ok('the right edge did not move', Math.abs((await p.evaluate(() => innerWidth)) - (await rect(p, WIN)).right - 24) <= 1)
 ok('and it is still open — a drag is not an outside click', (await shown(p)) === 'true')
 ok('the width is kept, as the number that was seen', (await p.evaluate(() => localStorage.getItem('assistant-window-width'))) === String(Math.round((await rect(p, WIN)).w)))
 await drag(p, -2000); await wait(p, 200)
@@ -207,7 +213,8 @@ await ctx.close()
 ;({ p, ctx } = await launch({ width: 390, height: 800, stored: '600' }))
 await p.locator(FAB).click(); await wait(p, 600)
 const ph = await rect(p, WIN)
-ok('on a phone the window fits the screen: 12px in from each side', Math.abs(ph.w - 366) <= 1 && Math.abs(ph.right - (390 - 12)) <= 1 && ph.x >= 11, JSON.stringify(ph))
+const phW = await p.evaluate(() => innerWidth)   // 390 screen px = 433 app units at 90%
+ok('on a phone the window fits the screen: 12px in from each side', Math.abs(ph.w - (phW - 24)) <= 1 && Math.abs(ph.right - (phW - 12)) <= 1 && ph.x >= 11, JSON.stringify(ph))
 ok('and is still a floating window, with the button below it', ph.y > 40 && ph.bottom < (await rect(p, FAB)).y)
 ok('the stored choice is NOT overwritten by the screen that could not hold it', (await p.evaluate(() => localStorage.getItem('assistant-window-width'))) === '600')
 await p.setViewportSize({ width: 1280, height: 900 }); await wait(p, 400)

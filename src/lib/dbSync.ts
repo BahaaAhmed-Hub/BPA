@@ -4,6 +4,10 @@
  */
 import { supabase } from './supabase'
 import { reportSyncGap, clearSyncGap } from './syncStatus'
+// `readEvery` — reading a growing table in pages — lives in ./readEvery so the finance, library,
+// shopping, mail and calendar loaders can use it without importing this file.
+import { readEvery } from './readEvery'
+export { readEvery }
 import type { DbCompany, DbHabit, DbHabitLog } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -383,12 +387,16 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
   const session = await getSession()
   const userId  = session.user.id
 
-  // Delete rows not in local list
-  const { data: existing } = await supabase
-    .from('tasks').select('id').eq('user_id', userId)
-  const existingIds = (existing ?? []).map((r: { id: string }) => r.id)
-  const keepIds     = tasks.map(t => t.id)
-  const toDelete    = existingIds.filter((id: string) => !keepIds.includes(id))
+  // Delete rows not in local list. Read in pages (see readEvery): a read cut at 1,000 rows would
+  // leave every task past it undeletable, and a read that failed part-way must not be mistaken for
+  // "the server holds nothing more" — so on an error nothing is deleted this time.
+  const { data: existing, error: existingErr } = await readEvery<{ id: string }>((a, b) =>
+    supabase.from('tasks').select('id').eq('user_id', userId)
+      .order('created_at', { ascending: true }).order('id', { ascending: true }).range(a, b),
+    r => r.id)
+  const existingIds = existingErr ? [] : (existing ?? []).map(r => r.id)
+  const keepIds     = new Set(tasks.map(t => t.id))
+  const toDelete    = existingIds.filter(id => !keepIds.has(id))
   if (toDelete.length) {
     await supabase.from('tasks').delete().in('id', toDelete)
   }
@@ -474,9 +482,14 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
 export async function loadTasksFromDB(): Promise<TaskRow[]> {
   const session = await getSession()
   const userId  = session.user.id
-  const { data, error } = await supabase
-    .from('tasks').select('*').eq('user_id', userId).order('created_at', { ascending: true })
-  if (error || !data) return []
+  // In pages: the server cuts one read at 1,000 rows, oldest first, and `loadFromDB` keeps only the
+  // local tasks the answer also contains — so an account past 1,000 tasks lost its newest ones from
+  // the device at every sync, with every one of them still on the server.
+  const { data, error } = await readEvery<Record<string, unknown>>((a, b) =>
+    supabase.from('tasks').select('*').eq('user_id', userId)
+      .order('created_at', { ascending: true }).order('id', { ascending: true }).range(a, b),
+    r => r.id as string)
+  if (error || !data) return []     // the store treats an empty answer as "nothing to merge" and keeps what it has
 
   const STATIC_TAGS = new Set(['teradix', 'dxtech', 'consulting', 'personal'])
   if ((data as Record<string, unknown>[]).some(r => 'project_id' in r)) taskProjectColumns = true
@@ -728,9 +741,13 @@ export async function saveHabitLogsToDB(logs: HabitLogs, quantities?: HabitQuant
   // never deleted, so the row stayed on the server and the next load put the
   // tick straight back. It did not survive a reload, let alone reach the other
   // device.
-  const { data: existing } = await supabase
-    .from('habit_logs').select('id, habit_id, date').eq('user_id', userId)
-  const stale = (existing ?? [])
+  const { data: existing, error: existingErr } = await readEvery<{ id: string; habit_id: string; date: string }>((a, b) =>
+    supabase.from('habit_logs').select('id, habit_id, date').eq('user_id', userId)
+      .order('date', { ascending: true }).order('habit_id', { ascending: true }).range(a, b),
+    r => `${r.habit_id}|${r.date}`)
+  // A read that failed part-way is not "the server has nothing": deleting against it would
+  // call every row it never saw stale.
+  const stale = existingErr ? [] : (existing ?? [])
     .filter((r: { habit_id: string; date: string }) => !keep.has(`${r.habit_id}|${r.date}`))
     .map((r: { id: string }) => r.id)
   if (stale.length) await supabase.from('habit_logs').delete().in('id', stale)
@@ -795,14 +812,21 @@ export async function loadHabitLogsFromDB(): Promise<{ logs: HabitLogs; quantiti
   let withQuantity = true
   let rows: { habit_id: string; date: string; quantity?: number | null; completed?: boolean }[] = []
 
-  const full = await supabase
-    .from('habit_logs').select('habit_id, date, quantity, completed').eq('user_id', userId)
+  type LogRow = { habit_id: string; date: string; quantity?: number | null; completed?: boolean }
+  const keyOfLog = (r: LogRow) => `${r.habit_id}|${r.date}`
+  const full = await readEvery<LogRow>((a, b) =>
+    supabase.from('habit_logs').select('habit_id, date, quantity, completed').eq('user_id', userId)
+      .order('date', { ascending: true }).order('habit_id', { ascending: true }).range(a, b), keyOfLog)
   if (full.error) {
-    if (!columnProblem(full.error)) return { logs: {}, quantities: null }
+    // A failed read is not an empty record. Returning `{}` here made the store write nothing over
+    // the logs this device holds; throwing lands in its `catch` — "offline, keep local" — which is
+    // what that guard is for.
+    if (!columnProblem(full.error)) throw new Error(full.error.message)
     withQuantity = false
-    const bare = await supabase
-      .from('habit_logs').select('habit_id, date, completed').eq('user_id', userId)
-    if (bare.error || !bare.data) return { logs: {}, quantities: null }
+    const bare = await readEvery<LogRow>((a, b) =>
+      supabase.from('habit_logs').select('habit_id, date, completed').eq('user_id', userId)
+        .order('date', { ascending: true }).order('habit_id', { ascending: true }).range(a, b), keyOfLog)
+    if (bare.error || !bare.data) throw new Error(bare.error?.message ?? 'habit logs could not be read')
     rows = bare.data
   } else {
     rows = full.data ?? []

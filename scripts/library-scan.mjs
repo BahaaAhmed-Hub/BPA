@@ -67,6 +67,7 @@ async function newPage(init = '') {
     return json(r, { items: [] }, 200, cors)
   })
   await ctx.route('https://covers.openlibrary.org/**', r => r.fulfill({ status: 404, headers: cors, body: '' }))
+  await ctx.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
   await ctx.addInitScript(s => { try {
     localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
     localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'library', themeId: 'sunlit-bento' }, version: 0 }))

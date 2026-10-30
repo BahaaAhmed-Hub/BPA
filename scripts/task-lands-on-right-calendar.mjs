@@ -117,7 +117,8 @@ if (WHICH === 'planner' || WHICH === 'planner-ok') {
       const cs = getComputedStyle(row)
       if (cs.opacity === '1') {
         const r = row.getBoundingClientRect()
-        if (r.height > 20 && r.top > 80) return { x: r.x + r.width * 0.6, y: r.y + r.height / 2, label: (sp.textContent||'').trim() }
+        const S = window.__zoomSpace ?? 1   // page units -> screen pixels, for the mouse
+        if (r.height > 20 && r.top > 80) return { x: (r.x + r.width * 0.6) * S, y: (r.y + r.height / 2) * S, label: (sp.textContent||'').trim() }
       }
     }
     return null
@@ -134,7 +135,7 @@ if (WHICH === 'planner' || WHICH === 'planner-ok') {
       for (let i = 0; i < 6 && n; i++, n = n.parentElement) {
         const r = n.getBoundingClientRect()
         if (r.width > 140 && r.height > 28 && r.x > window.innerWidth * 0.5)
-          return { x: r.x + r.width/2, y: r.y + r.height/2, w: r.width, h: r.height }
+          { const S = window.__zoomSpace ?? 1; return { x: (r.x + r.width/2) * S, y: (r.y + r.height/2) * S, w: r.width * S, h: r.height * S } }
       }
     }
     return null
