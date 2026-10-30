@@ -81,7 +81,7 @@ async function newPage(init = '') {
   const requests = []
   p.on('request', r => requests.push(r.url()))
   p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx, requests }
 }
 
@@ -95,7 +95,7 @@ const streamsEnded = p => p.evaluate(() => window.__streams.length > 0 && window
 {
   const { p, ctx } = await newPage()
   const u = await p.evaluate(async () => {
-    const m = await import('/BPA/src/modules/library/isbn.ts')
+    const m = await import('/src/modules/library/isbn.ts')
     return { a: m.parseIsbn('978-1-61268-019-4'), b: m.parseIsbn(' 9781612680194 '), c: m.parseIsbn('1-61268-019-4'), bad: m.parseIsbn('9781612680195'), mag: m.parseIsbn('9771234567003'),
       ean: m.parseIsbn('5012345678900'), short: m.parseIsbn('12345'), x: m.parseIsbn('0-8044-2957-X'), x2: m.parseIsbn('080442957X'), empty: m.parseIsbn('') }
   })

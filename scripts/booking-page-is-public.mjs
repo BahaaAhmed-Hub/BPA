@@ -98,8 +98,8 @@ const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  [${M
 const text = () => p.evaluate(() => document.body.innerText)
 
 const url = MODE === 'manage'
-  ? 'http://localhost:5199/BPA/?manage=tok-abc'
-  : `http://localhost:5199/BPA/?book=${HANDLE}`
+  ? 'http://localhost:5199/?manage=tok-abc'
+  : `http://localhost:5199/?book=${HANDLE}`
 await p.goto(url, { waitUntil: 'domcontentloaded' })
 await p.waitForTimeout(3000)
 

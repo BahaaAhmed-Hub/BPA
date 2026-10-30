@@ -69,7 +69,7 @@ await ctx.addInitScript(s => { try {
 
 const p = await ctx.newPage()
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) fails++ }
 const wait = ms => p.waitForTimeout(ms)
@@ -115,7 +115,7 @@ ok('back returns to the author list', /Best known for/.test(await text()) && awa
 // ── an author key is not free text ──────────────────────────────────────────
 seen.length = 0
 const unit = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/bookLookup.ts')
+  const m = await import('/src/modules/library/bookLookup.ts')
   const bad = await m.booksByAuthor('OL1A OR title:x')
   const empty = await m.searchAuthors('a')
   const books = [{ id: 'a', title: 'Atomic Habits: Tiny Changes!', authors: ['James Clear'] }, { id: 'b', title: 'Other', authors: ['X'], isbn: '123' }]

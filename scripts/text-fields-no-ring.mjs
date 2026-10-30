@@ -37,7 +37,7 @@ await ctx.addInitScript(s => { try {
 const p = await ctx.newPage()
 const traffic = watchTraffic(p)
 p.on('pageerror', () => {})
-await p.goto(`http://localhost:${PORT}/BPA/`, { waitUntil: 'domcontentloaded' })
+await p.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' })
 await settled(p, traffic, 6500)
 
 const TEXT = 'textarea, [contenteditable=""], [contenteditable="true"], input:not([type]), input:is([type="text"],[type="search"],[type="number"],[type="email"],[type="password"],[type="tel"],[type="url"],[type="date"],[type="time"],[type="datetime-local"],[type="month"],[type="week"])'

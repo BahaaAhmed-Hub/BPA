@@ -73,7 +73,7 @@ async function open({ viewport = { width: 1440, height: 900 }, ageDays = 0, done
     localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
     if (done) localStorage.setItem('bpa-wizard-done', '1')
   }, [session, done, local, sess])
-  await page.goto(`http://localhost:${PORT}/BPA/`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' })
   return { ctx, page, db, writes, errors }
 }
 const ls = (page, k) => page.evaluate(k => localStorage.getItem(k), k)
@@ -246,7 +246,7 @@ console.log('— review')
   await ctx.route('**://accounts.google.com/**', r => r.abort())
   await page.getByRole('button', { name: 'Add another Google account' }).click()
   await page.waitForTimeout(800)
-  await page.goto(`http://localhost:${PORT}/BPA/`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' })
   ok('review: back from Google, an account the wizard made look established still gets its guide', await wizardUp(page, 14000))
   await to(page, 'accounts')
   ok('review: and the company it added still has its remove button', (await page.getByRole('button', { name: 'Remove Beta Ltd' }).count()) === 1)

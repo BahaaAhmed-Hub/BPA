@@ -82,7 +82,7 @@ await ctx.addInitScript(s => { try {
 
 const p = await ctx.newPage()
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
 import { writeFileSync, mkdtempSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
@@ -96,8 +96,8 @@ const preview = () => dlg().getByLabel('Preview').inputValue()
 
 // ── pure pieces, from the module the dev server serves ──────────────────────
 const unit = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/exportQuotes.ts')
-  const z = await import('/BPA/src/modules/library/zip.ts')
+  const m = await import('/src/modules/library/exportQuotes.ts')
+  const z = await import('/src/modules/library/zip.ts')
   return { name: m.safeName('A: B/C #1? [x] ^y |z'), empty: m.safeName('???'), crc: z.crc32(new TextEncoder().encode('123456789')) }
 })
 ok('safeName removes what breaks a path or a wikilink', unit.name === 'A B C 1 x y z', unit.name)

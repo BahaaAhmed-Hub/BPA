@@ -36,7 +36,7 @@ await ctx.addInitScript(s => { localStorage.setItem('sb-placeholder-auth-token',
 const p = await ctx.newPage(); p.on('pageerror', e => console.log('ERR', String(e).slice(0, 200)))
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) fails++ }
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' })
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' })
 await p.getByRole('button', { name: /^Dune by/ }).click({ timeout: 20000 })
 const panel = p.getByRole('complementary')
 ok('the Cover card is in the panel', await panel.getByText('Cover', { exact: true }).count() > 0)

@@ -137,7 +137,7 @@ await page.addInitScript(([s, rules]) => {
   if (rules) localStorage.setItem('finance-budget-rules', JSON.stringify(rules))
 }, [session, MODE === 'borrow' ? null : { [LOAN]: planRule() }])
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000)
 
 const until = async (cond, ms = 8000) => { const end = Date.now() + ms; while (Date.now() < end) { if (cond()) return true; await new Promise(r => setTimeout(r, 50)) } return cond() }

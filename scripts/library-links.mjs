@@ -52,15 +52,15 @@ await ctx.addInitScript(s => { try {
 
 const p = await ctx.newPage()
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) fails++ }
 const wait = ms => p.waitForTimeout(ms)
 
 // ── the pure module, from what the dev server serves ────────────────────────
 const u = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/bookLinks.ts')
-  const prefs = await import('/BPA/src/modules/library/libraryPrefs.ts')
+  const m = await import('/src/modules/library/bookLinks.ts')
+  const prefs = await import('/src/modules/library/libraryPrefs.ts')
   const book = { title: 'Rich Dad & Poor Dad #1', authors: ['Robert Kiyosaki'], isbn: '978-1-61268-019-4' }
   const all = c => { const s = m.linksFor(book, c); return [...s.free, ...s.buy] }
   localStorage.setItem('library-settings', JSON.stringify({ enabled: true, country: 'EG' })); const eg = prefs.loadLibrarySettings()

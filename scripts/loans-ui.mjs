@@ -81,7 +81,7 @@ await page.addInitScript(([s, rates]) => {
   localStorage.setItem('bpa-wizard-done', '1')   // the stub account is brand new; the setup guide would cover the screen
 }, [session, MODE === 'norate' ? {} : { USD: 48 }])
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000)
 
 // The finance tabs, not the app's side rail, which has a Today of its own.

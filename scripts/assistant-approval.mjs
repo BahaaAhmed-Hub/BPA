@@ -53,7 +53,7 @@ async function launch() {
     localStorage.setItem('professor-ai-config', JSON.stringify({ provider: 'anthropic', anthropicKey: 'sk-ant-test' }))
     localStorage.setItem('assistant-persona', JSON.stringify({ name: 'Beau', asked: true })) } catch {} }, session)
   const p = await ctx.newPage(); p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.locator('[data-assistant-fab]').waitFor({ timeout: 20000 }); await p.waitForTimeout(1500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.locator('[data-assistant-fab]').waitFor({ timeout: 20000 }); await p.waitForTimeout(1500)
   await p.locator('[data-assistant-fab]').click(); await p.waitForTimeout(600)
   return { p, ctx }
 }

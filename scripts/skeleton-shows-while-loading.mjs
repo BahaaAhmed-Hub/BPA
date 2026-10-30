@@ -68,7 +68,7 @@ async function run(reducedMotion) {
     localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'calendar', themeId: 'sunlit-bento' }, version: 0 }))
   }, [session, cals])
   const traffic = watchTraffic(page)
-  await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('[data-side-rail]', { timeout: 15000 })
   await page.getByText('Skip for now').first().click({ timeout: 800 }).catch(() => {})
   return { page, ctx, isDelivered: () => delivered, traffic }

@@ -74,7 +74,7 @@ what the server sent. A task's `projectId` rides the existing task push, so
   `clearProject` (orphan), the direct server update (orphan-patch — task pushes are
   refused in that mode, so nothing else can clear the row). 37 assertions.
 - **The harness trap, hit on the first controls:** Vite appends `?t=<n>` to a
-  module URL once its file has been edited, so `import('/BPA/src/store/x.ts')`
+  module URL once its file has been edited, so `import('/src/store/x.ts')`
   returns a *second copy* of the store — one the app never reads and liveSync never
   reloads. The controls then mutated the app's copy while the harness drove the
   original and "passed". `project-sync.mjs` takes the URL from

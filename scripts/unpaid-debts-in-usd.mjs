@@ -71,7 +71,7 @@ await page.addInitScript(([s, screen]) => {
   localStorage.setItem('finance-fx-rates', JSON.stringify({ USD: 50 }))
 }, [session, MODE === 'rows' ? 'today' : 'balance'])
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000)
 
 if (MODE === 'rows') {

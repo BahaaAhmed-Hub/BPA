@@ -61,7 +61,7 @@ async function open({ enabled = false } = {}) {
   } catch {} }, [session, enabled])
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e.stack || e).slice(0, 700)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 let fails = 0
@@ -72,7 +72,7 @@ reset()
 let { p, ctx } = await open()
 const wait = ms => p.waitForTimeout(ms)
 const u = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/priceWatch.ts')
+  const m = await import('/src/modules/library/priceWatch.ts')
   const t = Date.now()
   return {
     v: [m.verdict(180, 200), m.verdict(200, 200), m.verdict(200.004, 200), m.verdict(200.01, 200), m.verdict(undefined, 200), m.verdict(180, undefined), m.verdict(180, 0)],

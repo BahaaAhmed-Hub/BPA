@@ -61,12 +61,12 @@ await page.addInitScript(([s]) => {
   localStorage.setItem('finance-budget-rules', JSON.stringify({ 'c-rent': { amount: 10000, frequency: 'monthly', rollover: false, warn80: false, currency: 'EGP', bucket: 'fixed' } }))
 }, [session])
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000)
 
 // ── 1. the entries a budget with a day writes ────────────────────────────────
 const occ = await page.evaluate(async () => {
-  const { occurrencesFor } = await import('/BPA/src/modules/finance/budgetEntries.ts')
+  const { occurrencesFor } = await import('/src/modules/finance/budgetEntries.ts')
   const at = new Date(2026, 9, 1)   // 1 Oct 2026, fixed: the dates below are not the clock's
   const steps = [{ from: '2026-11', amount: 13000 }]
   const monthly = { amount: 10000, frequency: 'monthly', rollover: false, warn80: false, dueDay: 5, steps }
@@ -87,8 +87,8 @@ ok('a rule that never changed is written exactly as before', occ.plain.length ==
 
 // ── 2. the assistant ─────────────────────────────────────────────────────────
 const asst = await page.evaluate(async ([thisM, lastM]) => {
-  const { executeFinanceTool } = await import('/BPA/src/lib/financeTools.ts')
-  const { useFinanceStore } = await import('/BPA/src/modules/finance/financeStore.ts')
+  const { executeFinanceTool } = await import('/src/lib/financeTools.ts')
+  const { useFinanceStore } = await import('/src/modules/finance/financeStore.ts')
   const deadline = Date.now() + 8000
   while (!useFinanceStore.getState().categories.length && Date.now() < deadline) await new Promise(r => setTimeout(r, 50))
   const set = await executeFinanceTool('set_budget_envelope', { category: 'Rent', amount: 13000 })
@@ -114,8 +114,8 @@ ok('a two-month range sums each month\'s own budget: 23,000, not 26,000', !!rent
 
 // ── 3. a budget that changed what it says: entries and the assistant ─────────
 const shape = await page.evaluate(async ([thisM, lastM]) => {
-  const { occurrencesFor } = await import('/BPA/src/modules/finance/budgetEntries.ts')
-  const { executeFinanceTool } = await import('/BPA/src/lib/financeTools.ts')
+  const { occurrencesFor } = await import('/src/modules/finance/budgetEntries.ts')
+  const { executeFinanceTool } = await import('/src/lib/financeTools.ts')
   const at = new Date(2026, 9, 1)   // 1 Oct 2026, fixed
   const mk = extra => ({ amount: 10000, frequency: 'monthly', rollover: false, warn80: false, dueDay: 5, currency: 'EGP', ...extra })
   const usd = occurrencesFor(mk({ steps: [{ from: '2026-11', currency: 'USD' }] }), at, 3)

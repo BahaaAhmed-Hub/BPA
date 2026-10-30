@@ -42,10 +42,10 @@ await ctx.route('https://covers.openlibrary.org/**', r => r.fulfill({ status: 40
 await ctx.addInitScript(s => { try { localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'library', themeId: 'sunlit-bento' }, version: 0 })) } catch {} }, session)
 const p = await ctx.newPage(); p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}${x ? '  ' + x : ''}`); if (!c) fails++ }
-const tool = (name, input = {}) => p.evaluate(async ([name, input]) => { const t = await import('/BPA/src/lib/assistantTools.ts'); return t.executeTool(name, input, { primaryEmail: 'a@x.com', accounts: [], tasks: [], habits: [], addTask() {}, updateTask() {}, deleteTask() {} }) }, [name, input])
+const tool = (name, input = {}) => p.evaluate(async ([name, input]) => { const t = await import('/src/lib/assistantTools.ts'); return t.executeTool(name, input, { primaryEmail: 'a@x.com', accounts: [], tasks: [], habits: [], addTask() {}, updateTask() {}, deleteTask() {} }) }, [name, input])
 const wrote = () => writes.filter(w => w.op === 'upsert' && w.t === 'library_books').flatMap(w => w.rows)
 const settle = () => p.waitForTimeout(900)
 

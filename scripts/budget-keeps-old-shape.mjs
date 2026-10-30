@@ -83,7 +83,7 @@ await page.addInitScript(([s, rules]) => {
   localStorage.setItem('finance-budget-rules', JSON.stringify(rules))
 }, [session, RULES])
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000)
 await page.getByText('Skip for now').first().click({ timeout: 800 }).catch(() => {})
 await page.getByRole('button', { name: /^Budget$/ }).first().click({ timeout: 3000 }).catch(() => {})
@@ -150,7 +150,7 @@ if (MODE === 'bucket' && here) {
 
 if (MODE === 'fees-edit') {
   const years = await page.evaluate(async ([cur]) => {
-    const { monthlyAmount } = await import('/BPA/src/modules/finance/modals/BudgetRuleModal.tsx')
+    const { monthlyAmount } = await import('/src/modules/finance/modals/BudgetRuleModal.tsx')
     const r = JSON.parse(localStorage.getItem('finance-budget-rules'))['c-fees']
     const y = Number(cur.slice(0, 4)), mm = String(new Date().getMonth()).padStart(2, '0')   // last month's number
     return { yearAgo: monthlyAmount(r, `${y - 1}-${mm}`), thisYearBeforeChange: monthlyAmount(r, `${y}-${mm}`), nextYear: monthlyAmount(r, `${y + 1}-${mm}`) }
@@ -172,7 +172,7 @@ if (MODE === 'bucket') {
   // The Kind pills show what an edit would change (this month's), so last month's bucket is read
   // from the stored rule through the real module — the same call the Budget screen's split makes.
   const at = await page.evaluate(async ([k, last, cur]) => {
-    const { ruleAt } = await import('/BPA/src/modules/finance/budgetSteps.ts')
+    const { ruleAt } = await import('/src/modules/finance/budgetSteps.ts')
     const r = JSON.parse(localStorage.getItem('finance-budget-rules'))[k]
     return { last: ruleAt(r, last).bucket, cur: ruleAt(r, cur).bucket, nextYear: ruleAt(r, `${Number(cur.slice(0, 4)) + 1}-03`).bucket, yearAgo: ruleAt(r, `${Number(cur.slice(0, 4)) - 1}-10`).bucket }
   }, [KEY, lastMonth, thisMonth])

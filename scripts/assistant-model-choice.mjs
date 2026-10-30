@@ -58,7 +58,7 @@ async function launch({ config, module = 'morning', usable = ['openai/gpt-oss-12
     localStorage.setItem('professor-ai-config', JSON.stringify(cfg))
     localStorage.setItem('assistant-persona', JSON.stringify({ name: 'Beau', asked: true })) } catch {} }, [session, config, module])
   const p = await ctx.newPage(); p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' })
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' })
   await p.locator('[data-assistant-fab]').waitFor({ timeout: 20000 }); await p.waitForTimeout(1000)
   return { p, ctx, seen }
 }

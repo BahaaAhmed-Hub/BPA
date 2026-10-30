@@ -50,7 +50,7 @@ await ctx.addInitScript(s=>{try{
 const p=await ctx.newPage()
 p.on('dialog', d => d.accept())
 p.on('pageerror',e=>console.log('  [pageerror]',String(e).slice(0,160)))
-await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(5500)
+await p.goto('http://localhost:5199/',{waitUntil:'domcontentloaded'}); await p.waitForTimeout(5500)
 const ok=(n,c,x='')=>{console.log(`${c?'PASS':'*** FAIL ***'}  [${MODE}] ${n}${x?'  '+x:''}`); if(!c)process.exitCode=1}
 await p.getByRole('tab',{name:/^Plan$/}).first().click(); await p.waitForTimeout(2500)
 const grid = () => p.evaluate(()=>document.body.innerText)

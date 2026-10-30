@@ -6,7 +6,7 @@
  *   ANTHROPIC_API_KEY    — Anthropic API key for Claude responses
  *
  * After deploying, register the webhook once:
- *   curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://gyvgqhaepfsqnydhhbnk.supabase.co/functions/v1/telegram-bot"
+ *   curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://api.be2.life/functions/v1/telegram-bot"
  *
  * Users connect their account:
  *   1. Copy a prof_sk_* token from Settings → Integrations → Connections

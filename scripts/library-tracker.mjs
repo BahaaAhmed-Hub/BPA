@@ -38,7 +38,7 @@ async function open() {
   } catch {} }, session)
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 let fails = 0
@@ -49,7 +49,7 @@ const wait = ms => p.waitForTimeout(ms)
 
 // ── pure ────────────────────────────────────────────────────────────────────
 const u = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/trackerStats.ts')
+  const m = await import('/src/modules/library/trackerStats.ts')
   const S = (on, kind = 'read', minutes = 20, pages) => ({ id: on + kind + minutes, bookId: 'x', kind, on, minutes, pages, createdAt: '' })
   const T0 = '2026-10-12' // a Monday
   return {

@@ -26,7 +26,7 @@ import { user, session } from './session.mjs'
 
 import { watchTraffic, settled } from './settled.mjs'
 const MODE = process.argv[2] ?? 'mark'
-const BASE = 'http://localhost:5199/BPA/'
+const BASE = 'http://localhost:5199/'
 
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium',
   args: ['--no-sandbox', '--ignore-certificate-errors'] })

@@ -77,7 +77,7 @@ const shapeOf = sel => p.evaluate(s => {
   }
 }, sel)
 
-const BASE = 'http://localhost:5199/BPA/'
+const BASE = 'http://localhost:5199/'
 
 async function go(mod) {
   // **localStorage belongs to an origin, and `about:blank` is not one.** The

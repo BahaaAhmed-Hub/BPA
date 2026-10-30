@@ -16,7 +16,7 @@ await ctx.route('**://placeholder.supabase.co/**', async r => { const q=r.reques
 await ctx.addInitScript(s=>{try{localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('professor-ui', JSON.stringify({state:{activeModule:'tasks',themeId:'sunlit-bento'},version:0}))}catch{}},session)
 const p = await ctx.newPage(); const traffic = watchTraffic(p)
-await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await settled(p, traffic, 8000)
+await p.goto('http://localhost:5199/',{waitUntil:'domcontentloaded'}); await settled(p, traffic, 8000)
 const tally = a => { const m={}; for (const l of a) m[l]=(m[l]||0)+1; return Object.entries(m).sort((x,y)=>y[1]-x[1]) }
 console.log('BOOT total', log.length); console.log(tally(log).slice(0,40).map(([k,v])=>`  ${v}x ${k}`).join('\n'))
 const mark = log.length

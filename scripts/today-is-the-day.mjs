@@ -88,7 +88,7 @@ async function open(savedModule) {
     if (!localStorage.getItem('professor-ui')) localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: mod, themeId: 'sunlit-bento' }, version: 0 }))
   }, [session, savedModule, CACHE])
   const traffic = watchTraffic(page)
-  await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
   await settled(page, traffic, 9000)
   return { ctx, page }
 }

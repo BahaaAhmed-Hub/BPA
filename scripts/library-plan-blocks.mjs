@@ -74,7 +74,7 @@ async function open() {
   } catch {} }, session)
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 let fails = 0
@@ -87,7 +87,7 @@ const calls = (method) => gcal.filter(c => c.method === method)
 
 // ── pure ────────────────────────────────────────────────────────────────────
 const u = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/planBlock.ts')
+  const m = await import('/src/modules/library/planBlock.ts')
   const bk = { id: 'b', title: 'Deep Work', authors: ['Cal Newport'], pages: 300, status: 'reading' }
   const P = (extra = {}) => ({ id: 'p', bookId: 'b', per: 'day', minutes: 30, createdAt: '', ...extra })
   const T0 = '2026-10-12', tz = 'Africa/Cairo'

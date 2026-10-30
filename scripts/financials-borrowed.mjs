@@ -75,7 +75,7 @@ await page.addInitScript(([s, themeId]) => {
   localStorage.setItem('bpa-wizard-done', '1')
 }, [session, THEME])
 const traffic = watchTraffic(page)
-await page.goto(`http://localhost:${port}/BPA/`, { waitUntil: 'domcontentloaded' })
+await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
 await settled(page, traffic, 9000)
 await page.locator('nav[aria-label="Finance sections"]').getByRole('button', { name: 'Financials', exact: true }).click()
 await page.getByText('Total income').first().waitFor({ timeout: 8000 }).catch(() => {})

@@ -21,7 +21,7 @@ const anthropicReply = (t, u) => ev('message_start', { type: 'message_start', me
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] })
 
 /** groq / anthropic: { headers, expose, status } — what the provider sends back and whether it lets a browser read it. */
-async function launch(w, { config, module = 'morning', goto = 'http://localhost:5199/BPA/', groq = {}, anthropic = {} } = {}) {
+async function launch(w, { config, module = 'morning', goto = 'http://localhost:5199/', groq = {}, anthropic = {} } = {}) {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 1000 } })
   const withHeaders = (cfg, extra = {}) => ({ ...CORS, ...(cfg.headers ?? {}), ...(cfg.expose === false ? {} : { 'access-control-expose-headers': '*' }), ...extra })
   await ctx.route('**://placeholder.supabase.co/**', async r => {
@@ -145,7 +145,7 @@ const colour = async p => line(p).evaluate(el => getComputedStyle(el).color)
   const w = makeWorld()
   const limits = { provider: 'groq', at: Date.now(), requests: { limit: 14400, remaining: 14370, resetAt: null }, tokens: { limit: 6000, remaining: 600, resetAt: Date.now() + 30_000 } }
   const cid = seed(w, [{ role: 'user', content: 'q' }, { role: 'assistant', content: 'a', usage: { input: 100, output: 20, cacheRead: 0, cacheWrite: 0, model: 'llama-3.1-8b-instant', provider: 'groq', limits } }])
-  const { p, ctx } = await launch(w, { config: groqC(), goto: 'http://localhost:5199/BPA/?c=' + cid })
+  const { p, ctx } = await launch(w, { config: groqC(), goto: 'http://localhost:5199/?c=' + cid })
   await open(p)
   ok('a conversation opened on another device shows the reading stored with the answer', await until(async () => (await line(p).count()) === 1 && (await line(p).getAttribute('data-limits-level')) === 'low', 10000), (await line(p).textContent().catch(() => '')))
   ok('and its minute bucket counts down to a refill', /refills in \d+s/.test(await line(p).getAttribute('title')))
@@ -156,7 +156,7 @@ const colour = async p => line(p).evaluate(el => getComputedStyle(el).color)
   const w = makeWorld()
   const limits = { provider: 'groq', at: Date.now(), tokens: { limit: 6000, remaining: 10, resetAt: null } }
   const cid = seed(w, [{ role: 'user', content: 'q' }, { role: 'assistant', content: 'a', usage: { input: 100, output: 20, cacheRead: 0, cacheWrite: 0, model: 'llama-3.1-8b-instant', provider: 'groq', limits } }])
-  const { p, ctx } = await launch(w, { config: claude(), goto: 'http://localhost:5199/BPA/?c=' + cid })
+  const { p, ctx } = await launch(w, { config: claude(), goto: 'http://localhost:5199/?c=' + cid })
   await open(p)
   await until(async () => Number(await counter(p).getAttribute('data-usage-tokens')) === 120, 10000)
   ok('a Groq reading is NOT shown while Claude is the provider (it would be someone else\'s quota)', (await line(p).count()) === 0)
@@ -167,7 +167,7 @@ const colour = async p => line(p).evaluate(el => getComputedStyle(el).color)
   const w = makeWorld()
   const limits = { provider: 'groq', at: Date.now() - 120_000, tokens: { limit: 6000, remaining: 10, resetAt: Date.now() - 60_000 } }
   const cid = seed(w, [{ role: 'user', content: 'q' }, { role: 'assistant', content: 'a', usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, model: 'llama-3.1-8b-instant', provider: 'groq', limits } }])
-  const { p, ctx } = await launch(w, { config: groqC(), goto: 'http://localhost:5199/BPA/?c=' + cid })
+  const { p, ctx } = await launch(w, { config: groqC(), goto: 'http://localhost:5199/?c=' + cid })
   await open(p)
   await until(async () => (await line(p).count()) === 1, 10000)
   ok('a minute bucket whose refill time has passed is shown full, not as the old shortfall', (await line(p).getAttribute('data-limits-level')) === 'ok' && /refilled since/.test(await line(p).getAttribute('title')) && /6k tokens\/min/.test(await line(p).textContent()), await line(p).textContent())
@@ -181,7 +181,7 @@ const colour = async p => line(p).evaluate(el => getComputedStyle(el).color)
   const LONG = 'meta-llama/llama-4-scout-17b-16e-instruct-extra-long-experimental-build-2026'
   const limits = { provider: 'groq', at: Date.now(), requests: { limit: 14400, remaining: 14370, resetAt: null }, tokens: { limit: 6000, remaining: 10, resetAt: Date.now() + 30_000 }, retryAfter: 23 }
   const cid = seed(w, [{ role: 'user', content: 'q' }, { role: 'assistant', content: 'a', usage: { input: 123456, output: 7890, cacheRead: 0, cacheWrite: 0, model: LONG, provider: 'groq', limits } }])
-  const { p, ctx } = await launch(w, { config: { ...groqC(), groqModel: LONG }, goto: 'http://localhost:5199/BPA/?c=' + cid })
+  const { p, ctx } = await launch(w, { config: { ...groqC(), groqModel: LONG }, goto: 'http://localhost:5199/?c=' + cid })
   await open(p)
   await until(async () => (await line(p).count()) === 1, 10000)
   const m = await p.evaluate(() => {

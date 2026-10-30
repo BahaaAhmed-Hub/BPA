@@ -84,7 +84,7 @@ const p = await ctx.newPage()
 const traffic = watchTraffic(p)
 p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0,160)))
 p.on('dialog', d => d.accept())
-await p.goto('http://localhost:5199/BPA/',{waitUntil:'domcontentloaded'}); await settled(p, traffic, 7000)
+await p.goto('http://localhost:5199/',{waitUntil:'domcontentloaded'}); await settled(p, traffic, 7000)
 let fails=0
 const ok=(n,c,x='')=>{console.log(`${c?'PASS':'*** FAIL ***'}  [${WHICH}] ${n}${x?'  '+x:''}`); if(!c)fails++}
 const show = () => posts.map(x=>`${x.calendarId}<-${x.bearer||'(none)'}`).join(' · ') || '(no POST)'

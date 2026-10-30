@@ -52,7 +52,7 @@ async function open() {
   } catch {} }, session)
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 let fails = 0
@@ -62,11 +62,11 @@ let { p, ctx } = await open()
 const wait = ms => p.waitForTimeout(ms)
 const panel = () => p.getByRole('complementary')
 const pick = async t => { await p.getByRole('button', { name: new RegExp(`${t} by`) }).click(); await wait(900) }
-const today = () => p.evaluate(async () => (await import('/BPA/src/modules/library/readingStats.ts')).todayISO())
+const today = () => p.evaluate(async () => (await import('/src/modules/library/readingStats.ts')).todayISO())
 
 // ── pure ────────────────────────────────────────────────────────────────────
 const u = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/readingStats.ts')
+  const m = await import('/src/modules/library/readingStats.ts')
   const S = (kind, minutes, toPage) => ({ id: Math.random().toString(), bookId: 'x', kind, on: '2026-01-01', minutes, toPage, createdAt: '' })
   return {
     far: m.progressOf({ pages: 200 }, [S('read', 30, 40), S('read', 20, 90), S('read', 10, 60), S('listen', 45)]),

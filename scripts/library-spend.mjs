@@ -51,7 +51,7 @@ async function open() {
   } catch {} }, session)
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 let fails = 0
@@ -62,8 +62,8 @@ const wait = ms => p.waitForTimeout(ms)
 
 // ── pure ────────────────────────────────────────────────────────────────────
 const u = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/spendStats.ts')
-  const ys = await import('/BPA/src/modules/library/yearStats.ts')
+  const m = await import('/src/modules/library/spendStats.ts')
+  const ys = await import('/src/modules/library/yearStats.ts')
   const bk = (amt, cur, on) => ({ paidAmount: amt, paidCurrency: cur, boughtOn: on })
   const books = [bk(0.1, 'USD', '2026-03-01'), bk(0.2, 'USD', '2026-12-31'), bk(900, 'EGP', '2026-06-01'), bk(40, 'USD', '2027-01-01'), bk(50, 'USD', '2025-12-31'),
     bk(10, undefined, '2026-05-05'), bk(10, 'USD', undefined), bk(undefined, 'USD', '2026-05-05'), bk(0, 'GBP', '2026-05-05')]

@@ -26,10 +26,10 @@ await ctx.route('**://www.googleapis.com/calendar/**', r => { const q = r.reques
   return j(r, { items: [] }) })
 await ctx.addInitScript(s => { try { localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s)); localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'habits', themeId: 'sunlit-bento' }, version: 0 })) } catch {} }, session)
 const p = await ctx.newPage(); p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
-const tool = async (name, input = {}) => p.evaluate(async ([name, input]) => { const t = await import('/BPA/src/lib/assistantTools.ts')
+await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+const tool = async (name, input = {}) => p.evaluate(async ([name, input]) => { const t = await import('/src/lib/assistantTools.ts')
   try { return await t.executeTool(name, input, { primaryEmail: 'a@x.com', accounts: [], tasks: [], habits: [], addTask() {}, updateTask() {}, deleteTask() {} }) } catch (e) { return { threw: String(e.message ?? e) } } }, [name, input])
-const habits = () => p.evaluate(async () => (await import('/BPA/src/store/habitsStore.ts')).useHabitsStore.getState().habits.map(h => ({ name: h.name, freq: h.frequency, type: h.type, goal: h.goal, unit: h.unit, active: h.isActive, emoji: h.emoji, color: h.color })))
+const habits = () => p.evaluate(async () => (await import('/src/store/habitsStore.ts')).useHabitsStore.getState().habits.map(h => ({ name: h.name, freq: h.frequency, type: h.type, goal: h.goal, unit: h.unit, active: h.isActive, emoji: h.emoji, color: h.color })))
 
 // ── calendar ─────────────────────────────────────────────────────────────────
 let r = await tool('update_calendar_event', { event_id: 'solo', title: 'Deep work', start_datetime: '2030-05-10T13:00:00Z' })

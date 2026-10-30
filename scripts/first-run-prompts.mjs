@@ -66,7 +66,7 @@ async function open({ p = port, seed = {}, module, wizardDone }) {
     if (!localStorage.getItem('professor-ui')) localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: mod, themeId: 'sunlit-bento' }, version: 0 }))
   }, [session, module ?? 'morning', !!wizardDone])
   const traffic = watchTraffic(page)
-  await page.goto(`http://localhost:${p}/BPA/`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`http://localhost:${p}/`, { waitUntil: 'domcontentloaded' })
   await settled(page, traffic, 9000)
   return { ctx, page, writes, db }
 }

@@ -75,7 +75,7 @@ async function open() {
   } catch {} }, session)
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 let fails = 0
@@ -86,7 +86,7 @@ const wait = ms => p.waitForTimeout(ms)
 
 // ── pure ────────────────────────────────────────────────────────────────────
 const u = await p.evaluate(async () => {
-  const m = await import('/BPA/src/modules/library/goalStats.ts')
+  const m = await import('/src/modules/library/goalStats.ts')
   const bk = (id, fin) => ({ id, title: id, authors: [], status: 'finished', finishedOn: fin })
   const ln = (list, ...ids) => ids.map(b => ({ listId: list, bookId: b, sortOrder: 0 }))
   const S = (bookId, on, kind, minutes, pages) => ({ id: bookId + on + kind, bookId, kind, on, minutes, pages, createdAt: '' })
@@ -208,7 +208,7 @@ await p.locator('body').click({ position: { x: 5, y: 5 } }); await p.keyboard.pr
 ok('undo brings it back', T.library_goals.some(g => g.kind === 'pages' && g.target === 1000))
 
 // deleting the list takes its challenge; undo brings both back
-await p.evaluate(async lid => (await import('/BPA/src/modules/library/libraryStore.ts')).useLibraryStore.getState().deleteList(lid), L1)
+await p.evaluate(async lid => (await import('/src/modules/library/libraryStore.ts')).useLibraryStore.getState().deleteList(lid), L1)
 await wait(1500)
 ok('deleting a list takes its challenge with it (the server cascades it)', !T.library_goals.some(g => g.list_id === L1) && (await goalRows().count()) === 3)
 await p.keyboard.press('Control+z'); await wait(1800)

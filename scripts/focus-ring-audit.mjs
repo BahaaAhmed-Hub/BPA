@@ -46,7 +46,7 @@ await ctx.addInitScript(s => { try {
 const p = await ctx.newPage()
 const traffic = watchTraffic(p)
 p.on('pageerror', () => {})
-await p.goto(`http://localhost:${PORT}/BPA/`, { waitUntil: 'domcontentloaded' })
+await p.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' })
 await settled(p, traffic, 6500)
 
 

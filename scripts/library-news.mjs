@@ -83,7 +83,7 @@ async function open() {
   } catch {} }, session)
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e.stack || e).slice(0, 400)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 let fails = 0
@@ -135,10 +135,10 @@ await ctx.close()
 reset({})
 ;({ p, ctx } = await open())
 const bell = await p.evaluate(async () => {
-  const n = await import('/BPA/src/lib/notifications.ts')
+  const n = await import('/src/lib/notifications.ts')
   const all = n.collect(n.DEFAULT_NOTIF_EVENTS).filter(x => x.kind === 'release')
   const off = n.collect(n.DEFAULT_NOTIF_EVENTS.map(s => (s.id === 'release' ? { ...s, push: false } : s))).filter(x => x.kind === 'release')
-  const { useLibraryStore } = await import('/BPA/src/modules/library/libraryStore.ts')
+  const { useLibraryStore } = await import('/src/modules/library/libraryStore.ts')
   useLibraryStore.setState({ newsMissing: true })
   const dormant = n.dormantKinds(n.DEFAULT_NOTIF_EVENTS).filter(d => d.setting.id === 'release').map(d => d.why)
   return { all, off: off.length, defaults: n.DEFAULT_NOTIF_EVENTS.map(s => s.id), derivable: n.DERIVABLE.includes('release'), dormant }

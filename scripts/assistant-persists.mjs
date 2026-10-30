@@ -25,7 +25,7 @@ const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', a
 const ev = (e, d) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`
 const anthropicText = t => ev('message_start', { type: 'message_start', message: { id: 'm', type: 'message', role: 'assistant', content: [], model: 'x', stop_reason: null, stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } } }) + ev('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }) + ev('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: t } }) + ev('content_block_stop', { type: 'content_block_stop', index: 0 }) + ev('message_delta', { type: 'message_delta', delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: 5 } }) + ev('message_stop', { type: 'message_stop' })
 
-async function device(w, { goto = 'http://localhost:5199/BPA/', open = true } = {}) {
+async function device(w, { goto = 'http://localhost:5199/', open = true } = {}) {
   const ctx = await b.newContext({ viewport: { width: 1024, height: 1366 } })
   const seen = { anthropic: 0, anthropicBodies: [], fnBodies: [] }
   await ctx.route('**://placeholder.supabase.co/**', async r => {
@@ -96,7 +96,7 @@ const convId = p => p.evaluate(() => new URL(location.href).searchParams.get('c'
   ok('the answer was still unfinished when the page went', gone.status === 'streaming', gone.status)
   await sleep(2500)                                  // dimmed. The server does not care.
   ok('and it kept being written with no page open', gone.content.length > midLen, `${midLen} → ${gone.content.length} chars`)
-  await p.goto('http://localhost:5199/BPA/?c=' + id, { waitUntil: 'domcontentloaded' })
+  await p.goto('http://localhost:5199/?c=' + id, { waitUntil: 'domcontentloaded' })
   await p.locator('[data-assistant-fab]').waitFor({ timeout: 20000 })
   ok('reopened: the window comes up by itself because an answer is on its way', await until(() => shown(p), 10000))
   ok('the question is back', await until(async () => (await text(p)).includes('tell me something long'), 8000), (await text(p)).slice(0, 120))
@@ -135,7 +135,7 @@ const convId = p => p.evaluate(() => new URL(location.href).searchParams.get('c'
   w.addMsg({ conversation_id: cid, user_id: U, role: 'user', content: 'a question' })
   const dead = w.addMsg({ conversation_id: cid, user_id: U, role: 'assistant', status: 'streaming', content: 'half an ans' }).row
   dead.updated_at = old
-  const { p, ctx } = await device(w, { goto: 'http://localhost:5199/BPA/?c=' + cid, open: false })
+  const { p, ctx } = await device(w, { goto: 'http://localhost:5199/?c=' + cid, open: false })
   await p.waitForTimeout(2000)
   const autoOpened = await shown(p)
   await p.locator('[data-assistant-fab]').click(); await p.waitForTimeout(800)
@@ -213,7 +213,7 @@ const convId = p => p.evaluate(() => new URL(location.href).searchParams.get('c'
   ok('and nothing has run meanwhile (the row is still "running", no result)', t.tool_state === 'running' && t.tool_result == null)
   const id = await convId(A.p)
   await A.p.goto('about:blank')
-  await A.p.goto('http://localhost:5199/BPA/?c=' + id, { waitUntil: 'domcontentloaded' })
+  await A.p.goto('http://localhost:5199/?c=' + id, { waitUntil: 'domcontentloaded' })
   await card(A.p).waitFor({ timeout: 20000 })
   ok('reloaded: the card is back (the page reclaimed its own earlier claim instead of waiting out two minutes)', await card(A.p).count() === 1 && (await shown(A.p)))
   ok('CONTROL: still nothing has run', t.tool_state === 'running' && t.tool_result == null)

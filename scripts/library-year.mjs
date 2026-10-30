@@ -55,7 +55,7 @@ async function open({ books = BOOKS, sessions = SESSIONS } = {}) {
   } catch {} }, session)
   const p = await ctx.newPage()
   p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
-  await p.goto('http://localhost:5199/BPA/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
+  await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(4500)
   return { p, ctx }
 }
 let fails = 0
@@ -67,7 +67,7 @@ const FIX = { books: BOOKS.map(r => ({ id: r.id, title: r.title, authors: r.auth
 
 // ── pure ────────────────────────────────────────────────────────────────────
 const u = await p.evaluate(async fx => {
-  const m = await import('/BPA/src/modules/library/yearStats.ts')
+  const m = await import('/src/modules/library/yearStats.ts')
   const r = (y, today = '2026-12-31', f = fx) => m.yearReview(y, f.books, f.sessions, f.quotes, f.links, f.lists, today)
   const y = r(2026)
   const slim = rv => ({ count: rv.count, titles: rv.finished.map(b => b.title), pages: rv.pages, pagesKnown: rv.pagesKnown, read: rv.readMinutes, listen: rv.listenMinutes, days: rv.daysRead, streak: rv.longestStreak, months: rv.months, busiest: rv.busiest, ratings: rv.ratings, top: rv.top.map(b => b.title), longest: rv.longest?.title ?? null, shortest: rv.shortest?.title ?? null, fastest: rv.fastest && [rv.fastest.book.title, rv.fastest.days], slowest: rv.slowest && [rv.slowest.book.title, rv.slowest.days], topAuthor: rv.topAuthor, quotes: rv.quotes, categories: rv.categories, undated: rv.undated })
