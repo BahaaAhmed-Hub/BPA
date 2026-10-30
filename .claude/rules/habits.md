@@ -30,6 +30,22 @@ until the next load and vanished. `completed` now says which kind of day it is,
 and `loadHabitLogsFromDB` reads it back rather than ticking every row it finds.
 A `quantity` of 0 is not a day.
 
+## Habits — "I can't find my logs for the last 5 days" was the server's 1,000-row ceiling
+`loadHabitLogsFromDB` and the stale-row check inside `saveHabitLogsToDB` read `habit_logs` with
+one plain select. PostgREST answers one request with at most 1,000 rows, oldest first, so an
+account with more than 1,000 logged days got a record with its **newest days missing** — and
+`habitsStore.loadFromDB` does `saveLogs(logs)`, replacing the device's own logs with that answer,
+so even a device that had the last five days showed them gone after the next sync. The ticks were
+still on the server (the save upserts and deletes only against what it read); a new address or
+browser just never fetched them. Both reads use `readEvery` now (see the root `CLAUDE.md`), and
+**a failed read throws** so the store keeps what the device has — before, it returned `{}`, which
+the store wrote over the local logs (measured: three local ticks became `[]`).
+`node scripts/habit-logs-past-1000.mjs [cap|flaky|deaf]` — six habits × 200 days, the stub capping
+a read at 1,000 and recording deletes: the whole record arrives (1,200 of 1,200, the newest 30
+included) and nothing is deleted; a page that fails keeps the device's own ticks; a server that
+ignores the range is asked twice, not for ever. Controls: on the code before, 1,000 of 1,200 and
+the last five days missing for every habit; with the old `return {}`, the local ticks are gone.
+
 ## Habits — a deleted habit came back, and brought its history with it
 `professor-habits-deleted` in `habitsStore.ts` — the same hole as
 `professor-tasks-deleted`, one store along, and the same three-part fix.

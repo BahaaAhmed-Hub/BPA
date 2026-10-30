@@ -31,6 +31,23 @@ the shell running the command and kills it (exit 144).
   **server** sends, not the store's persisted copy, or the screen empties a few
   seconds after it settles.
 
+## Three things that make a harness fail for a reason that is not the code
+- **The page and the mouse use different units at 90%.** The app is drawn at 0.9 and
+  `lib/zoomSpace.ts` makes everything the *page* reports (`getBoundingClientRect`, `innerWidth`,
+  `elementFromPoint`) read in the app's own units, while Playwright's `mouse.*` and
+  `boundingBox()` work in screen pixels. A rect read inside the page must be multiplied by
+  `window.__zoomSpace ?? 1` before it goes to the mouse (and a screen position divided before it
+  goes to `elementFromPoint`); a hard-coded `1280` compared with a page position must be
+  `innerWidth`. Ten scripts mixed them and silently clicked 11% off target.
+- **A dev server that has hot-updated a file gives a harness a second copy of the store.** A
+  harness that does `import('/src/store/…')` inside the page (`assistant-calendar-habits.mjs`)
+  passes 4 out of 4 on a freshly started server and fails 3 out of 3 after a `touch` of a file
+  it depends on. Restart the server after editing, before you trust a failure there.
+- **`localStorage.setItem('bpa-wizard-done', '1')`** in every init script: the setup guide
+  (PR #62) covers a brand-new stub account's page, and a click is "intercepted" by it.
+- **A stub that answers every read with the same rows cannot show a paging bug** — and hides a
+  paging loop. Honour `limit`/`offset`/`order` and cap at 1,000, as the server does.
+
 ## Waiting: `scripts/settled.mjs`, not a number
 Every harness used to sleep 5–7s after boot — **354 seconds of fixed
 `waitForTimeout` across the directory**, about eleven of a twelve-second mode.

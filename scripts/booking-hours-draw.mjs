@@ -98,6 +98,7 @@ await ctx.addInitScript(s => { try {
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'calendar', themeId: 'sunlit-bento' }, version: 0 }))
   localStorage.setItem('google_provider_token', 'stub-token')
+  localStorage.setItem('bpa-wizard-done', '1')   // the setup guide (PR #62) covers a brand-new account's page
   localStorage.setItem('google_provider_token_saved_at', String(Date.now()))
 } catch { /* quota */ } }, session)
 
@@ -149,7 +150,9 @@ async function dragOn(dateStr, fromMin, toMin) {
     const g = document.querySelector('[data-cal-cols]')?.parentElement
     return g ? { top: g.getBoundingClientRect().top, scroll: g.scrollTop } : { top: 0, scroll: 0 }
   })
-  const yOf = m => scroller.top + (m / 60) * hourPx - scroller.scroll
+  // The page reports positions in the app's own units (lib/zoomSpace.ts); the mouse works in screen pixels.
+  const S = await p.evaluate(() => window.__zoomSpace ?? 1)
+  const yOf = m => S * (scroller.top + (m / 60) * hourPx - scroller.scroll)
   await p.mouse.move(x, yOf(fromMin))
   await p.mouse.down()
   await p.mouse.move(x, yOf(fromMin) + 14, { steps: 3 })

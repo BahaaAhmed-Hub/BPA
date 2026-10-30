@@ -97,6 +97,26 @@ browser zoom, so three rules keep it honest:
 measures real pixels and real pointer actions; each of `space`, `calendar`, `popover` fails with
 the layer switched off.
 
+## A read of a table that grows must page — the server cuts a select at 1,000 rows, silently
+PostgREST answers any single read with at most 1,000 rows and says nothing when it has cut the
+answer short, so a plain `.select()` is correct **until the day the table passes 1,000 rows** and
+then returns the *oldest* 1,000. `habit_logs` did exactly that (six habits × 170 days): the record
+arrived five days short, and because `loadFromDB` replaces the device's own copy with the answer,
+a device that had the last five days lost them at the next sync — "I filled the habits till today
+and can't find the last 5 days". Nothing was deleted; the rows were on the server the whole time.
+- **`readEvery(page, keyOf?)` in `src/lib/dbSync.ts`** reads in pages, in an order that cannot
+  shuffle between pages (`order('date').order('habit_id')`), until a page is empty — or brings
+  nothing new (a server that ignores the range), or after 500 pages. Use it for any table a person
+  adds to every day.
+- **A failed read throws; it does not return `{}`.** The store's `catch` is "offline, keep local";
+  an empty result is what it writes over the device.
+- **Still unpaged, and growing** (found by scanning every `.from().select()`): `finance_transactions`
+  (`loadTransactions(year)`, `loadTransactionsSpan`), `tasks`, `mail_smart_threads`,
+  `shopping_price_snapshots`, `library_sessions`, `google_event_metadata`. Each is a latent copy of
+  the habit bug; fix them as they are touched, with a stub that caps at 1,000
+  (`scripts/habit-logs-past-1000.mjs` is the pattern: it honours `limit`/`offset`/`order`, enforces
+  the ceiling, and records every delete).
+
 ## Stack
 - **React 19 + TypeScript + Vite + Zustand**
 - Branch: `claude/professor-web-app-dev-tnj0uk` (current dev branch; older work was on `claude/build-professor-ai-app-sDbyz`)

@@ -120,7 +120,7 @@ const tick = await p.evaluate(() => {
   const x = [...document.querySelectorAll('button')].find(e => /Mark done/i.test(e.getAttribute('aria-label') ?? e.title ?? ''))
   if (!x) return null
   const r = x.getBoundingClientRect()
-  return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+  const S = window.__zoomSpace ?? 1; return { x: (r.x + r.width / 2) * S, y: (r.y + r.height / 2) * S }
 })
 ok('the block carries a done tick', !!tick)
 if (tick) { await p.mouse.move(tick.x, tick.y); await p.waitForTimeout(120); await p.mouse.down(); await p.mouse.up() }
