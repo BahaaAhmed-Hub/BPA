@@ -803,3 +803,20 @@ the module the app opened on.
   rule gives a different number (a finished urgent task, an all-day event), and
   the doors. `supabase/functions/_shared/appGuide.ts` no longer lists Dashboard
   (an edge-function file: deploys with the functions workflow).
+
+## The look follows the account, not the address
+Density (`professor-compact`, a page zoom of 0.9) and the accent are **synced** preferences,
+and they arrive *after* boot: `initAppearance()` has already painted from an empty
+`localStorage` on an address the browser has never seen (a new device, the move to
+`www.be2.life`). Nothing re-applied them, so the app stayed ~11% bigger than you left it —
+"the fonts feel bigger, the whole experience is different" — until a second reload.
+`initAppearance` now listens for `professor:prefsRestored` and re-reads the appearance.
+- **Deliberately not synced, so they start from defaults on a new address:** the theme
+  (`professor-ui`), the calendar's view (`cal-view`), and the finance passkey
+  (`finance-lock-device`; a passkey is also bound to the address it was made on, so it is
+  re-registered there — Settings → Finance → Security). These are choices made *on a
+  device*; changing that is a decision, not a bug fix.
+- `node scripts/appearance-follows-prefs.mjs 5199 [density|accent|control]` — a fresh
+  origin whose account has compact saved: the page must reach zoom 0.9 with no reload.
+  Control: with nothing saved the page stays at 100%, and the same run on the code
+  before fails.

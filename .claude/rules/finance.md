@@ -300,9 +300,9 @@ figure is added to something denominated differently:
 
 ## Finance — Balances screen
 - **Every account row is one box, and its name is all there.** One fixed height
-  (`ROW_H`, 58) and one grid per row — handle, icon, name, [ceiling], balance, action,
+  (`ROW_H`, 52 — it was a 46px minimum before, and 58 for a while, which read as bigger) and one grid per row — handle, icon, name, [ceiling], balance, action,
   edit — so every edge is at the same x (`rowColumns`; below `COMPACT_BELOW` the
-  ceiling folds into the caption and a hairline on the row's foot). The name may take
+  ceiling folds into the caption and a 2px hairline flush on the row's foot, clear of the text above it). The name may take
   **two lines** (line-clamp, `title` carries the rest): at the width the money columns
   leave it, "World Platinum Signature CC" was cut to "World Platinum Si…" when it was
   one, and a name you cannot read in full is how two accounts get confused. The

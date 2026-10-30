@@ -69,6 +69,14 @@ await settled(page, traffic, 9000)
 await page.locator('nav[aria-label="Finance sections"]').getByRole('button', { name: 'Balance', exact: true }).click()
 await page.getByText(NAMES[3]).first().waitFor({ timeout: 8000 }).catch(() => {})
 
+// The card's limit hairline runs along the row's foot: the text above it must clear it.
+const gap = await page.evaluate(() => {
+  const row = [...document.querySelectorAll('[role="button"][title^="Show only"]')].find(r => r.querySelector('div[aria-hidden][style*="bottom"]'))
+  if (!row) return null
+  const bar = row.querySelector('div[aria-hidden][style*="bottom"]').getBoundingClientRect()
+  const lowest = Math.max(...[...row.querySelectorAll('span')].filter(s => s.children.length === 0 && s.textContent?.trim()).map(s => s.getBoundingClientRect().bottom))
+  return Math.round((bar.top - lowest) * 10) / 10
+})
 const rows = await page.evaluate(names => {
   const out = []
   for (const el of document.querySelectorAll('[role="button"][title^="Show only"]')) {
@@ -85,6 +93,7 @@ const rows = await page.evaluate(names => {
   return out
 }, NAMES)
 console.log(rows.map(r => `  ${r.h}px × ${r.w}px  ${r.title}`).join('\n'))
+ok('the card caption clears the limit hairline (gap >= 0px)', gap !== null && gap >= 0, `gap ${gap}px`)
 ok('every account row was found (positive: the fixture is on screen)', rows.length === 5, String(rows.length))
 ok('…and every name element was found', rows.every(r => r.name), JSON.stringify(rows.map(r => r.name)))
 ok('all rows are the same height', new Set(rows.map(r => r.h)).size === 1, [...new Set(rows.map(r => r.h))].join(' / '))

@@ -150,7 +150,7 @@ if (MODE === 'borrow') {
   await tab('Balance')
   await page.getByTitle('Add one entry').click()
   await page.getByRole('button', { name: 'Borrowed', exact: true }).click()
-  await page.getByLabel('Who lent it').fill('Ahmed')
+  await page.getByPlaceholder('e.g. borrowed from Ahmed').fill('borrowed from Ahmed')
   await page.getByPlaceholder('0').first().fill('10000')
 
   ok('the plan is offered, and off', (await page.getByRole('checkbox').first().getAttribute('aria-checked')) === 'false')

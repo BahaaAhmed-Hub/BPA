@@ -411,6 +411,12 @@ export function initAppearance(): void {
   applyAppearance()
   window.addEventListener('professor:accentChanged', () => applyAppearance())
   window.addEventListener('professor:densityChanged', () => applyDensity())
+  // The synced half of this arrives *after* boot: a browser that has never seen
+  // this address (a new device, a new domain) paints at its defaults, and the
+  // account's saved density and accent land in localStorage a moment later with
+  // nobody to paint them — the app stays 11% bigger than you left it until a
+  // second reload. Preferences restored means appearance re-read.
+  window.addEventListener('professor:prefsRestored', () => applyAppearance())
   // The mode is passed rather than re-read: persist writes the store to
   // localStorage from the same set(), and a listener that read it back could
   // arrive first and paint the mode you just left.
