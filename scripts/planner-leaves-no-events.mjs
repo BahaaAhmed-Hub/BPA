@@ -41,6 +41,7 @@ await ctx.route('**://www.googleapis.com/**', r=>{
   return j({})
 })
 await ctx.route('**://oauth2.googleapis.com/**', r=>r.fulfill({status:200,contentType:'application/json',body:'{}'}))
+await ctx.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
 await ctx.addInitScript(s=>{try{
  localStorage.setItem('sb-placeholder-auth-token',JSON.stringify(s))
  localStorage.setItem('professor-ui',JSON.stringify({state:{activeModule:'tasks',themeId:'sunlit-bento'},version:0}))

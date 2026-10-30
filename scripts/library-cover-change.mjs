@@ -32,6 +32,7 @@ await ctx.route('https://openlibrary.org/**', r => json(r, { docs: [{ key: '/wor
 await ctx.route('https://www.googleapis.com/books/**', r => json(r, { items: [{ id: 'g1', volumeInfo: { title: 'Dune', authors: ['Frank Herbert'], imageLinks: { thumbnail: 'https://books.google.com/dune.jpg' } } }] }))
 await ctx.route('https://covers.openlibrary.org/**', r => r.fulfill({ status: 200, contentType: 'image/png', body: png(40, 60, [200, 40, 40]) }))
 await ctx.route('https://books.google.com/**', r => r.fulfill({ status: 200, contentType: 'image/png', body: png(40, 60, [40, 40, 200]) }))
+await ctx.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
 await ctx.addInitScript(s => { localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s)); localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'library', themeId: 'sunlit-bento' }, version: 0 })) }, session)
 const p = await ctx.newPage(); p.on('pageerror', e => console.log('ERR', String(e).slice(0, 200)))
 let fails = 0

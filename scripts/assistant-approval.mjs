@@ -48,6 +48,7 @@ async function launch() {
   await ctx.route('**://gmail.googleapis.com/**', r => { const q = r.request(); if (q.method() === 'OPTIONS') return r.fulfill({ status: 204, headers: CORS })
     if (/messages\/send$/.test(new URL(q.url()).pathname)) { sent.push(JSON.parse(q.postData() || '{}')); return r.fulfill({ status: 200, headers: CORS, contentType: 'application/json', body: '{"id":"sent1"}' }) }
     return r.fulfill({ status: 200, headers: CORS, contentType: 'application/json', body: '{}' }) })
+  await ctx.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
   await ctx.addInitScript(s => { try { localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
     localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'morning', themeId: 'sunlit-bento' }, version: 0 }))
     localStorage.setItem('professor-ai-config', JSON.stringify({ provider: 'anthropic', anthropicKey: 'sk-ant-test' }))

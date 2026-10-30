@@ -82,6 +82,7 @@ const page = await ctx.newPage()
 page.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
 const dialogs = []
 page.on('dialog', d => { dialogs.push(d.message()); d.accept().catch(() => {}) })   // accept: if one fires, the delete still happens, and the case fails on `dialogs`
+await page.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
 await page.addInitScript(s => {
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('google_provider_token', 'tok')

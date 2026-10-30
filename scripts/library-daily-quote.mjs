@@ -42,6 +42,7 @@ async function open({ quotes = QUOTES, settings = null, module = 'morning' } = {
   await ctx.route('https://api.anthropic.com/**', r => r.request().method() === 'OPTIONS' ? r.fulfill({ status: 204, headers: cors }) : json(r, { id: 'm', type: 'message', role: 'assistant', model: 'x', stop_reason: 'end_turn', stop_sequence: null, content: [{ type: 'text', text: '{}' }], usage: { input_tokens: 1, output_tokens: 1 } }, 200, cors))
   await ctx.route('**://*.googleapis.com/**', r => json(r, { items: [] }))
   await ctx.route('https://covers.openlibrary.org/**', r => r.fulfill({ status: 404, body: '' }))
+  await ctx.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
   await ctx.addInitScript(([s, st, mod]) => { try {
     localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
     localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: mod, themeId: 'sunlit-bento' }, version: 0 }))

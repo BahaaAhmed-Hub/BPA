@@ -32,6 +32,7 @@ await ctx.route('**://placeholder.supabase.co/**', r => {
   if (u.pathname === '/rest/v1/tasks') return j(tasks)
   return j([])
 })
+await ctx.addInitScript(() => { try { localStorage.setItem('bpa-wizard-done', '1') } catch {} })
 await ctx.addInitScript(s => { try {
   localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(s))
   localStorage.setItem('professor-ui', JSON.stringify({ state: { activeModule: 'tasks', themeId: 'sunlit-bento' }, version: 0 }))
