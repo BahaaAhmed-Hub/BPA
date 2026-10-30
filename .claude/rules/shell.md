@@ -820,3 +820,20 @@ move to `www.be2.life`), so it re-reads the appearance on `professor:prefsRestor
   changing that is a decision, not a bug fix.
 - `node scripts/appearance-follows-prefs.mjs 5199 [accent|control]` — a fresh origin whose account
   has an accent saved must reach it with no reload; with nothing saved it stays amber.
+
+## The rail dock — a bar that slides, a label that slides out
+`SideRail.tsx` + the `.rail-ind` / `.rail-tip` rules in `index.css`, from the Side Rail Dock
+component. The **module pill** only; the company tiles are untouched. The active tile stays the
+solid dark square (the Sunlit rule above) — the dock's accent-coloured active state was not taken.
+- **One accent bar** (`--sb-accent`, 3×20px, `left: 3px`) translates to the active tile
+  (`offsetTop`, CSS units, re-read on module change and resize), 360ms `cubic-bezier(.22,1,.36,1)`.
+  20px, not the tile's 40: at the pill's rounded end a taller bar pokes past the border.
+- **The label is `position: fixed`**, drawn from the tile's rect: the rail is `overflow-y: auto`,
+  which clips x as well, so a label inside it is cut off at the rail's own edge. Hover and
+  `:focus-visible` show it; `title` is gone (it would draw the word twice). Colours are the active
+  tile's own pair (`--sb-ink-1` on `--sb-ink-on-dark`) so contrast is the same choice, not a second.
+- Hidden under 720px (the rail is a bottom bar) and on `hover: none`. `prefers-reduced-motion`
+  turns the slide and the fade off. **Not taken**: the demo's idle auto-walk.
+`scripts/rail-dock.mjs [dock|control]` (`INK_THEME=`) — 15 assertions in a real browser, with the
+control removing the bar's transform. Measured in CSS units in the page: Playwright's `boundingBox`
+is real pixels and the app is at 90%, which read as a 43px misalignment that was not there.

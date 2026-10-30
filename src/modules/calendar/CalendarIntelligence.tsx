@@ -36,6 +36,7 @@ import {
 } from '@/lib/googleCalendar'
 import { uploadToDrive } from '@/lib/googleDrive'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
+import { knownPeopleFrom } from '@/lib/knownPeople'
 import { CalendarRail, Label as CalLabel, type RailEvent } from './CalendarRail'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
 import { loadEventStatuses, toggleEventStatus } from '@/lib/eventStatus'
@@ -2620,6 +2621,9 @@ export function CalendarIntelligence() {
     }
   }, [events, projectLinks])
 
+  // Who the Attendees field can suggest: everyone on the events already loaded.
+  const knownPeople = useMemo(() => knownPeopleFrom(events), [events])
+
   // Filter out block-events for rules with hideBlocked=true (or global originalsOnly).
   // Uses two paths: localStorage map (fast) + description marker (cross-device, no Apply needed).
   const displayedEvents = (() => {
@@ -3800,6 +3804,7 @@ export function CalendarIntelligence() {
             draft={{ dateStr: existing.startDate, startMin: 0, endMin: 0 }}
             existing={existing}
             calendars={allCalendars}
+            knownPeople={knownPeople}
             organiser={cal?.accountEmail ?? user?.email}
             clashes={(displayedEvents as GCalEventExt[])
               .filter(o => {
@@ -3919,6 +3924,7 @@ export function CalendarIntelligence() {
           draft={newEventDraft}
           seed={newEventSeed ?? undefined}
           calendars={allCalendars}
+          knownPeople={knownPeople}
           organiser={user?.email}
           onSave={data => void handleCreateEvent(data)}
           uploadFile={uploadForCalendar}
