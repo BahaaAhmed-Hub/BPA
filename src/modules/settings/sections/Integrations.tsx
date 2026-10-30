@@ -5,6 +5,8 @@ import { usePersona } from '@/lib/assistantPersona'
 import { ICON, STROKE } from '@/lib/type'
 import { listUserTokens, createUserToken, revokeUserToken, type UserToken } from '@/lib/userTokens'
 import { getTelegramLinks, revokeTelegramLink, type TelegramLink } from '@/lib/telegramLink'
+import { IntegrationHub, type HubNode } from './IntegrationHub'
+import { MARKS } from '@/lib/integrationMarks'
 
 // ─── Integrations Section (11D) ───────────────────────────────────────────────
 
@@ -56,8 +58,22 @@ export function IntegrationsSection() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // Connected means there is something to act as you: a linked chat for Telegram,
+  // a token for Siri and the MCP server (which is what both of them present).
+  const hubNodes: HubNode[] = [
+    { id: 'telegram', label: 'Telegram', mark: MARKS.telegram, state: telegramLinks.length > 0 ? 'on' : 'off' },
+    { id: 'siri',     label: 'Siri',     mark: MARKS.siri,     state: tokens.length > 0 ? 'on' : 'off' },
+    { id: 'mcp',      label: 'MCP',      mark: MARKS.mcp,      state: tokens.length > 0 ? 'on' : 'off' },
+    { id: 'notion',   label: 'Notion',   mark: MARKS.notion,   state: 'soon' },
+    { id: 'asana',    label: 'Asana',    mark: MARKS.asana,    state: 'soon' },
+    { id: 'trello',   label: 'Trello',   mark: MARKS.trello,   state: 'soon' },
+    { id: 'notes',    label: 'Apple Notes', mark: MARKS.appleNotes, state: 'soon' },
+  ]
+
   return (
     <div>
+      <IntegrationHub nodes={hubNodes} />
+
       {/* ── CONNECTIONS — personal access tokens ─────────────────────────── */}
       <div style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
