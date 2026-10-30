@@ -3,6 +3,7 @@
 // Column drops on error: the migration may not have run on all environments.
 
 import { supabase } from '@/lib/supabase'
+import { readEvery } from '@/lib/readEvery'
 import type { ShoppingGroup, ShoppingItem, ShoppingStore, PriceSnapshot } from './types'
 
 // ─── Row shapes (snake_case ↔ camelCase) ─────────────────────────────────────
@@ -121,12 +122,12 @@ export async function deleteGroup(id: string): Promise<void> {
 // ─── Items ────────────────────────────────────────────────────────────────────
 
 export async function loadItems(): Promise<ShoppingItem[] | null> {
-  const { data, error } = await supabase
-    .from('shopping_items')
-    .select('*')
-    .order('sort_order')
-  if (error) { console.warn('[shoppingDb] loadItems:', error.message); return null }
-  return (data as ItemRow[]).map(toItem)
+  // In pages: the server cuts one read at 1,000 rows without saying so.
+  const { data, error } = await readEvery<ItemRow>((a, b) =>
+    supabase.from('shopping_items').select('*').order('sort_order').order('id').range(a, b),
+    r => r.id)
+  if (error || !data) { console.warn('[shoppingDb] loadItems:', error?.message); return null }
+  return data.map(toItem)
 }
 
 /** Columns a migration may not have added yet. Dropped **one at a time, and
@@ -222,13 +223,15 @@ export async function markStoreScraped(id: string, ok: boolean): Promise<void> {
 
 export async function loadSnapshots(itemIds: string[]): Promise<PriceSnapshot[] | null> {
   if (!itemIds.length) return []
-  const { data, error } = await supabase
-    .from('shopping_price_snapshots')
-    .select('*')
-    .in('item_id', itemIds)
-    .order('scraped_at', { ascending: false })
-  if (error) { console.warn('[shoppingDb] loadSnapshots:', error.message); return null }
-  return (data as SnapshotRow[]).map(toSnapshot)
+  // In pages — and this is the table that fills fastest: one row per item per price check, so a
+  // few hundred items reach the server's 1,000-row ceiling within weeks.
+  const { data, error } = await readEvery<SnapshotRow>((a, b) =>
+    supabase.from('shopping_price_snapshots').select('*')
+      .in('item_id', itemIds)
+      .order('scraped_at', { ascending: false }).order('id').range(a, b),
+    r => r.id)
+  if (error || !data) { console.warn('[shoppingDb] loadSnapshots:', error?.message); return null }
+  return data.map(toSnapshot)
 }
 
 /** A whole batch in one request. Sent one at a time, a price refresh over

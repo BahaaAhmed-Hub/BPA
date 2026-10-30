@@ -3,6 +3,7 @@
  */
 import { supabase } from '@/lib/supabase'
 import { markLocalWrite } from '@/lib/liveSync'
+import { readEvery } from '@/lib/readEvery'
 
 // ─── Row types ────────────────────────────────────────────────────────────────
 
@@ -158,17 +159,20 @@ export async function deleteCategory(id: string): Promise<void> {
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
 
+/** One year of the ledger, read in pages: the server answers one request with at most 1,000 rows
+ *  and says nothing when it cuts the answer short, so a year with more entries than that came back
+ *  without its *oldest* months (the list is newest first) and every balance and total drifted.
+ *  A failed read **throws**: the store's `catch` keeps the entries the device already has, where an
+ *  empty answer used to blank the whole ledger on screen. */
 export async function loadTransactions(year: number): Promise<TransactionRow[]> {
   const userId = await uid()
-  const { data, error } = await supabase
-    .from('finance_transactions')
-    .select('*')
-    .eq('user_id', userId)
-    .gte('date', `${year}-01-01`)
-    .lte('date', `${year}-12-31`)
-    .order('date', { ascending: false })
-  if (error || !data) return []
-  return data as TransactionRow[]
+  const { data, error } = await readEvery<TransactionRow>((a, b) =>
+    supabase.from('finance_transactions').select('*').eq('user_id', userId)
+      .gte('date', `${year}-01-01`).lte('date', `${year}-12-31`)
+      .order('date', { ascending: false }).order('id', { ascending: true }).range(a, b),
+    r => r.id)
+  if (error || !data) throw new Error(error?.message ?? 'the ledger could not be read')
+  return data
 }
 
 /** Every entry the ledger holds, in every year. Read in pages: a plain select
@@ -177,15 +181,11 @@ export async function loadTransactions(year: number): Promise<TransactionRow[]> 
  *  is not "there is nothing". */
 export async function loadEveryTransaction(): Promise<TransactionRow[] | null> {
   const userId = await uid()
-  const out: TransactionRow[] = []
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await supabase
-      .from('finance_transactions').select('*').eq('user_id', userId)
-      .order('date', { ascending: true }).range(from, from + 999)
-    if (error || !data) return null
-    out.push(...(data as TransactionRow[]))
-    if (data.length < 1000) return out
-  }
+  const { data, error } = await readEvery<TransactionRow>((a, b) =>
+    supabase.from('finance_transactions').select('*').eq('user_id', userId)
+      .order('date', { ascending: true }).order('id', { ascending: true }).range(a, b),
+    r => r.id)
+  return error || !data ? null : data
 }
 
 /** A span of years, in one query.
@@ -203,15 +203,13 @@ export async function loadTransactionsSpan(fromYear: number, toYear: number): Pr
   const userId = await uid()
   const lo = Math.min(fromYear, toYear)
   const hi = Math.max(fromYear, toYear)
-  const { data, error } = await supabase
-    .from('finance_transactions')
-    .select('*')
-    .eq('user_id', userId)
-    .gte('date', `${lo}-01-01`)
-    .lte('date', `${hi}-12-31`)
-    .order('date', { ascending: false })
-  if (error || !data) return []
-  return data as TransactionRow[]
+  const { data, error } = await readEvery<TransactionRow>((a, b) =>
+    supabase.from('finance_transactions').select('*').eq('user_id', userId)
+      .gte('date', `${lo}-01-01`).lte('date', `${hi}-12-31`)
+      .order('date', { ascending: false }).order('id', { ascending: true }).range(a, b),
+    r => r.id)
+  if (error || !data) throw new Error(error?.message ?? 'the ledger could not be read')
+  return data
 }
 
 /** The first and last year this ledger has anything in, so a span control can
@@ -233,14 +231,13 @@ export async function loadYearBounds(): Promise<{ first: number; last: number } 
  *  fixes one year at a time is one you have to remember to run again. */
 export async function loadUnpaidTransactions(): Promise<TransactionRow[]> {
   const userId = await uid()
-  const { data, error } = await supabase
-    .from('finance_transactions')
-    .select('*')
-    .eq('user_id', userId)
-    .is('paid_at', null)
-    .order('date', { ascending: true })
-  if (error || !data) return []
-  return data as TransactionRow[]
+  const { data, error } = await readEvery<TransactionRow>((a, b) =>
+    supabase.from('finance_transactions').select('*').eq('user_id', userId)
+      .is('paid_at', null)
+      .order('date', { ascending: true }).order('id', { ascending: true }).range(a, b),
+    r => r.id)
+  if (error || !data) throw new Error(error?.message ?? 'the ledger could not be read')
+  return data
 }
 
 /** Every entry claiming it was paid on a day that has not happened yet, in any
@@ -259,14 +256,13 @@ export async function loadUnpaidTransactions(): Promise<TransactionRow[]> {
  *  which, so those are left alone rather than guessed at. */
 export async function loadPaidInFuture(today: string): Promise<TransactionRow[]> {
   const userId = await uid()
-  const { data, error } = await supabase
-    .from('finance_transactions')
-    .select('*')
-    .eq('user_id', userId)
-    .gt('paid_at', today)
-    .order('date', { ascending: true })
-  if (error || !data) return []
-  return data as TransactionRow[]
+  const { data, error } = await readEvery<TransactionRow>((a, b) =>
+    supabase.from('finance_transactions').select('*').eq('user_id', userId)
+      .gt('paid_at', today)
+      .order('date', { ascending: true }).order('id', { ascending: true }).range(a, b),
+    r => r.id)
+  if (error || !data) throw new Error(error?.message ?? 'the ledger could not be read')
+  return data
 }
 
 export async function saveTransaction(row: TransactionRow): Promise<void> {

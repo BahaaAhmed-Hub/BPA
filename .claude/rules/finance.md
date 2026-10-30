@@ -978,6 +978,15 @@ pushes to Google Calendar — nothing here knows about calendars.
 - Configured in Settings → Finance (MONEY REMINDERS); `App.tsx` runs it on load, on
   `professor:moneyRemindersChanged`, and every 12h.
 
+## Finance — the year is read in pages, and a failed read keeps what the device has
+`loadTransactions(year)` (and the span, the unpaid, the paid-in-the-future and every-entry
+reads) go through `readEvery`: the server answers one request with at most 1,000 rows, and the
+year is newest-first, so a year with more entries than that came back **without its oldest
+months** — every balance, envelope and Financials total quietly short, with the rows on the
+server. A failed read **throws** (it used to return `[]`), and `loadFromDB` keeps the entries the
+device already holds (`txFailed`) instead of replacing them with nothing — a ledger that goes blank
+because one page timed out is worse than a stale one. `scripts/reads-past-1000.mjs` holds all five.
+
 ## Finance — a year at a time
 `loadTransactions(year)` fetches `date` between Jan 1 and Dec 31 and `loadFromDB`
 **replaces** the list with what it fetched. So an entry dated outside `currentYear`

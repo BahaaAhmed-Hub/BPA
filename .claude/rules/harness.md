@@ -48,6 +48,13 @@ the shell running the command and kills it (exit 144).
 - **A stub that answers every read with the same rows cannot show a paging bug** — and hides a
   paging loop. Honour `limit`/`offset`/`order` and cap at 1,000, as the server does.
 
+## A pure harness over the real loaders — `scripts/reads-past-1000.mjs`
+No browser and no dev server: the real files are bundled with `rolldown`, with only `supabase`
+(and `liveSync`) replaced by a fake that **behaves like the server** — a 1,000-row ceiling, `range`
+/ `order` / `in` / `eq` / `gte` / `lte` / `gt` / `is` / `not`, every delete recorded, a page that can
+fail. `SRC=<path to a worktree>` runs the same claims against other code, which is the control
+(`git worktree add <dir> <sha>` and symlink `node_modules`). Copy it for the next loader.
+
 ## Waiting: `scripts/settled.mjs`, not a number
 Every harness used to sleep 5–7s after boot — **354 seconds of fixed
 `waitForTimeout` across the directory**, about eleven of a twelve-second mode.

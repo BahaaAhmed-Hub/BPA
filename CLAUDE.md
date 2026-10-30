@@ -110,12 +110,21 @@ and can't find the last 5 days". Nothing was deleted; the rows were on the serve
   adds to every day.
 - **A failed read throws; it does not return `{}`.** The store's `catch` is "offline, keep local";
   an empty result is what it writes over the device.
-- **Still unpaged, and growing** (found by scanning every `.from().select()`): `finance_transactions`
-  (`loadTransactions(year)`, `loadTransactionsSpan`), `tasks`, `mail_smart_threads`,
-  `shopping_price_snapshots`, `library_sessions`, `google_event_metadata`. Each is a latent copy of
-  the habit bug; fix them as they are touched, with a stub that caps at 1,000
-  (`scripts/habit-logs-past-1000.mjs` is the pattern: it honours `limit`/`offset`/`order`, enforces
-  the ceiling, and records every delete).
+- **Every table that grows now pages**: `habit_logs`; `finance_transactions` (the year, a span of
+  years, every entry, the unpaid ones, the paid-in-the-future ones); `tasks` (the load **and** the
+  save's stale-id check — past the ceiling a task deleted here could never be deleted there);
+  `mail_smart_threads`; `google_event_metadata`; `shopping_items` and `shopping_price_snapshots`
+  (the fastest to fill: a row per item per price check); the library's books, lists, links, quotes,
+  notes, bookmarks and reading sessions. Bounded tables (accounts, categories, goals, budgets, plans,
+  stores, groups, follows) stay plain selects.
+- **A failed page is an error, never "nothing"**: the ledger, habit logs and tasks throw or return
+  the empty the store already ignores; mail, shopping and the library return `null`. `financeStore`
+  keeps the entries it has when the year could not be read — it used to blank the ledger.
+- **`node scripts/reads-past-1000.mjs`** bundles the *real* loaders against a fake server that
+  enforces the ceiling, honours `range`/`order`/`in`/`eq`/`gte`/`lte`/`gt`/`is`/`not`, records every
+  delete and can fail a page — 27 claims, no browser. `SRC=<checkout>` runs it against other code:
+  on the code before paging, **25 of 27 fail** (every table cut to exactly 1,000).
+  **A new loader of a table a person adds to must use `readEvery` and get a line there.**
 
 ## Stack
 - **React 19 + TypeScript + Vite + Zustand**

@@ -4,6 +4,10 @@
  */
 import { supabase } from './supabase'
 import { reportSyncGap, clearSyncGap } from './syncStatus'
+// `readEvery` — reading a growing table in pages — lives in ./readEvery so the finance, library,
+// shopping, mail and calendar loaders can use it without importing this file.
+import { readEvery } from './readEvery'
+export { readEvery }
 import type { DbCompany, DbHabit, DbHabitLog } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -383,12 +387,16 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
   const session = await getSession()
   const userId  = session.user.id
 
-  // Delete rows not in local list
-  const { data: existing } = await supabase
-    .from('tasks').select('id').eq('user_id', userId)
-  const existingIds = (existing ?? []).map((r: { id: string }) => r.id)
-  const keepIds     = tasks.map(t => t.id)
-  const toDelete    = existingIds.filter((id: string) => !keepIds.includes(id))
+  // Delete rows not in local list. Read in pages (see readEvery): a read cut at 1,000 rows would
+  // leave every task past it undeletable, and a read that failed part-way must not be mistaken for
+  // "the server holds nothing more" — so on an error nothing is deleted this time.
+  const { data: existing, error: existingErr } = await readEvery<{ id: string }>((a, b) =>
+    supabase.from('tasks').select('id').eq('user_id', userId)
+      .order('created_at', { ascending: true }).order('id', { ascending: true }).range(a, b),
+    r => r.id)
+  const existingIds = existingErr ? [] : (existing ?? []).map(r => r.id)
+  const keepIds     = new Set(tasks.map(t => t.id))
+  const toDelete    = existingIds.filter(id => !keepIds.has(id))
   if (toDelete.length) {
     await supabase.from('tasks').delete().in('id', toDelete)
   }
@@ -474,9 +482,14 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
 export async function loadTasksFromDB(): Promise<TaskRow[]> {
   const session = await getSession()
   const userId  = session.user.id
-  const { data, error } = await supabase
-    .from('tasks').select('*').eq('user_id', userId).order('created_at', { ascending: true })
-  if (error || !data) return []
+  // In pages: the server cuts one read at 1,000 rows, oldest first, and `loadFromDB` keeps only the
+  // local tasks the answer also contains — so an account past 1,000 tasks lost its newest ones from
+  // the device at every sync, with every one of them still on the server.
+  const { data, error } = await readEvery<Record<string, unknown>>((a, b) =>
+    supabase.from('tasks').select('*').eq('user_id', userId)
+      .order('created_at', { ascending: true }).order('id', { ascending: true }).range(a, b),
+    r => r.id as string)
+  if (error || !data) return []     // the store treats an empty answer as "nothing to merge" and keeps what it has
 
   const STATIC_TAGS = new Set(['teradix', 'dxtech', 'consulting', 'personal'])
   if ((data as Record<string, unknown>[]).some(r => 'project_id' in r)) taskProjectColumns = true
@@ -686,39 +699,6 @@ function columnProblem(error: { code?: string; message?: string }): 'columns' | 
 }
 
 // ─── Habit logs ───────────────────────────────────────────────────────────────
-
-/** The server answers any single read with at most 1,000 rows (PostgREST `max-rows`) whatever was
- *  asked for, and says nothing when it has cut the answer short. A plain `select` on a table that
- *  grows every day is therefore *correct until the day it passes 1,000 rows*, and from then on it
- *  returns the oldest 1,000 — for `habit_logs`, the record minus its newest days, which then
- *  replaced the device's own copy at every sync ("I can't find my logs for the last 5 days").
- *  Read in pages instead, in an order that cannot shuffle between pages, until a page is empty.
- *  The step is what came back rather than a fixed 1,000, so a lower server ceiling skips nothing. */
-export async function readEvery<T>(
-  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string; code?: string } | null }>,
-  /** Identifies a row, so a server that ignores the range and answers the same rows again is noticed
-   *  (a page with nothing new in it is the last one) rather than asked for ever. */
-  keyOf?: (row: T) => string,
-  size = 1000,
-): Promise<{ data: T[] | null; error: { message: string; code?: string } | null }> {
-  const all: T[] = []
-  const seen = new Set<string>()
-  // A ceiling, not an expectation: 500 pages is half a million rows.
-  for (let pages = 0, from = 0; pages < 500; pages++) {
-    const { data, error } = await page(from, from + size - 1)
-    if (error) return { data: null, error }
-    if (!data || data.length === 0) return { data: all, error: null }
-    if (keyOf) {
-      const fresh = data.filter(r => { const k = keyOf(r); if (seen.has(k)) return false; seen.add(k); return true })
-      if (fresh.length === 0) return { data: all, error: null }
-      all.push(...fresh)
-    } else {
-      all.push(...data)
-    }
-    from += data.length
-  }
-  return { data: null, error: { message: 'a read did not end (500 pages)' } }
-}
 
 export async function saveHabitLogsToDB(logs: HabitLogs, quantities?: HabitQuantities): Promise<void> {
   const session = await getSession()
