@@ -710,3 +710,21 @@ land in the other's field. What it does and why is in `assistant.md` ("The model
 `GROQ_MODELS` export (it still offered Mixtral, long retired, and nothing read it) is gone. `settings-snapshot.mjs` will
 show the AI section changed — that is this row.
 
+
+## Settings → Integrations — the hub
+`sections/IntegrationHub.tsx` (presentational) + `lib/integrationMarks.tsx` (the apps' own
+colours, kept out of `src/modules/` where a raw hex is a `ui-guard` failure). The platform's mark
+is centred and seven apps sit round it. **Connected** (a linked Telegram chat; any token for
+Siri and MCP) is in colour with a 3s beam travelling its line to the centre; **not connected**
+and **not available yet** (Notion, Asana, Trello, Apple Notes) are the same mark under one
+`grayscale(1)` filter with no beam. Nothing in it is a button — a control that reaches nothing
+is not drawn — and each node carries `aria-label="Telegram, connected"`.
+- The beam is the MagicUI `AnimatedBeam` idea rebuilt in SVG (`stroke-dasharray` on `pathLength=100`
+  with an animated offset): the registry component is Tailwind + `cn`, which this app has neither
+  of. `prefers-reduced-motion` draws the beams and stops them.
+- Marks are simplified drawings, not official artwork.
+- "Connected" for Siri and MCP is "a token exists" — the one thing both present. It does not mean
+  either has been *used*; `last_used_at` is there if that should be the test.
+`scripts/integration-hub.mjs [none|connected|reduced]` — 15 assertions per mode, measured as
+computed `filter`, the dash offset sampled twice (1.67px → -27.5px) and the logo's centre against
+the hub's.
