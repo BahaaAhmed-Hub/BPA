@@ -769,3 +769,9 @@ typed). The look is the Mention Picker's — avatar, name, address, an Enter hin
 - **Options act on `mousedown`, prevented**: the input's `onBlur` adds the half-typed text, so a
   `click` would add the fragment before the choice was heard.
 - Not driven in a browser yet; `scripts/known-people.mjs` covers the ranking and filters.
+- **Choosing a suggestion closed the whole composer** (found by `scripts/attendee-suggestions.mjs`,
+  which clicks it with the mouse): the option removes itself on `mousedown`, React has flushed that
+  before `ComposerShell`'s document-level "click away" listener runs, and `contains()` on a detached
+  node is false — so it read as outside. The listener now ignores a target that is no longer
+  `isConnected`. The keyboard path never showed it. Control: before the fix, a click leaves no panel
+  and no attendee. `scripts/attendee-suggestions.mjs [compose|edit|control]` — 23 checks.

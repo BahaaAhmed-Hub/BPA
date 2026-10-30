@@ -132,6 +132,12 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
     const away = (e: Event) => {
       if (Date.now() - openedAt < 400) return
       const t = e.target as HTMLElement
+      // **A target that has left the page cannot be judged "outside".** A row in
+      // the panel that removes itself when pressed (a suggestion in Attendees)
+      // is gone from the DOM by the time this document-level listener runs —
+      // React has already flushed its handler — and `contains` on a detached
+      // node is false, so choosing a person closed the whole composer.
+      if (!t.isConnected) return
       // A click on the grid picks another event or draws a new one; it should
       // not also have to close this first.
       if (t.closest('.event-card, .sb-compose')) return
