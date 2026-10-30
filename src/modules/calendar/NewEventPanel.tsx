@@ -27,6 +27,7 @@ import { ICON, STROKE } from '@/lib/type'
 import { openPicker } from '@/lib/nativePicker'
 import { loadDynamicCompanies } from '@/types'
 import { isMyCalendar, myCalendarAddresses } from '@/lib/calendarEvents'
+import { matchPeople, type KnownPerson } from '@/lib/knownPeople'
 import { toRecurrence, presetRecur, type Recur } from './recurrence'
 import { useInkOn } from '@/lib/ink'
 import LinkPreviews from '../../components/LinkPreviews'
@@ -131,6 +132,12 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
     const away = (e: Event) => {
       if (Date.now() - openedAt < 400) return
       const t = e.target as HTMLElement
+      // **A target that has left the page cannot be judged "outside".** A row in
+      // the panel that removes itself when pressed (a suggestion in Attendees)
+      // is gone from the DOM by the time this document-level listener runs —
+      // React has already flushed its handler — and `contains` on a detached
+      // node is false, so choosing a person closed the whole composer.
+      if (!t.isConnected) return
       // A click on the grid picks another event or draws a new one; it should
       // not also have to close this first.
       if (t.closest('.event-card, .sb-compose')) return
@@ -376,8 +383,10 @@ function initialsOf(s: string): string {
 export function NewEventPanel({
   draft, existing, seed, calendars, organiser, provider = 'google',
   clashes, onSave, onCancel, onPush, onDelete, onMoveCalendar, extra, uploadFile,
-  alertMinutes, onAlert, onAddMeet, onRemoveMeet, onStatus,
+  alertMinutes, onAlert, onAddMeet, onRemoveMeet, onStatus, knownPeople,
 }: {
+  /** People already on loaded events — what the Attendees field suggests from. */
+  knownPeople?: KnownPerson[]
   /** `drawn`: the span was dragged out on the grid, so its end is an answer
    *  the person gave and the remembered duration must not overwrite it. */
   draft: { dateStr: string; startMin: number; endMin: number; drawn?: boolean }
@@ -501,6 +510,8 @@ export function NewEventPanel({
   const [invitee, setInvitee] = useState('')
   const [inviteeError, setInviteeError] = useState<string | null>(null)
   const inviteeRef = useRef<HTMLInputElement>(null)
+  const [pickOpen, setPickOpen] = useState(false)
+  const [pickAt, setPickAt] = useState(0)
 
   const [files, setFiles] = useState<ComposerFile[]>(existing?.files ?? [])
   const [dropping, setDropping] = useState(false)
@@ -624,6 +635,16 @@ export function NewEventPanel({
     : repeat.freq === 'WEEKLY' && repeat.interval === 1 ? 'weekly'
     : repeat.freq === 'WEEKLY' && repeat.interval === 2 ? 'biweekly'
     : repeat.freq === 'MONTHLY' ? 'monthly' : 'custom'
+
+  // Never offered: the organiser, or anyone already on the invite.
+  const suggestions = useMemo(
+    () => matchPeople(
+      (knownPeople ?? []).filter(k => !sameEmail(k.email, host) && !people.some(p => sameEmail(p.email, k.email))),
+      invitee,
+    ),
+    [knownPeople, invitee, host, people],
+  )
+  const showPick = pickOpen && suggestions.length > 0
 
   function addPerson(raw: string) {
     const email = normaliseEmail(raw.replace(/,$/, ''))
@@ -1091,13 +1112,78 @@ export function NewEventPanel({
             }}><Plus size={ICON.sm} strokeWidth={1.8} /></button>
           <input
             ref={inviteeRef}
+            role="combobox"
+            aria-expanded={showPick}
+            aria-controls="cal-invitee-list"
+            aria-autocomplete="list"
+            aria-activedescendant={showPick ? `cal-invitee-opt-${pickAt}` : undefined}
             value={invitee}
-            onChange={e => { setInvitee(e.target.value); if (inviteeError) setInviteeError(null) }}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addPerson(invitee) } }}
-            onBlur={() => { if (invitee.trim()) addPerson(invitee) }}
-            placeholder="name@company.com"
+            onChange={e => { setInvitee(e.target.value); setPickOpen(true); setPickAt(0); if (inviteeError) setInviteeError(null) }}
+            onKeyDown={e => {
+              if (showPick && e.key === 'ArrowDown') { e.preventDefault(); setPickAt(i => (i + 1) % suggestions.length); return }
+              if (showPick && e.key === 'ArrowUp') { e.preventDefault(); setPickAt(i => (i - 1 + suggestions.length) % suggestions.length); return }
+              if (showPick && e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setPickOpen(false); return }
+              if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault()
+                // Enter on a highlighted suggestion takes it; a comma is the
+                // person saying "this is the whole address".
+                if (showPick && e.key === 'Enter') addPerson(suggestions[Math.min(pickAt, suggestions.length - 1)].email)
+                else addPerson(invitee)
+              }
+            }}
+            onBlur={() => { setPickOpen(false); if (invitee.trim()) addPerson(invitee) }}
+            placeholder="name or name@company.com"
             style={{ ...BARE, fontSize: 'var(--sb-t-body-s)' }} />
         </div>
+        {showPick && (
+          <div
+            id="cal-invitee-list"
+            role="listbox"
+            style={{
+              padding: 6, borderRadius: 'var(--sb-r-nav)', background: C.card,
+              border: `1px solid ${C.border}`, boxShadow: 'var(--sb-shadow-control)',
+              display: 'flex', flexDirection: 'column', gap: 2,
+            }}>
+            {suggestions.map((s, i) => {
+              const on = i === Math.min(pickAt, suggestions.length - 1)
+              const label = s.name || nameFromEmail(s.email)
+              return (
+                <div
+                  key={s.email}
+                  id={`cal-invitee-opt-${i}`}
+                  role="option"
+                  aria-selected={on}
+                  // mousedown, and prevented: the input's blur would add whatever
+                  // half-typed text is in it before the click was ever heard.
+                  onMouseDown={e => { e.preventDefault(); addPerson(s.email) }}
+                  onMouseEnter={() => setPickAt(i)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', minWidth: 0,
+                    borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
+                    background: on ? C.inset : 'transparent',
+                  }}>
+                  <span style={{
+                    width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    background: peopleBg(i), color: ink(peopleBg(i)),
+                    fontSize: 'var(--sb-t-meta)', fontWeight: 700,
+                  }}>{initialsOf(label)}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{
+                      display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink1,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{label}</span>
+                    <span style={{
+                      display: 'block', fontSize: 'var(--sb-t-meta)', color: C.ink3,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{s.email}{s.count > 1 ? ` · on ${s.count} events` : ''}</span>
+                  </span>
+                  {on && <span style={{ ...MONO, flexShrink: 0 }}>Enter</span>}
+                </div>
+              )
+            })}
+          </div>
+        )}
         {inviteeError && (
           <span style={{ fontSize: 'var(--sb-t-meta)', color: C.negDeep, paddingLeft: 39 }}>{inviteeError}</span>
         )}

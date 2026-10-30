@@ -70,6 +70,10 @@ export const LOZENGE: React.CSSProperties = {
   boxShadow: '0 2px 10px -4px rgba(25, 23, 18, .16), 0 10px 30px -18px rgba(25, 23, 18, .22)',
 }
 
+/** The sliding bar's height — shorter than the 40px tile it sits beside, so the
+ *  pill's rounded end never has it poking out past the border. */
+const BAR_H = 20
+
 const PILL: React.CSSProperties = {
   ...LOZENGE,
   display: 'flex',
@@ -79,18 +83,26 @@ const PILL: React.CSSProperties = {
   padding: '11px 9px',
 }
 
-function RailButton({ active, label, onClick, children }: {
+function RailButton({ active, label, onClick, onTip, children }: {
   active?: boolean
   label: string
   onClick: () => void
+  /** Hover or keyboard focus on, `null` off — the rail draws the label itself. */
+  onTip: (el: HTMLElement | null, label: string) => void
   children: React.ReactNode
 }) {
   return (
     <button
       onClick={onClick}
-      title={label}
+      // No `title`: the dock's own label slides out instead, and a native
+      // tooltip beside it would be the same word drawn twice.
+      onMouseEnter={e => onTip(e.currentTarget, label)}
+      onMouseLeave={() => onTip(null, label)}
+      onFocus={e => { if (e.currentTarget.matches(':focus-visible')) onTip(e.currentTarget, label) }}
+      onBlur={() => onTip(null, label)}
       aria-label={label}
       aria-current={active ? 'page' : undefined}
+      data-rail-item
       style={{
         width: 42, height: 40, flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -152,6 +164,32 @@ export function SideRail({ items, activeModule, onPick }: {
   const [companies, setCompanies] = useState<DynamicCompany[]>(() =>
     loadDynamicCompanies().filter(c => !c.hidden))
 
+  // The dock: one accent bar that slides to the active module, and a label that
+  // slides out beside whichever one is hovered or focused. The label is drawn
+  // `fixed` from the button's rect because the rail scrolls (`overflow-y:
+  // auto` makes the x axis clip too), so a label inside it would be cut off at
+  // the rail's own edge. `getBoundingClientRect` is already in CSS units here
+  // (`zoomSpace`), so the numbers go straight into `top`/`left`.
+  const modulesRef = useRef<HTMLDivElement>(null)
+  const [barY, setBarY] = useState<number | null>(null)
+  const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null)
+  const showTip = (el: HTMLElement | null, label: string) => {
+    if (!el) { setTip(null); return }
+    const r = el.getBoundingClientRect()
+    setTip({ label, top: r.top + r.height / 2, left: r.right + 14 })
+  }
+  useEffect(() => {
+    const pill = modulesRef.current
+    if (!pill) return
+    const place = () => {
+      const on = pill.querySelector<HTMLElement>('[aria-current="page"]')
+      setBarY(on ? on.offsetTop + (on.offsetHeight - BAR_H) / 2 : null)
+    }
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [activeModule, items.length])
+
   // Companies are edited in Settings and arrive from the server on load, so
   // the rail listens rather than reading once at mount.
   useEffect(() => {
@@ -193,12 +231,19 @@ export function SideRail({ items, activeModule, onPick }: {
       gap: 13, padding: '16px 14px', height: '100%', overflowY: 'auto',
     }}>
       <div style={{ margin: 'auto 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 13 }}>
-      <div style={PILL}>
+      <div ref={modulesRef} style={{ ...PILL, position: 'relative' }}>
+        {barY !== null && (
+          <span className="rail-ind" aria-hidden style={{
+            position: 'absolute', left: 3, top: 0, width: 3, height: BAR_H, borderRadius: 3,
+            background: 'var(--sb-accent)', transform: `translateY(${barY}px)`,
+          }} />
+        )}
         {items.map(item => (
           <RailButton
             key={item.id}
             active={activeModule === item.id}
             label={item.label}
+            onTip={showTip}
             onClick={() => onPick(item.id)}>
             {item.icon}
           </RailButton>
@@ -250,6 +295,16 @@ export function SideRail({ items, activeModule, onPick }: {
         </div>
       )}
       </div>
+      {tip && (
+        <span className="rail-tip" role="presentation" aria-hidden style={{
+          position: 'fixed', top: tip.top, left: tip.left, zIndex: 60, pointerEvents: 'none',
+          padding: '4px 10px', borderRadius: 7, whiteSpace: 'nowrap',
+          // The same pair the active tile uses, so the label is legible in every
+          // theme by the same choice rather than a second one.
+          background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
+          fontSize: 12, fontWeight: 600, lineHeight: 1.3,
+        }}>{tip.label}</span>
+      )}
     </nav>
   )
 }

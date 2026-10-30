@@ -1328,6 +1328,28 @@ img { max-width: 100%; }
      390px header (and 974px inside a 678px one). */
   [data-cal-header] > div { flex-shrink: 1 !important; max-width: 100%; }
 }
+/* ── The rail dock: a bar that slides to the active module, a label that slides
+   out beside the hovered one. Motion only; position and colour are inline. */
+.rail-ind { transition: transform 360ms cubic-bezier(.22, 1, .36, 1); }
+.rail-tip { animation: rail-tip-in 160ms cubic-bezier(.22, 1, .36, 1) both; }
+.rail-tip::before {
+  content: ''; position: absolute; right: 100%; top: 50%; margin-top: -4px;
+  border: 4px solid transparent; border-right-color: var(--sb-ink-1);
+}
+@keyframes rail-tip-in {
+  from { opacity: 0; transform: translate(-8px, -50%); }
+  to   { opacity: 1; transform: translate(0, -50%); }
+}
+[data-side-rail] [data-rail-item]:hover:not([aria-current="page"]) { color: var(--sb-ink-1) !important; }
+@media (prefers-reduced-motion: reduce) {
+  .rail-ind { transition: none; }
+  .rail-tip { animation: none; transform: translateY(-50%); }
+}
+@media (max-width: 720px) {
+  /* The rail is a bottom bar here: nothing to slide out beside, no column to slide down. */
+  .rail-ind, .rail-tip { display: none; }
+}
+@media (hover: none) { .rail-tip { display: none; } }
 @media (max-width: 720px) {
   .app-shell { flex-direction: column-reverse !important; }
   .app-rail-col { height: auto !important; width: 100%; flex-direction: row !important; }
