@@ -38,7 +38,7 @@ const m = await p.evaluate(() => {
   return { aside: { r: a.right, b: a.bottom, radius: cs.borderRadius, overflow: cs.overflow }, scroller: sc ? { r: s.right, b: s.bottom, mid: (s.top + s.bottom) / 2, bar: sc.offsetWidth - sc.clientWidth } : null }
 })
 console.log(JSON.stringify(m))
-const png = await p.screenshot({ path: process.env.SHOT ?? 'panel.png' })
+const png = await p.screenshot(process.env.SHOT ? { path: process.env.SHOT } : {})
 // What is drawn, not what is declared: walk the row across the middle of the
 // scroll area from the card's own border inward and note where the thumb is.
 const row = await p.evaluate(async ([b64, y, x0, x1, dpr]) => {
