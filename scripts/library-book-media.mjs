@@ -13,15 +13,22 @@ const now = new Date().toISOString()
 const ID = '00000000-0000-4000-8000-0000000000d1'
 const books = [{ id: ID, user_id: user.id, title: 'Dune', authors: ['Frank Herbert'], pages: 600, source: 'manual', status: 'reading', format: 'print', rating: 0, shelf_order: 0, added_at: now, updated_at: now, cover_url: null, description: 'A desert planet and the spice. BLURB-MARK' }]
 let summaries = []
-const state = { vid: 'ok', ai: 'ok', delay: 0, missing: false, trunc: 0, failAt: 0 }
-const fnBodies = [], aiCalls = [], saves = []
+let marks = []            // library_video_marks, as the server holds them
+const state = { vid: 'ok', ai: 'ok', delay: 0, missing: false, trunc: 0, failAt: 0, marksMissing: false, marksFail: false, moreFail: '' }
+const fnBodies = [], aiCalls = [], saves = [], markSaves = [], markDeletes = []
 
+// The function marks each video `strict` (its title names THIS book). Page 1: 17 strict + 2 loose. Page 2 (Search for more): 6 more strict.
 const GOOD = [
   // The real function has already unescaped the title; markup in it must still be shown as text, never run.
-  { id: 'dQw4w9WgXcQ', title: 'Dune & the <i>spice</i>', channel: 'Reads', publishedAt: '2024-05-01T10:00:00Z' },
-  { id: 'aaaaaaaaaaa', title: 'Dune in 10 minutes', channel: 'Brief', publishedAt: '2023-01-01T00:00:00Z' },
-  { id: 'bbbbbbbbbbb', title: 'Frank Herbert on Dune', channel: 'Talks', publishedAt: '2022-03-03T00:00:00Z' },
+  { id: 'dQw4w9WgXcQ', title: 'Dune & the <i>spice</i>', channel: 'Reads', publishedAt: '2024-05-01T10:00:00Z', strict: true },
+  { id: 'aaaaaaaaaaa', title: 'Dune in 10 minutes', channel: 'Brief', publishedAt: '2023-01-01T00:00:00Z', strict: true },
+  { id: 'bbbbbbbbbbb', title: 'Frank Herbert on Dune', channel: 'Talks', publishedAt: '2022-03-03T00:00:00Z', strict: true },
 ]
+const mkVid = (prefix, n, strict) => Array.from({ length: n }, (_, i) => ({ id: `${prefix}${String(i).padStart(11 - prefix.length, '0')}`, title: strict ? `Dune explained ${prefix}${i}` : `Deep Work summary ${prefix}${i}`, channel: 'Chan', publishedAt: '2021-01-01T00:00:00Z', strict }))
+const EXTRA = mkVid('e', 14, true)        // with GOOD: 17 strict
+const LOOSE = mkVid('l', 2, false)        // titles that do not name the book
+const PAGE2 = mkVid('p', 6, true)
+const PAGE1 = [...GOOD, ...EXTRA, ...LOOSE]
 const HOSTILE = [{ id: 'x"><img src=x>', title: 'evil one', channel: 'c' }, { id: 'short', title: 'evil two', channel: 'c' }]
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
 
@@ -39,9 +46,15 @@ await ctx.route('**://placeholder.supabase.co/**', async r => {
     const body = JSON.parse(q.postData() || '{}'); fnBodies.push(body)
     // The fake can refuse: a request with no title is a 400, as the real function answers.
     if (!body.title) return json(r, { error: 'a title is needed' }, 400, cors)
+    if (body.more === true) {
+      // The next page of the same search. Refuses when the caller says nothing about which search it is.
+      if (!body.topic) return json(r, { error: 'which search?' }, 400, cors)
+      if (state.moreFail) return json(r, { status: 'ok', items: PAGE1, canMore: true, cached: true, moreStatus: state.moreFail }, 200, cors)
+      return json(r, { status: 'ok', items: [...PAGE1, ...PAGE2], canMore: false, cached: false }, 200, cors)
+    }
     switch (state.vid) {
-      case 'ok': return json(r, { status: 'ok', items: [...HOSTILE, ...GOOD.map(g => ({ ...g, thumb: 'https://evil.example/t.jpg' }))], cached: false }, 200, cors)
-      case 'stale': return json(r, { status: 'ok', items: GOOD, cached: true, stale: true }, 200, cors)
+      case 'ok': return json(r, { status: 'ok', items: [...HOSTILE, ...PAGE1.map(g => ({ ...g, thumb: 'https://evil.example/t.jpg' }))], canMore: true, cached: false }, 200, cors)
+      case 'stale': return json(r, { status: 'ok', items: GOOD, canMore: false, cached: true, stale: true }, 200, cors)
       case 'not_configured': case 'quota': case 'unreachable': return json(r, { status: state.vid, items: [] }, 200, cors)
       case 'down': return json(r, { error: 'boom' }, 500, cors)
     }
@@ -52,6 +65,23 @@ await ctx.route('**://placeholder.supabase.co/**', async r => {
   if (u.pathname.endsWith('/rpc/my_modules')) return json(r, [{ module_id: 'library', label: 'Library', enabled: true }])
   const t = u.pathname.split('/').pop()
   if (t === 'library_books') return m === 'GET' ? json(r, books) : json(r, [], 201)
+  if (t === 'library_video_marks') {
+    if (state.marksMissing) return json(r, { code: 'PGRST205', message: "Could not find the table 'public.library_video_marks'" }, 404)
+    if (m === 'GET') return json(r, marks.filter(x => u.searchParams.get('book_id') === `eq.${x.book_id}`).sort((a, b) => b.created_at.localeCompare(a.created_at)))
+    if (state.marksFail) return json(r, { code: '500', message: 'boom' }, 500)
+    if (m === 'POST') {
+      const body = JSON.parse(q.postData() || '{}'); const row = Array.isArray(body) ? body[0] : body
+      // The table's own CHECKs: an 11-character id, and one of two marks.
+      if (!/^[A-Za-z0-9_-]{11}$/.test(row.video_id || '') || !['favorite', 'hidden'].includes(row.mark)) return json(r, { code: '23514', message: 'check constraint' }, 400)
+      markSaves.push(row)
+      marks = [...marks.filter(x => !(x.book_id === row.book_id && x.video_id === row.video_id)), row]
+      return json(r, [], 201)
+    }
+    if (m === 'DELETE') {
+      const vid = (u.searchParams.get('video_id') || '').replace(/^eq\./, ''), bid = (u.searchParams.get('book_id') || '').replace(/^eq\./, '')
+      markDeletes.push({ bid, vid }); marks = marks.filter(x => !(x.book_id === bid && x.video_id === vid)); return json(r, [])
+    }
+  }
   if (t === 'library_summaries') {
     if (state.missing) return json(r, { code: 'PGRST205', message: "Could not find the table 'public.library_summaries'" }, 404)
     if (m === 'GET') {
@@ -129,7 +159,8 @@ const fail = async (mode, re, label) => {
   ok(`${label}: says why`, await until(async () => re.test(await dlg.innerText())))
   ok(`${label}: no video cards`, await dlg.locator('ul img').count() === 0)
   const link = dlg.getByRole('link', { name: /Search on YouTube/ })
-  ok(`${label}: the plain YouTube search link is still there`, await link.count() === 1 && (await link.getAttribute('href')).includes('results?search_query=Dune'))
+  const lh = await link.getAttribute('href')
+  ok(`${label}: the plain YouTube search link is still there, and asks for the quoted title`, await link.count() === 1 && lh.includes('results?search_query=%22Dune%22%20Frank%20Herbert'), lh)
   await p.keyboard.press('Escape'); await dlg.waitFor({ state: 'detached' })
 }
 await fail('not_configured', /not switched on/, 'no key set')
@@ -139,9 +170,17 @@ ok('the three failures were asked once each, none cached', fnBodies.length === 3
 ok('every request carried the title, authors and topic', fnBodies.every(x => x.title === 'Dune' && x.authors?.[0] === 'Frank Herbert' && x.topic === 'review'))
 
 state.vid = 'ok'
-await panel.getByRole('button', { name: 'Videos about this book' }).click(); await dlg.waitFor()
-ok('cards appear', await until(async () => await dlg.locator('ul li').count() === 3))
-ok('three good cards, the two hostile ids dropped', await dlg.locator('ul li').count() === 3 && !(await dlg.innerText()).includes('evil'))
+const openVideos = async () => { await panel.getByRole('button', { name: 'Videos about this book' }).click(); await dlg.waitFor() }
+const closeDlg = async () => { await p.keyboard.press('Escape'); await dlg.waitFor({ state: 'detached' }) }
+const cards = () => dlg.locator('ul[aria-label="Videos"] > li')
+const card = id => dlg.locator(`li[data-video="${id}"]`)
+const text = async () => await dlg.innerText()
+await openVideos()
+ok('cards appear', await until(async () => await cards().count() === 12))
+const dbox = await dlg.boundingBox()
+ok('the dialog fits inside the window (its height is in the app’s own viewport unit, not raw vh)', dbox && dbox.y >= 0 && dbox.y + dbox.height <= 1000 && dbox.height > 300, `${Math.round(dbox?.y)}…${Math.round(dbox?.y + dbox?.height)} of 1000`)
+ok('the first page is 12 of the 17 that name the book; the two hostile ids are dropped', await cards().count() === 12 && !(await text()).includes('evil'))
+ok('the count says so', (await dlg.locator('[data-count]').innerText()).includes('Showing 12 of 17'))
 const srcs = await dlg.locator('ul img').evaluateAll(a => a.map(i => i.getAttribute('src')))
 ok('thumbnails are derived from the id', srcs[0] === 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg', srcs[0])
 ok('the response’s own thumbnail address is never used', srcs.every(s => !s.includes('evil.example')))
@@ -149,18 +188,112 @@ ok('and they really render (naturalWidth > 0)', await until(() => dlg.locator('u
 const href = await dlg.locator('ul a').first().getAttribute('href')
 ok('a card opens the video on YouTube', href === 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', href)
 ok('in a new tab, without opener', (await dlg.locator('ul a').first().getAttribute('target')) === '_blank' && /noopener/.test(await dlg.locator('ul a').first().getAttribute('rel')))
-ok('a title is shown as text: its ampersand and its tag characters, literally', (await dlg.innerText()).includes('Dune & the <i>spice</i>'))
+ok('a title is shown as text: its ampersand and its tag characters, literally', (await text()).includes('Dune & the <i>spice</i>'))
 ok('and the markup in it was not turned into an element', await dlg.locator('ul i').count() === 0)
-const before = fnBodies.length
-await p.keyboard.press('Escape'); await dlg.waitFor({ state: 'detached' })
+ok('the search asks for the book by its quoted title’s own request (title, authors, topic, no "more")', fnBodies.at(-1).title === 'Dune' && fnBodies.at(-1).topic === 'review' && fnBodies.at(-1).more === undefined)
+
+/* exact: videos that do not name this book are kept out, and one press away */
+ok('the 2 looser matches are NOT in the list', !(await text()).includes('Deep Work summary'))
+ok('and the person is told they exist', (await text()).includes('Show looser matches (2)'))
+
+/* see more — free, what was already fetched */
+const reqsBefore = fnBodies.length
+await dlg.getByRole('button', { name: /^Show more/ }).click()
+ok('Show more reveals the other 5', await until(async () => await cards().count() === 17))
+ok('…without asking YouTube again', fnBodies.length === reqsBefore)
+ok('…and the button goes when there is nothing left to reveal', await dlg.getByRole('button', { name: /^Show more/ }).count() === 0)
+
+/* search for more — the next page of the same search */
+const more = dlg.getByRole('button', { name: 'Search for more' })
+ok('Search for more is offered (the function said another page exists)', await more.count() === 1)
+await more.click()
+ok('it asks for the next page of the same search', await until(async () => fnBodies.at(-1)?.more === true) && fnBodies.at(-1).title === 'Dune' && fnBodies.at(-1).topic === 'review')
+ok('and the 6 new videos arrive (17 + 6 name the book)', await until(async () => (await dlg.locator('[data-count]').innerText()).includes('of 23')))
+ok('they are shown straight away (a search for more is asked for in order to see them), the rest still there', await until(async () => await cards().count() === 23))
+ok('with no further page, Search for more goes and the end is said', await dlg.getByRole('button', { name: 'Search for more' }).count() === 0 && (await text()).includes('everything YouTube returned'))
+
+/* looser matches, on request, and labelled */
+await dlg.getByRole('button', { name: /Show looser matches \(2\)/ }).click()
+ok('Show looser matches adds the 2, and the count follows', await until(async () => (await dlg.locator('[data-count]').innerText()).includes('of 25')))
+await until(async () => (await text()).includes('Deep Work summary l0'))
+const looseLabels = await dlg.getByText(/Looser match —/).allInnerTexts()
+ok('each is labelled as a looser match', (await text()).includes('Deep Work summary l0') && looseLabels.length === 2, `${looseLabels.length} labels; cards ${await cards().count()}`)
+await dlg.getByRole('button', { name: /Hide looser matches/ }).click()
+ok('and they can be put away again', await until(async () => !(await text()).includes('Deep Work summary')))
+
+/* favourite */
+await card('dQw4w9WgXcQ').locator('[data-act="favourite"]').click()
+ok('the star shows it is on', await until(async () => (await card('dQw4w9WgXcQ').locator('[data-act="favourite"]').getAttribute('aria-pressed')) === 'true'))
+ok('the server got one favourite row, for this book and this video, as the owner', await until(() => markSaves.length === 1) && markSaves[0].mark === 'favorite' && markSaves[0].video_id === 'dQw4w9WgXcQ' && markSaves[0].book_id === ID && markSaves[0].user_id === user.id)
+ok('with the title kept (a later search may not return it)', markSaves[0].title === 'Dune & the <i>spice</i>' && markSaves[0].channel === 'Reads')
+ok('the tab counts it', await dlg.getByRole('tab', { name: /Favourites \(1\)/ }).count() === 1)
+
+/* remove, and bring back */
+await card('aaaaaaaaaaa').locator('[data-act="remove"]').click()
+ok('Remove takes the card off the list at once', await until(async () => await card('aaaaaaaaaaa').count() === 0))
+ok('the server got a hidden mark for it', await until(() => markSaves.length === 2) && markSaves[1].mark === 'hidden' && markSaves[1].video_id === 'aaaaaaaaaaa')
+ok('the list says how many are removed, and the count of what is left follows', (await dlg.locator('[data-count]').innerText()).includes('1 removed') && (await dlg.locator('[data-count]').innerText()).includes('of 22'))
+await dlg.getByRole('tab', { name: /Removed \(1\)/ }).click()
+ok('it waits under Removed, by name', await until(async () => await card('aaaaaaaaaaa').count() === 1) && (await card('aaaaaaaaaaa').innerText()).includes('Dune in 10 minutes'))
+await card('aaaaaaaaaaa').locator('[data-act="restore"]').click()
+ok('Bring back deletes the mark', await until(() => markDeletes.some(d => d.vid === 'aaaaaaaaaaa' && d.bid === ID)))
+await dlg.getByRole('tab', { name: 'Results' }).click()
+ok('and the video is in the results again', await until(async () => await card('aaaaaaaaaaa').count() === 1))
+
+/* favourites live on their own, whatever YouTube says */
+await dlg.getByRole('tab', { name: /Favourites/ }).click()
+ok('Favourites lists it, from the saved title', await until(async () => await card('dQw4w9WgXcQ').count() === 1) && (await card('dQw4w9WgXcQ').innerText()).includes('Dune & the <i>spice</i>'))
+await closeDlg()
 ok('Escape closes the dialog and leaves the book panel open', await panel.count() === 1)
-await panel.getByRole('button', { name: 'Videos about this book' }).click(); await dlg.waitFor()
-ok('reopening is answered from memory (no second request)', await until(async () => await dlg.locator('ul li').count() === 3) && fnBodies.length === before)
+state.vid = 'down'
+await p.reload({ waitUntil: 'domcontentloaded' }); await open()
+await openVideos()
+ok('with YouTube down, the results say so', await until(async () => /not available right now/.test(await text())))
+await dlg.getByRole('tab', { name: /Favourites/ }).click()
+ok('…and the favourite is still there after a reload (it was read from the server, not from the search)', await until(async () => await card('dQw4w9WgXcQ').count() === 1))
+ok('…and it is still a favourite (the star is on)', (await card('dQw4w9WgXcQ').locator('[data-act="favourite"]').getAttribute('aria-pressed')) === 'true')
+await card('dQw4w9WgXcQ').locator('[data-act="favourite"]').click()
+const gone = await until(async () => await card('dQw4w9WgXcQ').count() === 0, 5000)
+const deleted = await until(() => markDeletes.some(d => d.vid === 'dQw4w9WgXcQ'), 8000)   // the card goes at once; the request follows
+ok('pressing the star in Favourites takes it off the list and deletes the mark', gone && deleted, `gone=${gone} deletes=${JSON.stringify(markDeletes.map(d => d.vid))} note=${JSON.stringify((await text()).match(/(could not be saved|put back)[^.]*/)?.[0] ?? '')}`)
+await closeDlg()
+
+/* a failing save is put back, and said */
+state.vid = 'ok'; state.marksFail = true
+await openVideos()
+await until(async () => await cards().count() === 12)
+const savesBefore = markSaves.length
+await card('dQw4w9WgXcQ').locator('[data-act="favourite"]').click()
+ok('a save the server refuses is put back (the star is off again)', await until(async () => (await text()).includes('could not be saved')) && (await card('dQw4w9WgXcQ').locator('[data-act="favourite"]').getAttribute('aria-pressed')) === 'false')
+ok('and nothing was kept', markSaves.length === savesBefore)
+await closeDlg()
+state.marksFail = false
+
+/* the migration has not run: videos still show, favourites say why */
+state.marksMissing = true
+await openVideos()
+ok('without 20260047 the dialog names it', await until(async () => (await text()).includes('20260047_library_video_marks.sql')))
+ok('the videos still show', await until(async () => await cards().count() === 12))
+ok('and the star and the remove button are disabled', await card('dQw4w9WgXcQ').locator('[data-act="favourite"]').isDisabled() && await card('dQw4w9WgXcQ').locator('[data-act="remove"]').isDisabled())
+await closeDlg()
+state.marksMissing = false
+
+/* a "more" that fails changes nothing and says why */
+await p.reload({ waitUntil: 'domcontentloaded' }); await open()
+state.moreFail = 'quota'
+await openVideos()
+await until(async () => await cards().count() === 12)
+await dlg.getByRole('button', { name: 'Search for more' }).click()
+ok('the quota being spent is said', await until(async () => (await text()).includes('have all been used')))
+ok('the list is unchanged and Search for more is still offered', await cards().count() === 12 && await dlg.getByRole('button', { name: 'Search for more' }).count() === 1)
+state.moreFail = ''
+
+/* the author topic, and an older cached answer */
 state.vid = 'stale'
 await dlg.getByRole('tab', { name: /The author/ }).click()
 ok('the author tab asks for the author topic', await until(async () => fnBodies.at(-1)?.topic === 'author'))
-ok('an older cached answer is shown, and said to be older', await until(async () => (await dlg.innerText()).includes('earlier search')) && await dlg.locator('ul li').count() === 3)
-await p.keyboard.press('Escape'); await dlg.waitFor({ state: 'detached' })
+ok('an older cached answer is shown, and said to be older', await until(async () => (await text()).includes('earlier search')) && await cards().count() === 3)
+await closeDlg()
 
 /* ── summary: the whole path ───────────────────────────────────────────── */
 const openSummary = async () => { await panel.getByRole('button', { name: 'Summary of this book' }).click(); await dlg.waitFor() }
