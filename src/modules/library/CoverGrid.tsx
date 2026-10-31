@@ -5,7 +5,9 @@ import { authorLine } from './spine'
 import type { Book } from './types'
 
 const COVER_W = 112
-const GAP = 14
+// The gap the boards draw (Bay's own default) — packing used 14 while the row drew 6, so a row that had room
+// for another cover was cut one short. One number, passed to Bay, so the two cannot disagree again.
+const GAP = 6
 const SIDE = 20
 const COVER_H = Math.round(COVER_W * 1.5)
 
@@ -32,7 +34,7 @@ export function CoverGrid({ books, pickedId, onPick }: {
   return (
     <Bookcase label="Your books" caseRef={ref}>
       {rows.map((row, i) => (
-        <Bay key={i} minHeight={row.length ? COVER_H + 6 : 120}>
+        <Bay key={i} gap={GAP} minHeight={row.length ? COVER_H + 6 : 120}>
           {row.map(b => (
             <button key={b.id} className="lib-cover" data-picked={pickedId === b.id ? '' : undefined}
               aria-label={`${b.title}${b.authors.length ? ` by ${authorLine(b)}` : ''}`}

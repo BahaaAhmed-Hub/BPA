@@ -1181,3 +1181,10 @@ from "fills". **Control**: the same Summary-dialog selector with `width:auto` pu
 Videos dialog's two selectors sit side by side in a row, which never stretches, so they cannot carry the control.)
 **Not measured:** a live YouTube key, a live Claude call, the edge function running on Deno (it is not in the Vite build — only the
 pure module it imports was run), the migration against a real Postgres, and the ink audit over the two new dialogs.
+
+## The Covers view packs rows with the gap the boards draw
+`CoverGrid` worked out how many covers fit a row with `GAP = 14` while `Bay` drew them 6 apart (it was never passed the
+gap), so in most window widths the row had room for a whole extra cover at its right end — "why is there room for another
+book on every shelf". One constant now (6), passed to `Bay`. `scripts/library-covers-fill.mjs` measures ten widths: no full
+row may have free room of a cover plus its gap or more (8 of 10 widths failed before; 10 of 10 pass after). A row's last
+remainder (less than one cover) is unavoidable and stays.
