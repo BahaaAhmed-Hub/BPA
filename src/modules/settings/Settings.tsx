@@ -1,16 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
-import { NAV_H } from '@/App'
-import { RefreshCw, CalendarDays, Sparkles, Database } from 'lucide-react'
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
+import { ChevronDown, Search } from 'lucide-react'
 import { signOut as googleSignOut } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
-import { useHabitsStore } from '@/store/habitsStore'
 import { loadAccounts, type ConnectedAccount } from '@/lib/multiAccount'
-import { saveProfileToDB, savePrefsToDB, loadCompaniesFromDB, mergeCompanies, saveHabitsToDB, saveHabitLogsToDB, loadSettingsFromDB, loadAccountsFromDB, type CompanyRow as DbSyncCompanyRow } from '@/lib/dbSync'
-import { loadLogs, loadQuantityLogs } from '@/store/habitsStore'
-import { ICON, STROKE } from '@/lib/type'
-import { type AppSettings, type CompanyRow, type CompanyUser, DEFAULTS, checkSupabase, loadCompanies, loadSettings, ls, saveCompanies, saveSettings } from './model'
-import { GhostPill } from './ui'
-import { NAV_GROUPS, SECTION_META, type SectionId, loadSectionOrder } from './nav'
+import { saveProfileToDB, savePrefsToDB, loadCompaniesFromDB, mergeCompanies, loadSettingsFromDB, loadAccountsFromDB, type CompanyRow as DbSyncCompanyRow } from '@/lib/dbSync'
+import { type AppSettings, type CompanyRow, type CompanyUser, DEFAULTS, loadCompanies, loadSettings, ls, saveCompanies, saveSettings } from './model'
+import { Block, GhostPill } from './ui'
+import { NAV_GROUPS, SECTION_META, SEARCH_KEYWORDS, DEFAULT_CLOSED_GROUPS, groupOf, isSectionId, pageFor, type SectionId } from './nav'
 import { ProfileSection } from './sections/Profile'
 import { BillingSection } from './sections/Billing'
 import { AccountsAndCompaniesSection } from './sections/Accounts'
@@ -29,118 +25,57 @@ import { NotificationsMatrixSection } from './sections/Notifications'
 import { DataPrivacySection } from './sections/DataPrivacy'
 import { FinanceSection } from './sections/Finance'
 
-
-
 export { type AIConfig, misplacedAnthropicKey, cleanKey, maskKey, loadAIConfig } from './model'
 
-// ─── Page layout definitions (multi-column pages matching design artboards) ───
+// ─── One shell, one page per rail item ────────────────────────────────────────
+// A floating card of folding groups on the left, one rounded panel on the
+// right. The panel's title and save status stay put; only what is under them
+// scrolls, inside the panel's own border — the page itself never scrolls.
 
-type PageKey = 'you' | 'connected' | 'ai' | 'integrations' | 'work' | 'system' | 'display' | 'finance'
+type SaveState = 'saved' | 'saving' | 'local'
 
-const SECTION_TO_PAGE: Record<SectionId, PageKey> = {
-  profile: 'you',   billing: 'you',
-  accounts: 'connected', schedule: 'connected',
-  professor: 'ai',
-  blocking: 'integrations',
-  tasks: 'work',    habits: 'work',  library: 'work',
-  automation: 'system', notifications: 'system',
-  appearance: 'display', behavioral: 'display', companies: 'display',
-  finance: 'finance',
+const SAVE_LABEL: Record<SaveState, string> = {
+  saved:  'All changes saved',
+  saving: 'Saving…',
+  local:  'Saved on this device only',
 }
 
-const PAGE_META: Record<PageKey, { title: string; sub: string }> = {
-  you:          { title: 'You and your day',  sub: 'Who you are, and what the licence costs' },
-  connected:    { title: 'Accounts and hours', sub: 'Your work contexts, and the shape of your working day' },
-  ai:           { title: 'The AI',             sub: 'Which model, how far it may act, and how it sounds when it writes for you' },
-  integrations: { title: 'Integrations',      sub: 'The tools that already hold your work — what comes in, what goes out, and how often' },
-  work:         { title: 'Work',              sub: 'Board statuses, task types and the habits the tracker runs on' },
-  system:       { title: 'System',            sub: 'Rules that run themselves, and what is allowed to interrupt you' },
-  display:      { title: 'Look and limits',   sub: 'How it all looks, how you are scored, and where your data sits' },
-  finance:      { title: 'Finance',           sub: 'How money is displayed and counted — including which envelope style the budget page opens in' },
-}
+const GROUPS_KEY = 'settings-groups-closed'
 
-// Card wrapper used in every multi-column page
-function Card({ icon: Icon, title, sub, children, actions, muted }: {
-  icon: React.ElementType
-  title: string
-  sub?: string
-  children: React.ReactNode
-  actions?: React.ReactNode
-  muted?: boolean
-}) {
-  return (
-    <div style={{
-      background: 'var(--sb-card)',
-      border: `var(--sb-border-width) solid ${muted ? 'var(--sb-border)' : 'var(--sb-border)'}`,
-      borderRadius: 'var(--sb-r-card)',
-      padding: '16px 20px 18px',
-      boxShadow: 'var(--sb-shadow-control)',
-      display: 'flex',
-      flexDirection: 'column',
-      minWidth: 0,
-      alignSelf: 'start',
-      transition: 'border-color 0.15s',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11, minWidth: 0 }}>
-          <div style={{
-            width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-            background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Icon size={14} strokeWidth={1.9} color="var(--sb-ink-3)" />
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <h3 style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h3)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1.25 }}>{title}</h3>
-            {sub && <p style={{
-              margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.35,
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-            }}>{sub}</p>}
-          </div>
-        </div>
-        {actions && <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>{actions}</div>}
-      </div>
-      <div style={{ minWidth: 0 }}>{children}</div>
-    </div>
-  )
+function loadClosedGroups(): string[] {
+  try {
+    const v: unknown = JSON.parse(localStorage.getItem(GROUPS_KEY) ?? 'null')
+    if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string')
+  } catch { /* private mode / bad json */ }
+  return DEFAULT_CLOSED_GROUPS
 }
-
-function SectionCard({ id, active, children, actions, sub }: {
-  id: SectionId
-  active: boolean
-  children: React.ReactNode
-  actions?: React.ReactNode
-  sub?: string
-}) {
-  const meta = SECTION_META.find(m => m.id === id)!
-  return (
-    <Card icon={meta.icon} title={meta.title} sub={sub ?? meta.description} actions={actions} muted={!active}>
-      {children}
-    </Card>
-  )
-}
-
-// ─── CHUNK 7: Main Settings component ────────────────────────────────────────
 
 export function Settings() {
   const [settings, setSettings]         = useState<AppSettings>(loadSettings)
   const [companies, setCompanies]       = useState<CompanyRow[]>(loadCompanies)
   const [accounts, setAccounts]         = useState<ConnectedAccount[]>(loadAccounts)
-  const [_sectionOrder] = useState<SectionId[]>(loadSectionOrder) // eslint-disable-line @typescript-eslint/no-unused-vars
   const [activeSection, setActiveSection] = useState<SectionId>(() => {
-    try { return (localStorage.getItem('settings-active-section') as SectionId) ?? 'profile' } catch { return 'profile' }
+    try {
+      const v = localStorage.getItem('settings-active-section')
+      return isSectionId(v) ? v : 'profile'
+    } catch { return 'profile' }
   })
-
-  const [supaOk, setSupaOk]             = useState<boolean | null>(null)
+  const [closed, setClosed]             = useState<string[]>(loadClosedGroups)
+  const [query, setQuery]               = useState('')
   const [refreshing, setRefreshing]     = useState(false)
-  // Per-section save states + error messages
-  const [sectionSaving, setSectionSaving] = useState<Record<string, 'idle'|'saving'|'saved'|'error'>>({})
-  const [_sectionError, setSectionError]  = useState<Record<string, string>>({}); void _sectionError
+  const [saveState, setSaveState]       = useState<SaveState>('saved')
   const authUser = useAuthStore(s => s.user)
   const settingsRef = useRef(settings)
   settingsRef.current = settings
-  // Gate for the profile autosave — false means "swallow the next change"
-  const profileHydrated = useRef(false)
+
+  // ── Autosave ───────────────────────────────────────────────────────────────
+  // The key is the whole settings object. `syncedKey` is what the server last
+  // agreed with — set on hydration and after every landed save — so a change
+  // is "anything that differs from that", not "whatever happens after a flag".
+  // (The flag this replaces swallowed the next edit whenever the server's copy
+  // happened to equal the local one, because nothing re-ran to clear it.)
+  const settingsKey = JSON.stringify(settings)
+  const syncedKey = useRef<string | null>(null)
 
   // Primary email: authStore (persisted, instant) with supabase session as fallback
   const [primaryEmail, setPrimaryEmail] = useState<string>(authUser?.email ?? '')
@@ -160,16 +95,14 @@ export function Settings() {
     return () => window.removeEventListener('professor:accountsUpdated', handler)
   }, [])
 
-  useEffect(() => { void checkSupabase().then(setSupaOk) }, [])
-
   // ── On mount: load all data from DB (authoritative source) ───────────────────
   useEffect(() => {
     void (async () => {
       try {
         // Settings
         const dbSettings = await loadSettingsFromDB(DEFAULTS)
-        // Swallow the autosave this hydration would otherwise trigger
-        profileHydrated.current = false
+        // What the server holds is, by definition, in sync: not an edit.
+        syncedKey.current = JSON.stringify(dbSettings)
         setSettings(dbSettings)
         saveSettings(dbSettings)
 
@@ -199,8 +132,6 @@ export function Settings() {
           }))
           setCompanies(merged)
           saveCompanies(merged)
-        } else if (companies.length === 0) {
-          // DB empty too — nothing to recover
         }
 
         // Connected accounts metadata from DB
@@ -231,34 +162,36 @@ export function Settings() {
     })
   }
 
-  // ── Profile autosave — the artboard swaps Save for "Setup wizard", and the
-  //    rail footer promises "Every change saves itself". Debounced so typing
-  //    the full name does not fire a write per keystroke. ────────────────────
-  const profileKey = `${settings.fullName}|${settings.timezone}|${settings.framework}|${settings.workWeek.join(',')}`
+  // Every edit saves itself: profile first, then prefs, one after the other —
+  // both read-modify-write `schedule_rules`, so run side by side one would
+  // overwrite the other. Debounced so typing a name is one write, not twelve.
   useEffect(() => {
-    if (!profileHydrated.current) { profileHydrated.current = true; return }
+    if (syncedKey.current === null) { syncedKey.current = settingsKey; return }
+    if (settingsKey === syncedKey.current) return
+    setSaveState('saving')
+    let cancelled = false
     const t = setTimeout(() => {
-      setSectionSaving(prev => ({ ...prev, profile: 'saving' }))
-      saveProfileToDB(settingsRef.current)
-        .then(() => {
-          setSectionSaving(prev => ({ ...prev, profile: 'saved' }))
-          setTimeout(() => setSectionSaving(prev => ({ ...prev, profile: 'idle' })), 2000)
-        })
-        .catch((err: unknown) => {
-          console.error('[Settings autosave:profile]', err)
-          setSectionSaving(prev => ({ ...prev, profile: 'error' }))
-          setTimeout(() => setSectionSaving(prev => ({ ...prev, profile: 'idle' })), 5000)
-        })
+      void (async () => {
+        try {
+          await saveProfileToDB(settingsRef.current)
+          await savePrefsToDB(settingsRef.current)
+          syncedKey.current = settingsKey
+          if (!cancelled) setSaveState('saved')
+        } catch (err) {
+          console.error('[Settings autosave]', err)
+          if (!cancelled) setSaveState('local')
+        }
+      })()
     }, 1200)
-    return () => clearTimeout(t)
-  }, [profileKey])
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [settingsKey])
 
   // ── Pull the authoritative record back down from the DB ─────────────────────
   async function handleRefresh() {
     setRefreshing(true)
     try {
       const dbSettings = await loadSettingsFromDB(DEFAULTS)
-      profileHydrated.current = false
+      syncedKey.current = JSON.stringify(dbSettings)
       setSettings(dbSettings)
       saveSettings(dbSettings)
       const dbAccounts = await loadAccountsFromDB()
@@ -271,206 +204,12 @@ export function Settings() {
           return merged
         })
       }
-      setSupaOk(await checkSupabase())
+      setSaveState('saved')
     } catch (err) {
       console.error('[Settings refresh]', err)
     } finally {
       setRefreshing(false)
     }
-  }
-
-  // ── Per-section DB save helper ───────────────────────────────────────────────
-  function withSectionSave(sectionId: string, fn: () => Promise<void>) {
-    return async () => {
-      setSectionSaving(p => ({ ...p, [sectionId]: 'saving' }))
-      setSectionError(p => ({ ...p, [sectionId]: '' }))
-      try {
-        await fn()
-        setSectionSaving(p => ({ ...p, [sectionId]: 'saved' }))
-        setTimeout(() => setSectionSaving(p => ({ ...p, [sectionId]: 'idle' })), 2000)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Unknown error'
-        console.error(`[Settings save:${sectionId}]`, msg)
-        setSectionError(p => ({ ...p, [sectionId]: msg }))
-        setSectionSaving(p => ({ ...p, [sectionId]: 'error' }))
-        setTimeout(() => setSectionSaving(p => ({ ...p, [sectionId]: 'idle' })), 5000)
-      }
-    }
-  }
-
-  // ── Page renderer (multi-column layout per design artboards) ────────────────
-  function renderPage() {
-    const page = SECTION_TO_PAGE[activeSection]
-
-    // Shared accounts list (primary + additional)
-    const allAccounts: ConnectedAccount[] = [
-      ...(primaryEmail ? [{
-        id: 'primary', email: primaryEmail,
-        name: authUser?.name ?? primaryEmail,
-        providerToken: '', scopes: [], connectedAt: '', isPrimary: true,
-      } as ConnectedAccount] : []),
-      ...accounts,
-    ]
-
-    // Inline save button for cards that have a DB save
-    function SaveBtn({ id }: { id: SectionId }) {
-      const fns: Partial<Record<SectionId, () => Promise<void>>> = {
-        schedule: () => saveProfileToDB(settingsRef.current),
-        professor:() => savePrefsToDB(settingsRef.current),
-        habits:   async () => { const { habits } = useHabitsStore.getState(); await saveHabitsToDB(habits); await saveHabitLogsToDB(loadLogs(), loadQuantityLogs()) },
-        appearance:() => savePrefsToDB(settingsRef.current),
-      }
-      const fn = fns[id]
-      if (!fn) return null
-      const saving = sectionSaving[id] ?? 'idle'
-      const label  = saving === 'saving' ? 'Saving…' : saving === 'saved' ? '✓ Saved' : saving === 'error' ? '✗ Error' : 'Save'
-      return (
-        <button onClick={withSectionSave(id, fn)} style={{
-          padding: '4px 12px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
-          background: saving === 'saved' ? 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)' : saving === 'error' ? 'color-mix(in srgb, var(--sb-negative) 10.0%, transparent)' : 'var(--sb-accent)',
-          border: saving === 'saved' ? 'var(--sb-border-width) solid var(--sb-positive-tint)' : saving === 'error' ? 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)' : 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent)',
-          color: saving === 'saved' ? 'var(--sb-positive)' : saving === 'error' ? 'var(--sb-negative)' : 'var(--sb-accent-ink)',
-          transition: 'all 0.15s',
-        }}>{label}</button>
-      )
-    }
-
-    // ── YOU page: Profile (left) + Billing (right) ──────────────────────────
-    if (page === 'you') return (
-      <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
-          <SectionCard
-            id="profile"
-            active={activeSection === 'profile'}
-            sub={[
-              settings.fullName || authUser?.name || 'Professor User',
-              supaOk === null ? 'Checking Supabase…' : supaOk ? 'Supabase connected' : 'Local only',
-              `${allAccounts.length} account${allAccounts.length === 1 ? '' : 's'}`,
-            ].join(' · ')}
-          >
-            <ProfileSection
-              s={settings}
-              set={update}
-              name={authUser?.name ?? ''}
-              email={primaryEmail}
-              avatarUrl={authUser?.avatarUrl}
-              onSignOut={() => void handleSignOut()}
-              onRefresh={() => void handleRefresh()}
-              refreshing={refreshing}
-            />
-          </SectionCard>
-          <SectionCard id="billing" active={activeSection === 'billing'} actions={<GhostPill>Manage</GhostPill>}>
-            <BillingSection />
-          </SectionCard>
-        </div>
-      </div>
-    )
-
-    // ── CONNECTED page: Accounts | AI | Schedule rules ──────────────────────
-    if (page === 'connected') return (
-      <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
-          <SectionCard id="accounts" active={activeSection === 'accounts'}>
-            <AccountsAndCompaniesSection
-              companies={companies}
-              setCompanies={c => { setCompanies(c); saveCompanies(c) }}
-              accounts={accounts}
-              setAccounts={setAccounts}
-              primaryEmail={primaryEmail}
-            />
-          </SectionCard>
-          <SectionCard id="schedule" active={activeSection === 'schedule'} actions={<SaveBtn id="schedule" />}>
-            <ScheduleSection s={settings} set={update} />
-          </SectionCard>
-        </div>
-      </div>
-    )
-
-    // ── AI page: the model and how it acts, beside how it sounds ────────────
-    if (page === 'ai') return (
-      <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
-          <SectionCard id="professor" active={activeSection === 'professor'} actions={<SaveBtn id="professor" />}>
-            <ProfessorSection />
-          </SectionCard>
-          <Card icon={Sparkles} title="Voice & instructions" sub="Tone, the morning brief, and what the assistant always knows">
-            <AIVoiceSection s={settings} set={update} />
-          </Card>
-        </div>
-      </div>
-    )
-
-    // ── INTEGRATIONS page ───────────────────────────────────────────────────
-    if (page === 'integrations') return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
-        <SectionCard id="blocking" active={true} sub="Notion, Asana, Trello and Apple Notes">
-          <IntegrationsSection />
-        </SectionCard>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Card icon={CalendarDays} title="Calendar blocking rules" sub="Which calendars block your focus time">
-            <BlockingRulesSection />
-          </Card>
-          <Card icon={RefreshCw} title="Sync rules" sub="How often, where things land, who wins">
-            <SyncRulesSection />
-          </Card>
-        </div>
-      </div>
-    )
-
-    // ── WORK page: Tasks (left) + Habits (right) ────────────────────────────
-    if (page === 'work') return (
-      <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
-          <SectionCard id="tasks" active={activeSection === 'tasks'}>
-            <TaskStatusesSection />
-          </SectionCard>
-          <SectionCard id="habits" active={activeSection === 'habits'} actions={<SaveBtn id="habits" />}>
-            <HabitsSection />
-          </SectionCard>
-          <SectionCard id="library" active={activeSection === 'library'}>
-            <LibrarySection />
-          </SectionCard>
-        </div>
-      </div>
-    )
-
-    // ── SYSTEM page: Automation | Notifications | Appearance+Behavioral+Privacy ─
-    if (page === 'system') return (
-      <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
-          <SectionCard id="automation" active={activeSection === 'automation'}>
-            <AutomationSection />
-          </SectionCard>
-          <SectionCard id="notifications" active={activeSection === 'notifications'}>
-            <NotificationsMatrixSection />
-          </SectionCard>
-        </div>
-      </div>
-    )
-
-    // ── LOOK AND LIMITS page ────────────────────────────────────────────────
-    if (page === 'display') return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
-        <SectionCard id="appearance" active={activeSection === 'appearance'} actions={<SaveBtn id="appearance" />}>
-          <AppearanceSection s={settings} set={update} />
-        </SectionCard>
-        <SectionCard id="behavioral" active={activeSection === 'behavioral'}>
-          <BehavioralSection />
-        </SectionCard>
-        <SectionCard id="companies" active={activeSection === 'companies'}>
-          <DataPrivacySection />
-        </SectionCard>
-      </div>
-    )
-
-    // ── FINANCE page ────────────────────────────────────────────────────────
-    return (
-      <div>
-        <SectionCard id="finance" active={true}>
-          <FinanceSection />
-        </SectionCard>
-      </div>
-    )
   }
 
   /** Download every locally-held settings blob as one JSON file. */
@@ -496,11 +235,119 @@ export function Settings() {
     await googleSignOut()
   }
 
-  function navItem(id: SectionId) {
-    const meta = SECTION_META.find(m => m.id === id)!
-    const Icon = meta.icon
-    const isActive = id === activeSection
+  // ── Navigation ──────────────────────────────────────────────────────────────
+  const page = pageFor(activeSection)
+  const meta = SECTION_META.find(m => m.id === page)!
 
+  useEffect(() => {
+    try { localStorage.setItem(GROUPS_KEY, JSON.stringify(closed)) } catch { /* noop */ }
+  }, [closed])
+
+  // A link into a folded group (the palette, the budget screen) must not land
+  // on a page whose own menu entry is hidden.
+  useEffect(() => {
+    const g = groupOf(activeSection)
+    if (g) setClosed(c => (c.includes(g) ? c.filter(x => x !== g) : c))
+  }, [activeSection])
+
+  function select(id: SectionId) {
+    setActiveSection(id)
+    try { localStorage.setItem('settings-active-section', id) } catch { /* noop */ }
+  }
+  function toggleGroup(label: string) {
+    setClosed(c => (c.includes(label) ? c.filter(x => x !== label) : [...c, label]))
+  }
+
+  const q = query.trim().toLowerCase()
+  const groups = useMemo(() => NAV_GROUPS
+    .map(g => ({
+      ...g,
+      ids: g.ids.filter(id => {
+        if (!q) return true
+        const m = SECTION_META.find(x => x.id === id)!
+        return `${m.title} ${m.description} ${SEARCH_KEYWORDS[id] ?? ''}`.toLowerCase().includes(q)
+      }),
+    }))
+    .filter(g => g.ids.length > 0), [q])
+
+  // ── Fill the window exactly, so only the panel scrolls ──────────────────────
+  const rootRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [fitH, setFitH] = useState(640)
+  useLayoutEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const fit = () => {
+      if (el.offsetParent === null) return          // the module is hidden
+      setFitH(Math.max(560, Math.round(window.innerHeight - el.getBoundingClientRect().top)))
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    const ro = new ResizeObserver(fit)               // fires when the module is shown again
+    ro.observe(el)
+    return () => { window.removeEventListener('resize', fit); ro.disconnect() }
+  }, [])
+  useEffect(() => { scrollRef.current?.scrollTo({ top: 0 }) }, [page])
+
+  function body() {
+    switch (page) {
+      case 'profile': return (
+        <Block>
+          <ProfileSection
+            s={settings}
+            set={update}
+            name={authUser?.name ?? ''}
+            email={primaryEmail}
+            avatarUrl={authUser?.avatarUrl}
+            onSignOut={() => void handleSignOut()}
+            onRefresh={() => void handleRefresh()}
+            refreshing={refreshing}
+          />
+        </Block>
+      )
+      case 'billing': return <Block bare><BillingSection /></Block>
+      case 'companies': return <Block bare><DataPrivacySection onExport={exportAllSettings} /></Block>
+      case 'accounts': return (
+        <Block bare>
+          <AccountsAndCompaniesSection
+            companies={companies}
+            setCompanies={c => { setCompanies(c); saveCompanies(c) }}
+            accounts={accounts}
+            setAccounts={setAccounts}
+            primaryEmail={primaryEmail}
+          />
+        </Block>
+      )
+      case 'blocking': return (
+        <>
+          <Block title="Connected tools" bare><IntegrationsSection /></Block>
+          <Block title="Calendar blocking" sub="Which calendars block your focus time" bare><BlockingRulesSection /></Block>
+          <Block title="Sync rules" sub="How often, where things land, who wins" bare><SyncRulesSection /></Block>
+        </>
+      )
+      case 'schedule': return <Block><ScheduleSection s={settings} set={update} /></Block>
+      case 'tasks': return <Block bare><TaskStatusesSection /></Block>
+      case 'habits': return <Block bare><HabitsSection /></Block>
+      case 'library': return <Block><LibrarySection /></Block>
+      case 'finance': return <Block bare><FinanceSection /></Block>
+      case 'professor': return (
+        <>
+          <Block title="Model and autonomy" sub="Who answers, and what the assistant may write for you"><ProfessorSection /></Block>
+          <Block title="Voice and instructions" sub="Tone, the morning brief, and what the assistant always knows"><AIVoiceSection s={settings} set={update} /></Block>
+          <Block title="Behavioral OS" sub="Rank scoring and an operating mode, on top of the assistant" bare><BehavioralSection /></Block>
+        </>
+      )
+      case 'automation': return <Block bare><AutomationSection /></Block>
+      case 'notifications': return <Block bare><NotificationsMatrixSection /></Block>
+      case 'appearance': return <Block><AppearanceSection s={settings} set={update} /></Block>
+      default: return null
+    }
+  }
+
+  function navItem(id: SectionId) {
+    const m = SECTION_META.find(x => x.id === id)!
+    const Icon = m.icon
+    const isActive = id === page
     let badge: number | null = null
     if (id === 'habits') {
       try {
@@ -508,32 +355,30 @@ export function Settings() {
         const n  = hs.filter((h: { isActive?: boolean }) => h.isActive !== false).length
         badge = n > 0 ? n : null
       } catch { badge = null }
-    } else if (id === 'blocking') {
-      badge = 4
     }
-
     return (
       <button
         key={id}
-        onClick={() => { setActiveSection(id); try { localStorage.setItem('settings-active-section', id) } catch { /* noop */ } }}
+        type="button"
+        aria-current={isActive ? 'page' : undefined}
+        onClick={() => select(id)}
         style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-          padding: '5px 12px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', marginBottom: 0,
-          background: isActive ? 'var(--sb-ink-1)' : 'transparent',
-          border: 'var(--sb-border-width) solid transparent',
-          color: isActive ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-          fontSize: 'var(--sb-t-body)', fontWeight: isActive ? 600 : 500, textAlign: 'left' as const,
-          fontFamily: 'inherit',
+          width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+          padding: '7px 12px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
+          background: isActive ? 'var(--sb-card)' : 'transparent',
+          boxShadow: isActive ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
+          border: 'none', textAlign: 'left',
+          color: isActive ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
+          fontSize: 'var(--sb-t-body)', fontWeight: isActive ? 600 : 500, fontFamily: 'inherit',
           transition: 'background 0.12s, color 0.12s',
         }}
       >
-        <Icon size={15} strokeWidth={1.9} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.8 }} />
-        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.title}</span>
+        <Icon size={16} strokeWidth={1.9} style={{ flexShrink: 0 }} />
+        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
         {badge !== null && (
           <span style={{
             height: 17, minWidth: 17, boxSizing: 'border-box', padding: '0 5px', borderRadius: 'var(--sb-r-pill)',
-            background: isActive ? 'color-mix(in srgb, var(--sb-ink-on-dark) 18%, transparent)' : 'var(--sb-field)',
-            color: isActive ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
+            background: 'var(--sb-field)', color: 'var(--sb-ink-3)',
             fontSize: 'var(--sb-t-meta)', fontWeight: 700,
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>{badge}</span>
@@ -542,97 +387,108 @@ export function Settings() {
     )
   }
 
-  const pm = PAGE_META[SECTION_TO_PAGE[activeSection]]
-
   return (
-    // Pages are laid out to fit the viewport, so nothing scrolls at a normal
-    // window height. minHeight (not height) means a very short window grows the
-    // page and scrolls it rather than silently clipping a card.
-    <div style={{
-      minHeight: `calc(calc(100 * var(--vh)) - ${NAV_H})`, background: 'var(--sb-page)',
-      display: 'flex', flexDirection: 'column', padding: '26px 36px 0',
+    <div ref={rootRef} style={{
+      height: fitH, background: 'var(--sb-page)', boxSizing: 'border-box',
+      display: 'flex', alignItems: 'stretch', gap: 22, padding: '8px 32px 24px 8px', overflow: 'hidden',
     }}>
+      <style>{`
+        .sx-row:last-child { border-bottom: 0 !important; }
+        .sx-scroll { scrollbar-width: thin; scrollbar-color: var(--sb-border) transparent; }
+        .sx-scroll::-webkit-scrollbar { width: 8px; }
+        .sx-scroll::-webkit-scrollbar-thumb { background: var(--sb-border); border-radius: 8px; }
+        .sx-gl:hover { color: var(--sb-ink-1); }
+      `}</style>
 
-      {/* ── PAGE HEADER — spans the full width, above the rail ───────────── */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        gap: 20, marginBottom: 20, flexShrink: 0,
+      {/* ── NAV CARD — floats beside the panel ───────────────────────────── */}
+      <nav aria-label="Settings sections" className="sx-scroll" style={{
+        width: 276, flexShrink: 0, alignSelf: 'flex-start', maxHeight: '100%', overflowY: 'auto',
+        boxSizing: 'border-box', padding: '12px 12px 14px',
+        background: 'var(--sb-header)', border: 'var(--sb-border-width) solid var(--sb-border)',
+        borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-control)',
       }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 4 }}>SETTINGS</div>
-          <h2 style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.05, color: 'var(--sb-ink-1)' }}>{pm.title}</h2>
-          <p style={{ margin: '5px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>{pm.sub}</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <button
-            onClick={() => exportAllSettings()}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              padding: '10px 18px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
-              fontSize: 'var(--sb-t-body)', fontWeight: 500, fontFamily: 'inherit',
-              boxShadow: 'var(--sb-shadow-control)',
-            }}>
-            <Database size={ICON.sm} strokeWidth={STROKE.rest} /> Export
-          </button>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 22, flex: 1, alignItems: 'stretch', paddingBottom: 26 }}>
-
-        {/* ── LEFT RAIL — floating card ──────────────────────────────────── */}
-        <div style={{
-          width: 250, flexShrink: 0, display: 'flex', flexDirection: 'column',
-          background: 'var(--sb-header)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-          boxShadow: 'var(--sb-shadow-control)', overflow: 'hidden',
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 8, height: 38, padding: '0 12px',
+          background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
         }}>
-          {/* Search */}
-          <div style={{ padding: '12px 12px 8px', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px 12px', cursor: 'text' }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', flex: 1, userSelect: 'none' }}>Find a setting</span>
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', opacity: 0.7 }}>⌘K</span>
-            </div>
-          </div>
+          <Search size={14} strokeWidth={2} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Escape') setQuery('')
+              if (e.key === 'Enter' && groups[0]?.ids[0]) { select(groups[0].ids[0]); setQuery('') }
+            }}
+            placeholder="Find a setting"
+            aria-label="Find a setting"
+            style={{
+              flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent',
+              fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', fontFamily: 'inherit',
+            }}
+          />
+        </label>
 
-          {/* Grouped nav */}
-          <div style={{ padding: '0 12px', flex: 1, minHeight: 0 }}>
-            {NAV_GROUPS.map(group => (
-              <div key={group.label} style={{ marginBottom: 0 }}>
-                <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', padding: '7px 12px 3px', textTransform: 'uppercase' as const }}>
-                  {group.label}
+        {groups.length === 0 && (
+          <p style={{ margin: '16px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Nothing matches “{query.trim()}”.</p>
+        )}
+
+        {groups.map(g => {
+          const open = q ? true : !closed.includes(g.label)
+          return (
+            <div key={g.label}>
+              <button
+                type="button" className="sx-gl"
+                aria-expanded={open}
+                onClick={() => toggleGroup(g.label)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 12px 6px', marginTop: 4, background: 'transparent', border: 'none', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
+                  textTransform: 'uppercase', color: 'var(--sb-ink-3)',
+                }}
+              >
+                {g.label}
+                <ChevronDown size={14} strokeWidth={2} style={{ transition: 'transform 0.15s', transform: open ? 'none' : 'rotate(-90deg)' }} />
+              </button>
+              {open && (
+                <div style={{ margin: '0 0 4px 16px', paddingLeft: 6, borderLeft: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+                  {g.ids.map(id => navItem(id))}
                 </div>
-                {group.ids.map(id => navItem(id))}
-              </div>
-            ))}
-          </div>
-
-          {/* Footer */}
-          <div style={{ padding: '10px 18px 11px', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', flexShrink: 0 }}>
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-positive)', flexShrink: 0 }} />
-              Every change saves itself
+              )}
             </div>
-            {/* Which build this page is. "It is not deployed" and "your browser
-                is holding the last one" look identical from the outside, and
-                without this the only way to tell them apart is to guess. */}
-            <div
-              title={`Built ${new Date(__BUILD_AT__).toLocaleString('en-GB')}`}
-              style={{
-                marginTop: 5, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
-                fontFamily: 'var(--sb-font-mono)', letterSpacing: '0.04em',
-              }}>
-              build {__BUILD_SHA__} · {new Date(__BUILD_AT__).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-              {' '}{new Date(__BUILD_AT__).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+          )
+        })}
+      </nav>
+
+      {/* ── CONFIGURATION PANEL — one rounded box; its header stays, the rest scrolls ── */}
+      <section aria-label={meta.title} style={{
+        flex: 1, minWidth: 0, maxWidth: 920, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        background: 'var(--sb-header)', border: 'var(--sb-border-width) solid var(--sb-border)',
+        borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-control)',
+      }}>
+        <header style={{
+          flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+          padding: '26px 36px 18px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <h2 style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.1, color: 'var(--sb-ink-1)' }}>{meta.title}</h2>
+            <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>{meta.description}</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 6 }}>
+            {page === 'billing' && <GhostPill>Manage</GhostPill>}
+            <div role="status" aria-live="polite" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
+              <span style={{
+                width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+                background: saveState === 'saved' ? 'var(--sb-positive)' : saveState === 'saving' ? 'var(--sb-ink-3)' : 'var(--sb-warning)',
+              }} />
+              {SAVE_LABEL[saveState]}
             </div>
           </div>
+        </header>
+        <div ref={scrollRef} className="sx-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '24px 28px 8px 36px' }}>
+          {body()}
         </div>
-
-        {/* ── RIGHT CONTENT PANEL ────────────────────────────────────────── */}
-        <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
-          {renderPage()}
-        </div>
-      </div>
+      </section>
     </div>
   )
 }

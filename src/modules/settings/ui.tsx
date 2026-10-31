@@ -35,19 +35,47 @@ export function FieldRow({ label, sub, children }: { label: string; sub?: string
   return (
     // Wraps rather than spills: when the control cannot fit beside the label
     // it drops to its own line, instead of overflowing onto the next card.
-    <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap',
-      padding: '5px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
+    // `sx-row` is how Settings drops the last row's rule (see the page's <style>).
+    <div className="sx-row" style={{
+      display: 'flex', alignItems: 'center', gap: '10px 24px', flexWrap: 'wrap',
+      padding: '14px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
     }}>
-      <div style={{ flex: '1 1 150px', minWidth: 0, maxWidth: 172, paddingTop: 2 }}>
-        <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{label}</span>
+      <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{label}</span>
         {sub && <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>{sub}</p>}
       </div>
+      {/* One control column, hard right. It takes the width its content needs,
+          up to 440px — a fixed 280 squeezed the sections that put a sentence
+          of help text under their control into a tall sliver. */}
       <div style={{
-        flex: '1 1 auto', minWidth: 0, display: 'flex',
+        flex: '0 1 auto', maxWidth: 'min(100%, 440px)', minWidth: 0, display: 'flex',
         justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 6,
       }}>{children}</div>
     </div>
+  )
+}
+
+/** A titled group of rows: the title and one line above, the rows in a white
+ *  rounded card. `bare` is for a section that draws its own boxes — a card
+ *  inside a card is the thing this exists to avoid. */
+export function Block({ title, sub, children, bare }: {
+  title?: string; sub?: string; children: ReactNode; bare?: boolean
+}) {
+  return (
+    <section style={{ marginBottom: 28 }}>
+      {(title || sub) && (
+        <div style={{ margin: '0 0 10px 2px' }}>
+          {title && <h3 style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{title}</h3>}
+          {sub && <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>{sub}</p>}
+        </div>
+      )}
+      {bare ? children : (
+        <div style={{
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+          borderRadius: 'var(--sb-r-card)', padding: '8px 20px', boxShadow: 'var(--sb-shadow-control)', minWidth: 0,
+        }}>{children}</div>
+      )}
+    </section>
   )
 }
 
@@ -84,16 +112,16 @@ export function DRow({ label, sub, children, last }: {
   label: string; sub?: string; children: ReactNode; last?: boolean
 }) {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-      padding: '12px 0',
+    <div className="sx-row" style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px 24px', flexWrap: 'wrap',
+      padding: '14px 0',
       borderBottom: last ? 'none' : 'var(--sb-border-width) solid var(--sb-hairline)',
     }}>
-      <div style={{ minWidth: 0 }}>
+      <div style={{ flex: '1 1 220px', minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{label}</p>
         {sub && <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.35 }}>{sub}</p>}
       </div>
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>{children}</div>
+      <div style={{ flex: '0 1 auto', maxWidth: 'min(100%, 440px)', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 10 }}>{children}</div>
     </div>
   )
 }
