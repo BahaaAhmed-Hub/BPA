@@ -181,7 +181,7 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
         // against both edges a panel reads as part of the frame rather than
         // as a thing sitting on top of it.
         margin: '0 14px 14px 6px',
-        maxHeight: 'calc(100% - 14px)', overflowY: 'auto', scrollbarWidth: 'thin',
+        maxHeight: 'calc(100% - 14px)', overflowY: 'auto',
         background: C.page, border: `var(--sb-border-width) solid ${C.border}`,
         borderRadius: 'var(--sb-r-frame)', boxShadow: 'var(--sb-shadow-control)',
         display: 'flex', flexDirection: 'column', gap: 12, padding: '12px 16px 14px',

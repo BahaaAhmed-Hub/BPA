@@ -837,3 +837,15 @@ solid dark square (the Sunlit rule above) — the dock's accent-coloured active 
 `scripts/rail-dock.mjs [dock|control]` (`INK_THEME=`) — 15 assertions in a real browser, with the
 control removing the bar's transform. Measured in CSS units in the page: Playwright's `boundingBox`
 is real pixels and the app is at 90%, which read as a 43px misalignment that was not there.
+
+## A details panel's scrollbar sits inside the card, not on its border
+Every details panel is an `<aside>` — a rounded card whose scroll area runs its full height — so the
+6px bar was drawn flush against the border and, at the bottom, under the corner curve. One rule in
+`index.css` covers all of them (tasks, library, mail reader, Financials, the calendar's new-event
+panel): inside an `aside` the bar is 14px with a 4px transparent border on the thumb (`background-clip:
+padding-box`), so the visible thumb is inset 4px from the border, and the track stops short of both ends.
+**A `scrollbar-width` on the same element switches the `::-webkit-scrollbar` rules off in Chromium** — that
+is why `NewEventPanel` lost its `scrollbarWidth: 'thin'`. Headless Chromium hides scrollbars by default:
+`scripts/panel-scrollbar-inside.mjs` launches with `ignoreDefaultArgs: ['--hide-scrollbars']` and reads
+the **drawn pixels** across the row (thumb vs border, in screen pixels via `__zoomSpace`): gap 2px before,
+4px after, in all four themes.
