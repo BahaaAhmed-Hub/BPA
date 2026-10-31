@@ -1080,3 +1080,52 @@ that have this book are shown, linking to the book itself:
   different sentences; a source that is down is named and never counted as "does not have it"; a result with a failed source is
   not cached. Buy links are unchanged (shop searches). `bookLinks.ts`'s `free` list is now unused by the card (kept, its test pins it).
 `scripts/library-read-sources.mjs` (35) with catalogues that lie; `library-links.mjs` drives the card.
+
+## Library — Videos and Summary, two buttons beside Delete
+`BookVideosDialog.tsx` + `bookVideos.ts` + `supabase/functions/library-videos/` + `_shared/libraryVideos.ts`;
+`BookSummaryDialog.tsx` + `summaryPlan.ts` (pure) + `bookSummary.ts` + `summaryDb.ts`; `20260046_library_book_media.sql`
+(`library_summaries`, `library_video_cache`). Two icon buttons in the panel header, Videos and Summary, then Delete. Both open
+dialogs (the module's Escape already stands down for `[role=dialog]`).
+- **Videos come from the YouTube Data API through an edge function, never the browser.** The key and the daily quota are the
+  *project's*. Google's own pages disagree on what `search.list` costs (a separate bucket of ~100 calls/day, or 100 units of
+  10,000) — either way a hundred or so searches a day for everybody — so every search is cached a week in `library_video_cache`
+  (service role only: RLS on, **no policy**), an older cached answer beats none when YouTube fails, and the client shares an
+  in-flight search instead of repeating it (React's dev double-mount asked twice before that; measured 6 requests for 3 opens).
+  **Not done: a per-user rate limit** — a signed-in person can still spend distinct searches. Fine at personal scale; add one
+  before the Library is opened to many accounts.
+- **Whatever the function cannot do, the person keeps the link.** `ok` / `not_configured` (no `YOUTUBE_API_KEY` secret) / `quota` /
+  `unreachable`, and a function that is not deployed or errors reads `unavailable`. Each is a sentence, none is an empty dialog,
+  and **Search on YouTube** (a plain results URL, no quota) is always there.
+- **YouTube's answer is data.** An id that is not 11 `[A-Za-z0-9_-]` characters is dropped (both in the function and again in the
+  client), and the thumbnail is **derived from the id** (`i.ytimg.com/vi/<id>/mqdefault.jpg`), never a URL taken from the
+  response — a hostile `thumb` field was injected in the harness and never reached an `<img>`. Titles are shown as text
+  (`<i>` in a title is not an element).
+- **Deploy**: `deploy-functions.yml` deploys `library-videos` **with the JWT gateway on** and asserts `YOUTUBE_API_KEY` only when
+  GitHub has it (the missing-secret-never-blanks rule). Add the GitHub secret, or the app says "not switched on" and offers the link.
+- **The summary is written in sections, saved as it goes.** An outline call, then one call per section handed the whole outline;
+  each step is upserted (`onConflict: book_id`, one row per book), so a refused key, a dropped connection, **Stop** or closing the
+  dialog keeps what was written and offers **Continue (2 of 5 written)**, which asks for sections 3–5 only — never the outline
+  again. An empty section is never saved (it would read as written and never be asked for again).
+- **The length is the person's** (`LENGTHS`): Short ~5 pages (5 sections × 500 words), Standard ~10 (8 × 625), Long ~18
+  (12 × 750), at 500 words a page — Long stays inside the 15–20 pages asked for. The cost is stated before anything is spent
+  ("9 requests with your Anthropic key"). Section ceilings are `words × 2.2 + 200` tokens; a reply cut by `max_tokens` is trimmed
+  to its last whole sentence (but a stop in the first half is not worth throwing the rest away for).
+- **It is the model's memory of the book, and the screen, the export and the prompt all say so.** The model is not given the
+  book. The outline prompt lets it answer `{"unknown": true}` — then **nothing is written, asked or stored** and the sentence points
+  at adding the publisher's blurb under About (which is passed along, clipped to 1,200 characters). Sections are told to leave out
+  any detail they are not sure of, to use their own words, and to quote at most one short phrase. A 15–20 page summary is long
+  enough to be an abridgement, and the law on AI summaries of books is unsettled — keep the "own words, no long quotes" rules.
+  **Not built: summarising from the book's own PDF** (`BookFileCard`): it would be ~100k+ input tokens a book and is the right
+  next step for faithfulness, as an opt-in.
+- **Regenerating asks first** (it costs the same again and replaces the row); **Download .md** uses an ASCII-safe name
+  (`Dune - summary.md`). Without `20260046` the dialog names the migration and offers no Write button: spending money on
+  something that cannot be kept is the worst order to fail in.
+`scripts/library-book-media-rules.mjs` (75, plain node — the REAL `libraryVideos.ts` and `summaryPlan.ts`, types stripped by Node,
+with a control beside each rule) and `scripts/library-book-media.mjs` (67, browser; `CHROME=…` overrides the Linux path): the
+buttons in order on one row, every video failure still leaving the link, hostile ids/thumbnail refused, the thumbnails really
+rendering, the request bodies, the 6 Anthropic calls in order, the 6 upserts, a truncated section, the download, read-back after
+a reload, Keep this one spending nothing, a mid-way 401 then Continue, Stop, unknown book, no key, the missing migration. The
+harness needs `bpa-wizard-done` set or the welcome wizard covers the book; two of its first-run failures were its own fixture
+(a CSS-uppercased heading read by `innerText`, an arbitrary token bound, a request logged after its delay), not the app.
+**Not measured:** a live YouTube key, a live Claude call, the edge function running on Deno (it is not in the Vite build — only the
+pure module it imports was run), the migration against a real Postgres, and the ink audit over the two new dialogs.
