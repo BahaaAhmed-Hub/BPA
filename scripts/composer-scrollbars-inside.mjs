@@ -54,7 +54,7 @@ const m = await p.evaluate(() => {
   return { card: { right: Math.round(a.right), bottom: Math.round(a.bottom), h: Math.round(a.height) }, win: [innerWidth, innerHeight], bars }
 })
 console.log(JSON.stringify(m))
-await p.screenshot({ path: process.env.SHOT ?? 'composer.png' })
+if (process.env.SHOT) await p.screenshot({ path: process.env.SHOT })
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}  ${x}`); if (!c) fails++ }
 const outside = m.bars.filter(x => x.label !== 'card')
