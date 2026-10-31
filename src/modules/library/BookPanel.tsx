@@ -1,6 +1,6 @@
 import { MeetingBacklink } from '@/components/MeetingBacklink'
 import { useState } from 'react'
-import { Bookmark, Trash2, X, Search } from 'lucide-react'
+import { Bookmark, FileText, Trash2, Video, X, Search } from 'lucide-react'
 import { Button, Card, Pill, Segmented } from '@/components/ui'
 import { CAPS, ICON } from '@/lib/type'
 import { CoverArt } from './CoverArt'
@@ -15,6 +15,8 @@ import { CoverCard } from './CoverCard'
 import { WatchCard } from './WatchCard'
 import { ReadingLogCard } from './ReadingLogCard'
 import { PlanCard } from './PlanCard'
+import { BookVideosDialog } from './BookVideosDialog'
+import { BookSummaryDialog } from './BookSummaryDialog'
 import { BookNotesCard } from './Notes'
 import { QuotesCard } from './QuotesCard'
 import { useLibraryStore } from './libraryStore'
@@ -53,6 +55,7 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
   const links = useLibraryStore(s => s.links)
   const setBookLists = useLibraryStore(s => s.setBookLists)
   const [finding, setFinding] = useState(false)
+  const [dialog, setDialog] = useState<'videos' | 'summary' | null>(null)
   const extrasMissing = useLibraryStore(s => s.extrasMissing)
   const sessionsMissing = useLibraryStore(s => s.sessionsMissing)
   const plansMissing = useLibraryStore(s => s.plansMissing)
@@ -93,6 +96,10 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
           aria-pressed={marked} disabled={extrasMissing} onClick={() => toggleMark({ kind: 'book', bookId: book.id })}>
           <Bookmark size={ICON.md} fill={marked ? 'var(--sb-accent)' : 'none'} color={marked ? 'var(--sb-accent-deep)' : 'currentColor'} />
         </Button>
+        <Button variant="ghost" iconOnly title="Videos about this book" aria-label="Videos about this book"
+          onClick={() => setDialog('videos')}><Video size={ICON.md} /></Button>
+        <Button variant="ghost" iconOnly title="Summary of this book" aria-label="Summary of this book"
+          onClick={() => setDialog('summary')}><FileText size={ICON.md} /></Button>
         <Button variant="ghost" iconOnly title="Delete this book" aria-label="Delete this book"
           onClick={() => { del(book.id); onClose() }}><Trash2 size={ICON.md} /></Button>
         <Button variant="ghost" iconOnly title="Close" aria-label="Close" onClick={onClose}><X size={ICON.md} /></Button>
@@ -194,6 +201,9 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
           onPush={v => patch({ review: v.trim() || undefined })} />
       </Card>
       </div>
+
+      {dialog === 'videos' && <BookVideosDialog book={book} onClose={() => setDialog(null)} />}
+      {dialog === 'summary' && <BookSummaryDialog book={book} onClose={() => setDialog(null)} />}
     </aside>
   )
 }
