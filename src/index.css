@@ -329,6 +329,17 @@ textarea:focus,
 ::-webkit-scrollbar-thumb { background: var(--sb-border); border-radius: var(--sb-r-pill); }
 ::-webkit-scrollbar-thumb:hover { background: var(--sb-ink-4); }
 
+/* A details panel is a rounded card, and its scroll area runs the full height
+   of it — so the 6px bar sat against the card's border, and at the bottom it
+   ran out under the curve. Inside an <aside> the bar is 14px wide with a 3px
+   clear edge either side (the thumb is the middle 6, drawn by clipping its own
+   background to the padding box), and the track stops short of both ends, so
+   the thumb is inset from the border and the corner curve alike.            */
+aside::-webkit-scrollbar, aside ::-webkit-scrollbar { width: 14px; height: 14px; }
+aside::-webkit-scrollbar-thumb, aside ::-webkit-scrollbar-thumb { border: 4px solid transparent; background-clip: padding-box; }
+aside::-webkit-scrollbar-track-piece:vertical:start, aside ::-webkit-scrollbar-track-piece:vertical:start { margin-top: 8px; }
+aside::-webkit-scrollbar-track-piece:vertical:end, aside ::-webkit-scrollbar-track-piece:vertical:end { margin-bottom: 14px; }
+
 /* Skeleton — what a place looks like while its content is on the way.
    A field-coloured bar that breathes (opacity, 1.2s). Opacity rather than a
    moving gradient: it is the one animation that can simply stop, and under
