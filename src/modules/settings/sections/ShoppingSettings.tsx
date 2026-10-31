@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DRow, Toggle } from '../ui'
+import { Block, DRow, Toggle } from '../ui'
 
 // ─── Shopping List settings block (inside FinanceSection) ────────────────────
 
@@ -35,16 +35,16 @@ export function ShoppingSettingsBlock() {
   }
 
   return (
-    <div style={{ borderTop: '1px solid var(--sb-border)', paddingTop: 28, marginTop: 28 }}>
-      <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 12 }}>SHOPPING LIST</span>
-
+    <Block title="Shopping list" sub="A list that follows your finance lock, with prices watched from your stores">
       <DRow label="Enable shopping list" sub="Adds Shopping to the main menu, behind the same finance lock">
         <Toggle checked={enabled} onChange={(v: boolean) => { setEnabled(v); save({ enabled: v }) }} />
       </DRow>
 
       {enabled && (
         <>
-          <DRow label="Check prices automatically" sub="How often the app looks up prices from your stores">
+          <DRow label="Check prices automatically" sub={lastRefreshed
+            ? `How often the app looks up prices from your stores · last refresh ${new Date(lastRefreshed).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+            : 'How often the app looks up prices from your stores'}>
             <select
               value={priceFreq}
               onChange={e => {
@@ -72,21 +72,15 @@ export function ShoppingSettingsBlock() {
             </select>
           </DRow>
 
-          {lastRefreshed && (
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginLeft: 0, marginBottom: 12 }}>
-              Last auto-refresh: {new Date(lastRefreshed).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-            </div>
-          )}
-
           <DRow label="Mark calendar events done on purchase" sub="When you mark an item purchased, its linked calendar event is updated">
             <Toggle checked={markCal} onChange={(v: boolean) => { setMarkCal(v); save({ markCalendarDoneOnPurchase: v }) }} />
           </DRow>
 
-          <DRow label="Complete linked tasks on purchase" sub="When you mark an item purchased, its linked task is completed and logged">
+          <DRow label="Complete linked tasks on purchase" last sub="When you mark an item purchased, its linked task is completed and logged">
             <Toggle checked={markTask} onChange={(v: boolean) => { setMarkTask(v); save({ markTaskDoneOnPurchase: v }) }} />
           </DRow>
         </>
       )}
-    </div>
+    </Block>
   )
 }

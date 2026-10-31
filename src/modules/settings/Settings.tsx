@@ -339,7 +339,7 @@ export function Settings() {
       )
       case 'automation': return <Block bare><AutomationSection /></Block>
       case 'notifications': return <Block bare><NotificationsMatrixSection /></Block>
-      case 'appearance': return <Block><AppearanceSection s={settings} set={update} /></Block>
+      case 'appearance': return <Block bare><AppearanceSection s={settings} set={update} /></Block>
       default: return null
     }
   }

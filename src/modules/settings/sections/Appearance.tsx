@@ -5,6 +5,7 @@ import { useUIStore } from '@/store/uiStore'
 import { THEMES, resolveThemeId, applyAppearance } from '@/lib/themes'
 import { ICON, STROKE } from '@/lib/type'
 import { type AppSettings } from '../model'
+import { Block } from '../ui'
 
 // NotificationsSection merged into NotificationsMatrixSection (Push/Mail/Digest per event)
 // Legacy reminder fields (morning brief time, wind-down) are now in the AI / Schedule sections.
@@ -29,12 +30,8 @@ export function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial
       {/* ── Accent ───────────────────────────────────────────────────────────
           The one colour the whole app shares: every chip, bar, highlight and
           today-marker is drawn in it. It changes as you click. */}
-      <div style={{ paddingBottom: 16, borderBottom: 'var(--sb-border-width) solid var(--sb-border)', marginBottom: 14 }}>
-        <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Accent</p>
-        <p style={{ margin: '0 0 11px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
-          Every highlight in the app — chips, bars, the ring on today.
-        </p>
-        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+      <Block title="Accent" sub="Every highlight in the app — chips, bars, the ring on today.">
+        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', padding: '12px 0' }}>
           {/* "None" is the default and it is not a colour: it means the theme's
               own accent, which is the one its surfaces and tints were built
               around. Picking one of the six overrides it everywhere. */}
@@ -82,7 +79,7 @@ export function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial
             )
           })}
         </div>
-      </div>
+      </Block>
 
       {/* ── Theme ────────────────────────────────────────────────────────────
           Each tile is the theme itself: its page behind, its card on top, its
@@ -91,12 +88,8 @@ export function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial
           from, so what you see is what you get rather than an artist's
           impression of it. The name is set in the theme's own display face,
           which is the other half of what changes. */}
-      <div style={{ paddingTop: 16, borderTop: 'var(--sb-border-width) solid var(--sb-border)', marginTop: 6 }}>
-        <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Theme</p>
-        <p style={{ margin: '0 0 11px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
-          Surfaces, ink, accent and typeface, for the whole app.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+      <Block title="Theme" sub="Surfaces, ink, accent and typeface, for the whole app.">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, padding: '12px 0' }}>
           {THEMES.map(t => {
             const active = resolveThemeId(s.theme) === t.id
             const tk = t.tokens
@@ -142,7 +135,7 @@ export function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial
             )
           })}
         </div>
-      </div>
+      </Block>
     </div>
   )
 }

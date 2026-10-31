@@ -4,6 +4,7 @@ import { Plus, Trash2, X, RefreshCw, Pencil, GripVertical } from 'lucide-react'
 import { loadCustomStatuses, saveCustomStatuses, moveStatus, DEFAULT_STATUSES, type CustomStatus } from '@/lib/customStatuses'
 import { ICON } from '@/lib/type'
 import { inputStyle } from '@/lib/fields'
+import { Block, DRow } from '../ui'
 
 // ─── Task Statuses Section ───────────────────────────────────────────────────
 
@@ -75,7 +76,8 @@ export function TaskStatusesSection() {
   const isEditingRow = (i: number) => editIdx === i && !adding
 
   const formEl = (
-    <div style={{ padding: '10px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    // No box: it opens inside the Block's card, where a bordered panel would be a card in a card.
+    <div className="sx-row" style={{ padding: '14px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', gap: 8 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginBottom: 4, fontWeight: 600 }}>Label</div>
@@ -117,72 +119,86 @@ export function TaskStatusesSection() {
     </div>
   )
 
+  const dangerBorder = '1px solid color-mix(in srgb, var(--sb-negative) 30%, transparent)'
+  const dangerBtn: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
+    background: 'var(--sb-card)', border: '1px solid color-mix(in srgb, var(--sb-negative) 35%, transparent)',
+    color: 'var(--sb-negative-deep)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',
+  }
+
   return (
     <div>
-      <p style={{ margin: '0 0 14px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
-        Define custom board statuses. These appear as columns in the Status board and in the task detail dropdown.
-      </p>
-
-      {statuses.map((s, i) => (
-        <div key={s.id + i}>
-          <div
-            draggable
-            onDragStart={e => { dragIdx.current = i; e.dataTransfer.effectAllowed = 'move' }}
-            onDragOver={e => { e.preventDefault(); if (dragIdx.current !== null && overIdx !== i) setOverIdx(i) }}
-            onDragLeave={() => setOverIdx(o => (o === i ? null : o))}
-            onDrop={e => {
-              e.preventDefault()
-              if (dragIdx.current !== null && dragIdx.current !== i) move(dragIdx.current, i)
-              dragIdx.current = null
-              setOverIdx(null)
-            }}
-            onDragEnd={() => { dragIdx.current = null; setOverIdx(null) }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '9px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
-              background: overIdx === i ? 'rgba(var(--sb-accent-rgb),0.10)' : 'transparent',
-            }}>
-            <span title="Drag to reorder" style={{ display: 'flex', color: 'var(--sb-ink-3)', cursor: 'grab', flexShrink: 0 }}>
-              <GripVertical size={ICON.sm} />
-            </span>
-            <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: s.color, flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{s.label}</span>
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', padding: '2px 7px', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
-              {s.id}
-            </span>
-            <button onClick={() => startEdit(i)} title="Edit"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? 'var(--sb-accent)' : 'var(--sb-ink-3)', padding: 4 }}>
-              <Pencil size={ICON.sm} />
-            </button>
-            <button onClick={() => remove(i)} title="Delete"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4 }}>
-              <Trash2 size={ICON.sm} />
-            </button>
+      <Block title="Board statuses" sub="These appear as columns in the Status board and in the task detail dropdown. Drag to reorder.">
+        {statuses.map((s, i) => (
+          <div key={s.id + i} className="sx-row" style={{ borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+            <div
+              draggable
+              onDragStart={e => { dragIdx.current = i; e.dataTransfer.effectAllowed = 'move' }}
+              onDragOver={e => { e.preventDefault(); if (dragIdx.current !== null && overIdx !== i) setOverIdx(i) }}
+              onDragLeave={() => setOverIdx(o => (o === i ? null : o))}
+              onDrop={e => {
+                e.preventDefault()
+                if (dragIdx.current !== null && dragIdx.current !== i) move(dragIdx.current, i)
+                dragIdx.current = null
+                setOverIdx(null)
+              }}
+              onDragEnd={() => { dragIdx.current = null; setOverIdx(null) }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '14px 0',
+                background: overIdx === i ? 'rgba(var(--sb-accent-rgb),0.10)' : 'transparent',
+              }}>
+              <span title="Drag to reorder" style={{ display: 'flex', color: 'var(--sb-ink-3)', cursor: 'grab', flexShrink: 0 }}>
+                <GripVertical size={ICON.sm} />
+              </span>
+              <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: s.color, flexShrink: 0 }} />
+              <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{s.label}</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', padding: '2px 7px', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
+                {s.id}
+              </span>
+              <button onClick={() => startEdit(i)} title="Edit"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? 'var(--sb-accent)' : 'var(--sb-ink-3)', padding: 4 }}>
+                <Pencil size={ICON.sm} />
+              </button>
+            </div>
+            {isEditingRow(i) && formEl}
           </div>
-          {isEditingRow(i) && formEl}
+        ))}
+
+        {adding && formEl}
+
+        <div className="sx-row" style={{ padding: '14px 0' }}>
+          <button onClick={startAdd} style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 7,
+            padding: '11px 16px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
+            border: '1px dashed var(--sb-border)',
+            color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
+          }}>
+            <Plus size={ICON.sm} /> Add a status
+          </button>
         </div>
-      ))}
+      </Block>
 
-      {adding && formEl}
-
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <button onClick={startAdd} style={{
-          flex: 1, display: 'flex', alignItems: 'center', gap: 7,
-          padding: '11px 16px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
-          border: '1px dashed var(--sb-border)',
-          color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
-        }}>
-          <Plus size={ICON.sm} /> Add a status
-        </button>
-        <button onClick={resetDefaults} title="Reset to defaults" style={{
-          padding: '11px 14px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
-          border: 'var(--sb-border-width) solid var(--sb-border)',
-          color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 5,
-        }}>
-          <RefreshCw size={ICON.sm} /> Reset
-        </button>
-      </div>
+      <section data-statuses-danger style={{ marginBottom: 28 }}>
+        <div style={{ margin: '0 0 10px 2px' }}>
+          <h3 style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-negative-deep)' }}>Reset or delete</h3>
+          <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>Both change the board's columns straight away.</p>
+        </div>
+        <div style={{ background: 'var(--sb-card)', border: dangerBorder, borderRadius: 'var(--sb-r-card)', padding: '8px 20px', minWidth: 0 }}>
+          <DRow label="Reset to defaults" sub="Replaces every status above with the original set.">
+            <button onClick={resetDefaults} title="Reset to defaults" style={dangerBtn}>
+              <RefreshCw size={ICON.sm} /> Reset
+            </button>
+          </DRow>
+          {statuses.map((s, i) => (
+            <DRow key={s.id + i} label={s.label} sub={s.id}>
+              <button onClick={() => remove(i)} title="Delete" aria-label={`Delete ${s.label}`} style={dangerBtn}>
+                <Trash2 size={ICON.sm} /> Delete
+              </button>
+            </DRow>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }

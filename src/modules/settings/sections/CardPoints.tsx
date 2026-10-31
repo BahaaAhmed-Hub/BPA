@@ -4,7 +4,7 @@ import { baseCurrency } from '@/modules/finance/fx'
 import { useFinanceStore } from '@/modules/finance/financeStore'
 import { loadRewardSettings, saveRewardSettings, isDormant, schemeFor, totalPoints, type RewardSettings } from '@/modules/finance/cardRewards'
 import { acct, group } from '@/modules/finance/format'
-import { FieldRow, Toggle } from '../ui'
+import { Block, FieldRow, Toggle } from '../ui'
 
 // ─── Settings → Finance → CARD POINTS ────────────────────────────────────────
 //
@@ -31,17 +31,15 @@ export function CardPointsSection() {
   const summary = totalPoints(accounts, transactions, { window: cfg.window })
 
   return (
-    <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
-      <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 12 }}>CARD POINTS</span>
-
+    <Block title="Card points" sub="What is true of every card — the per-card figures live on the card">
       {cards.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.55, maxWidth: 720 }}>
+        <p className="sx-row" style={{ margin: 0, padding: '14px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.55 }}>
           No credit cards yet. A card's earn rate and point value are set on the card
           itself, in Balances → the card → edit, where they differ from card to card.
         </p>
       ) : (
         <>
-          <p style={{ margin: '0 0 14px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.55, maxWidth: 720 }}>
+          <p className="sx-row" style={{ margin: 0, padding: '14px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.55, borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
             {withScheme.length === 0
               ? <>None of your {cards.length === 1 ? 'card has' : `${cards.length} cards have`} a
                  rewards programme set. Open a card and use <b style={{ fontWeight: 600 }}>Look it up</b> —
@@ -79,11 +77,7 @@ export function CardPointsSection() {
           </FieldRow>
 
           {summary.rows.length > 0 && (
-            <div style={{
-              marginTop: 12, padding: '11px 14px', borderRadius: 'var(--sb-r-nav)',
-              background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-hairline)',
-              fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.55, maxWidth: 720,
-            }}>
+            <p className="sx-row" style={{ margin: 0, padding: '14px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', lineHeight: 1.55 }}>
               {group(summary.rows.reduce((t: number, r) => t + r.total, 0))} points
               {cfg.showAsMoney && summary.worthInBase !== null &&
                 <> — worth about {acct(summary.worthInBase, { currency: baseCurrency() })}</>}
@@ -94,10 +88,10 @@ export function CardPointsSection() {
               {summary.rows.some(r => r.cashUse > 0) && (
                 <> Cash taken on a card earns nothing and is left out.</>
               )}
-            </div>
+            </p>
           )}
         </>
       )}
-    </div>
+    </Block>
   )
 }

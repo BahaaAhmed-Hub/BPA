@@ -7,7 +7,7 @@ import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
 import { HABIT_VIEWS, loadHabitView, saveHabitView, EmojiBtn, type HabitView } from '@/modules/habits/HabitsModule'
 import { ICON, STROKE } from '@/lib/type'
 import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
-import { Toggle } from '../ui'
+import { Block, DRow, Toggle } from '../ui'
 import { PrayerBlock } from './PrayerBlock'
 
 const FREQ_OPTS    = ['daily','weekdays','weekly'] as const
@@ -103,8 +103,10 @@ function SettingsHabitForm({
 
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', gap: 18, marginTop: 12,
-      padding: 18, background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', border: 'var(--sb-border-width) solid var(--sb-border)',
+      // No box of its own: it opens inside the Block's card, and a card in a card is the thing
+      // the row system exists to avoid. The fields carry the tint instead.
+      display: 'flex', flexDirection: 'column', gap: 18, padding: '16px 0 18px',
+      borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
     }}>
 
       {/* Picture, icon, name — the three things that identify a habit */}
@@ -118,7 +120,7 @@ function SettingsHabitForm({
               style={{
                 width: 46, height: 46, borderRadius: 'var(--sb-r-nav)', padding: 0, cursor: 'pointer', overflow: 'hidden',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 'var(--sb-t-h2)', color: 'var(--sb-ink-3)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                fontSize: 'var(--sb-t-h2)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
               }}>
               {s.image
                 ? <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -163,7 +165,7 @@ function SettingsHabitForm({
             onKeyDown={e => { if (e.key === 'Enter' && valid) onSave(s); if (e.key === 'Escape') onCancel() }}
             style={{
               width: '100%', boxSizing: 'border-box', height: 42, padding: '0 14px',
-              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+              background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
               fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
             }} />
         </div>
@@ -204,14 +206,14 @@ function SettingsHabitForm({
               placeholder="8"
               style={{
                 width: 90, boxSizing: 'border-box', height: 'var(--sb-h-nav)', padding: '0 12px',
-                background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
+                background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
                 fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
               }} />
             <input value={s.unit} onChange={e => update({ unit: e.target.value })}
               placeholder="glasses / ml / minutes…"
               style={{
                 flex: 1, minWidth: 0, boxSizing: 'border-box', height: 'var(--sb-h-nav)', padding: '0 12px',
-                background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
+                background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
                 fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
               }} />
           </div>
@@ -226,7 +228,7 @@ function SettingsHabitForm({
                 placeholder={String(stepFor({ id: s.id ?? '', goal: Number(s.goal) || 0, unit: s.unit }))}
                 style={{
                   width: 90, boxSizing: 'border-box', height: 'var(--sb-h-nav)', padding: '0 12px',
-                  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
+                  background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
                   fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
                 }} />
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
@@ -243,7 +245,7 @@ function SettingsHabitForm({
         <button onClick={() => valid && onSave(s)} disabled={!valid}
           style={{
             height: 38, padding: '0 18px', borderRadius: 'var(--sb-r-pill)', border: 'none',
-            background: valid ? 'var(--sb-accent)' : 'var(--sb-field)', color: valid ? 'var(--sb-accent-ink)' : 'var(--sb-ink-4)', // ui-guard: ink-ok
+            background: valid ? 'var(--sb-accent)' : 'var(--sb-hairline)', color: valid ? 'var(--sb-accent-ink)' : 'var(--sb-ink-4)', // ui-guard: ink-ok
             fontSize: 'var(--sb-t-label)', fontWeight: 600, fontFamily: 'inherit',
             cursor: valid ? 'pointer' : 'default',
             display: 'flex', gap: 6, alignItems: 'center',
@@ -333,11 +335,8 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
   } as const
 
   return (
-    <div style={{ marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
-      <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 10 }}>
-        APPLE HEALTH
-      </span>
-      <p style={{ margin: '0 0 14px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.6, maxWidth: 660 }}>
+    <Block title="Apple Health" sub="Steps and distance can come from your iPhone instead of from you.">
+      <p className="sx-row" style={{ margin: 0, padding: '14px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
         Apple gives a web app no way to read Health — HealthKit is native to the phone, with no web
         API to ask. What it does give is Shortcuts: your iPhone reads the number and sends it here
         each morning. Link a habit below and you get a private address to paste into a Shortcut;
@@ -345,15 +344,16 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
       </p>
 
       {movement.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
+        <p className="sx-row" style={{ margin: 0, padding: '14px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
           Nothing to link yet. Add a habit about walking, running, steps or distance and it appears
           here.
         </p>
       ) : !ready ? (
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Looking…</p>
+        <p className="sx-row" style={{ margin: 0, padding: '14px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Looking…</p>
       ) : links === null ? (
+        <div className="sx-row" style={{ padding: '14px 0' }}>
         <div style={{
-          fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)', lineHeight: 1.55, maxWidth: 720,
+          fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)', lineHeight: 1.55,
           background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent-border)', borderRadius: 'var(--sb-r-nav)', padding: '11px 14px',
         }}>
           Your database has nowhere to keep these yet — run{' '}
@@ -361,15 +361,16 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
           and deploy the <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)' }}>health-ingest</code> function,
           then reload.
         </div>
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 720 }}>
+        <>
           {movement.map(h => {
             const link = links.find(l => l.habitId === h.id)
             const metric = link?.metric ?? suggestMetric(h.name, h.unit)
             return (
-              <div key={h.id} style={{ border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 13px' }}>
-                  <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', flex: 1, minWidth: 0 }}>
+              <div key={h.id} className="sx-row" style={{ padding: '14px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)', flex: '1 1 200px', minWidth: 0 }}>
                     {h.name}
                     <span style={{ fontWeight: 400, color: 'var(--sb-ink-3)' }}> · {METRIC_LABEL[metric]}</span>
                   </span>
@@ -394,7 +395,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
                 </div>
 
                 {link && open === link.id && (
-                  <div style={{ borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', padding: '12px 13px', background: 'var(--sb-header)' }}>
+                  <div style={{ paddingTop: 14 }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
                       <code style={{
                         flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -444,10 +445,10 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
               </div>
             )
           })}
-          {err && <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)' }}>{err}</p>}
-        </div>
+          {err && <p className="sx-row" style={{ margin: 0, padding: '14px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)' }}>{err}</p>}
+        </>
       )}
-    </div>
+    </Block>
   )
 }
 
@@ -474,119 +475,131 @@ export function HabitsSection() {
 
   return (
     <div>
-      <p style={{ margin: '0 0 14px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
-        Changes here instantly sync with the Habits Tracker page.
-      </p>
-
       {/* First, not last: it used to sit under the whole habit list, and a switch nobody scrolled to is a feature nobody has. */}
       <PrayerBlock first />
 
       {/* Which view the Habits page opens on — switching it there sticks too */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingBottom: 14, marginBottom: 4, borderBottom: 'var(--sb-border-width) solid var(--sb-border)' }}>
-        <div style={{ flex: '1 1 150px', minWidth: 0, maxWidth: 200 }}>
-          <div style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>Default view</div>
-          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 2 }}>
-            {HABIT_VIEWS.find(v => v.id === habitView)?.hint}
-          </div>
-        </div>
-        <div style={{ flex: '1 1 auto', display: 'flex', justifyContent: 'flex-end' }}>
+      <Block title="Habits page" sub="Changes here instantly sync with the Habits Tracker page.">
+        <DRow label="Default view" sub={HABIT_VIEWS.find(v => v.id === habitView)?.hint} last>
           <Segmented
             value={habitView}
             options={HABIT_VIEWS.map(v => ({ value: v.id, label: v.label }))}
             onChange={chooseView}
           />
-        </div>
-      </div>
+        </DRow>
+      </Block>
 
-      {habits.map(h => (
-        <div key={h.id}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '10px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
-            opacity: h.isActive ? 1 : 0.5,
-          }}>
-            <HabitRowImage
-              image={h.image}
-              emoji={h.emoji}
-              onChange={img => updateHabit(h.id, { image: img })}
-            />
-            <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: h.color, flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{h.name}</span>
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-              {describeHabit(h)}
-            </span>
-            <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
-            <button onClick={() => setEditingId(editingId === h.id ? null : h.id)} title="Edit habit"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: editingId === h.id ? 'var(--sb-accent)' : 'var(--sb-ink-3)', padding: 4 }}>
-              <Pencil size={ICON.sm} />
-            </button>
-            <button onClick={() => { if (editingId === h.id) setEditingId(null); storeDel(h.id) }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4 }}>
-              <Trash2 size={ICON.sm} />
+      <Block title="Your habits" sub="Switch one off to hide it from the tracker without losing its history.">
+        {habits.map(h => (
+          <div key={h.id} className="sx-row" style={{ borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', opacity: h.isActive ? 1 : 0.5, flexWrap: 'wrap' }}>
+              <HabitRowImage
+                image={h.image}
+                emoji={h.emoji}
+                onChange={img => updateHabit(h.id, { image: img })}
+              />
+              <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: h.color, flexShrink: 0 }} />
+              <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{h.name}</span>
+                <span style={{ display: 'block', marginTop: 2, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{describeHabit(h)}</span>
+              </div>
+              <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
+              <button onClick={() => setEditingId(editingId === h.id ? null : h.id)} title="Edit habit"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: editingId === h.id ? 'var(--sb-accent)' : 'var(--sb-ink-3)', padding: 4 }}>
+                <Pencil size={ICON.sm} />
+              </button>
+            </div>
+
+            {/* Inline edit form */}
+            {editingId === h.id && editingHabit && (
+              <SettingsHabitForm
+                key={h.id + '-edit'}
+                initial={{
+                  id: h.id,
+                  name: h.name, emoji: h.emoji, color: h.color, image: h.image,
+                  freq: h.frequency as typeof FREQ_OPTS[number],
+                  type: h.type ?? 'boolean',
+                  goal: h.goal != null ? String(h.goal) : '',
+                  unit: h.unit ?? '',
+                  step: loadHabitSteps()[h.id] != null ? String(loadHabitSteps()[h.id]) : '',
+                }}
+                saveLabel="Save Changes"
+                onSave={s => {
+                  updateHabit(h.id, {
+                    name: s.name.trim(), emoji: s.emoji, color: s.color, image: s.image,
+                    frequency: s.freq,
+                    type: s.type,
+                    goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
+                    unit: s.type === 'quantity' ? s.unit.trim() : undefined,
+                  })
+                  setHabitStep(h.id, s.type === 'quantity' && parseFloat(s.step) > 0 ? parseFloat(s.step) : null)
+                  setEditingId(null)
+                }}
+                onCancel={() => setEditingId(null)}
+              />
+            )}
+          </div>
+        ))}
+
+        {adding ? (
+          <SettingsHabitForm
+            initial={{ name: '', emoji: DEFAULT_HABIT_EMOJI, color: COLORS[habits.length % COLORS.length], freq: 'daily', type: 'boolean', goal: '', unit: '', step: '' }}
+            onSave={s => {
+              const made = storeAdd({
+                name: s.name.trim(), emoji: s.emoji, color: s.color, image: s.image,
+                frequency: s.freq, isActive: true,
+                type: s.type,
+                goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
+                unit: s.type === 'quantity' ? s.unit.trim() : undefined,
+              })
+              // addHabit hands back the new id, which is what the step is filed under.
+              if (made && s.type === 'quantity' && parseFloat(s.step) > 0) setHabitStep(made, parseFloat(s.step))
+              setAdding(false)
+            }}
+            onCancel={() => setAdding(false)}
+          />
+        ) : (
+          <div className="sx-row" style={{ padding: '14px 0' }}>
+            <button onClick={() => { setEditingId(null); setAdding(true) }} style={{
+              display: 'flex', alignItems: 'center', gap: 7, width: '100%',
+              padding: '11px 16px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
+              border: '1px dashed var(--sb-border)',
+              color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
+            }}>
+              <Plus size={ICON.sm} /> Add a habit
             </button>
           </div>
-
-          {/* Inline edit form */}
-          {editingId === h.id && editingHabit && (
-            <SettingsHabitForm
-              key={h.id + '-edit'}
-              initial={{
-                id: h.id,
-                name: h.name, emoji: h.emoji, color: h.color, image: h.image,
-                freq: h.frequency as typeof FREQ_OPTS[number],
-                type: h.type ?? 'boolean',
-                goal: h.goal != null ? String(h.goal) : '',
-                unit: h.unit ?? '',
-                step: loadHabitSteps()[h.id] != null ? String(loadHabitSteps()[h.id]) : '',
-              }}
-              saveLabel="Save Changes"
-              onSave={s => {
-                updateHabit(h.id, {
-                  name: s.name.trim(), emoji: s.emoji, color: s.color, image: s.image,
-                  frequency: s.freq,
-                  type: s.type,
-                  goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
-                  unit: s.type === 'quantity' ? s.unit.trim() : undefined,
-                })
-                setHabitStep(h.id, s.type === 'quantity' && parseFloat(s.step) > 0 ? parseFloat(s.step) : null)
-                setEditingId(null)
-              }}
-              onCancel={() => setEditingId(null)}
-            />
-          )}
-        </div>
-      ))}
-
-      {adding ? (
-        <SettingsHabitForm
-          initial={{ name: '', emoji: DEFAULT_HABIT_EMOJI, color: COLORS[habits.length % COLORS.length], freq: 'daily', type: 'boolean', goal: '', unit: '', step: '' }}
-          onSave={s => {
-            const made = storeAdd({
-              name: s.name.trim(), emoji: s.emoji, color: s.color, image: s.image,
-              frequency: s.freq, isActive: true,
-              type: s.type,
-              goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
-              unit: s.type === 'quantity' ? s.unit.trim() : undefined,
-            })
-            // addHabit hands back the new id, which is what the step is filed under.
-            if (made && s.type === 'quantity' && parseFloat(s.step) > 0) setHabitStep(made, parseFloat(s.step))
-            setAdding(false)
-          }}
-          onCancel={() => setAdding(false)}
-        />
-      ) : (
-        <button onClick={() => { setEditingId(null); setAdding(true) }} style={{
-          marginTop: 12, display: 'flex', alignItems: 'center', gap: 7, width: '100%',
-          padding: '11px 16px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
-          border: '1px dashed var(--sb-border)',
-          color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
-        }}>
-          <Plus size={ICON.sm} /> Add a habit
-        </button>
-      )}
+        )}
+      </Block>
 
       {/* Steps and distance can come from the phone rather than from you. */}
       <AppleHealthBlock habits={habits} />
+
+      {habits.length > 0 && (
+        <section data-habits-danger style={{ marginBottom: 28 }}>
+          <div style={{ margin: '0 0 10px 2px' }}>
+            <h3 style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-negative-deep)' }}>Delete a habit</h3>
+            <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>Removes the habit and its history. Switch it off above to keep it.</p>
+          </div>
+          <div style={{
+            background: 'var(--sb-card)', border: '1px solid color-mix(in srgb, var(--sb-negative) 30%, transparent)',
+            borderRadius: 'var(--sb-r-card)', padding: '8px 20px', minWidth: 0,
+          }}>
+            {habits.map(h => (
+              <DRow key={h.id} label={h.name} sub={describeHabit(h)}>
+                <button onClick={() => { if (editingId === h.id) setEditingId(null); storeDel(h.id) }} aria-label={`Delete ${h.name}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
+                    background: 'var(--sb-card)', border: '1px solid color-mix(in srgb, var(--sb-negative) 35%, transparent)',
+                    color: 'var(--sb-negative-deep)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',
+                  }}>
+                  <Trash2 size={ICON.sm} /> Delete
+                </button>
+              </DRow>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

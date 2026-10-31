@@ -1,7 +1,7 @@
 import { isBusinessAccount, setBusinessAccount } from '@/lib/businessAccounts'
 import { useState, useEffect, type ReactNode } from 'react'
 import { Pill } from '@/components/ui'
-import { Trash2, LogIn, LogOut, Building2, RefreshCw, Eye, EyeOff, Mail, HardDrive, CalendarDays, AlertTriangle } from 'lucide-react'
+import { Trash2, LogIn, LogOut, RefreshCw, Eye, EyeOff, Mail, HardDrive, CalendarDays, AlertTriangle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signInWithGoogle, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
 import { readScopes, cachedScopes, scopesAreStale, forgetScopes } from '@/lib/googleScopes'
@@ -10,6 +10,8 @@ import { saveAccountsToDB } from '@/lib/dbSync'
 import { ICON, STROKE } from '@/lib/type'
 import { type CompanyRow, fetchGCals } from '../model'
 import { CompaniesSection } from './Companies'
+import { Block, FieldRow, GhostPill } from '../ui'
+import { PILL_BASE } from '../pillStyles'
 
 // ─── CHUNK 5: Connected Accounts (multi-Google) ───────────────────────────────
 
@@ -67,13 +69,18 @@ function IntegrationBadge({ icon, label, active, fresh = true, onGrant }: {
 }
 
 function AccountsSection({
-  accounts, setAccounts, primaryEmail, companies = [],
+  accounts, setAccounts, primaryEmail, companies = [], intro, unusedAccounts, children,
 }: {
   accounts: ConnectedAccount[]
   setAccounts: (a: ConnectedAccount[]) => void
   primaryEmail: string
   /** Shown under each account so the link reads both ways. */
   companies?: CompanyRow[]
+  /** The page's one-line explanation and how many extra accounts no company uses. */
+  intro: string
+  unusedAccounts: number
+  /** Rendered between the accounts card and the danger zone (the companies). */
+  children?: ReactNode
 }) {
   const [adding, setAdding]         = useState(false)
   const [reconnecting, setRecon]    = useState<string | null>(null)
@@ -155,6 +162,22 @@ function AccountsSection({
     saveAccountsToDB(updated).catch(console.warn)
   }
 
+  function removeAllAccounts() {
+    // Mirror individual Remove: call disconnectGoogleAccount for each
+    // so OAuth tokens are cleaned up from the DB (same as Trash button).
+    accounts.forEach(a => {
+      removeAccount(a.id)
+      const serverAcc = serverAccounts.find(s => s.email === a.email)
+      if (serverAcc) {
+        void disconnectGoogleAccount(serverAcc.id)
+          .then(() => setServerAccounts(prev => prev.filter(s => s.id !== serverAcc.id)))
+      }
+    })
+    const updated = loadAccounts()
+    setAccounts(updated)
+    saveAccountsToDB(updated).catch(console.warn)
+  }
+
   // Primary account row (from Supabase session)
   const primaryToken = localStorage.getItem('google_provider_token') ?? ''
 
@@ -212,16 +235,30 @@ function AccountsSection({
   /** Whether that answer came from the token just now, or off a record. */
   const fresh = (email: string): boolean => !!grantsBy[email.toLowerCase()]?.live
 
+  // One account = one row of the Block card, on the same rhythm as FieldRow
+  // (`sx-row` drops the last rule). Avatar, address, badges left; controls right.
+  const accountRow = (extra?: React.CSSProperties): React.CSSProperties => ({
+    display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0',
+    borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', ...extra,
+  })
+  const iconBtn: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex', alignItems: 'center' }
+  // A loaded calendar list is a row of its own, not a tinted box.
+  const calendarRow = (key: string, heading: string, names: string[]) => (
+    <div key={key} className="sx-row" style={{ padding: '10px 0 12px 44px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+      <p style={{ margin: '0 0 4px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>{heading}</p>
+      {names.map(name => (
+        <p key={name} style={{ margin: '3px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>• {name}</p>
+      ))}
+    </div>
+  )
+
   return (
-    <div>
+    <>
+      <Block title="Google accounts"
+        sub={`${intro}${unusedAccounts > 0 ? ` ${unusedAccounts} not used by any company.` : ''}`}>
 
       {/* Primary account */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', marginBottom: 10,
-        background: 'var(--sb-field)',
-        border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.19)',
-      }}>
+      <div className="sx-row" style={accountRow()}>
         <div style={{
           width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
           background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.25)',
@@ -229,8 +266,8 @@ function AccountsSection({
         }}>
           {primaryEmail ? primaryEmail[0].toUpperCase() : 'G'}
         </div>
-        <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{primaryEmail || 'Primary Google Account'}</p>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 500, color: 'var(--sb-ink-1)', overflowWrap: 'anywhere' }}>{primaryEmail || 'Primary Google Account'}</p>
           <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {/* These read `active` unconditionally — three badges that were
                 green whatever the token carried. The primary account is the
@@ -254,47 +291,31 @@ function AccountsSection({
         </span>
         {primaryToken && (
           <button onClick={() => loadCalendars({ id: 'primary', email: primaryEmail, name: '', providerToken: primaryToken, scopes: [], connectedAt: '', isPrimary: true })}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)' }}
+            style={{ ...iconBtn, gap: 4, fontSize: 'var(--sb-t-meta)' }}
             title="Load calendars">
             <RefreshCw size={ICON.sm} style={{ animation: loadingCals === 'primary' ? 'spin 1s linear infinite' : 'none' }} />
           </button>
         )}
-        <button onClick={() => void googleSignOut()}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-negative)', padding: 4, display: 'flex', alignItems: 'center' }}
-          title="Sign out">
-          <LogOut size={ICON.sm} />
-        </button>
       </div>
 
       {/* Show primary calendars */}
-      {calendars['primary'] && (
-        <div style={{ marginBottom: 12, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
-          <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Calendars in this account</p>
-          {calendars['primary'].map(name => (
-            <p key={name} style={{ margin: '3px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>• {name}</p>
-          ))}
-        </div>
-      )}
+      {calendars['primary'] && calendarRow('primary-cals', 'Calendars in this account', calendars['primary'])}
 
       {/* Additional connected accounts — show ALL stored accounts with delete */}
-      {accounts.map(acc => {
+      {accounts.flatMap(acc => {
         const isStale = needsReconnect.has(acc.email)
         const isRecon = reconnecting === acc.id
-        return (
-          <div key={acc.id} style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', marginBottom: 8,
-            background: 'var(--sb-field)',
-            border: `var(--sb-border-width) solid ${isStale ? 'color-mix(in srgb, var(--sb-warning) 35.0%, transparent)' : 'var(--sb-border)'}`,
+        const rows: ReactNode[] = [
+          <div key={acc.id} className="sx-row" style={accountRow({
             opacity: hiddenAccts.has(acc.email) ? 0.5 : 1,
             transition: 'opacity 0.15s',
-          }}>
+          })}>
             <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 25.1%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-info)' }}>
               {acc.email ? acc.email[0].toUpperCase() : 'G'}
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{acc.email || acc.name}</p>
+                <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 500, color: 'var(--sb-ink-1)', overflowWrap: 'anywhere' }}>{acc.email || acc.name}</p>
                 <BusinessToggle email={acc.email} />
               </div>
               {(() => {
@@ -308,7 +329,7 @@ function AccountsSection({
                       <span key={c.id} style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5,
                         padding: '2px 8px', borderRadius: 'var(--sb-r-pill)',
-                        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
                         fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
                       }}>
                         <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: c.color }} />
@@ -345,85 +366,67 @@ function AccountsSection({
                 {isRecon ? 'Redirecting…' : 'Reconnect'}
               </button>
             ) : (
-              <button onClick={() => void loadCalendars(acc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex' }} title="Load calendars">
+              <button onClick={() => void loadCalendars(acc)} style={iconBtn} title="Load calendars">
                 <RefreshCw size={ICON.sm} style={{ animation: loadingCals === acc.id ? 'spin 1s linear infinite' : 'none' }} />
               </button>
             )}
             <button
               onClick={() => toggleAccountVisibility(acc.email)}
               title={hiddenAccts.has(acc.email) ? 'Show in Calendar' : 'Hide from Calendar'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: hiddenAccts.has(acc.email) ? 'var(--sb-ink-3)' : 'var(--sb-ink-3)' }}
+              style={iconBtn}
             >
               {hiddenAccts.has(acc.email) ? <EyeOff size={ICON.sm} /> : <Eye size={ICON.sm} />}
             </button>
-            <button onClick={() => removeAcc(acc.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-negative)', padding: 4, display: 'flex' }}>
+            <button onClick={() => removeAcc(acc.id)} style={{ ...iconBtn, color: 'var(--sb-negative)' }} title="Remove this account">
               <Trash2 size={ICON.sm} />
             </button>
-          </div>
-        )
+          </div>,
+        ]
+        // Show calendars for this account straight under it
+        if (calendars[acc.id]) rows.push(calendarRow(`${acc.id}-cals`, `${acc.email} calendars`, calendars[acc.id]))
+        return rows
       })}
 
-      {/* Show calendars for additional accounts */}
-      {accounts.map(acc => calendars[acc.id] ? (
-        <div key={`${acc.id}-cals`} style={{ marginBottom: 8, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
-          <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>{acc.email} calendars</p>
-          {calendars[acc.id].map(name => <p key={name} style={{ margin: '3px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>• {name}</p>)}
-        </div>
-      ) : null)}
-
-      {/* Add account button + Remove all */}
-      <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+      {/* Add account */}
+      <FieldRow label="Connect another account"
+        sub="Connected accounts grant Calendar, Gmail, and Drive access for aggregation and triage. Tokens are stored securely on the server — never in the browser. Re-authorize any account to upgrade its permissions.">
         <button onClick={() => void connectAdditional()} disabled={adding}
           style={{
-            flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-            padding: '12px 16px', borderRadius: 'var(--sb-r-sm)',
-            background: 'var(--sb-field)',
-            border: '1px dashed var(--sb-border)',
-            color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer',
-            opacity: adding ? 0.6 : 1,
+            ...PILL_BASE, display: 'inline-flex', alignItems: 'center', gap: 6,
+            color: 'var(--sb-ink-1)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
+            cursor: 'pointer', opacity: adding ? 0.6 : 1,
           }}>
           <LogIn size={ICON.sm} />
-          {adding ? 'Connecting…' : '+ Connect another Google account'}
+          {adding ? 'Connecting…' : 'Connect a Google account'}
         </button>
+      </FieldRow>
+      </Block>
 
-        {accounts.length > 0 && (
-          <button
-            onClick={() => {
-              // Mirror individual Remove: call disconnectGoogleAccount for each
-              // so OAuth tokens are cleaned up from the DB (same as Trash button).
-              accounts.forEach(a => {
-                removeAccount(a.id)
-                const serverAcc = serverAccounts.find(s => s.email === a.email)
-                if (serverAcc) {
-                  void disconnectGoogleAccount(serverAcc.id)
-                    .then(() => setServerAccounts(prev => prev.filter(s => s.id !== serverAcc.id)))
-                }
-              })
-              const updated = loadAccounts()
-              setAccounts(updated)
-              saveAccountsToDB(updated).catch(console.warn)
-            }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '12px 14px', borderRadius: 'var(--sb-r-sm)',
-              background: 'color-mix(in srgb, var(--sb-negative) 6.0%, transparent)',
-              border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 25.0%, transparent)',
-              color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <Trash2 size={ICON.sm} />
-            Remove all
-          </button>
-        )}
-      </div>
+      {children}
 
-      <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.55 }}>
-        Connected accounts grant Calendar, Gmail, and Drive access for aggregation and triage. Tokens are stored securely on the server — never in the browser. Re-authorize any account to upgrade its permissions.
-      </p>
+      {/* Danger zone — signing out and removing every extra account. Each keeps its own flow. */}
+      <section style={{ marginBottom: 28 }}>
+        <div style={{ margin: '0 0 10px 2px' }}>
+          <h3 style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-negative-deep)' }}>Danger zone</h3>
+          <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>Leaving this device, or disconnecting accounts.</p>
+        </div>
+        <div style={{
+          background: 'var(--sb-card)', border: '1px solid color-mix(in srgb, var(--sb-negative) 30%, transparent)',
+          borderRadius: 'var(--sb-r-card)', padding: '8px 20px', boxShadow: 'var(--sb-shadow-control)', minWidth: 0,
+        }}>
+          <FieldRow label="Sign out" sub="Ends this session on this device.">
+            <GhostPill icon={LogOut} tone="rust" title="Sign out" onClick={() => void googleSignOut()}>Sign out</GhostPill>
+          </FieldRow>
+          {accounts.length > 0 && (
+            <FieldRow label="Remove all connected accounts" sub="Disconnects every additional Google account and clears its tokens.">
+              <GhostPill icon={Trash2} tone="rust" onClick={removeAllAccounts}>Remove all</GhostPill>
+            </FieldRow>
+          )}
+        </div>
+      </section>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
+    </>
   )
 }
 
@@ -472,52 +475,15 @@ export function AccountsAndCompaniesSection({
 
   return (
     <div>
-      {/* How the two halves relate, stated once at the top */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-        padding: '9px 12px', marginBottom: 12,
-        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
-      }}>
-        <p style={{ margin: 0, flex: 1, minWidth: 180, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
-          Connect a Google account, then point a company at it. Mail, calendars and
-          Drive flow in through the account; the company decides how that work is
-          tagged, coloured and assigned.
-        </p>
-        <span style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          <span style={{ padding: '3px 9px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
-            {accountCount} account{accountCount === 1 ? '' : 's'}
-          </span>
-          <span style={{ padding: '3px 9px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
-            {companies.length} compan{companies.length === 1 ? 'y' : 'ies'}
-          </span>
-        </span>
-      </div>
-
-      {/* Accounts */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-        <Mail size={ICON.sm} color="var(--sb-ink-3)" />
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Google accounts</p>
-        {unusedAccounts > 0 && (
-          <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
-            {unusedAccounts} not used by any company
-          </span>
-        )}
-      </div>
-      <AccountsSection accounts={accounts} setAccounts={setAccounts} primaryEmail={primaryEmail} companies={companies} />
-
-      <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '16px 0 14px' }} />
-
-      {/* Companies */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-        <Building2 size={ICON.sm} color="var(--sb-ink-3)" />
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Companies</p>
-        {unlinked > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)', fontWeight: 600 }}>
-            {unlinked} not linked to an account
-          </span>
-        )}
-      </div>
-      <CompaniesSection companies={companies} setCompanies={setCompanies} accounts={accounts} primaryEmail={primaryEmail} />
+      {/* How the two halves relate, stated once at the top — as the first card's line */}
+      <AccountsSection accounts={accounts} setAccounts={setAccounts} primaryEmail={primaryEmail} companies={companies}
+        unusedAccounts={unusedAccounts}
+        intro={`${accountCount} account${accountCount === 1 ? '' : 's'}, ${companies.length} compan${companies.length === 1 ? 'y' : 'ies'}. Connect a Google account, then point a company at it: mail, calendars and Drive flow in through the account, and the company decides how that work is tagged, coloured and assigned.`}>
+        <Block title="Companies"
+          sub={unlinked > 0 ? `${unlinked} not linked to an account` : 'Each company is tagged, coloured and assigned through its Google account.'}>
+          <CompaniesSection companies={companies} setCompanies={setCompanies} accounts={accounts} primaryEmail={primaryEmail} />
+        </Block>
+      </AccountsSection>
     </div>
   )
 }
