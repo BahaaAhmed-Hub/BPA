@@ -1121,6 +1121,18 @@ dialogs (the module's Escape already stands down for `[role=dialog]`).
   to the cached row (never more than 150) — the only thing that spends more of the shared quota, and the button says so. A failing
   "more" (quota/unreachable) changes nothing and says why. `next_page` is read with a fallback so a project without `20260047` still
   answers a search; it just cannot page.
+- **Ordered by what was watched and liked** (`videoSort.ts`, pure; an **Order** selector: *Most watched* — the default — *Most liked*,
+  *Best match* = YouTube's own order; the choice is remembered in `library-video-sort`). A search result carries no counts, so each page
+  also asks `videos.list?part=statistics` for its ids — **1 quota unit for up to 50 videos, against 100 for the search** — and
+  `applyStats` puts `views`/`likes` on the items. Four rules, each a thing that was easy to get wrong:
+  **(1)** videos that name the book **always come before the looser ones**, whatever the order — a nearby video with 99M views must not
+  sit above the book's own, which is the whole point of the filter (measured: 99M-view looser videos last in all three orders);
+  **(2)** an unknown count is `null` and sorts **last**, never as zero — a channel can hide its likes, and "hidden" is not "none"
+  (the card shows `11K views`, not `0 likes`; a real 0 still shows as 0); **(3)** the list is ordered **before** it is cut to a page,
+  so "most watched" is the most watched of all of them, not of the first twelve; **(4)** ties fall back to the other count, then to
+  YouTube's order, so it is the same every time. A failed stats call returns the videos with `null` counts and the order falls back
+  to YouTube's own rather than inventing numbers. Cached rows moved to `v3|…` so rows made without counts are never trusted (one
+  refetch per book, once). A favourite stores no counts — they go stale.
 - **Deploy**: `deploy-functions.yml` deploys `library-videos` **with the JWT gateway on** and asserts `YOUTUBE_API_KEY` only when
   GitHub has it (the missing-secret-never-blanks rule). Add the GitHub secret, or the app says "not switched on" and offers the link.
 - **The summary is written in sections, saved as it goes.** An outline call, then one call per section handed the whole outline;
@@ -1141,9 +1153,10 @@ dialogs (the module's Escape already stands down for `[role=dialog]`).
 - **Regenerating asks first** (it costs the same again and replaces the row); **Download .md** uses an ASCII-safe name
   (`Dune - summary.md`). Without `20260046` the dialog names the migration and offers no Write button: spending money on
   something that cannot be kept is the worst order to fail in.
-`scripts/library-book-media-rules.mjs` (108, plain node — the REAL `libraryVideos.ts` and `summaryPlan.ts`, types stripped by Node,
-with a control beside each rule; the strictness rule has 20 cases) and `scripts/library-book-media.mjs` (103, browser; `CHROME=…`
-overrides the Linux path; 4 clean runs in a row): the
+`scripts/library-book-media-rules.mjs` (139, plain node — the REAL `libraryVideos.ts`, `summaryPlan.ts` and `videoSort.ts`, types stripped
+by Node, with a control beside each rule; the strictness rule has 20 cases, the stats and the order 31) and
+`scripts/library-book-media.mjs` (116, browser; `CHROME=…` overrides the Linux path; 4 clean runs in a row; the fake videos carry
+counts chosen so each order gives a different first card, and two looser ones with 99M views): the
 buttons in order on one row, every video failure still leaving the link, hostile ids/thumbnail refused, the thumbnails really
 rendering, the request bodies, **12 of 17 shown → Show more reveals 5 with no request → Search for more sends `more: true` and adds 6
 → looser matches hidden, then shown and labelled, then put away → favourite (the row sent, as the owner) → remove (hidden mark) → Removed

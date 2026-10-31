@@ -19,6 +19,10 @@ export interface BookVideo {
   publishedAt: string
   /** The title names this book. False = probably about something nearby. */
   strict: boolean
+  /** Times watched; `null` when unknown (never 0 for "unknown"). */
+  views: number | null
+  /** Likes; `null` when unknown or hidden by the channel. */
+  likes: number | null
 }
 
 export type VideoStatus = 'not_configured' | 'quota' | 'unreachable' | 'unavailable'
@@ -45,6 +49,9 @@ export function youtubeSearchUrl(b: { title: string; authors: string[] }, topic:
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(q.replace(/\s+/g, ' ').trim())}`
 }
 
+/** A count is a whole number that is not negative; anything else is "not said", which is not zero. */
+const count = (v: unknown): number | null => (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 ? v : null)
+
 /** What a response is allowed to say about a video — anything else is dropped. */
 export function readVideos(data: unknown): BookVideo[] {
   const items = (data as { items?: unknown })?.items
@@ -57,6 +64,7 @@ export function readVideos(data: unknown): BookVideo[] {
       publishedAt: typeof v.publishedAt === 'string' ? v.publishedAt : '',
       // Only an explicit yes counts: a response that does not say is not vouched for.
       strict: v.strict === true,
+      views: count(v.views), likes: count(v.likes),
     }]
   })
 }

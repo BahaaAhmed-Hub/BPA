@@ -13,7 +13,9 @@
  * **One search is a page of 50 candidates, judged against the book** (see
  * `_shared/libraryVideos.ts`): each is marked `strict` when its title names this
  * book. The app shows the strict ones and keeps the rest one press away. A page
- * costs the same quota whatever its size, so asking for 50 is free precision.
+ * costs the same quota whatever its size, so asking for 50 is free precision. Each
+ * page also asks `videos.list` for the view and like counts (1 unit for up to 50
+ * videos) so the app can order by what was watched most and liked most.
  * `more: true` fetches the next page of the same search and adds it to the row —
  * up to `MAX_STORED` — which is the only thing that spends more quota.
  *
@@ -30,8 +32,8 @@
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  MAX_STORED, PAGE_SIZE, cacheKey, isFresh, isQuotaReason, mergeItems, nextToken, parseSearch, videoQuery,
-  type BookRef, type VideoItem, type VideoTopic,
+  MAX_STORED, PAGE_SIZE, applyStats, cacheKey, isFresh, isQuotaReason, mergeItems, nextToken, parseSearch, parseStats, videoQuery,
+  type BookRef, type Stats, type VideoItem, type VideoTopic,
 } from '../_shared/libraryVideos.ts'
 
 const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!
@@ -104,13 +106,29 @@ serve(async (req) => {
     return { ok: true, payload }
   }
 
+  /**
+   * How many watched and liked each video — `videos.list`, which costs 1 unit for up to 50 ids (a search costs 100), so
+   * the app can order by them. Best effort: if it fails the videos are still returned, with `null` counts, and the app
+   * falls back to YouTube's own order rather than showing a made-up zero.
+   */
+  const askStats = async (ids: string[]): Promise<Map<string, Stats>> => {
+    if (!YOUTUBE_API_KEY || ids.length === 0) return new Map()
+    const url = new URL('https://www.googleapis.com/youtube/v3/videos')
+    url.search = new URLSearchParams({ part: 'statistics', id: ids.slice(0, PAGE_SIZE).join(','), key: YOUTUBE_API_KEY }).toString()
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
+      return res.ok ? parseStats(await res.json()) : new Map()
+    } catch { return new Map() }
+  }
+
   /* ── the next page of a search we already hold ─────────────────────── */
   if (more) {
     const have = cached?.items ?? []
     if (!cached?.next_page || have.length >= MAX_STORED) return json({ status: 'ok', items: have, canMore: false, cached: true })
     const r = await askYouTube(cached.next_page)
     if (!r.ok) return json({ status: 'ok', items: have, canMore: true, cached: true, moreStatus: r.why })
-    const merged = mergeItems(have, parseSearch(r.payload, book))
+    const page = parseSearch(r.payload, book)
+    const merged = mergeItems(have, applyStats(page, await askStats(page.map(v => v.id))))
     const next = merged.length >= MAX_STORED ? null : nextToken(r.payload)
     await store(merged, next)
     return json({ status: 'ok', items: merged, canMore: next !== null, cached: false })
@@ -125,7 +143,8 @@ serve(async (req) => {
 
   const r = await askYouTube(null)
   if (!r.ok) return fallback(r.why)
-  const items = parseSearch(r.payload, book)
+  const found = parseSearch(r.payload, book)
+  const items = applyStats(found, await askStats(found.map(v => v.id)))
   const next = nextToken(r.payload)
   // An empty answer is a real answer ("nothing found"), but it is not worth a week of silence.
   if (items.length) await store(items, next)

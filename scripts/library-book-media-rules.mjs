@@ -5,6 +5,7 @@
 // Each block ends in a control: the same question put to input that SHOULD be refused, so a pass cannot be vacuous.
 import * as V from '../supabase/functions/_shared/libraryVideos.ts'
 import * as S from '../src/modules/library/summaryPlan.ts'
+import * as SORT from '../src/modules/library/videoSort.ts'
 
 let fails = 0, n = 0
 const ok = (name, cond, extra = '') => { n++; console.log(`${cond ? 'PASS' : '*** FAIL ***'}  ${name}${extra ? '  ' + extra : ''}`); if (!cond) fails++ }
@@ -95,6 +96,56 @@ ok('quotaExceeded is the quota', V.isQuotaReason({ error: { errors: [{ reason: '
 ok('dailyLimitExceeded is the quota', V.isQuotaReason({ error: { errors: [{ reason: 'dailyLimitExceeded' }] } }))
 ok('control: keyInvalid is not the quota', !V.isQuotaReason({ error: { errors: [{ reason: 'keyInvalid' }] } }))
 ok('control: no body is not the quota', !V.isQuotaReason(null))
+
+/* ── videos: how many watched, how many liked ─────────────────────────── */
+const stats = V.parseStats({ items: [
+  { id: 'dQw4w9WgXcQ', statistics: { viewCount: '1234567', likeCount: '45000' } },
+  { id: 'aaaaaaaaaaa', statistics: { viewCount: '900' } },                       // likes hidden by the channel
+  { id: 'bbbbbbbbbbb', statistics: { viewCount: '-5', likeCount: '1.5' } },      // not counts
+  { id: 'short', statistics: { viewCount: '1' } },                               // not a video id
+  { id: 'ccccccccccc' },                                                          // no statistics at all
+  { id: 'ddddddddddd', statistics: { viewCount: '9'.repeat(40) } },               // absurd
+  { id: '"><x>', statistics: { viewCount: '5' } },
+] })
+eq('views and likes are read as numbers', stats.get('dQw4w9WgXcQ'), { views: 1234567, likes: 45000 })
+eq('a hidden like count is null, NOT zero', stats.get('aaaaaaaaaaa'), { views: 900, likes: null })
+eq('a negative or fractional count is "not said"', stats.get('bbbbbbbbbbb'), { views: null, likes: null })
+eq('no statistics at all is "not said"', stats.get('ccccccccccc'), { views: null, likes: null })
+eq('an absurdly long number is refused, not turned into Infinity', stats.get('ddddddddddd'), { views: null, likes: null })
+ok('control: a malformed id never gets an entry', !stats.has('short') && !stats.has('"><x>') && stats.size === 5)
+eq('not an object → an empty map', V.parseStats(null).size, 0)
+eq('items not an array → an empty map', V.parseStats({ items: 'x' }).size, 0)
+const vid = (id, over = {}) => ({ id, title: id, channel: '', thumb: '', publishedAt: '', strict: true, views: null, likes: null, ...over })
+const applied = V.applyStats([vid('dQw4w9WgXcQ'), vid('aaaaaaaaaaa', { views: 5, likes: 5 }), vid('zzzzzzzzzzz', { views: 7, likes: 8 })], stats)
+eq('counts are put on the videos they belong to', [applied[0].views, applied[0].likes], [1234567, 45000])
+eq('a video the channel hides likes on gets null, replacing nothing it had', [applied[1].views, applied[1].likes], [900, null])
+eq('a video with no entry keeps what it had (a failed stats call changes nothing)', [applied[2].views, applied[2].likes], [7, 8])
+eq('an empty map changes nothing at all', V.applyStats([vid('dQw4w9WgXcQ', { views: 1, likes: 2 })], new Map())[0].views, 1)
+ok('a freshly parsed search starts with unknown counts (null, not 0)', V.parseSearch({ items: [{ id: { videoId: 'dQw4w9WgXcQ' }, snippet: { title: 'Dune summary' } }] }, { title: 'Dune', authors: [] })[0].views === null)
+
+/* ── videos: the order ─────────────────────────────────────────────────── */
+const sv = (id, strict, views, likes) => ({ id, strict, views, likes })
+const mix = [sv('a', true, 100, 5), sv('b', true, 900, 1), sv('c', true, 900, 50), sv('d', true, null, null), sv('e', true, 50, null), sv('x', false, 9_000_000, 9_000_000)]
+const ids = (xs) => xs.map(v => v.id).join('')
+eq('most watched: views, then likes to break a tie, unknown last', ids(SORT.sortVideos(mix, 'watched')), 'cbaedx')
+eq('most liked: likes, then views to break a tie, unknown last', ids(SORT.sortVideos(mix, 'liked')), 'cabedx')
+eq('best match is YouTube’s own order', ids(SORT.sortVideos(mix, 'match')), 'abcdex')
+ok('a looser video with nine million views and likes is STILL below every video that names the book', ['watched', 'liked', 'match'].every(k => SORT.sortVideos(mix, k).at(-1).id === 'x'))
+eq('control: a video watched 0 times is above one whose count is unknown (unknown is not zero)', ids(SORT.sortVideos([sv('n', true, null, null), sv('z', true, 0, 0)], 'watched')), 'zn')
+eq('equal videos keep YouTube’s order (the result is the same every time)', ids(SORT.sortVideos([sv('p', true, 5, 5), sv('q', true, 5, 5), sv('r', true, 5, 5)], 'watched')), 'pqr')
+const before = ids(mix); SORT.sortVideos(mix, 'watched')
+eq('sorting does not reorder the list it was given', ids(mix), before)
+eq('an empty list is an empty list', SORT.sortVideos([], 'watched').length, 0)
+eq('the three orders are offered, most watched first', SORT.SORT_OPTIONS.map(o => o.value), ['watched', 'liked', 'match'])
+eq('compact: millions', SORT.compact(1234567), '1.2M')
+eq('compact: thousands', SORT.compact(45000), '45K')
+eq('compact: small numbers are left alone', SORT.compact(980), '980')
+eq('compact: zero', SORT.compact(0), '0')
+eq('the stats line says both when both are known', SORT.statsLine({ views: 3_400_000, likes: 41_000 }), '3.4M views · 41K likes')
+eq('…only the views when likes are hidden (never "0 likes")', SORT.statsLine({ views: 3_400_000, likes: null }), '3.4M views')
+eq('…only the likes when the views are unknown', SORT.statsLine({ views: null, likes: 5 }), '5 likes')
+eq('…nothing when neither is known', SORT.statsLine({ views: null, likes: null }), '')
+eq('a real zero is shown as zero', SORT.statsLine({ views: 0, likes: 0 }), '0 views · 0 likes')
 
 /* ── summary: the lengths ──────────────────────────────────────────────── */
 for (const k of S.LENGTH_ORDER) {
