@@ -173,7 +173,7 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
       className="sb-compose"
       style={{
         width: expanded ? PANEL_W_WIDE : PANEL_W,
-        flexShrink: 0, alignSelf: 'flex-start', minWidth: 0,
+        flexShrink: 1, alignSelf: 'flex-start', minWidth: 0,
         // The row it sits in has a definite height, so this is the row's — a
         // fixed viewport offset put the footer four pixels below the fold,
         // because it did not know how tall the calendar's own header was.

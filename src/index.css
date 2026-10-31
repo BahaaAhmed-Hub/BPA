@@ -831,7 +831,15 @@ img { max-width: 100%; }
 
 /* The right-column wrapper that holds whichever of the rail, event panel or
    composer is currently occupying it. */
-.cal-right { min-height: 0; max-height: 100%; overflow-y: auto; }
+/* It does not scroll: whichever of the three it holds is a card with a scroll
+   area of its own. As a block with `overflow-y: auto` it was the thing that
+   scrolled — the card's `maxHeight: 100%` has nothing to be a percentage of in
+   an auto-height parent, so the card ran past the row, the wrapper grew a bar of
+   its own beside it, and another along its foot. A column that clips lets the
+   card shrink to the row (its `min-height: 0` is why it can) and scroll inside
+   its own border. */
+.cal-right { min-height: 0; max-height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+.cal-right > * { min-height: 0; }
 
 @media (max-width: 1180px) {
   .cal-body { grid-template-columns: minmax(0, 1fr); overflow-y: auto; align-content: start; }
@@ -851,7 +859,7 @@ img { max-width: 100%; }
      is its own height and the body scrolls past them both. */
   .cal-body { grid-auto-rows: auto; }
   .cal-rail { max-height: none; overflow-y: visible; }
-  .cal-right { max-height: none; overflow-y: visible; }
+  .cal-right { max-height: none; overflow: visible; display: block; }
   /* The divider has no meaning in the stacked layout. */
   .cal-divider { display: none; }
 }

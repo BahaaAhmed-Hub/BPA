@@ -775,3 +775,15 @@ typed). The look is the Mention Picker's — avatar, name, address, an Enter hin
   node is false — so it read as outside. The listener now ignores a target that is no longer
   `isConnected`. The keyboard path never showed it. Control: before the fix, a click leaves no panel
   and no attendee. `scripts/attendee-suggestions.mjs [compose|edit|control]` — 23 checks.
+
+## The composer's scrollbar is the card's own — `.cal-right` does not scroll
+"Scrollbars outside the new-event card, one down the side and one along its foot." `.cal-right`
+(the column that holds the rail, the event panel or the composer) was a block with `overflow-y: auto`,
+and the card's `maxHeight: calc(100% - 14px)` has nothing to be a percentage of in an auto-height
+parent — so on a short window the card ran past the row, the **wrapper** grew a bar beside it, and
+a second along the foot where card + margins were wider than the column. It is a clipping flex
+column now, and `NewEventPanel` is `flexShrink: 1`, so the card shrinks to the row and scrolls inside
+its own border (the bar inset per `shell.md`). Under 1180px it is a block again, as the stacked
+layout needs. `scripts/composer-scrollbars-inside.mjs [theme] [height]` lists every ancestor that
+draws a bar: 760px tall, before — `DIV.cal-right` 6×5px, card bottom 852 in an 844 window; after — only
+the card, bottom 791. (`<html>` is skipped: under the 90% zoom it reports its two widths side by side.)
