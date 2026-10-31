@@ -43,6 +43,7 @@ const SHARED_KEYS = [
   'professor-company-users',     // people, per company
   'professor-habit-quantity-logs', // how much, not just whether
   'professor-habit-steps',         // what one tap adds
+  'professor-prayer',              // prayer times on or off, the place, and which prayers each day
   'professor-notif-events',
   'professor-review-hours',
   'professor-ai-config',

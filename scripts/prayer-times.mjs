@@ -28,6 +28,14 @@ ok('5 -> all five', P.maskFromCount(5) === P.ALL_PRAYERS)
 ok('more than 5 is still all five, and the count survives the round trip', P.maskFromCount(9) === 31 && [0, 1, 2, 3, 4, 5].every(n => P.maskCount(P.maskFromCount(n)) === n))
 ok('toggling a prayer flips only its bit', P.maskToggle(0, 'asr') === 4 && P.maskToggle(4, 'asr') === 0 && P.maskToggle(4, 'fajr') === 5)
 
+// What a day says: the stored mask when it agrees with the count, the rule when it does not.
+const fa = P.maskFromCount(3) // fajr+dhuhr+asr
+ok('a stored mask that matches the count is kept (Fajr+Isha+Maghrib stays that, not the rule\'s three)', P.dayMask(1 | 8 | 16, 3, false) === (1 | 8 | 16))
+ok('a mask the count has overtaken is stale: the count is read by the rule', P.dayMask(1, 3, false) === fa)
+ok('no mask, a count of 3 -> the rule', P.dayMask(undefined, 3, false) === fa)
+ok('no mask, no count, ticked -> all five', P.dayMask(undefined, undefined, true) === 31)
+ok('nothing at all -> nothing', P.dayMask(undefined, undefined, false) === 0 && P.dayMask(undefined, 0, false) === 0)
+
 // Times. Cairo, 1 Jan 2025 (UTC+2), Egyptian General Authority. Published timetables for the day
 // read about 05:11 / 11:58 / 14:45 / 17:07 / 18:30.
 const cairo = { lat: 30.0444, lon: 31.2357, tz: 'Africa/Cairo' }

@@ -156,3 +156,15 @@ export function currentPrayer(times: PrayerTimes, nowMinutes: number): PrayerId 
   for (const p of PRAYERS) { const t = times[p]; if (t !== null && nowMinutes >= t) cur = p }
   return cur
 }
+
+// ─── What a day's record says ──────────────────────────────────────────────
+
+/** The prayers done on a day. The stored mask wins; with none (a day written by a build that only
+ *  counted, or logged on another device before this one knew) the count is read by the rule —
+ *  and a ticked day with no count is all five. The count in `habit_logs` is the day's truth about
+ *  *how many*, so a mask that disagrees with it is a stale one and the count's reading is used. */
+export function dayMask(stored: number | undefined, count: number | undefined, ticked: boolean): number {
+  const n = count ?? (ticked ? 5 : 0)
+  if (stored !== undefined && maskCount(stored) === Math.min(5, Math.max(0, Math.floor(n)))) return stored & ALL_PRAYERS
+  return maskFromCount(n)
+}
