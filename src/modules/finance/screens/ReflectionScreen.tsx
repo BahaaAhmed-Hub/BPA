@@ -1516,8 +1516,11 @@ export function ReflectionScreen(_props?: any) {
             // The gap on the left is the one that matters: without it the
             // panel's edge sits against the table's own scrollbar and the two
             // read as one surface with a seam down it.
-            margin: '10px 12px 12px 18px', padding: '18px 20px 20px', overflowY: 'auto',
+            margin: '10px 12px 12px 18px', overflow: 'hidden',
           }}>
+          {/* The card clips and the body inside it scrolls — the task panel's shape — so the bar is
+              inset from the border and clear of the curve instead of running the card's height. */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 20px 20px' }}>
 
             {/* The entry form itself, docked. There is one entry form in this
                 app and this is it — a second design of the same thing is two
@@ -1734,6 +1737,7 @@ export function ReflectionScreen(_props?: any) {
               </Button>
             </div>
             </>)}
+        </div>
         </aside>
       )}
       </div>

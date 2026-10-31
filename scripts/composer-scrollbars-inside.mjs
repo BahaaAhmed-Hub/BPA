@@ -49,6 +49,7 @@ const m = await p.evaluate(() => {
     const h = el.offsetHeight - el.clientHeight - parseFloat(cs.borderTopWidth) - parseFloat(cs.borderBottomWidth)
     if (v > 1 || h > 1) { const r = el.getBoundingClientRect(); bars.push({ label, v: Math.round(v), h: Math.round(h), right: Math.round(r.right), bottom: Math.round(r.bottom) }) } }
   add(aside, 'card')
+  for (const d of aside.querySelectorAll('div')) if (['auto', 'scroll'].includes(getComputedStyle(d).overflowY)) add(d, 'body')
   // <html> reports its zoomed and unzoomed widths side by side, which reads as a bar
   for (let e = aside.parentElement; e && e !== document.documentElement; e = e.parentElement) add(e, e.tagName + '.' + String(e.className).split(' ')[0])
   return { card: { right: Math.round(a.right), bottom: Math.round(a.bottom), h: Math.round(a.height) }, win: [innerWidth, innerHeight], bars }
@@ -57,9 +58,10 @@ console.log(JSON.stringify(m))
 if (process.env.SHOT) await p.screenshot({ path: process.env.SHOT })
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  ${n}  ${x}`); if (!c) fails++ }
-const outside = m.bars.filter(x => x.label !== 'card')
+const outside = m.bars.filter(x => x.label !== 'card' && x.label !== 'body')
 ok('the card sits inside the window', m.card.bottom <= m.win[1] + 1, `card bottom ${m.card.bottom}, window ${Math.round(m.win[1])}`)
-ok('the card scrolls itself when it is taller than its row', m.card.h >= 640 || m.bars.some(x => x.label === 'card'), JSON.stringify(m.bars.map(x => x.label)))
+ok('the card itself never scrolls — its body does, as in the task panel', !m.bars.some(x => x.label === 'card'), JSON.stringify(m.bars.map(x => x.label)))
+ok('a short window gives the body a bar, inside the card', m.card.h >= 640 || m.bars.some(x => x.label === 'body' && x.right <= m.card.right), JSON.stringify(m.bars))
 ok('the card is on screen', m.card.right > 0 && m.card.bottom > 0)
 ok('no row, grid or page scrollbar is drawn around the card', outside.length === 0, JSON.stringify(outside))
 await b.close(); process.exit(fails ? 1 : 0)
