@@ -48,6 +48,7 @@ jobs:
           GOOGLE_CLIENT_ID:      ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET:  ${{ secrets.GOOGLE_CLIENT_SECRET }}
           ANTHROPIC_API_KEY:     ${{ secrets.ANTHROPIC_API_KEY }}
+          YOUTUBE_API_KEY:       ${{ secrets.YOUTUBE_API_KEY }}
           SUPABASE_PROJECT_REF:  ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
@@ -63,6 +64,7 @@ jobs:
           add GOOGLE_CLIENT_ID     "${GOOGLE_CLIENT_ID:-}"
           add GOOGLE_CLIENT_SECRET "${GOOGLE_CLIENT_SECRET:-}"
           add ANTHROPIC_API_KEY    "${ANTHROPIC_API_KEY:-}"
+          add YOUTUBE_API_KEY      "${YOUTUBE_API_KEY:-}"
 
           if [ ${#args[@]} -eq 0 ]; then
             echo "No secrets to set — nothing in GitHub to assert. Skipping."
@@ -100,6 +102,18 @@ jobs:
         run: |
           supabase functions deploy library-follow-check \
             --no-verify-jwt \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      # library-videos keeps the gateway's JWT check: its caller is always a
+      # signed-in person's browser (the Library's Videos button), and it spends
+      # the project's YouTube quota. It checks the user and the Library gate again.
+      # Without a YOUTUBE_API_KEY secret it answers `not_configured` and the app
+      # offers a plain YouTube search link instead.
+      - name: Deploy library-videos
+        run: |
+          supabase functions deploy library-videos \
             --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
