@@ -15,6 +15,8 @@ import { dayProgress, dayTotals, spanTotals } from '@/lib/habitProgress'
 import { LOZENGE } from '../../components/SideRail'
 import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
 import { HabitStarter } from './HabitStarter'
+import { PrayerCard } from './PrayerCard'
+import { loadPrayerState, PRAYER_EVENT } from '@/lib/prayerState'
 
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -1000,7 +1002,16 @@ export function HabitsModule() {
     })
   }
 
+  const [prayerOn, setPrayerOn] = useState(loadPrayerState)
+  useEffect(() => {
+    const h = () => setPrayerOn(loadPrayerState())
+    window.addEventListener(PRAYER_EVENT, h); window.addEventListener('professor:prefsRestored', h)
+    return () => { window.removeEventListener(PRAYER_EVENT, h); window.removeEventListener('professor:prefsRestored', h) }
+  }, [])
   const activeHabits = habits.filter(h => h.isActive)
+  // The Prayers habit is drawn by its own card, not as a row of the three views — but it still counts in every total.
+  const prayerHabitId = prayerOn.enabled ? prayerOn.habitId : undefined
+  const listedHabits = activeHabits.filter(h => h.id !== prayerHabitId)
   const detailHabit = detailHabitId ? activeHabits.find(h => h.id === detailHabitId) ?? null : null
 
   // Today's completion stats. Every percentage counts part-days — six glasses
@@ -1222,6 +1233,8 @@ export function HabitsModule() {
           record beside them. Nothing scrolled and nothing said so: the page's
           own scrollWidth still equalled the viewport, and `elementFromPoint`
           at the record's top-left corner answered *a habit card*. */}
+      <PrayerCard day={selectedDay} today={today} />
+
       <div className="habits-record-row" style={{ display: 'flex', gap: 14, alignItems: 'flex-start', minWidth: 0 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
 
@@ -1230,7 +1243,7 @@ export function HabitsModule() {
         <div style={{ display: 'flex', gap: 14, minHeight: 0 }}>
           {/* Wall grid — 3 cols, shrinks to 2 when edit panel is open */}
           <div style={{ flex: 1, display: 'grid', gridTemplateColumns: detailHabitId ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))', gridAutoRows: '220px', gap: 14, alignContent: 'start' }}>
-            {activeHabits.map((habit, i) => {
+            {listedHabits.map((habit, i) => {
               const habitLogs   = logs[habit.id] ?? []
               const todayDoneH  = habitLogs.includes(selectedDay)
               const streak      = calcStreak(habitLogs)
@@ -1272,13 +1285,13 @@ export function HabitsModule() {
           // point of this view, and keeps the spill inside this column.
           overflowX: 'auto', overflowY: 'hidden',
         }}>
-          {activeHabits.map((habit, i) => {
+          {listedHabits.map((habit, i) => {
             const habitLogs   = logs[habit.id] ?? []
             const todayDoneH  = habitLogs.includes(selectedDay)
             const streak      = calcStreak(habitLogs)
             const isQuantity  = habit.type === 'quantity'
             const qtyValue    = isQuantity ? (qtyLogs[habit.id]?.[selectedDay] ?? 0) : 0
-            const isSelected  = (fillSelected ?? activeHabits[0]?.id) === habit.id
+            const isSelected  = (fillSelected ?? listedHabits[0]?.id) === habit.id
             return (
               <FillCard
                 key={habit.id}
@@ -1354,7 +1367,7 @@ export function HabitsModule() {
         )}
 
         {/* Habit rows */}
-        {activeHabits.map((habit, i) => {
+        {listedHabits.map((habit, i) => {
           const habitLogs  = logs[habit.id] ?? []
           const todayDoneH = habitLogs.includes(selectedDay)
           const streak     = calcStreak(habitLogs)

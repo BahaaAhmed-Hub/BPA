@@ -8,6 +8,7 @@ import { HABIT_VIEWS, loadHabitView, saveHabitView, EmojiBtn, type HabitView } f
 import { ICON, STROKE } from '@/lib/type'
 import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
 import { Toggle } from '../ui'
+import { PrayerBlock } from './PrayerBlock'
 
 const FREQ_OPTS    = ['daily','weekdays','weekly'] as const
 
@@ -582,6 +583,7 @@ export function HabitsSection() {
       )}
 
       {/* Steps and distance can come from the phone rather than from you. */}
+      <PrayerBlock />
       <AppleHealthBlock habits={habits} />
     </div>
   )

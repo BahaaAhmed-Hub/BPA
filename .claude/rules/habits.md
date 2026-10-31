@@ -179,3 +179,30 @@ Time of Day → Find Health Samples → Get Contents of URL).
   never reach.
 - `20260012_health_links.sql` + the `health-ingest` function must both be
   deployed; the settings block says so when the table is missing.
+
+## Habits — the five prayers (a built-in habit with its own card)
+Prayer times are a different kind of habit: five fixed times a day, worked out for where the person is, each ticked on
+its own — not a counter. `lib/prayer.ts` (pure) works the times out on the device (Fajr/Isha by sun angle per method —
+Egyptian by default — Asr standard or Hanafi, the timezone's offset taken for the day so summer time moves them), holds the
+5-bit day mask, and `maskFromCount` — **the rule the person set**: 1 → Maghrib, 2 → Dhuhr + Asr, 3 → Fajr + Dhuhr + Asr,
+4 → + Maghrib, 5 → all five. `lib/prayerState.ts` is the one write path (`writeDay`).
+- **No schema change.** The habit is an ordinary quantity habit (goal 5, unit "prayers") so streaks, the day's share, Today and
+  the Dashboard work untouched; `habit_logs.quantity` is the **count**. *Which* prayers rides in the shared pref key
+  `professor-prayer` (`days: date → mask`, plus enabled / habit id / method / school / place), like `professor-habit-steps`.
+  `dayMask` reads a day: the stored mask if it agrees with the count, else the count by the rule — so a day written by an older
+  build or another device, or a counter's history, is always readable.
+- **Switch on** in Settings → Habits → Prayer times (`PrayerBlock`). If a habit is already kept under a prayer's name
+  (`prayerLikeHabits`) the person is asked: **Convert** keeps the same habit — id, name, picture, history — and makes it five
+  a day; **Start a new one** leaves it alone. With none, the built-in habit (🕌 "Prayers", picture changeable like any) is made.
+  The starter list and the setup wizard's "prayer" template switch it on rather than copying a plain habit.
+- **Where:** the browser's location (asked on a tap, never at load), else a city (`prayerCities.ts`, which also sets the
+  region's method). Times are for the place's timezone; "now" is the device clock.
+- **The card** (`PrayerCard`) sits above the Table / Wall / Fill views and replaces the habit's row in them (it still counts in
+  every total). A prayer opens when its time begins and stays open all day, so a missed one can be marked; the next day is closed.
+  Locked tiles use `--sb-ink-4` (disabled), not opacity.
+- Assistant / Telegram / Siri: `log_habit_completion` writes a count, which `dayMask` reads by the rule — a prayer by name
+  ("I prayed Asr") is **not** wired into the three doors yet.
+- **Not verified against a source:** Fajr's 19.5° and every other published timetable differ by minutes — `prayer-times.mjs`
+  holds Fajr to a window, not a minute. The person should compare with their mosque's timetable once.
+`node scripts/prayer-times.mjs` (pure, 25 claims), `prayer-habit.mjs [on|off]` (browser, clock fixed), `prayer-migrates.mjs
+[convert|new|fresh]`.

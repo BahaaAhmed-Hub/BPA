@@ -4,6 +4,7 @@ import { saveCompaniesToDB, saveProfileToDB, type CompanyRow } from '@/lib/dbSyn
 import { DEFAULT_AUTOMATION_RULES, saveAutomationRules } from '@/lib/automation'
 import { loadNotifSettings, loadQuietHours, saveNotifSettings, saveQuietHours } from '@/lib/notifications'
 import { HABIT_TEMPLATES } from '@/lib/habitTemplates'
+import { enablePrayers } from '@/lib/prayerState'
 import { useHabitsStore } from '@/store/habitsStore'
 import { hashPassword, loadLock, saveLock } from '@/modules/finance/lock'
 import { moduleIsOff } from '@/lib/entitlements'
@@ -139,6 +140,8 @@ const habits: Saver = async (w, dry) => {
   for (const t of chosen) {
     // Never twice: one that is already there (made in Settings, or on another device) is left as it is.
     if (have.has(t.name.toLowerCase())) continue
+    // The built-in prayer habit is switched on, not copied: it carries the five prayers and their times.
+    if (t.id === 'prayer') { enablePrayers(); continue }
     store.addHabit({ name: t.name, emoji: t.emoji, color: t.color, type: t.type, goal: t.goal, unit: t.unit, frequency: t.frequency, isActive: true })
   }
   return lines

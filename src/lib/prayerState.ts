@@ -1,3 +1,5 @@
+import { DEFAULT_PRAYER_EMOJI } from '@/lib/glyphs'
+import { setHabitStep } from '@/lib/habitSteps'
 import { pushSharedPrefs } from '@/lib/prefSync'
 import {
   ALL_PRAYERS, dayMask, maskCount, type AsrSchool, type Place, type PrayerMethod,
@@ -85,17 +87,46 @@ export function writeDay(date: string, mask: number): void {
 
 /** The built-in habit's own shape: a quantity habit, five a day. The picture is the person's to change. */
 export const PRAYER_HABIT = {
-  name: 'Prayers', emoji: '🕌', color: 'var(--sb-accent)',   // ui-guard: emoji-ok
+  name: 'Prayers', emoji: DEFAULT_PRAYER_EMOJI, color: 'var(--sb-accent)',
   frequency: 'daily' as const, isActive: true, type: 'quantity' as const, goal: 5, unit: 'prayers',
 }
 
-/** Turn prayer times on: reuse the habit this account already has, or make the built-in one. */
-export function enablePrayers(): PrayerState {
+/** Names a person might give the habit they already keep: Prayer, Prayers, Salah, Salat, صلاة. */
+const PRAYER_NAME = /pray|salah|salat|صلا|صلو/i
+export function prayerLikeHabits() {
+  return useHabitsStore.getState().habits.filter(h => !h.archived && PRAYER_NAME.test(h.name))
+}
+
+/** Turn prayer times on. With `adopt`, an existing habit becomes the prayer habit **in place**: same
+ *  id, picture, name and history, now five a day — its old days read by the count rule (1 -> Maghrib …)
+ *  until the person edits them. Without it, the habit this account already has, or the built-in one. */
+export function enablePrayers(adopt?: string): PrayerState {
   const state = loadPrayerState()
-  const habits = useHabitsStore.getState().habits
-  let id = state.habitId && habits.some(h => h.id === state.habitId) ? state.habitId : undefined
-  if (!id) id = useHabitsStore.getState().addHabit({ ...PRAYER_HABIT })
+  const store = useHabitsStore.getState()
+  let id = adopt && store.habits.some(h => h.id === adopt) ? adopt
+    : state.habitId && store.habits.some(h => h.id === state.habitId) ? state.habitId : undefined
+  if (id && id === adopt) {
+    store.updateHabit(id, { type: 'quantity', goal: 5, unit: 'prayers', isActive: true })
+    setHabitStep(id, null)           // a tap is a prayer, whatever step the counter had
+  }
+  if (!id) id = store.addHabit({ ...PRAYER_HABIT })
   return patchPrayerState({ enabled: true, habitId: id })
 }
 
 export function disablePrayers(): PrayerState { return patchPrayerState({ enabled: false }) }
+
+/** Ask the browser where we are. Resolves true when a place was stored. */
+export function askLocation(): Promise<boolean> {
+  return new Promise(resolve => {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) { resolve(false); return }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+        patchPrayerState({ place: { lat: pos.coords.latitude, lon: pos.coords.longitude, tz, label: 'Your location' } })
+        resolve(true)
+      },
+      () => resolve(false),
+      { timeout: 10000, maximumAge: 3600000 },
+    )
+  })
+}
