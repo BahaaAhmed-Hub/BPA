@@ -6,6 +6,7 @@
 // the rule has an exception is a file and not a scatter of `ui-guard` marks.
 // Plain typographic symbols (a star for a rating, an arrow out) are here too.
 export const DEFAULT_HABIT_EMOJI    = '🎯'
+export const DEFAULT_PRAYER_EMOJI   = '🕌'
 export const DEFAULT_GOAL_ICON      = '🎯'
 export const DEFAULT_ACCOUNT_EMOJI  = '🏦'
 export const DEFAULT_LOAN_EMOJI     = '🤝'

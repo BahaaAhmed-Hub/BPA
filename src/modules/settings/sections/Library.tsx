@@ -9,8 +9,6 @@ import { FieldRow, Toggle } from '../ui'
 export function LibrarySection() {
   const [enabled, setEnabled] = useState(() => loadLibrarySettings().enabled)
   const [dailyQuote, setDailyQuote] = useState(() => loadLibrarySettings().dailyQuote !== false)
-  const books = useLibraryStore(s => s.books.length)
-  const lists = useLibraryStore(s => s.lists.length)
   const missing = useLibraryStore(s => s.missing)
 
   function flip(v: boolean) {
@@ -41,13 +39,9 @@ export function LibrarySection() {
           <Toggle checked={dailyQuote} onChange={flipQuote} />
         </FieldRow>
       )}
-      {missing ? (
+      {missing && (
         <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)' }}>
           The Library's tables are not on this account yet — migration <code>20260025_library.sql</code> has not run.
-        </div>
-      ) : (
-        <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
-          {books} book{books === 1 ? '' : 's'} · {lists} list{lists === 1 ? '' : 's'} &amp; categories
         </div>
       )}
     </div>

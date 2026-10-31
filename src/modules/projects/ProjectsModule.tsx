@@ -53,7 +53,9 @@ export function ProjectsModule() {
   if (openProject) return <ProjectPage project={openProject} onBack={() => setOpenId(null)} />
 
   return (
-    <div data-projects-module style={{ padding: '8px 24px 32px', display: 'flex', flexDirection: 'column', gap: 18, boxSizing: 'border-box', minWidth: 0 }}>
+    // The add / edit panel docks beside the page, as the task panel does, so the page is a row.
+    <div style={{ padding: '8px 24px 32px', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 18, boxSizing: 'border-box', minWidth: 0 }}>
+    <div data-projects-module style={{ flex: '1 1 420px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div data-projects-bar style={{ ...LOZENGE, display: 'flex', alignItems: 'center', gap: 14, padding: '12px 18px', flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>
           Projects
@@ -99,6 +101,7 @@ export function ProjectsModule() {
         </div>
       )}
 
+    </div>
       {creating && <ProjectDialog onClose={() => setCreating(false)} />}
     </div>
   )

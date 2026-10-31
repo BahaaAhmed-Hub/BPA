@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { useHabitsStore } from '@/store/habitsStore'
 import { HABIT_TEMPLATES } from '@/lib/habitTemplates'
+import { enablePrayers } from '@/lib/prayerState'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { inkOn } from '@/lib/ink'
@@ -23,7 +24,8 @@ export function HabitStarter() {
   function add() {
     for (const id of picked) {
       const t = HABIT_TEMPLATES.find(x => x.id === id)
-      if (t) addHabit({ name: t.name, emoji: t.emoji, color: t.color, type: t.type, goal: t.goal, unit: t.unit, frequency: t.frequency, isActive: true })
+      if (t?.id === 'prayer') enablePrayers()
+      else if (t) addHabit({ name: t.name, emoji: t.emoji, color: t.color, type: t.type, goal: t.goal, unit: t.unit, frequency: t.frequency, isActive: true })
     }
     setPicked([])
   }

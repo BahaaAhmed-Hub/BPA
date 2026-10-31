@@ -17,7 +17,9 @@ export function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: 
       <span style={{
         position: 'absolute', top: 4, left: checked ? 22 : 4,
         width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', display: 'block',
-        background: checked ? 'var(--sb-card)' : 'var(--sb-ink-3)',
+        // On: the label colour the theme guarantees against its own accent. `--sb-card` is a pale
+        // or translucent surface and, on Glass's lilac or Sunlit's amber, left a knob you could not see.
+        background: checked ? 'var(--sb-accent-ink)' : 'var(--sb-ink-3)',
         transition: 'left 0.2s',
       }} />
     </button>

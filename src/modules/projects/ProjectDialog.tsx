@@ -33,8 +33,10 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
   const [notes, setNotes] = useState(project?.notes ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const nameRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
 
-  useEffect(() => { nameRef.current?.focus() }, [])
+  // Beside the page it is already in view; on a phone it wraps under it, so bring it up.
+  useEffect(() => { panelRef.current?.scrollIntoView({ block: 'nearest' }); nameRef.current?.focus({ preventScroll: true }) }, [])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -59,23 +61,26 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
     onClose()
   }
 
+  // A panel docked beside the page, not a dialog over it — the task panel's shape: the card clips,
+  // the header and footer are pinned, and the form between them is what scrolls. The caller puts it
+  // in a row next to the content it belongs to.
   return (
-    <div onMouseDown={e => { if (e.target === e.currentTarget) onClose() }} className="sb-above-modal"
-      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--sb-scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div role="dialog" aria-modal="true" aria-label={project ? 'Edit project' : 'New project'} data-project-dialog style={{
-        width: 'min(560px, 100%)', maxHeight: 'calc(94 * var(--vh))', display: 'flex', flexDirection: 'column',
-        background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)',
-        borderRadius: 'var(--sb-r-frame)', boxShadow: 'var(--sb-shadow-frame)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px 4px' }}>
-          <h2 style={{ margin: 0, flex: 1, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>
-            {project ? 'Edit project' : 'New project'}
-          </h2>
-          <Button variant="ghost" iconOnly title="Close" aria-label="Close" onClick={onClose}><X size={ICON.md} /></Button>
-        </div>
+    <aside ref={panelRef} data-project-dialog aria-label={project ? 'Edit project' : 'New project'} style={{
+      width: 'clamp(300px, calc(32 * var(--vw)), 400px)', maxWidth: '100%', flexShrink: 0, alignSelf: 'flex-start',
+      position: 'sticky', top: 8, maxHeight: 'calc(calc(100 * var(--vh)) - 120px)',
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+      borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-control)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '14px 14px 0', flexShrink: 0 }}>
+        <h2 style={{ margin: 0, flex: 1, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>
+          {project ? 'Edit project' : 'New project'}
+        </h2>
+        <Button variant="ghost" iconOnly title="Close" aria-label="Close" onClick={onClose}><X size={ICON.md} /></Button>
+      </div>
 
         <form onSubmit={e => { e.preventDefault(); save() }}
-          style={{ overflowY: 'auto', padding: '8px 20px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <label>
             <span style={LABEL}>Name</span>
             <input ref={nameRef} value={name} onChange={e => setName(e.target.value)} maxLength={80}
@@ -109,7 +114,7 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
                     width: 26, height: 26, borderRadius: '50%', background: c, cursor: 'pointer', padding: 0,
                     border: 'none',
                     // Ringed in the page's own colour, outside the fill — a border would eat the colour.
-                    boxShadow: color === c ? '0 0 0 2px var(--sb-overlay), 0 0 0 4px var(--sb-ink-1)' : 'none',
+                    boxShadow: color === c ? '0 0 0 2px var(--sb-card), 0 0 0 4px var(--sb-ink-1)' : 'none',
                   }} />
               ))}
             </div>
@@ -143,7 +148,7 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
           </label>
         </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px 16px', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flexShrink: 0, padding: '12px 14px 14px', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
           {project && !confirmDelete && (
             <Button variant="danger" onClick={() => setConfirmDelete(true)}>Delete</Button>
           )}
@@ -165,7 +170,7 @@ export function ProjectDialog({ project, onClose }: { project?: Project; onClose
           {!confirmDelete && <Button variant="secondary" onClick={onClose}>Cancel</Button>}
           {!confirmDelete && <Button variant="primary" onClick={save} disabled={!canSave}>{project ? 'Save' : 'Create project'}</Button>}
         </div>
-      </div>
-    </div>
+
+    </aside>
   )
 }

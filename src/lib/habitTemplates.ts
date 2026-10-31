@@ -18,7 +18,7 @@ export const HABIT_TEMPLATES: HabitTemplate[] = [
   { id: 'cold-shower', name: 'Cold Shower',   emoji: '🚿', color: 'var(--sb-info)',     type: 'boolean',                                   frequency: 'daily' },
   { id: 'no-phone-am', name: 'No Phone (AM)', emoji: '📵', color: 'var(--sb-info)',     type: 'boolean',                                   frequency: 'daily' },
   { id: 'vitamins',    name: 'Vitamins',      emoji: '💊', color: 'var(--sb-negative)', type: 'boolean',                                   frequency: 'daily' },
-  { id: 'prayer',      name: 'Prayer',        emoji: '🤲', color: 'var(--sb-accent)',   type: 'boolean',                                   frequency: 'daily' },
+  { id: 'prayer',      name: 'Prayers',       emoji: '🕌', color: 'var(--sb-accent)',   type: 'quantity', goal: 5,     unit: 'prayers', frequency: 'daily' },  // built in: the five daily prayers, at their times (see lib/prayer.ts)
   { id: 'no-sugar',    name: 'No Sugar',      emoji: '🚫', color: 'var(--sb-accent)',   type: 'boolean',                                   frequency: 'daily' },
 // ui-guard: emoji-end
 ]

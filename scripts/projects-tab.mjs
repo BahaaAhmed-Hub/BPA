@@ -146,9 +146,17 @@ if (MODE === 'create') {
   ok('and the filters are not (nothing to filter)', await p.getByLabel('Which projects').count() === 0)
   await p.getByRole('button', { name: /Create your first project/ }).click()
   await dlg.waitFor({ state: 'visible' })
-  const cx = await dlg.evaluate(el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + 24] })
-  const top = await p.evaluate(([x, y]) => !!document.elementFromPoint(x, y)?.closest('[data-project-dialog]'), cx)
-  ok('the dialog is on top of the page it dims (hit-test)', top)
+  // Docked beside the page, like the task panel: at the right of the window, the grid still
+  // there beside it and still hit-testable, nothing dimmed over it.
+  const geo = await p.evaluate(() => {
+    const d = document.querySelector('[data-project-dialog]').getBoundingClientRect()
+    const m = document.querySelector('[data-projects-module], [data-projects-empty]')
+    const mr = m.getBoundingClientRect()
+    const scrim = [...document.querySelectorAll('body *')].some(e => getComputedStyle(e).position === 'fixed' && e.getBoundingClientRect().width >= innerWidth - 2 && e.getBoundingClientRect().height >= innerHeight - 2 && getComputedStyle(e).backgroundColor !== 'rgba(0, 0, 0, 0)' && !e.hasAttribute('data-side-rail'))
+    return { dRight: d.right, dLeft: d.left, mRight: mr.right, win: innerWidth, scrim, role: document.querySelector('[data-project-dialog]').getAttribute('aria-modal') }
+  })
+  ok('the panel is docked on the right, beside the page and not over it', geo.dLeft >= geo.mRight - 1 && geo.dRight <= geo.win, JSON.stringify(geo))
+  ok('nothing dims the page behind it, and it is not a modal', !geo.scrim && geo.role === null, JSON.stringify(geo))
   ok('the name field has focus on open', await p.evaluate(() => document.activeElement?.getAttribute('aria-label') === 'Project name'))
   const save = dlg.getByRole('button', { name: 'Create project' })
   ok('Create is disabled with no name', await save.isDisabled())

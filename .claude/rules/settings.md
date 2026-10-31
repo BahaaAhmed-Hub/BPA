@@ -728,3 +728,10 @@ is not drawn — and each node carries `aria-label="Telegram, connected"`.
 `scripts/integration-hub.mjs [none|connected|reduced]` — 15 assertions per mode, measured as
 computed `filter`, the dash offset sampled twice (1.67px → -27.5px) and the logo's centre against
 the hub's.
+
+## A switch that is on must look on — the knob is `--sb-accent-ink`
+`Toggle` drew its knob `--sb-card` when on. On Sunlit's amber that was 1.49:1 against the track and on Glass's lilac
+**1.06:1** — a pill with no visible knob, which does not read as a switch. The knob is the theme's `--sb-accent-ink` now
+(the colour it already guarantees against its own accent): 12.0 / 4.5 / 6.9 / 6.5:1 across the four themes.
+`scripts/switch-knob-visible.mjs` opens Settings → Library, turns it on and measures the composited colours. Also: the
+Library section no longer prints a "126 books · 11 lists" line — statistics are not a setting.

@@ -157,7 +157,9 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
   )
 
   return (
-    <div data-project-page={project.id} style={{ padding: '8px 24px 32px', display: 'flex', flexDirection: 'column', gap: 18, boxSizing: 'border-box', minWidth: 0 }}>
+    // The add / edit panel docks beside the page, as the task panel does, so the page is a row.
+    <div style={{ padding: '8px 24px 32px', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 18, boxSizing: 'border-box', minWidth: 0 }}>
+    <div data-project-page={project.id} style={{ flex: '1 1 420px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div data-projects-bar style={{ ...LOZENGE, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', flexWrap: 'wrap' }}>
         <Button variant="ghost" iconOnly title="Back to all projects" aria-label="Back to all projects" onClick={onBack}>
           <ArrowLeft size={ICON.md} />
@@ -293,9 +295,10 @@ export function ProjectPage({ project, onBack }: { project: Project; onBack: () 
       {tab === 'calendar' && <ProjectCalendar project={project} tasks={mine} today={today} />}
       {tab === 'timeline' && <ProjectTimeline project={project} tasks={mine} today={today} />}
 
-      {editing && <ProjectDialog project={project} onClose={() => setEditing(false)} />}
       {planning && <ProjectPlanner project={project} onClose={() => setPlanning(false)} />}
       {deliverablePrompt}
+    </div>
+      {editing && <ProjectDialog project={project} onClose={() => setEditing(false)} />}
     </div>
   )
 }
