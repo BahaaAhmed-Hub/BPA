@@ -15,7 +15,7 @@ import { FieldRow, Toggle } from '../ui'
 const today = () => new Date().toLocaleDateString('en-CA')
 
 /** Settings → Habits → Prayer times: on or off, where, and by which method. */
-export function PrayerBlock() {
+export function PrayerBlock({ first }: { first?: boolean } = {}) {
   const [s, setS] = useState(loadPrayerState)
   const [asking, setAsking] = useState(false)
   const [note, setNote] = useState('')
@@ -50,7 +50,7 @@ export function PrayerBlock() {
   const times = s.enabled && s.place ? prayerTimes(today(), s.place, s.method, s.school) : null
 
   return (
-    <div data-prayer-settings style={{ marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div data-prayer-settings style={{ ...(first ? { paddingBottom: 18, marginBottom: 6, borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' } : { marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }), display: 'flex', flexDirection: 'column', gap: 14 }}>
       <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>
         PRAYER TIMES
       </span>

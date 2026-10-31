@@ -16,6 +16,7 @@ import { LOZENGE } from '../../components/SideRail'
 import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
 import { HabitStarter } from './HabitStarter'
 import { PrayerCard } from './PrayerCard'
+import { PrayerOffer } from './PrayerOffer'
 import { loadPrayerState, PRAYER_EVENT } from '@/lib/prayerState'
 
 
@@ -1233,6 +1234,7 @@ export function HabitsModule() {
           record beside them. Nothing scrolled and nothing said so: the page's
           own scrollWidth still equalled the viewport, and `elementFromPoint`
           at the record's top-left corner answered *a habit card*. */}
+      <PrayerOffer />
       <PrayerCard day={selectedDay} today={today} />
 
       <div className="habits-record-row" style={{ display: 'flex', gap: 14, alignItems: 'flex-start', minWidth: 0 }}>

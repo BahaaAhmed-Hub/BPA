@@ -478,6 +478,9 @@ export function HabitsSection() {
         Changes here instantly sync with the Habits Tracker page.
       </p>
 
+      {/* First, not last: it used to sit under the whole habit list, and a switch nobody scrolled to is a feature nobody has. */}
+      <PrayerBlock first />
+
       {/* Which view the Habits page opens on — switching it there sticks too */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingBottom: 14, marginBottom: 4, borderBottom: 'var(--sb-border-width) solid var(--sb-border)' }}>
         <div style={{ flex: '1 1 150px', minWidth: 0, maxWidth: 200 }}>
@@ -583,7 +586,6 @@ export function HabitsSection() {
       )}
 
       {/* Steps and distance can come from the phone rather than from you. */}
-      <PrayerBlock />
       <AppleHealthBlock habits={habits} />
     </div>
   )

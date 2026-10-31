@@ -206,3 +206,11 @@ Egyptian by default — Asr standard or Hanafi, the timezone's offset taken for 
   holds Fajr to a window, not a minute. The person should compare with their mosque's timetable once.
 `node scripts/prayer-times.mjs` (pure, 25 claims), `prayer-habit.mjs [on|off]` (browser, clock fixed), `prayer-migrates.mjs
 [convert|new|fresh]`.
+
+### Where the prayer habit is offered (it was invisible)
+It shipped switched off, behind a switch at the **foot** of Settings → Habits, so nobody saw a thing: "I can't see the
+prayer times configuration or the UX". Now: (1) `PrayerOffer` is a banner on the Habits page itself, above the views —
+it names a habit already kept under a prayer's name and offers Convert / Start a new one, or offers the built-in one;
+"Not now" is remembered per device (`professor-prayer-offer-dismissed`); (2) `PrayerBlock` is the **first** thing in
+Settings → Habits. A feature behind a switch needs a door where the person already is.
+`scripts/prayer-offer.mjs [convert|new|dismiss|none]`.
