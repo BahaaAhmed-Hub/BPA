@@ -10,7 +10,7 @@ import { CompanyMark } from '@/components/CompanyMark'
 import { inputStyle, selectStyle } from '@/lib/fields'
 import { logoFromFile, imageFrom, LOGO_ACCEPT } from '@/lib/companyLogo'
 import { type CompanyRow, type CompanyUser, saveCompanies } from '../model'
-import { Toggle } from '../ui'
+import { Toggle, FieldRow, GhostPill } from '../ui'
 
 // ─── CHUNK 4: Companies + Habits sections ────────────────────────────────────
 
@@ -170,9 +170,15 @@ function CompanyCard({
   }
 
   return (
-    <div style={{ background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', marginBottom: 8, overflow: 'visible', opacity: co.hidden ? 0.55 : 1, transition: 'opacity 0.15s' }}>
+    // A company is a row of the Block card, not a bordered box of its own; its members
+    // open as a second row directly beneath (`sx-row` drops the last rule).
+    <>
       {/* Company header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', position: 'relative' }}>
+      <div className="sx-row" style={{
+        display: 'flex', alignItems: 'center', gap: '10px 12px', flexWrap: 'wrap', padding: '14px 0', position: 'relative',
+        borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
+        opacity: co.hidden ? 0.55 : 1, transition: 'opacity 0.15s',
+      }}>
 
         {/* The logo — the rail's own tile, and the way to set it */}
         <CompanyLogoPicker co={co} onPick={logoUrl => onUpdate({ logoUrl })} />
@@ -214,7 +220,7 @@ function CompanyCard({
         </div>
 
         {/* Name + domain stacked */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: '1 1 140px', minWidth: 0 }}>
           {editingName ? (
             <input autoFocus value={nameDraft}
               onChange={e => setNameDraft(e.target.value)}
@@ -293,7 +299,7 @@ function CompanyCard({
 
       {/* Users tree */}
       {usersOpen && (
-        <div style={{ borderTop: 'var(--sb-border-width) solid var(--sb-border)', padding: '8px 14px 10px 46px' }}>
+        <div className="sx-row" style={{ borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', padding: '0 0 12px 56px' }}>
           {users.length === 0 && (
             <EmptyState compact>No members yet</EmptyState>
           )}
@@ -302,7 +308,7 @@ function CompanyCard({
             const isEditing = editingUserId === u.id
             const draft = userDrafts[u.id]
             return (
-              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-border)' }}>
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
                 <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: co.color, flexShrink: 0 }} />
 
                 {isEditing ? (
@@ -357,7 +363,7 @@ function CompanyCard({
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -412,7 +418,7 @@ export function CompaniesSection({
   }
 
   return (
-    <div>
+    <>
       {companies.map(co => (
         <CompanyCard key={co.id} co={co} accounts={linkable}
           onUpdate={patch => updateCompany(co.id, patch)}
@@ -420,7 +426,7 @@ export function CompaniesSection({
       ))}
 
       {adding ? (
-        <div style={{ marginTop: 14, padding: '14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
+        <div className="sx-row" style={{ padding: '14px 0' }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
             <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Company name"
               style={{ ...inputStyle, width: 160 }} autoFocus />
@@ -433,7 +439,7 @@ export function CompaniesSection({
               </select>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
             {C_COLORS.map(c => (
               <button key={c} onClick={() => setNewColor(c)}
                 style={{ width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', background: c, border: 'none', cursor: 'pointer', outline: newColor === c ? `2px solid ${c}` : 'none', outlineOffset: 2 }} />
@@ -451,15 +457,10 @@ export function CompaniesSection({
           </div>
         </div>
       ) : (
-        <button onClick={() => setAdding(true)} style={{
-          marginTop: 12, display: 'flex', alignItems: 'center', gap: 7, width: '100%',
-          padding: '11px 16px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
-          border: '1px dashed var(--sb-border)',
-          color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
-        }}>
-          <Plus size={ICON.sm} /> Add a company / context
-        </button>
+        <FieldRow label="Add a company / context" sub="Another body of work, with its own colour, domain and Google account.">
+          <GhostPill icon={Plus} onClick={() => setAdding(true)}>Add a company</GhostPill>
+        </FieldRow>
       )}
-    </div>
+    </>
   )
 }

@@ -602,9 +602,28 @@ height (measured: 72px / 72px) and sit on the page's one ground.
   ≥ 5.3:1 in all four themes. **Not measured**: a phone width (the shell is a desktop
   layout), `ink-audit` / `settings-snapshot` (they need the Linux Chromium the
   harnesses hard-code), and the **failed**-save state against a refusing server.
-- **Not yet moved onto the row system** (they render inside the panel as before):
-  Accounts, Habits, Finance, Tasks, Automation, Notifications, Billing, Integrations,
-  Appearance's own sub-layouts. Moving one is a change to that section only.
+- **Every section is on the row system.** The shell renders most pages as
+  `<Block bare>`, so a section draws its **own** titled `Block`s of `FieldRow`/`DRow`s
+  rather than boxes of its own; Integrations' three sub-sections are the exception —
+  the shell prints their titles and each is one card. Lists of records (accounts,
+  companies, habits, statuses, rules, invoices) are rows inside a card, and a member list
+  opens as a second row under its record. A selectable card (a billing tier, a theme
+  preview) stays a card *on* the ground or inside its Block — that is a choice, not a
+  wrapper. Swept across all 14 pages: no horizontal overflow, and no bordered box nested
+  in another except Appearance's theme previews.
+- **Destructive actions end the page in a red-outlined block** (`1px solid` the negative
+  colour at 30%, title in `--sb-negative-deep`): Billing's Cancel plan, Accounts' sign
+  out / remove all, Habits' delete, Tasks' reset / delete, Integrations' revoke and
+  disconnect, Finance's two ledger-rewriting repairs, Data & privacy's Danger zone.
+  Each file inlines the markup today; a shared `DangerBlock` in `ui.tsx` is the next
+  tidy. **Not destructive, so not in one**: turning the finance lock on or off, and a
+  blocking rule's trash icon (no confirm flow, so it stays in its row).
+- **Behaviour the migration changed, on purpose**: a disabled blocking rule is no longer
+  dimmed (its toggle shows the state); Integrations' Telegram / Siri / MCP rows are
+  status pills with no Connect button, because nothing handles one — a dead button was
+  the alternative; an automation rule's WHEN badge is plain text. **Kept as found**:
+  the Notifications "Mute for 1h" button still has no handler, and the two Data &
+  privacy toggles are still local state that changes nothing.
 
 Profile fields and every other setting autosave through the effect above (1.2s
 debounce → `saveProfileToDB`, then `savePrefsToDB`).

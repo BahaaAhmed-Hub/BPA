@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Segmented } from '@/components/ui'
 import { Download, Check } from 'lucide-react'
 import { ICON, STROKE } from '@/lib/type'
-import { DRow, GhostPill, PillValue } from '../ui'
+import { Block, DRow, GhostPill, PillValue } from '../ui'
 import { PILL_BASE } from '../pillStyles'
 
 function VisaBadge() {
@@ -95,11 +95,11 @@ export function BillingSection() {
 
   return (
     <div>
-      {/* ── Eyebrow ── */}
-      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 14 }}>PLAN</div>
-
+      {/* The tiers are choices, each its own card, so they sit on the panel's ground
+          under a titled bare Block rather than inside another card. */}
+      <Block bare title="Plan" sub="Pick a tier and how often you are billed.">
       {/* ── Billing cycle toggle ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <Segmented
           options={[
             { label: 'Monthly', value: 'monthly' },
@@ -111,7 +111,7 @@ export function BillingSection() {
       </div>
 
       {/* ── Plan cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
         {BILLING_PLANS.map(plan => {
           const isCurrent = plan.id === CURRENT_PLAN
           const price = cycle === 'annual' && plan.annualPrice > 0
@@ -197,55 +197,44 @@ export function BillingSection() {
         })}
       </div>
 
-      {/* ── Current plan summary ── */}
-      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 8 }}>SUBSCRIPTION</div>
+      </Block>
 
-      <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', marginBottom: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-              <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Professor Pro</span>
-              <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
-            </div>
-            <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>Renews 14 March 2027</p>
-          </div>
+      {/* ── Subscription and billing fields ── */}
+      <Block title="Subscription" sub="What you are on, and how it is paid for.">
+        <DRow label="Professor Pro" sub="Renews 14 March 2027">
+          <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <p style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>$300</p>
             <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>per year</p>
           </div>
-        </div>
-      </div>
+        </DRow>
 
-      {/* ── Billing fields ── */}
-      <DRow label="Payment method">
-        <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Visa ending 4417 · expires 09/28</span>
-        <VisaBadge />
-        <GhostPill>Change</GhostPill>
-      </DRow>
+        <DRow label="Payment method">
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>Visa ending 4417 · expires 09/28</span>
+          <VisaBadge />
+          <GhostPill>Change</GhostPill>
+        </DRow>
 
-      <DRow label="Billing email" sub="Invoices are sent here every renewal">
-        <PillValue>eng.bahaa.a@gmail.com</PillValue>
-      </DRow>
+        <DRow label="Billing email" sub="Invoices are sent here every renewal">
+          <PillValue>eng.bahaa.a@gmail.com</PillValue>
+        </DRow>
 
-      <DRow label="VAT / tax ID" sub="Appears on every invoice">
-        <GhostPill>Add a tax ID</GhostPill>
-      </DRow>
+        <DRow label="VAT / tax ID" sub="Appears on every invoice">
+          <GhostPill>Add a tax ID</GhostPill>
+        </DRow>
 
-      <DRow label="Seats" sub="Personal licence — one person" last>
-        <PillValue>1 of 1</PillValue>
-      </DRow>
+        <DRow label="Seats" sub="Personal licence — one person" last>
+          <PillValue>1 of 1</PillValue>
+        </DRow>
+      </Block>
 
       {/* ── Invoices ── */}
-      <div style={{ marginTop: 18 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>INVOICES</div>
-          <button style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>Download all</button>
-        </div>
+      <Block title="Invoices" sub="Every charge, newest first.">
         {INVOICES.map((inv, i) => (
-          <div key={`${inv.date}-${i}`} style={{
+          <div key={`${inv.date}-${i}`} className="sx-row" style={{
             display: 'flex', alignItems: 'center', gap: 12,
-            padding: '11px 0',
-            borderBottom: i === INVOICES.length - 1 ? 'none' : 'var(--sb-border-width) solid var(--sb-hairline)',
+            padding: '14px 0',
+            borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
           }}>
             <span style={{ width: 90, flexShrink: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>{inv.date}</span>
             <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.desc}</span>
@@ -256,18 +245,25 @@ export function BillingSection() {
             }}><Download size={ICON.sm} /></button>
           </div>
         ))}
-      </div>
+        <DRow label="All invoices" last>
+          <GhostPill icon={Download}>Download all</GhostPill>
+        </DRow>
+      </Block>
 
-      {/* ── Cancel ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-        marginTop: 18, paddingTop: 16, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
-      }}>
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
-          Cancelling keeps your data readable until the term ends.
-        </p>
-        <GhostPill tone="rust">Cancel plan</GhostPill>
-      </div>
+      {/* ── Cancel — the danger zone ── */}
+      <section style={{ marginBottom: 28 }}>
+        <div style={{ margin: '0 0 10px 2px' }}>
+          <h3 style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-negative-deep)' }}>Danger zone</h3>
+        </div>
+        <div style={{
+          background: 'var(--sb-card)', border: '1px solid color-mix(in srgb, var(--sb-negative) 30%, transparent)',
+          borderRadius: 'var(--sb-r-card)', padding: '8px 20px', boxShadow: 'var(--sb-shadow-control)', minWidth: 0,
+        }}>
+          <DRow label="Cancel plan" sub="Cancelling keeps your data readable until the term ends." last>
+            <GhostPill tone="rust">Cancel plan</GhostPill>
+          </DRow>
+        </div>
+      </section>
     </div>
   )
 }
