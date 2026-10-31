@@ -49,14 +49,14 @@ if (MODE === 'none') {
   await offer.getByRole('button', { name: 'Turn on' }).click(); await p.waitForTimeout(800)
   const pr = await prayerNow(), hs = await habitsNow()
   ok('Turn on makes the built-in habit', pr.enabled === true && hs.find(h => h.id === pr.habitId)?.name === 'Prayers' && hs.length === 2, JSON.stringify({ en: pr.enabled, n: hs.length }))
-  ok('the card is there and the banner is gone', await p.locator('[data-prayer-card]').count() === 1 && await offer.count() === 0)
+  ok('the five prayer buttons are there and the banner is gone', await p.locator('[data-prayer-pills], [data-prayer-place]').count() >= 1 && await offer.count() === 0)
 } else {
   ok('it names the habit already kept', /Make “Prayer” the five daily prayers/.test(txt), txt.replace(/\s+/g, ' ').slice(0, 100))
   if (MODE === 'convert') {
     await offer.getByRole('button', { name: 'Convert' }).click(); await p.waitForTimeout(800)
     const pr = await prayerNow(), h = (await habitsNow()).find(x => x.id === OLD)
     ok('Convert makes the SAME habit the prayer habit, picture kept', pr.enabled === true && pr.habitId === OLD && h?.image === PIC && h?.goal === 5 && h?.unit === 'prayers', JSON.stringify({ id: pr.habitId === OLD, img: h?.image === PIC, u: h?.unit }))
-    ok('the five-prayer card appears and the banner goes', await p.locator('[data-prayer-card]').count() === 1 && await offer.count() === 0)
+    ok('the five prayer buttons appear in the habit row and the banner goes', await p.locator('[data-prayer-pills], [data-prayer-place]').count() >= 1 && await offer.count() === 0)
   } else if (MODE === 'new') {
     await offer.getByRole('button', { name: 'Start a new one' }).click(); await p.waitForTimeout(800)
     const pr = await prayerNow(), hs = await habitsNow()

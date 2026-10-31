@@ -2,7 +2,7 @@
 // The built-in prayer habit, in a browser. Cairo, 1 Jan 2025, browser clock fixed at 13:00 Cairo:
 // Fajr and Dhuhr have begun, Asr / Maghrib / Isha have not. Claims, read off the page, the store
 // and the requests the server received:
-//   on   the card draws five prayers with their times; the three that have not begun are locked and
+//   on   the habit is a row / card like the others (Table, Wall, Fill) with five prayer buttons for its control; the three that have not begun are locked and
 //        a tap on one changes nothing; a tap on Dhuhr then Fajr stores *those two* (not the count
 //        rule's Dhuhr+Asr) and the server is sent quantity 2; the habit is not also a row of the
 //        views; at 15:00 Asr opens; five ticks make the day done; an untick takes it back
@@ -49,50 +49,68 @@ p.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)))
 await p.goto('http://localhost:5199/', { waitUntil: 'domcontentloaded' }); await settled(p, traffic, 6500)
 let fails = 0
 const ok = (n, c, x = '') => { console.log(`${c ? 'PASS' : '*** FAIL ***'}  [${MODE}] ${n}${x ? '  ' + x : ''}`); if (!c) fails++ }
-const card = p.locator('[data-prayer-card]')
+const pills = () => p.locator('[data-prayer-pills]').first()
 const stored = () => p.evaluate(([h, d]) => {
   const pr = JSON.parse(localStorage.getItem('professor-prayer') || '{}')
   const q = JSON.parse(localStorage.getItem('professor-habit-quantity-logs') || '{}')
   const l = JSON.parse(localStorage.getItem('professor-habit-logs') || '{}')
   return { mask: pr.days?.[d] ?? 0, qty: q[h]?.[d] ?? 0, ticked: (l[h] ?? []).includes(d) }
 }, [HID, DAY])
-const state = n => card.locator(`[data-prayer="${n}"]`).getAttribute('data-state')
-const rowsNamed = () => p.evaluate(() => [...document.querySelectorAll('main *')].filter(e => e.children.length === 0 && e.textContent?.trim() === 'Prayers' && !e.closest('[data-prayer-card]')).length)
+const state = n => pills().locator(`[data-prayer="${n}"]`).getAttribute('data-state')
+const view = v => p.getByRole('tab', { name: v }).click()
+const tableRow = () => p.locator('div').filter({ has: p.locator('[data-prayer-pills]') }).filter({ hasText: 'Prayers' }).last()
 
 if (MODE === 'off') {
-  ok('no prayer card when prayer times are off', await card.count() === 0)
-  ok('the habit is an ordinary row again', await rowsNamed() > 0, `${await rowsNamed()} places draw its name`)
+  ok('prayer times off: no prayer buttons anywhere', await p.locator('[data-prayer-pills]').count() === 0)
+  ok('the habit is an ordinary row', await p.getByText('Prayers', { exact: true }).count() > 0)
 } else {
-  await card.waitFor({ timeout: 6000 })
-  ok('the card draws the five prayers', await card.locator('[data-prayer]').count() === 5)
-  const txt = await card.innerText()
-  ok('with their times (Cairo, 1 Jan, Egyptian method)', /Fajr\s+05:\d\d/.test(txt) && /Dhuhr\s+12:0\d|Dhuhr\s+11:5\d/.test(txt) && /Asr\s+14:\d\d/.test(txt) && /Maghrib\s+17:\d\d/.test(txt) && /Isha\s+18:\d\d/.test(txt), txt.replace(/\s+/g, ' ').slice(0, 160))
-  ok('at 13:00 Fajr and Dhuhr have begun; Asr, Maghrib, Isha are locked', [await state('fajr'), await state('dhuhr'), await state('asr'), await state('maghrib'), await state('isha')].join() === 'open,current,locked,locked,locked' || [await state('fajr'), await state('dhuhr'), await state('asr'), await state('maghrib'), await state('isha')].join() === 'open,open,locked,locked,locked', [await state('fajr'), await state('dhuhr'), await state('asr')].join())
-  ok('the habit is not also a row of the views', await rowsNamed() === 0, `${await rowsNamed()} places`)
+  await pills().waitFor({ timeout: 6000 })
+  ok('there is no separate card above the habits any more', await p.locator('[data-prayer-card]').count() === 0)
 
-  await card.locator('[data-prayer="asr"]').click({ force: true })
+  // TABLE: the habit is a row like the others, its control five buttons.
+  ok('Table: five prayer buttons in the habit\'s own row', await pills().locator('[data-prayer]').count() === 5)
+  const rowInfo = await p.evaluate(() => {
+    const pillsEl = document.querySelector('[data-prayer-pills]'); let row = pillsEl; while (row && !(row.style && row.style.height === '46px')) row = row.parentElement
+    const other = [...document.querySelectorAll('div')].find(d => d.style && d.style.height === '46px' && /Stretch/.test(d.textContent || '') && !d.querySelector('[data-prayer-pills]'))
+    return { mine: row ? row.getBoundingClientRect().height : null, theirs: other ? other.getBoundingClientRect().height : null, sameParent: !!row && !!other && row.parentElement === other.parentElement }
+  })
+  ok('it is the same row — same height, same list — as a habit like Stretch', rowInfo.mine !== null && rowInfo.mine === rowInfo.theirs && rowInfo.sameParent, JSON.stringify(rowInfo))
+  const txt = await pills().innerText()
+  ok('the buttons are the five prayers by name', /Fajr/.test(txt) && /Dhuhr/.test(txt) && /Asr/.test(txt) && /Maghrib/.test(txt) && /Isha/.test(txt), txt.replace(/\s+/g, ' '))
+  const label = n => pills().locator(`[data-prayer="${n}"]`).getAttribute('aria-label')
+  const labs = await Promise.all(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].map(label))
+  ok('each carries its time (Cairo, 1 Jan, Egyptian method)', /05:\d\d/.test(labs[0]) && /1[12]:\d\d/.test(labs[1]) && /14:\d\d/.test(labs[2]) && /17:\d\d/.test(labs[3]) && /18:\d\d/.test(labs[4]), labs.join(' | '))
+  ok('at 13:00 Fajr and Dhuhr have begun; Asr, Maghrib, Isha are locked', [await state('asr'), await state('maghrib'), await state('isha')].every(x => x === 'locked') && (await state('fajr')) !== 'locked' && (await state('dhuhr')) !== 'locked')
+
+  await pills().locator('[data-prayer="asr"]').click({ force: true })
   ok('a tap on a prayer whose time has not come changes nothing', (await stored()).qty === 0 && (await state('asr')) === 'locked')
-
-  await card.locator('[data-prayer="dhuhr"]').click()
+  await pills().locator('[data-prayer="dhuhr"]').click()
   let s = await stored()
   ok('Dhuhr ticked: mask is Dhuhr only, count 1', s.mask === 2 && s.qty === 1, JSON.stringify(s))
-  await card.locator('[data-prayer="fajr"]').click()
+  await pills().locator('[data-prayer="fajr"]').click()
   s = await stored()
   ok('then Fajr: the mask is Fajr + Dhuhr (the rule would have said Dhuhr + Asr)', s.mask === 3 && s.qty === 2, JSON.stringify(s))
-  ok('the card says 2 of 5', /2\s*of 5/.test(await card.locator('[data-prayer-count]').innerText()))
   await p.waitForTimeout(2300)
   const row = logs.find(x => x.habit_id === HID && x.date === DAY)
   ok('the server was sent quantity 2 for the day, not completed', !!row && row.quantity === 2 && !row.completed, JSON.stringify(row))
+
+  // WALL and FILL: a card like the others, the same five buttons.
+  await view('Wall'); await p.waitForTimeout(500)
+  ok('Wall: the habit is a card and the five buttons are in it', await p.locator('[data-prayer-pills] [data-prayer]').count() === 5)
+  ok('Wall: the same state — Fajr and Dhuhr done', (await state('fajr')) === 'done' && (await state('dhuhr')) === 'done')
+  await view('Fill'); await p.waitForTimeout(500)
+  ok('Fill: five buttons on the open card', await p.locator('[data-prayer-pills] [data-prayer]').count() === 5)
+  await view('Table'); await p.waitForTimeout(300)
 
   await p.clock.setFixedTime(new Date('2025-01-01T13:00:00Z'))        // 15:00 in Cairo
   await p.evaluate(() => window.dispatchEvent(new Event('professor:prayerUpdated')))
   ok('at 15:00 Asr opens', (await state('asr')) !== 'locked', await state('asr'))
   await p.clock.setFixedTime(new Date('2025-01-01T20:00:00Z'))        // 22:00
   await p.evaluate(() => window.dispatchEvent(new Event('professor:prayerUpdated')))
-  for (const n of ['asr', 'maghrib', 'isha']) await card.locator(`[data-prayer="${n}"]`).click()
+  for (const n of ['asr', 'maghrib', 'isha']) await pills().locator(`[data-prayer="${n}"]`).click()
   s = await stored()
   ok('all five ticked: mask 31, count 5, the day is ticked', s.mask === 31 && s.qty === 5 && s.ticked, JSON.stringify(s))
-  await card.locator('[data-prayer="isha"]').click()
+  await pills().locator('[data-prayer="isha"]').click()
   s = await stored()
   ok('unticking Isha takes it back to four and un-ticks the day', s.mask === 15 && s.qty === 4 && !s.ticked, JSON.stringify(s))
 }

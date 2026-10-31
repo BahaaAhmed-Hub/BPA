@@ -15,9 +15,10 @@ import { dayProgress, dayTotals, spanTotals } from '@/lib/habitProgress'
 import { LOZENGE } from '../../components/SideRail'
 import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
 import { HabitStarter } from './HabitStarter'
-import { PrayerCard } from './PrayerCard'
+import { PrayerPills } from './PrayerPills'
 import { PrayerOffer } from './PrayerOffer'
-import { loadPrayerState, PRAYER_EVENT } from '@/lib/prayerState'
+import { loadPrayerState, PRAYER_EVENT, writeDay } from '@/lib/prayerState'
+import { ALL_PRAYERS } from '@/lib/prayer'
 
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -458,7 +459,7 @@ function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, isToday = tru
   )
 }
 
-function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, onDecrement, paletteIdx, isToday = true, isSelected, onSelect }: {
+function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, onDecrement, paletteIdx, isToday = true, isSelected, onSelect, control }: {
   habit: { id: string; name: string; emoji: string; type?: string; goal?: number; unit?: string; image?: string }
   todayDone: boolean
   streak: number
@@ -471,6 +472,8 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
   isToday?: boolean
   isSelected?: boolean
   onSelect?: () => void
+  /** Replaces the log control — the prayer habit's five buttons in place of Mark done / ±. */
+  control?: React.ReactNode
 }) {
   const bgColor = WALL_PALETTE[paletteIdx % WALL_PALETTE.length]
   const isQty = habit.type === 'quantity'
@@ -524,7 +527,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         </span>
         {/* Log it — the same control the fill cards use */}
         <span style={{ marginTop: 'auto', display: 'block' }}>
-          <HabitLogControl
+          {control ?? <HabitLogControl
             isQty={isQty}
             todayDone={todayDone}
             qtyValue={qtyValue}
@@ -534,7 +537,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
             onToggle={onToggle}
             onIncrement={onIncrement}
             onDecrement={onDecrement}
-          />
+          />}
         </span>
       </span>
     </div>
@@ -543,7 +546,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
 
 // ─── Fill view card (12B) ─────────────────────────────────────────────────────
 
-function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, onDecrement, paletteIdx, isToday = true, isSelected, onSelect }: {
+function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, onDecrement, paletteIdx, isToday = true, isSelected, onSelect, control }: {
   habit: { id: string; name: string; emoji: string; type?: string; goal?: number; unit?: string; image?: string }
   todayDone: boolean
   /** False when the view is showing a day other than today. */
@@ -556,6 +559,8 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
   paletteIdx: number
   isSelected: boolean
   onSelect: () => void
+  /** Replaces the log control — the prayer habit's five buttons. */
+  control?: React.ReactNode
 }) {
   const bgColor = WALL_PALETTE[paletteIdx % WALL_PALETTE.length]
   const isQty = habit.type === 'quantity'
@@ -694,7 +699,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
           )}
 
           {isSelected && (
-            <HabitLogControl
+            control ?? <HabitLogControl
               isQty={isQty}
               todayDone={todayDone}
               qtyValue={qtyValue}
@@ -1010,9 +1015,13 @@ export function HabitsModule() {
     return () => { window.removeEventListener(PRAYER_EVENT, h); window.removeEventListener('professor:prefsRestored', h) }
   }, [])
   const activeHabits = habits.filter(h => h.isActive)
-  // The Prayers habit is drawn by its own card, not as a row of the three views — but it still counts in every total.
+  // The Prayers habit is listed like any other, in every view — only its control differs: five buttons, one per prayer.
   const prayerHabitId = prayerOn.enabled ? prayerOn.habitId : undefined
-  const listedHabits = activeHabits.filter(h => h.id !== prayerHabitId)
+  const prayerControl = (tone: 'light' | 'dark') => <PrayerPills day={selectedDay} today={today} layout="letters" tone={tone} />
+  const toggleDay = (habitId: string, day: string, done: boolean) => {
+    if (habitId === prayerHabitId) writeDay(day, done ? 0 : ALL_PRAYERS)
+    else toggleHabit(habitId, day)
+  }
   const detailHabit = detailHabitId ? activeHabits.find(h => h.id === detailHabitId) ?? null : null
 
   // Today's completion stats. Every percentage counts part-days — six glasses
@@ -1235,7 +1244,6 @@ export function HabitsModule() {
           own scrollWidth still equalled the viewport, and `elementFromPoint`
           at the record's top-left corner answered *a habit card*. */}
       <PrayerOffer />
-      <PrayerCard day={selectedDay} today={today} />
 
       <div className="habits-record-row" style={{ display: 'flex', gap: 14, alignItems: 'flex-start', minWidth: 0 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1245,7 +1253,7 @@ export function HabitsModule() {
         <div style={{ display: 'flex', gap: 14, minHeight: 0 }}>
           {/* Wall grid — 3 cols, shrinks to 2 when edit panel is open */}
           <div style={{ flex: 1, display: 'grid', gridTemplateColumns: detailHabitId ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))', gridAutoRows: '220px', gap: 14, alignContent: 'start' }}>
-            {listedHabits.map((habit, i) => {
+            {activeHabits.map((habit, i) => {
               const habitLogs   = logs[habit.id] ?? []
               const todayDoneH  = habitLogs.includes(selectedDay)
               const streak      = calcStreak(habitLogs)
@@ -1262,7 +1270,8 @@ export function HabitsModule() {
                   isToday={selectedDay === today}
                   isSelected={detailHabitId === habit.id}
                   onSelect={() => setDetailHabitId(id => id === habit.id ? null : habit.id)}
-                  onToggle={() => toggleHabit(habit.id, selectedDay)}
+                  control={habit.id === prayerHabitId ? prayerControl('dark') : undefined}
+                  onToggle={() => toggleDay(habit.id, selectedDay, todayDoneH)}
                   onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, qtyValue + stepFor(habit))}
                   onDecrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, Math.max(0, qtyValue - stepFor(habit)))}
                 />
@@ -1287,13 +1296,13 @@ export function HabitsModule() {
           // point of this view, and keeps the spill inside this column.
           overflowX: 'auto', overflowY: 'hidden',
         }}>
-          {listedHabits.map((habit, i) => {
+          {activeHabits.map((habit, i) => {
             const habitLogs   = logs[habit.id] ?? []
             const todayDoneH  = habitLogs.includes(selectedDay)
             const streak      = calcStreak(habitLogs)
             const isQuantity  = habit.type === 'quantity'
             const qtyValue    = isQuantity ? (qtyLogs[habit.id]?.[selectedDay] ?? 0) : 0
-            const isSelected  = (fillSelected ?? listedHabits[0]?.id) === habit.id
+            const isSelected  = (fillSelected ?? activeHabits[0]?.id) === habit.id
             return (
               <FillCard
                 key={habit.id}
@@ -1305,7 +1314,8 @@ export function HabitsModule() {
                 isToday={selectedDay === today}
                 isSelected={isSelected}
                 onSelect={() => { setFillSelected(habit.id); setDetailHabitId(habit.id) }}
-                onToggle={() => toggleHabit(habit.id, selectedDay)}
+                control={habit.id === prayerHabitId ? prayerControl('light') : undefined}
+                onToggle={() => toggleDay(habit.id, selectedDay, todayDoneH)}
                 onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, qtyValue + stepFor(habit))}
                 onDecrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, Math.max(0, qtyValue - stepFor(habit)))}
               />
@@ -1369,7 +1379,7 @@ export function HabitsModule() {
         )}
 
         {/* Habit rows */}
-        {listedHabits.map((habit, i) => {
+        {activeHabits.map((habit, i) => {
           const habitLogs  = logs[habit.id] ?? []
           const todayDoneH = habitLogs.includes(selectedDay)
           const streak     = calcStreak(habitLogs)
@@ -1401,7 +1411,7 @@ export function HabitsModule() {
               </span>
 
               {/* Today done checkbox */}
-              <button onClick={() => toggleHabit(habit.id, selectedDay)} title={todayDoneH ? 'Mark undone' : 'Mark done'}
+              <button onClick={() => toggleDay(habit.id, selectedDay, todayDoneH)} title={todayDoneH ? 'Mark undone' : 'Mark done'}
                 style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: 'var(--sb-border-emphasis) solid var(--sb-border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
                 {todayDoneH && (
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-1)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -1423,7 +1433,8 @@ export function HabitsModule() {
               </span>
 
               {/* Quantity control for measurable habits */}
-              {isQuantity && (
+              {habit.id === prayerHabitId && <PrayerPills day={selectedDay} today={today} layout="names" />}
+              {isQuantity && habit.id !== prayerHabitId && (
                 <QuantityControl
                   value={qtyLogs[habit.id]?.[selectedDay] ?? 0}
                   goal={habit.goal}
@@ -1452,6 +1463,7 @@ export function HabitsModule() {
                       <WeekCell key={d} done={qty >= goal} isToday={isT} isFuture={isFuture}
                         onToggle={() => {
                           const cur = qtyLogs[habit.id]?.[d] ?? 0
+                          if (habit.id === prayerHabitId) { toggleDay(habit.id, d, cur >= goal); return }
                           setQuantity(habit.id, goal, d, cur >= goal ? 0 : goal)
                         }} />
                     )
