@@ -467,23 +467,27 @@ broken; the badge could not be changed by one.
   account, and `forgetScopes(email)` runs before a re-consent — what was
   measured is about the grant being replaced.
 
-## Settings — Section → Component Mapping (CONFIRMED CORRECT as of latest commit)
-| Nav group | Section id | Title shown | Component rendered |
+## Settings — Section → Page Mapping (one rail item = one page = one title)
+`nav.ts` is the source (`NAV_GROUPS`, `SECTION_META`, `pageFor`). The section **ids** are
+unchanged because the palette and the budget screen write them to
+`settings-active-section`; `pageFor` maps an id that is drawn inside another page.
+| Group | Section id | Title shown | Page body |
 |---|---|---|---|
-| YOU | `profile` | Profile | `ProfileSection` |
-| YOU | `billing` | Billing | `BillingSection` (plan tile, payment, invoices) |
-| CONNECTED | `accounts` | Accounts & companies | `CompaniesSection` (company cards + people) |
-| CONNECTED | `professor` | AI | `ProfessorSection` (model, autonomy, toggles, tone) |
-| CONNECTED | `schedule` | Schedule rules | `ScheduleSection` |
-| CONNECTED | `blocking` | Integrations | `IntegrationsSection` (Notion/Asana/Trello + Google OAuth + calendar sync) |
-| WORK | `tasks` | Tasks | `TaskStatusesSection` |
-| WORK | `habits` | Habits | `HabitsSection` |
-| SYSTEM | `automation` | Automation | `AutomationSection` (7 rule cards) |
-| SYSTEM | `notifications` | Notifications | `NotificationsMatrixSection` (Push/Mail/Digest per event + quiet hours) |
-| SYSTEM | `appearance` | Appearance | `AppearanceSection` |
-| SYSTEM | `behavioral` | Behavioral OS | `BehavioralSection` |
-| SYSTEM | `companies` | Data & privacy | `DataPrivacySection` |
-| SYSTEM | `finance` | Finance | `FinanceSection` |
+| Account | `profile` | Profile | `ProfileSection` |
+| Account | `billing` | Billing | `BillingSection` |
+| Account | `companies` | Data & privacy | `DataPrivacySection` (the one Export lives here) |
+| Workspace | `accounts` | Accounts & companies | `AccountsAndCompaniesSection` |
+| Workspace | `blocking` | Integrations | `IntegrationsSection`, then blocks **Calendar blocking** (`BlockingRulesSection`) and **Sync rules** (`SyncRulesSection`) |
+| Workspace | `schedule` | Schedule | `ScheduleSection` |
+| Workspace | `tasks` | Tasks | `TaskStatusesSection` |
+| Life | `habits` | Habits | `HabitsSection` |
+| Life | `finance` | Finance | `FinanceSection` |
+| Life | `library` | Library | `LibrarySection` |
+| Intelligence | `professor` | AI | blocks **Model and autonomy** (`ProfessorSection`), **Voice** (`AIVoiceSection`), **Behavioral OS** (`BehavioralSection`) |
+| Intelligence | `automation` | Automation | `AutomationSection` |
+| Preferences | `appearance` | Appearance | `AppearanceSection` |
+| Preferences | `notifications` | Notifications | `NotificationsMatrixSection` |
+| *(none)* | `behavioral` | — | drawn on the AI page; `pageFor('behavioral') === 'professor'` |
 
 ## Design Screen → Implementation Status
 | Screen | Status | Notes |
@@ -553,13 +557,57 @@ The rules (`professor-automation-rules`, a prefSync key):
 `Segmented`, `pillSelectStyle`, `VisaBadge`. Prefer these over `FieldRow`/`inputStyle`
 when bringing a section up to the artboards.
 
-Layout: the page header (eyebrow + title + `Export`) spans full width
-**above** the rail. The rail is a floating 250px card; the active nav item is a solid
-black pill (`#191712` bg, white text). Cards use `alignSelf: 'start'` so they size to
-content — the content column scrolls, not each card.
+## Settings — the shell: a floating nav card, one rounded panel, one scroll
+`Settings.tsx` draws two objects beside the app's own rail. Both start at the same
+height (measured: 72px / 72px) and sit on the page's one ground.
+- **The nav is a 276px card of folding groups.** Account · Workspace · Life ·
+  Intelligence · Preferences, each a button with `aria-expanded`; its items sit one
+  level in under a hairline guide, an icon (16px) and a 14px gap before the title.
+  The active item is the white pill from the app's own spec, not a black one.
+  **Folded groups persist** in `settings-groups-closed` (default: Preferences). A
+  link into a folded group (`groupOf(activeSection)`) opens it, so a deep link never
+  lands on a page whose menu entry is hidden.
+- **Search is real.** It filters on title, description and `SEARCH_KEYWORDS` — words
+  people look for that no title carries ("calendar" is a setting on three pages and
+  a title on none). It was a `<span>` reading "Find a setting".
+- **The panel's header stays and only its body scrolls**, inside the panel's own
+  border: the root is sized to `innerHeight − its own top` (a `ResizeObserver`
+  re-fits it when the module is shown again — Settings stays mounted, hidden), the
+  panel is `overflow: hidden` with the scroller inside it. Measured: header top
+  unchanged after scrolling 400px; `main` and the window do not scroll; the scroller's
+  right edge is one border-width inside the panel's. `SettingsModule` lost its 60px
+  bottom padding for exactly this reason — spare pixels make the page scroll.
+- **Rows**: `FieldRow` / `DRow` are label + help left, control hard right (max 440px
+  column, content-sized — a fixed 280 squeezed sections that put a sentence of help
+  under a control into a tall sliver; measured on the AI page). `Block` is a titled
+  group in a white rounded card; **`bare` for a section that draws its own boxes**, so
+  there is no card inside a card. A section is moved onto the row system by using
+  `FieldRow`, not by restyling itself.
+- **Every edit saves itself, and says so once** — the header's `role="status"`:
+  *All changes saved* / *Saving…* / *Saved on this device only*. The per-card Save
+  buttons are gone; Habits never needed one (its store pushes its own writes).
+  `syncedKey` is the whole settings object as the server last agreed with it — set on
+  hydration and after each landed save — and a change is "differs from that". The old
+  `profileHydrated` flag swallowed the **next edit** whenever the server's copy equalled
+  the local one, because nothing re-ran to clear it. Profile then prefs are written
+  **in sequence**: both read-modify-write `users.schedule_rules`, so side by side one
+  would overwrite the other.
+- **Nothing is drawn that is not wired.** The rail's hard-coded `4` badge on
+  Integrations is gone (a number somebody typed), and *Export all data* on Data &
+  privacy now runs the real export instead of waiting 1.2s and downloading nothing.
+- **Measured here**: 14 pages, none overflowing horizontally; fold/unfold + persistence;
+  search ("calendar" → Accounts, Integrations, Schedule); a `behavioral` deep link →
+  the AI page with its three blocks and Intelligence opened; an edit → *Saving…* →
+  two `POST /rest/v1/users` → *All changes saved*; text contrast of the new surfaces
+  ≥ 5.3:1 in all four themes. **Not measured**: a phone width (the shell is a desktop
+  layout), `ink-audit` / `settings-snapshot` (they need the Linux Chromium the
+  harnesses hard-code), and the **failed**-save state against a refusing server.
+- **Not yet moved onto the row system** (they render inside the panel as before):
+  Accounts, Habits, Finance, Tasks, Automation, Notifications, Billing, Integrations,
+  Appearance's own sub-layouts. Moving one is a change to that section only.
 
-Profile fields **autosave** (1.2s debounce → `saveProfileToDB`); `profileHydrated` ref
-swallows the write-back that DB hydration would otherwise trigger.
+Profile fields and every other setting autosave through the effect above (1.2s
+debounce → `saveProfileToDB`, then `savePrefsToDB`).
 
 ## Notifications — all seven kinds are worked out
 `lib/notifications.ts`. Push is the only channel this app delivers (the list

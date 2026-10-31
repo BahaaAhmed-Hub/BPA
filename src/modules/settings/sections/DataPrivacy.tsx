@@ -5,12 +5,14 @@ import { Toggle } from '../ui'
 
 // ─── Data & Privacy Section (companies → data & privacy) ─────────────────────
 
-export function DataPrivacySection() {
+export function DataPrivacySection({ onExport }: { onExport: () => void }) {
   const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'done'>('idle')
 
-  async function handleExport() {
+  // The one export. It used to wait 1.2s and download nothing, while the real
+  // one sat in the page header — two buttons, one of them a prop.
+  function handleExport() {
     setExportStatus('exporting')
-    await new Promise(r => setTimeout(r, 1200))
+    onExport()
     setExportStatus('done')
     setTimeout(() => setExportStatus('idle'), 3000)
   }

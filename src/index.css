@@ -575,6 +575,15 @@ aside::-webkit-scrollbar-track-piece:vertical:end, aside ::-webkit-scrollbar-tra
      *stretches* is the problem, so it is fixed at that parent — the Goals
      policy picker sets `alignSelf` on its own. `data-block` is still the opt-in
      for deliberately filling the width. */
+  /* The track is exactly as wide as its options, wherever it is put. `inline-flex`
+     alone is not enough: as an item of a column flex box (a dialog, a card) or of
+     a grid, the parent *stretches* anything whose width is `auto`, so the track
+     ran the width of the window behind two words. A definite `fit-content`
+     opts out of that stretch without touching how a row aligns it, which
+     `align-self` did. `max-width` lets it give way, rather than overflow, in a
+     parent narrower than its options. Only `data-block` fills a width, below. */
+  width: fit-content;
+  max-width: 100%;
   padding: 3px;
   box-sizing: border-box;
   border-radius: var(--sb-r-pill);
