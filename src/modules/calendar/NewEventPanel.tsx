@@ -121,10 +121,14 @@ export const BARE: React.CSSProperties = {
 export const PANEL_W = 'clamp(289px, calc(30.6 * var(--vw)), 400px)'
 export const PANEL_W_WIDE = 'min(476px, calc(52.7 * var(--vw)))'
 
-export function ComposerShell({ panelRef, onClose, expanded, children }: {
+export function ComposerShell({ panelRef, onClose, expanded, header, footer, children }: {
   panelRef: React.RefObject<HTMLDivElement | null>
   onClose: () => void
   expanded?: boolean
+  /** Pinned above the scroll area — the task panel's top row. */
+  header?: React.ReactNode
+  /** Pinned below it, so the button that finishes the job never scrolls away. */
+  footer?: React.ReactNode
   children: React.ReactNode
 }) {
   useEffect(() => {
@@ -181,12 +185,23 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
         // against both edges a panel reads as part of the frame rather than
         // as a thing sitting on top of it.
         margin: '0 14px 14px 6px',
-        maxHeight: 'calc(100% - 14px)', overflowY: 'auto',
+        maxHeight: 'calc(100% - 14px)', overflow: 'hidden',
         background: C.page, border: `var(--sb-border-width) solid ${C.border}`,
         borderRadius: 'var(--sb-r-frame)', boxShadow: 'var(--sb-shadow-control)',
-        display: 'flex', flexDirection: 'column', gap: 12, padding: '12px 16px 14px',
+        display: 'flex', flexDirection: 'column',
       }}>
-      {children}
+      {/* The card clips and the body inside it scrolls — the task panel's shape.
+          The bar is the body's, so it sits inside the border and below the pinned
+          header instead of running the card's full height under its curve. */}
+      {header && <div style={{ padding: '12px 16px 0', flexShrink: 0 }}>{header}</div>}
+      <div style={{
+        flex: 1, minHeight: 0, overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', gap: 12,
+        padding: footer ? '12px 16px 12px' : '12px 16px 14px',
+      }}>
+        {children}
+      </div>
+      {footer && <div style={{ padding: '0 16px 14px', flexShrink: 0 }}>{footer}</div>}
     </aside>
   )
 }
@@ -698,9 +713,8 @@ export function NewEventPanel({
   }
 
   return (
-    <ComposerShell panelRef={ref} onClose={onCancel}>
-
-      {/* ── 1 · Header ─────────────────────────────────────────────────────── */}
+    <ComposerShell panelRef={ref} onClose={onCancel}
+      header={(
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 12px 0', minWidth: 0 }}>
         {/* The chip names the calendar and, on an event that exists, changes
             it — the picker is an invisible select the size of the chip. */}
@@ -783,6 +797,43 @@ export function NewEventPanel({
           <X size={ICON.sm} strokeWidth={STROKE.rest} />
         </button>
       </div>
+      )}
+      footer={(
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        // Outside the scroll area, like the task panel's footer: the one button that
+        // finishes the job is never somewhere you have to go looking for. The right
+        // inset keeps the buttons out of the corner the assistant's floating button
+        // occupies — it is fixed to the viewport and sits over whatever is under it.
+        padding: '10px var(--ai-fab-clear) 0 2px',
+      }}>
+        {editing ? (
+          <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>
+            Every change saves itself.
+          </span>
+        ) : (
+        <button
+          onClick={submit}
+          disabled={!title.trim()}
+          aria-disabled={!title.trim()}
+          style={{
+            flex: '1 1 0', minWidth: 0, height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-pill)', border: 'none',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            background: C.ink1, color: C.onInk, cursor: title.trim() ? 'pointer' : 'default',
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+            opacity: title.trim() ? 1 : 0.45,
+          }}>
+          {guests > 0 ? `Create & invite ${guests}` : 'Create event'}
+        </button>
+        )}
+        <button onClick={onCancel}
+          style={{
+            height: 'var(--sb-h-nav)', padding: '0 14px', flexShrink: 0, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
+            background: C.inset, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink3,
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+          }}>{editing ? 'Close' : 'Cancel'}</button>
+      </div>
+      )}>
 
       {/* ── 2 · What ───────────────────────────────────────────────────────── */}
       <div style={{ ...sectionTop, gap: 12 }}>
@@ -1320,45 +1371,6 @@ export function NewEventPanel({
       {moveError && (
         <div style={{ ...CARD, gap: 0, fontSize: 'var(--sb-t-meta)', color: C.negDeep }}>{moveError}</div>
       )}
-
-      {/* ── 7 · Footer ─────────────────────────────────────────────────────── */}
-      {/* Sticky, because the panel scrolls: the one button that finishes the
-          job must not be somewhere you have to go looking for. */}
-      {/* Sticky, because the panel scrolls. The right inset keeps the buttons
-          out of the corner the assistant's floating button occupies — it is
-          fixed to the viewport and sits over whatever is under it, which was
-          Cancel. */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        position: 'sticky', bottom: -12, padding: '10px var(--ai-fab-clear) 6px 2px', marginTop: -2,
-        background: C.page,
-      }}>
-        {editing ? (
-          <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>
-            Every change saves itself.
-          </span>
-        ) : (
-        <button
-          onClick={submit}
-          disabled={!title.trim()}
-          aria-disabled={!title.trim()}
-          style={{
-            flex: '1 1 0', minWidth: 0, height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-pill)', border: 'none',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            background: C.ink1, color: C.onInk, cursor: title.trim() ? 'pointer' : 'default',
-            fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-            opacity: title.trim() ? 1 : 0.45,
-          }}>
-          {guests > 0 ? `Create & invite ${guests}` : 'Create event'}
-        </button>
-        )}
-        <button onClick={onCancel}
-          style={{
-            height: 'var(--sb-h-nav)', padding: '0 14px', flexShrink: 0, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-            background: C.inset, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink3,
-            fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-          }}>{editing ? 'Close' : 'Cancel'}</button>
-      </div>
     </ComposerShell>
   )
 }

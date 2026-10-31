@@ -79,12 +79,13 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
 
   return (
     <aside aria-label={`${book.title} — details`} style={{
-      width: narrow ? '100%' : 'clamp(300px, calc(32 * var(--vw)), 420px)', flexShrink: 0, boxSizing: 'border-box', maxHeight: '100%', overflowY: 'auto',
-      display: 'flex', flexDirection: 'column', gap: 12, padding: 14, paddingBottom: 56,
+      width: narrow ? '100%' : 'clamp(300px, calc(32 * var(--vw)), 420px)', flexShrink: 0, boxSizing: 'border-box', maxHeight: '100%', overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
       background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)',
       borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-panel)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      {/* The card clips; the header is pinned and the body scrolls, as in the task panel. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '14px 14px 0', flexShrink: 0 }}>
         <span style={{ ...CAPS, color: 'var(--sb-ink-3)', flex: 1 }}>Book</span>
         {/* What you do *to* the book, then the way out — a different glyph from
             Close and no stronger than it. Deleting is one ⌘Z away. */}
@@ -96,6 +97,7 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
           onClick={() => { del(book.id); onClose() }}><Trash2 size={ICON.md} /></Button>
         <Button variant="ghost" iconOnly title="Close" aria-label="Close" onClick={onClose}><X size={ICON.md} /></Button>
       </div>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, padding: '12px 14px 56px' }}>
 
       <Card style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
@@ -191,6 +193,7 @@ export function BookPanel({ book, flying, narrow, onClose, onManageLists, onOpen
         <AreaField label="Your review" value={book.review ?? ''} rows={4} placeholder="What stayed with you?"
           onPush={v => patch({ review: v.trim() || undefined })} />
       </Card>
+      </div>
     </aside>
   )
 }

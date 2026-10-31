@@ -849,3 +849,16 @@ is why `NewEventPanel` lost its `scrollbarWidth: 'thin'`. Headless Chromium hide
 `scripts/panel-scrollbar-inside.mjs` launches with `ignoreDefaultArgs: ['--hide-scrollbars']` and reads
 the **drawn pixels** across the row (thumb vs border, in screen pixels via `__zoomSpace`): gap 2px before,
 4px after, in all four themes.
+
+## Every right-hand panel is the task panel's shape: the card clips, header and footer pinned, the body scrolls
+The reference is `TaskDetailPanel`: an `<aside>` with `overflow: hidden`, a pinned header row, a
+`flex: 1; min-height: 0; overflow-y: auto` body, and (where there is one) a pinned footer — so the bar is the
+body's, sits inside the border, and starts below the header. The calendar composer / event panel
+(`ComposerShell` takes `header` and `footer` props; `NewEventPanel` passes both, and the Create / Cancel row is
+no longer `position: sticky`), the Library's `SidePanel` and `BookPanel`, and Financials' docked entry form
+(`ReflectionScreen`) had the **aside itself** scrolling — a bar down the whole card, under the curve, with the
+header scrolling away. `SmartReader` was already this shape. Booking's panel uses `ComposerShell` without a
+header, so it gets the inner scroller. A new right panel copies this; it does not put `overflow-y` on the card.
+`scripts/composer-scrollbars-inside.mjs` asserts it for the composer (the card never scrolls, its body does,
+no ancestor draws a bar). **Measured:** the Tasks panel, the calendar composer. Seen in a screenshot only:
+Library's book panel. Not opened: Financials' docked form, Booking, `SidePanel`'s other users.
