@@ -469,3 +469,12 @@ create/edit · 3 project page, Tasks tab, task panel picker · 4 milestones and
 timeline, calendar markers · 5 calendar links · 6 mail links and suggestion ·
 7 finance, habits, books links · 8 AI templates and planning (preview, then
 confirm) · 9 project filter in the lens.
+
+## The project add / edit form is a right-hand panel, not a centred dialog
+`ProjectDialog` was a fixed, scrimmed, centred modal — the one add panel in the app that did not dock. It is an
+`<aside data-project-dialog>` in the task panel's shape (card clips, header and footer pinned, the form scrolls) and
+the caller puts it **in a row beside the page**: `ProjectsModule` and `ProjectPage` are `display: flex; flex-wrap: wrap`
+with the page as a `flex: 1 1 420px` column and the panel after it (sticky, 300–400px). Nothing dims the page and it is
+not `aria-modal`. On a phone it wraps under the page and scrolls itself into view. Name kept, so the Escape handler,
+`data-project-dialog` and the harnesses still find it. `scripts/projects-tab.mjs` now asserts the geometry (panel left
+edge at or past the page's right edge, inside the window, no full-window scrim) in place of "above the page it dims".
