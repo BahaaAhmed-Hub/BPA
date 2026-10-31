@@ -1100,6 +1100,27 @@ dialogs (the module's Escape already stands down for `[role=dialog]`).
   client), and the thumbnail is **derived from the id** (`i.ytimg.com/vi/<id>/mqdefault.jpg`), never a URL taken from the
   response — a hostile `thumb` field was injected in the harness and never reached an `<img>`. Titles are shown as text
   (`<i>` in a title is not an element).
+- **Videos are judged against the book, not trusted to YouTube's ranking** (`isAboutBook`, `_shared/libraryVideos.ts`). YouTube
+  returns the author's other books, "books like…", trailers. A page of 50 costs the same quota as a page of 1, so every search asks
+  for 50 and each is marked `strict`: the **video's title** contains the book's title (subtitle dropped, as whole words — "Habit" is
+  not "Habits", case/accents/punctuation set aside, any script); a **one- or two-word** title also needs the author's surname in the
+  title, channel or description (a description alone is not enough to name the book — a roundup lists a dozen); with **no author** the
+  title is all there is; and a title saying `books like / similar to / better than / alternatives to / instead of / vs / trailer /
+  soundtrack / gameplay / walkthrough / full audiobook` is not about it. The search itself quotes the title (`"Dune" Frank Herbert
+  book summary review`), as does the YouTube fallback link. **Strict ones show; the rest wait behind "Show looser matches (n)"**,
+  each labelled "Looser match", and pressing it reveals them (it once reset the window to 12 and showed nothing — found by the harness).
+  Cache rows are versioned (`v2|…`) so a row made under older rules is never trusted.
+- **A list the person manages, per book** (`library_video_marks`, `20260047`, `videoMarksDb.ts`): ★ **favourite** and ✕ **remove**
+  on every card, a **Results / Favourites / Removed** switch, and **Bring back**. The mark carries the title/channel/date, so a favourite
+  still reads as itself when a later search no longer returns it — **Favourites do not depend on YouTube** (measured: YouTube down,
+  after a reload, the favourite is still listed from the server). Writes are optimistic and **put back with a sentence if the server
+  refuses**; the thumbnail is never stored. Without `20260047` the videos still show and the buttons are disabled with the file named.
+  A removed video is not gone: it waits under Removed.
+- **See more, and search for more are different things.** *Show more* reveals 12 more of what is already fetched — free, no request.
+  *Search for more* (`more: true`) asks YouTube for the **next page of the same search** using the stored `next_page` token and adds it
+  to the cached row (never more than 150) — the only thing that spends more of the shared quota, and the button says so. A failing
+  "more" (quota/unreachable) changes nothing and says why. `next_page` is read with a fallback so a project without `20260047` still
+  answers a search; it just cannot page.
 - **Deploy**: `deploy-functions.yml` deploys `library-videos` **with the JWT gateway on** and asserts `YOUTUBE_API_KEY` only when
   GitHub has it (the missing-secret-never-blanks rule). Add the GitHub secret, or the app says "not switched on" and offers the link.
 - **The summary is written in sections, saved as it goes.** An outline call, then one call per section handed the whole outline;
@@ -1120,12 +1141,30 @@ dialogs (the module's Escape already stands down for `[role=dialog]`).
 - **Regenerating asks first** (it costs the same again and replaces the row); **Download .md** uses an ASCII-safe name
   (`Dune - summary.md`). Without `20260046` the dialog names the migration and offers no Write button: spending money on
   something that cannot be kept is the worst order to fail in.
-`scripts/library-book-media-rules.mjs` (75, plain node — the REAL `libraryVideos.ts` and `summaryPlan.ts`, types stripped by Node,
-with a control beside each rule) and `scripts/library-book-media.mjs` (67, browser; `CHROME=…` overrides the Linux path): the
+`scripts/library-book-media-rules.mjs` (108, plain node — the REAL `libraryVideos.ts` and `summaryPlan.ts`, types stripped by Node,
+with a control beside each rule; the strictness rule has 20 cases) and `scripts/library-book-media.mjs` (103, browser; `CHROME=…`
+overrides the Linux path; 4 clean runs in a row): the
 buttons in order on one row, every video failure still leaving the link, hostile ids/thumbnail refused, the thumbnails really
-rendering, the request bodies, the 6 Anthropic calls in order, the 6 upserts, a truncated section, the download, read-back after
+rendering, the request bodies, **12 of 17 shown → Show more reveals 5 with no request → Search for more sends `more: true` and adds 6
+→ looser matches hidden, then shown and labelled, then put away → favourite (the row sent, as the owner) → remove (hidden mark) → Removed
+→ Bring back (the DELETE) → favourites after a reload with YouTube down → a refused save put back → the missing migration → a failing
+"more"**, the 6 Anthropic calls in order, the 6 upserts, a truncated section, the download, read-back after
 a reload, Keep this one spending nothing, a mid-way 401 then Continue, Stop, unknown book, no key, the missing migration. The
 harness needs `bpa-wizard-done` set or the welcome wizard covers the book; two of its first-run failures were its own fixture
-(a CSS-uppercased heading read by `innerText`, an arbitrary token bound, a request logged after its delay), not the app.
+(a CSS-uppercased heading read by `innerText`, an arbitrary token bound, a request logged after its delay), not the app. A later
+race was the test's too: a card leaves at once (optimistic) and its DELETE follows, so "gone and deleted" must wait for the request.
+
+### A segmented control is as wide as its options, everywhere
+`.sb-segmented` is `width: fit-content; max-width: 100%` (`index.css`). `inline-flex` alone only shrank it where nothing stretched it:
+in a column flex box (a dialog, a card) or a grid the parent stretched it to the window's width behind two words. A definite
+`fit-content` opts out of the stretch without touching how a row aligns it (the old `align-self: start` did, and put the Financials
+pills on another line); `max-width` makes it give way in a narrow parent instead of overflowing. Only `data-block` fills a width, and
+none of the 49 uses asks for it. Admin and the Goals policy picker carried their own `alignSelf` workaround for this; they are
+harmless now and may go.
+`scripts/segmented-fits-its-options.mjs` (11 groups of assertions) measures `getBoundingClientRect` against Σ options + gaps + padding
+for **82 controls** across all 7 modules (each option of each control pressed in turn, which opens the sub-views), 9 Settings
+sections and the two dialogs, at 1280 and at 390px; 70 of them had empty room beside them, which is what makes "fits" distinguishable
+from "fills". **Control**: the same Summary-dialog selector with `width:auto` put back is 717.8px for options that need 395.2. (The
+Videos dialog's two selectors sit side by side in a row, which never stretches, so they cannot carry the control.)
 **Not measured:** a live YouTube key, a live Claude call, the edge function running on Deno (it is not in the Vite build — only the
 pure module it imports was run), the migration against a real Postgres, and the ink audit over the two new dialogs.
