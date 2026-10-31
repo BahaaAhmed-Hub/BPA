@@ -197,12 +197,24 @@ Egyptian by default — Asr standard or Hanafi, the timezone's offset taken for 
   The starter list and the setup wizard's "prayer" template switch it on rather than copying a plain habit.
 - **Where:** the browser's location (asked on a tap, never at load), else a city (`prayerCities.ts`, which also sets the
   region's method). Times are for the place's timezone; "now" is the device clock.
-- **The card** (`PrayerCard`) sits above the Table / Wall / Fill views and replaces the habit's row in them (it still counts in
-  every total). A prayer opens when its time begins and stays open all day, so a missed one can be marked; the next day is closed.
-  Locked tiles use `--sb-ink-4` (disabled), not opacity.
+- **Drawn as a habit, not a banner.** The Prayers habit is a row in Table and a card in Wall and Fill, in the list with the
+  others — same height, same place. Only its **control** differs: five buttons, one per prayer (`PrayerPills`: names in the
+  table row, F D A M I on a card, full name and time in the tooltip and accessible name), where other habits have Mark done or ±.
+  `usePrayerDay` is the one hook behind all three so they cannot disagree. A prayer opens when its time begins and stays open all
+  day, so a missed one can be marked; the next day is closed. Locked ones are dashed and `--sb-ink-4` (disabled), not faded. The
+  row's tick and the week cells set / clear all five via `writeDay`. (An earlier version drew a horizontal card *above* the views;
+  it did not read as a habit and was removed.) Before a place is known the strip is one button, "Use my location for the times".
 - Assistant / Telegram / Siri: `log_habit_completion` writes a count, which `dayMask` reads by the rule — a prayer by name
   ("I prayed Asr") is **not** wired into the three doors yet.
 - **Not verified against a source:** Fajr's 19.5° and every other published timetable differ by minutes — `prayer-times.mjs`
   holds Fajr to a window, not a minute. The person should compare with their mosque's timetable once.
 `node scripts/prayer-times.mjs` (pure, 25 claims), `prayer-habit.mjs [on|off]` (browser, clock fixed), `prayer-migrates.mjs
 [convert|new|fresh]`.
+
+### Where the prayer habit is offered (it was invisible)
+It shipped switched off, behind a switch at the **foot** of Settings → Habits, so nobody saw a thing: "I can't see the
+prayer times configuration or the UX". Now: (1) `PrayerOffer` is a banner on the Habits page itself, above the views —
+it names a habit already kept under a prayer's name and offers Convert / Start a new one, or offers the built-in one;
+"Not now" is remembered per device (`professor-prayer-offer-dismissed`); (2) `PrayerBlock` is the **first** thing in
+Settings → Habits. A feature behind a switch needs a door where the person already is.
+`scripts/prayer-offer.mjs [convert|new|dismiss|none]`.
