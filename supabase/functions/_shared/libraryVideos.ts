@@ -31,6 +31,10 @@ export interface VideoItem {
   publishedAt: string
   /** The title names this book (and, for a short title, its author). False = probably about something nearby. */
   strict: boolean
+  /** Times watched, or `null` when YouTube did not say (the count could not be fetched). */
+  views: number | null
+  /** Likes, or `null` — a channel can hide them, and that is not the same as zero. */
+  likes: number | null
 }
 
 export const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/
@@ -41,7 +45,7 @@ export const MAX_STORED = 150
 /** A week: what a channel has said about a book does not change by the hour, and the quota does not refill by the hour. */
 export const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 /** Bumped when the shape or the rules change, so older cached rows are not trusted. */
-export const CACHE_VERSION = 'v2'
+export const CACHE_VERSION = 'v3'
 
 const clip = (s: unknown, max: number): string =>
   typeof s === 'string' ? s.replace(/\s+/g, ' ').trim().slice(0, max) : ''
@@ -127,10 +131,38 @@ export function parseSearch(json: unknown, book: BookRef): VideoItem[] {
     out.push({
       id, title, channel, thumb: thumbOf(id), publishedAt: clip(sn.publishedAt, 40),
       strict: isAboutBook({ title, channel, description: unescapeTitle(clip(sn.description, 400)) }, book),
+      // The search does not say how many watched it; `applyStats` fills these from `videos.list`.
+      views: null, likes: null,
     })
     if (out.length >= PAGE_SIZE) break
   }
   return out
+}
+
+/* ── how many watched it, and how many liked it ────────────────────────── */
+
+export interface Stats { views: number | null; likes: number | null }
+
+/** YouTube sends counts as digit strings. Anything else — a negative, a float, text, an absurd length — is "not said", never 0. */
+const toCount = (v: unknown): number | null => (typeof v === 'string' && /^\d{1,15}$/.test(v) ? Number(v) : null)
+
+/** The `videos.list?part=statistics` response → a count per video. A hidden like count is `null`, not zero. */
+export function parseStats(json: unknown): Map<string, Stats> {
+  const out = new Map<string, Stats>()
+  const items = (json as { items?: unknown })?.items
+  if (!Array.isArray(items)) return out
+  for (const it of items) {
+    const id = (it as { id?: unknown })?.id
+    if (typeof id !== 'string' || !VIDEO_ID.test(id)) continue
+    const s = (it as { statistics?: Record<string, unknown> }).statistics ?? {}
+    out.set(id, { views: toCount(s.viewCount), likes: toCount(s.likeCount) })
+  }
+  return out
+}
+
+/** The counts put on the videos they belong to. A video with no entry keeps what it had. */
+export function applyStats(items: VideoItem[], stats: Map<string, Stats>): VideoItem[] {
+  return items.map(v => { const s = stats.get(v.id); return s ? { ...v, views: s.views, likes: s.likes } : v })
 }
 
 /** The token for the next page, only if it is shaped like one. */

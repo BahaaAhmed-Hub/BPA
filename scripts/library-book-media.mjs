@@ -18,16 +18,17 @@ const state = { vid: 'ok', ai: 'ok', delay: 0, missing: false, trunc: 0, failAt:
 const fnBodies = [], aiCalls = [], saves = [], markSaves = [], markDeletes = []
 
 // The function marks each video `strict` (its title names THIS book). Page 1: 17 strict + 2 loose. Page 2 (Search for more): 6 more strict.
+// Counts, chosen so every order gives a different first card: watched → aaaa (3.4M) · liked → bbbb (99K).
 const GOOD = [
   // The real function has already unescaped the title; markup in it must still be shown as text, never run.
-  { id: 'dQw4w9WgXcQ', title: 'Dune & the <i>spice</i>', channel: 'Reads', publishedAt: '2024-05-01T10:00:00Z', strict: true },
-  { id: 'aaaaaaaaaaa', title: 'Dune in 10 minutes', channel: 'Brief', publishedAt: '2023-01-01T00:00:00Z', strict: true },
-  { id: 'bbbbbbbbbbb', title: 'Frank Herbert on Dune', channel: 'Talks', publishedAt: '2022-03-03T00:00:00Z', strict: true },
+  { id: 'dQw4w9WgXcQ', title: 'Dune & the <i>spice</i>', channel: 'Reads', publishedAt: '2024-05-01T10:00:00Z', strict: true, views: 2_000_000, likes: 90 },
+  { id: 'aaaaaaaaaaa', title: 'Dune in 10 minutes', channel: 'Brief', publishedAt: '2023-01-01T00:00:00Z', strict: true, views: 3_400_000, likes: 41_000 },
+  { id: 'bbbbbbbbbbb', title: 'Frank Herbert on Dune', channel: 'Talks', publishedAt: '2022-03-03T00:00:00Z', strict: true, views: 900_000, likes: 99_000 },
 ]
-const mkVid = (prefix, n, strict) => Array.from({ length: n }, (_, i) => ({ id: `${prefix}${String(i).padStart(11 - prefix.length, '0')}`, title: strict ? `Dune explained ${prefix}${i}` : `Deep Work summary ${prefix}${i}`, channel: 'Chan', publishedAt: '2021-01-01T00:00:00Z', strict }))
-const EXTRA = mkVid('e', 14, true)        // with GOOD: 17 strict
-const LOOSE = mkVid('l', 2, false)        // titles that do not name the book
-const PAGE2 = mkVid('p', 6, true)
+const mkVid = (prefix, n, strict, stat) => Array.from({ length: n }, (_, i) => ({ id: `${prefix}${String(i).padStart(11 - prefix.length, '0')}`, title: strict ? `Dune explained ${prefix}${i}` : `Deep Work summary ${prefix}${i}`, channel: 'Chan', publishedAt: '2021-01-01T00:00:00Z', strict, ...stat(i) }))
+const EXTRA = mkVid('e', 14, true, i => ({ views: 10_000 + i * 100, likes: i % 2 === 0 ? 100 + i : null }))   // with GOOD: 17 strict; odd ones hide their likes
+const LOOSE = mkVid('l', 2, false, () => ({ views: 99_000_000, likes: 1_000_000 }))                          // titles that do not name the book — hugely popular
+const PAGE2 = mkVid('p', 6, true, () => ({ views: 50, likes: 5 }))
 const PAGE1 = [...GOOD, ...EXTRA, ...LOOSE]
 const HOSTILE = [{ id: 'x"><img src=x>', title: 'evil one', channel: 'c' }, { id: 'short', title: 'evil two', channel: 'c' }]
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
@@ -181,12 +182,29 @@ const dbox = await dlg.boundingBox()
 ok('the dialog fits inside the window (its height is in the app’s own viewport unit, not raw vh)', dbox && dbox.y >= 0 && dbox.y + dbox.height <= 1000 && dbox.height > 300, `${Math.round(dbox?.y)}…${Math.round(dbox?.y + dbox?.height)} of 1000`)
 ok('the first page is 12 of the 17 that name the book; the two hostile ids are dropped', await cards().count() === 12 && !(await text()).includes('evil'))
 ok('the count says so', (await dlg.locator('[data-count]').innerText()).includes('Showing 12 of 17'))
+
+/* the order: most watched by default, then most liked, then YouTube's own */
+const order = () => dlg.locator('ul[aria-label="Videos"] > li').evaluateAll(a => a.map(l => l.dataset.video))
+const tab = name => dlg.getByRole('tab', { name, exact: true })
+ok('the order selector is there, with Most watched selected', await tab('Most watched').getAttribute('aria-selected') === 'true' && await tab('Most liked').count() === 1 && await tab('Best match').count() === 1)
+ok('default order is most watched: 3.4M, 2M, 900K, then the rest from 11.3K down', (await order()).slice(0, 4).join() === 'aaaaaaaaaaa,dQw4w9WgXcQ,bbbbbbbbbbb,e0000000013', (await order()).slice(0, 4).join())
+ok('the list is ordered before it is cut to a page: the 12 shown are the 12 most watched of all 17', (await order()).join() === ['aaaaaaaaaaa', 'dQw4w9WgXcQ', 'bbbbbbbbbbb', ...Array.from({ length: 9 }, (_, k) => `e${String(13 - k).padStart(10, '0')}`)].join())
+ok('each card says what is known: 3.4M views · 41K likes', (await card('aaaaaaaaaaa').locator('[data-stats]').innerText()) === '3.4M views · 41K likes', await card('aaaaaaaaaaa').locator('[data-stats]').innerText())
+ok('a channel that hides its likes shows only the views, never "0 likes"', !(await card('e0000000013').locator('[data-stats]').innerText()).includes('like') && (await card('e0000000013').locator('[data-stats]').innerText()).includes('views'))
+await tab('Most liked').click()
+ok('Most liked: 99K, then 41K, then the best-liked of the rest', await until(async () => (await order()).slice(0, 3).join() === 'bbbbbbbbbbb,aaaaaaaaaaa,e0000000012'), (await order()).slice(0, 3).join())
+ok('…and one that is only a little liked (90) is lower down than the 100+ ones, though it has 2M views', (await order()).indexOf('dQw4w9WgXcQ') > 8)
+await tab('Best match').click()
+ok('Best match is the order YouTube answered in', await until(async () => (await order()).slice(0, 3).join() === 'dQw4w9WgXcQ,aaaaaaaaaaa,bbbbbbbbbbb'), (await order()).slice(0, 3).join())
+await tab('Most watched').click()
+ok('and back to Most watched', await until(async () => (await order())[0] === 'aaaaaaaaaaa'))
+if (process.env.SHOT) await dlg.screenshot({ path: process.env.SHOT })   // SHOT=/path/to.png: a picture of this dialog, for a person to look at
 const srcs = await dlg.locator('ul img').evaluateAll(a => a.map(i => i.getAttribute('src')))
-ok('thumbnails are derived from the id', srcs[0] === 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg', srcs[0])
+ok('thumbnails are derived from the id (the first card is the most watched)', srcs[0] === 'https://i.ytimg.com/vi/aaaaaaaaaaa/mqdefault.jpg', srcs[0])
 ok('the response’s own thumbnail address is never used', srcs.every(s => !s.includes('evil.example')))
 ok('and they really render (naturalWidth > 0)', await until(() => dlg.locator('ul img').first().evaluate(i => i.complete && i.naturalWidth > 0)))
 const href = await dlg.locator('ul a').first().getAttribute('href')
-ok('a card opens the video on YouTube', href === 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', href)
+ok('a card opens the video on YouTube', href === 'https://www.youtube.com/watch?v=aaaaaaaaaaa', href)
 ok('in a new tab, without opener', (await dlg.locator('ul a').first().getAttribute('target')) === '_blank' && /noopener/.test(await dlg.locator('ul a').first().getAttribute('rel')))
 ok('a title is shown as text: its ampersand and its tag characters, literally', (await text()).includes('Dune & the <i>spice</i>'))
 ok('and the markup in it was not turned into an element', await dlg.locator('ul i').count() === 0)
@@ -218,6 +236,7 @@ ok('Show looser matches adds the 2, and the count follows', await until(async ()
 await until(async () => (await text()).includes('Deep Work summary l0'))
 const looseLabels = await dlg.getByText(/Looser match —/).allInnerTexts()
 ok('each is labelled as a looser match', (await text()).includes('Deep Work summary l0') && looseLabels.length === 2, `${looseLabels.length} labels; cards ${await cards().count()}`)
+ok('they have 99M views — more than anything — and are STILL last, below every video that names the book', (await order()).slice(-2).join() === 'l0000000000,l0000000001' && (await order())[0] === 'aaaaaaaaaaa', (await order()).slice(-2).join())
 await dlg.getByRole('button', { name: /Hide looser matches/ }).click()
 ok('and they can be put away again', await until(async () => !(await text()).includes('Deep Work summary')))
 
@@ -240,6 +259,10 @@ ok('Bring back deletes the mark', await until(() => markDeletes.some(d => d.vid 
 await dlg.getByRole('tab', { name: 'Results' }).click()
 ok('and the video is in the results again', await until(async () => await card('aaaaaaaaaaa').count() === 1))
 
+/* the chosen order is the person's, and stays */
+await tab('Most liked').click()
+ok('Most liked is chosen (it is remembered across a reload, checked below)', await tab('Most liked').getAttribute('aria-selected') === 'true')
+
 /* favourites live on their own, whatever YouTube says */
 await dlg.getByRole('tab', { name: /Favourites/ }).click()
 ok('Favourites lists it, from the saved title', await until(async () => await card('dQw4w9WgXcQ').count() === 1) && (await card('dQw4w9WgXcQ').innerText()).includes('Dune & the <i>spice</i>'))
@@ -249,6 +272,7 @@ state.vid = 'down'
 await p.reload({ waitUntil: 'domcontentloaded' }); await open()
 await openVideos()
 ok('with YouTube down, the results say so', await until(async () => /not available right now/.test(await text())))
+ok('the order chosen before the reload is still chosen', await tab('Most liked').getAttribute('aria-selected') === 'true')
 await dlg.getByRole('tab', { name: /Favourites/ }).click()
 ok('…and the favourite is still there after a reload (it was read from the server, not from the search)', await until(async () => await card('dQw4w9WgXcQ').count() === 1))
 ok('…and it is still a favourite (the star is on)', (await card('dQw4w9WgXcQ').locator('[data-act="favourite"]').getAttribute('aria-pressed')) === 'true')

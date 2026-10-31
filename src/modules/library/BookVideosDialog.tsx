@@ -4,6 +4,7 @@ import { Button, Segmented } from '@/components/ui'
 import { ICON } from '@/lib/type'
 import { findVideos, thumbUrl, watchUrl, youtubeSearchUrl, type VideoResult, type VideoTopic } from './bookVideos'
 import { clearMark, loadMarks, saveMark, type MarkKind, type VideoMark } from './videoMarksDb'
+import { SORT_OPTIONS, sortVideos, statsLine, type SortKey } from './videoSort'
 import type { Book } from './types'
 
 const TOPICS: { value: VideoTopic; label: string }[] = [
@@ -21,7 +22,14 @@ const NOTE = {
 const STEP = 12
 
 type View = 'all' | 'favourites' | 'hidden'
-type Card = { id: string; title: string; channel: string; publishedAt: string; strict?: boolean }
+type Card = { id: string; title: string; channel: string; publishedAt: string; strict?: boolean; views?: number | null; likes?: number | null }
+
+/** The order is the person's, and stays: per browser, like every other view preference. */
+const SORT_KEY = 'library-video-sort'
+const readSort = (): SortKey => {
+  try { const v = localStorage.getItem(SORT_KEY); return v === 'liked' || v === 'match' || v === 'watched' ? v : 'watched' } catch { return 'watched' }
+}
+const writeSort = (s: SortKey) => { try { localStorage.setItem(SORT_KEY, s) } catch { /* private window: the order still applies for this visit */ } }
 
 /**
  * Videos about one book, with their thumbnails — and a list the person keeps.
@@ -41,6 +49,7 @@ export function BookVideosDialog({ book, onClose }: { book: Book; onClose: () =>
   const [again, setAgain] = useState(0)
   const [view, setView] = useState<View>('all')
   const [looser, setLooser] = useState(false)
+  const [sort, setSort] = useState<SortKey>(readSort)
   const [shown, setShown] = useState(STEP)
   const [searchingMore, setSearchingMore] = useState(false)
   const [marks, setMarks] = useState<VideoMark[]>([])
@@ -81,7 +90,8 @@ export function BookVideosDialog({ book, onClose }: { book: Book; onClose: () =>
 
   const items = result?.status === 'ok' ? result.items : []
   const notRemoved = items.filter(v => byId.get(v.id)?.mark !== 'hidden')
-  const candidates = notRemoved.filter(v => v.strict || looser)
+  // Ordered before it is cut to a page, so "most watched" means the most watched of ALL of them, not of the first twelve.
+  const candidates = sortVideos(notRemoved.filter(v => v.strict || looser), sort)
   const looserCount = notRemoved.filter(v => !v.strict).length
   const visible = candidates.slice(0, shown)
 
@@ -111,6 +121,8 @@ export function BookVideosDialog({ book, onClose }: { book: Book; onClose: () =>
   /** One video: a link to YouTube, with the two things you do to it laid over its picture (never inside the link). */
   const card = (c: Card, kind: 'result' | 'favourite' | 'removed') => {
     const fav = byId.get(c.id)?.mark === 'favorite'
+    // Counts are only known for a search result (a favourite stores no numbers: they go stale).
+    const stats = kind === 'result' ? statsLine({ views: c.views ?? null, likes: c.likes ?? null }) : ''
     const overlay = { position: 'absolute', top: 6, width: 32, height: 32, display: 'grid', placeItems: 'center', borderRadius: '50%', cursor: canMark ? 'pointer' : 'default', padding: 0,
       background: 'color-mix(in srgb, var(--sb-overlay) 90%, transparent)', color: 'var(--sb-ink-1)', border: 'var(--sb-border-width) solid var(--sb-border)' } as const
     return (
@@ -124,6 +136,7 @@ export function BookVideosDialog({ book, onClose }: { book: Book; onClose: () =>
           </span>
           <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c.title}</span>
           {c.channel && <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{c.channel}</span>}
+          {stats && <span data-stats style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{stats}</span>}
         </a>
         {kind === 'result' && c.strict === false && (
           <span style={{ alignSelf: 'flex-start', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-deep)' }}>Looser match — may be about another book</span>
@@ -166,6 +179,7 @@ export function BookVideosDialog({ book, onClose }: { book: Book; onClose: () =>
             <Segmented value={topic} onChange={t => { setTopic(t); setShown(STEP); setLooser(false) }} options={TOPICS} aria-label="What to look for" />
             <Segmented value={view} onChange={setView} aria-label="Which videos"
               options={[{ value: 'all', label: 'Results' }, { value: 'favourites', label: `Favourites${favourites.length ? ` (${favourites.length})` : ''}` }, { value: 'hidden', label: `Removed${removed.length ? ` (${removed.length})` : ''}` }]} />
+            {view === 'all' && <Segmented value={sort} onChange={s => { setSort(s); setShown(STEP); writeSort(s) }} options={SORT_OPTIONS} aria-label="Order" />}
           </div>
           {marksState === 'missing' && <p role="alert" style={{ ...small, color: 'var(--sb-accent-deep)' }}>Favourites and removing need the database update <code>20260047_library_video_marks.sql</code>. Videos still show.</p>}
           {marksState === 'error' && <p role="alert" style={{ ...small, color: 'var(--sb-accent-deep)' }}>Your favourites could not be read just now.</p>}
