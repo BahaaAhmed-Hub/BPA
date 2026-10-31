@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Segmented } from '@/components/ui'
 import { RefreshCw, LocateFixed } from 'lucide-react'
 import { loadWeekStart, saveWeekStart, WEEKDAY_NAMES, type Weekday } from '@/lib/weekStart'
 import { syncTimezoneFromLocation } from '@/lib/weather'
@@ -37,7 +36,6 @@ const TZ_OPTIONS = ALL_TZ.map(tz => ({
   keywords: tz.value.replace(/[_/]/g, ' '),
 }))
 
-// Framework options live in FRAMEWORK_SEGMENTS (11A segmented control).
 const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
 // ─── Sortable Section Shell ────────────────────────────────────────────────────
@@ -45,13 +43,6 @@ const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 // SectionShell removed — Settings now uses a left-rail + single-panel layout.
 
 // ─── CHUNK 3: Profile & Schedule sections ────────────────────────────────────
-
-/** Framework options shown as a segmented control on the 11A artboard. */
-const FRAMEWORK_SEGMENTS = [
-  { value: 'time_blocking', label: 'Time blocking' },
-  { value: 'eisenhower',    label: 'Eisenhower' },
-  { value: 'gtd',           label: 'GTD' },
-]
 
 /** "Sunday to Thursday" / "Mon, Wed, Fri" summary of the selected work week. */
 function workWeekSummary(days: string[]): string {
@@ -126,14 +117,6 @@ export function ProfileSection({
           onChange={e => set({ fullName: e.target.value })}
           placeholder="Your name"
           style={{ ...PILL_BASE, width: 220 }}
-        />
-      </DRow>
-
-      <DRow label="Framework" sub="How the Professor plans your day">
-        <Segmented
-          value={FRAMEWORK_SEGMENTS.some(f => f.value === s.framework) ? s.framework : 'time_blocking'}
-          options={FRAMEWORK_SEGMENTS}
-          onChange={v => set({ framework: v })}
         />
       </DRow>
 

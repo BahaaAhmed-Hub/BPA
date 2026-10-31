@@ -44,6 +44,9 @@ const SHARED_KEYS = [
   'professor-habit-quantity-logs', // how much, not just whether
   'professor-habit-steps',         // what one tap adds
   'professor-prayer',              // prayer times on or off, the place, and which prayers each day
+  'task-default-view',             // which view Tasks opens on
+  'task-command-config',           // the Tasks page's filters, including hide completed
+  'task-default-calendar',         // where a task with no calendar of its own is put
   'professor-notif-events',
   'professor-review-hours',
   'professor-ai-config',

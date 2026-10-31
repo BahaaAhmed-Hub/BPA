@@ -11,6 +11,7 @@ import { ProfileSection } from './sections/Profile'
 import { BillingSection } from './sections/Billing'
 import { AccountsAndCompaniesSection } from './sections/Accounts'
 import { ScheduleSection } from './sections/Schedule'
+import { TaskPreferencesSection } from './sections/TaskPreferences'
 import { AIVoiceSection, ProfessorSection } from './sections/Ai'
 import { TaskStatusesSection } from './sections/TaskStatuses'
 import { HabitsSection } from './sections/Habits'
@@ -318,15 +319,22 @@ export function Settings() {
           />
         </Block>
       )
-      case 'blocking': return (
+      case 'blocking': return <Block title="Connected tools" bare><IntegrationsSection /></Block>
+      // Calendar blocking and sync rules are about the calendar — your hours, your focus time, what lands where —
+      // so they live with Schedule, each as a block of its own, not tucked under the list of connected tools.
+      case 'schedule': return (
         <>
-          <Block title="Connected tools" bare><IntegrationsSection /></Block>
+          <Block><ScheduleSection s={settings} set={update} /></Block>
           <Block title="Calendar blocking" sub="Which calendars block your focus time" bare><BlockingRulesSection /></Block>
           <Block title="Sync rules" sub="How often, where things land, who wins" bare><SyncRulesSection /></Block>
         </>
       )
-      case 'schedule': return <Block><ScheduleSection s={settings} set={update} /></Block>
-      case 'tasks': return <Block bare><TaskStatusesSection /></Block>
+      case 'tasks': return (
+        <>
+          <Block title="Defaults" sub="How Tasks opens, what it hides and where an unplaced task goes"><TaskPreferencesSection s={settings} set={update} /></Block>
+          <Block title="Statuses" sub="The columns of your board" bare><TaskStatusesSection /></Block>
+        </>
+      )
       case 'habits': return <Block bare><HabitsSection /></Block>
       case 'library': return <Block><LibrarySection /></Block>
       case 'finance': return <Block bare><FinanceSection /></Block>

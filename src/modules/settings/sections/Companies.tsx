@@ -58,7 +58,10 @@ function CompanyLogoPicker({ co, onPick }: {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0, width: 46 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, width: 46 }}>
+      {/* The mark, with a small ✕ on its top-right corner when there is a logo to take away —
+          no caption: the mark is the control, and an empty one is drawn as initials. */}
+      <span style={{ position: 'relative', display: 'inline-flex' }}>
       <button
         onClick={() => file.current?.click()}
         onDragOver={e => { e.preventDefault(); setOver(true) }}
@@ -80,27 +83,31 @@ function CompanyLogoPicker({ co, onPick }: {
         }}>
         <CompanyMark co={co} size={38} />
       </button>
+      {co.logoUrl && (
+        <button
+          className="sb-hit"
+          onClick={() => { setWhy(null); onPick(undefined) }}
+          data-logo-remove={co.id}
+          title={`Remove ${co.name}'s logo`}
+          aria-label={`Remove the logo for ${co.name}`}
+          style={{
+            position: 'absolute', top: -5, right: -7, width: 18, height: 18, minWidth: 0, minHeight: 0, padding: 0,
+            borderRadius: '50%', cursor: 'pointer', boxSizing: 'border-box',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-2)',
+            boxShadow: 'var(--sb-shadow-control)',
+          }}>
+          <X size={11} strokeWidth={2.4} />
+        </button>
+      )}
+      </span>
       <input
         ref={file} type="file" accept={LOGO_ACCEPT} hidden
         aria-label={`Logo image for ${co.name}`}
         onChange={e => void take(e.target.files?.[0] ?? null)} />
-      {co.logoUrl ? (
-        <button
-          onClick={() => { setWhy(null); onPick(undefined) }}
-          data-logo-remove={co.id}
-          aria-label={`Remove the logo for ${co.name}`}
-          style={{
-            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
-          }}>
-          Remove
-        </button>
-      ) : (
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Logo</span>
-      )}
       {why && (
         <span data-logo-why style={{
-          position: 'absolute', marginTop: 54, maxWidth: 240, zIndex: 3,
+          position: 'absolute', marginTop: 44, maxWidth: 240, zIndex: 3,
           fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)', lineHeight: 1.3,
           background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)',
           borderRadius: 'var(--sb-r-sm)', padding: '5px 8px', boxShadow: 'var(--sb-shadow-hover)',

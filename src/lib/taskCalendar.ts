@@ -12,6 +12,7 @@
 
 import { loadDynamicCompanies } from '@/types'
 import { loadAccounts } from '@/lib/multiAccount'
+import { loadDefaultCalendar } from '@/lib/taskPrefs'
 
 export interface CalendarTarget {
   calendarId: string
@@ -96,6 +97,20 @@ export function resolveTaskCalendar(
       ...wanted,
       source: 'company',
       companyName: co.name,
+    }
+  }
+
+  // Nothing names a calendar. If the person chose one in Settings → Tasks, that is where an unplaced task
+  // goes (and the account it is on, if it is not the primary) — before the account's own default.
+  const chosen = !onOtherAccount && !unresolved ? loadDefaultCalendar() : null
+  if (chosen) {
+    const acct = chosen.accountEmail
+      ? loadAccounts().find(a => !a.isPrimary && a.email.toLowerCase() === chosen.accountEmail!.toLowerCase())
+      : undefined
+    return {
+      calendarId: chosen.calendarId,
+      ...(acct ? { accountId: acct.id, accountEmail: acct.email } : {}),
+      source: 'default',
     }
   }
 

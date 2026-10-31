@@ -149,7 +149,7 @@ async function pngFile(kind) {
 
 const setFile = async (coId, kind) => {
   const f = await pngFile(kind)
-  await p.locator(`[data-logo-pick="${coId}"] ~ input[type=file]`)
+  await p.locator(`[data-logo-pick="${coId}"]`).locator('xpath=ancestor::div[1]').locator('input[type=file]')
     .setInputFiles({ name: f.name, mimeType: f.mimeType, buffer: Buffer.from(f.buffer) })
   await p.waitForTimeout(1800)
 }
@@ -168,7 +168,7 @@ await p.waitForTimeout(1200)
 ok('the companies section is open', /Teradix Ltd/.test(await text()))
 ok('every company card offers a logo', await p.locator('[data-logo-pick]').count() === 2,
    `${await p.locator('[data-logo-pick]').count()} pickers`)
-ok('and says so where there is none', /Logo/.test(await text()))
+ok('with no caption under the mark, and nothing to remove where there is no logo', !/\bLogo\b/.test(await text()) && await p.locator('[data-logo-remove]').count() === 0)
 
 if (MODE === 'dense') {
   // The second rung, which is the whole reason there is no size refusal.
@@ -259,13 +259,20 @@ if (MODE === 'no-column') {
 }
 
 if (MODE === 'remove') {
+  const geo = await p.evaluate(() => {
+    const x = document.querySelector('[data-logo-remove="co-teradix"]').getBoundingClientRect()
+    const m = document.querySelector('[data-logo-pick="co-teradix"]').getBoundingClientRect()
+    return { xr: x.right - m.right, xt: m.top - x.top, w: x.width, h: x.height, inCorner: x.left + x.width / 2 > m.left + m.width * 0.6 && x.top + x.height / 2 < m.top + m.height * 0.4 }
+  })
+  ok('the remove control is a small ✕ on the mark\'s top-right corner', geo.inCorner && geo.w >= 16 && geo.w <= 24, JSON.stringify(geo))
+  ok('and there is no "Remove" word', !/\bRemove\b/.test(await text()))
   await p.locator('[data-logo-remove="co-teradix"]').click()
   await p.waitForTimeout(1500)
   ok('Remove takes it off the company', await logoOf('co-teradix') === null)
   ok('and clears the column rather than leaving the old one',
      stored.find(r => r.id === 'co-teradix')?.logo_url === null,
      JSON.stringify(stored.find(r => r.id === 'co-teradix')?.logo_url))
-  ok('the card goes back to offering one', /Logo/.test(await text()))
+  ok('the card goes back to offering one: the picker is there, the ✕ is gone', await p.locator('[data-logo-pick="co-teradix"]').count() === 1 && await p.locator('[data-logo-remove="co-teradix"]').count() === 0)
   await b.close(); process.exit(code)
 }
 

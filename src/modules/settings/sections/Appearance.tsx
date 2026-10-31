@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SECTION_BREAK } from '../ui'
 import { Check } from 'lucide-react'
 import { ACCENTS, loadAccent, saveAccent } from '@/lib/accent'
 import { useUIStore } from '@/store/uiStore'
@@ -91,7 +92,7 @@ export function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial
           from, so what you see is what you get rather than an artist's
           impression of it. The name is set in the theme's own display face,
           which is the other half of what changes. */}
-      <div style={{ paddingTop: 16, borderTop: 'var(--sb-border-width) solid var(--sb-border)', marginTop: 6 }}>
+      <div style={{ ...SECTION_BREAK }}>
         <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Theme</p>
         <p style={{ margin: '0 0 11px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
           Surfaces, ink, accent and typeface, for the whole app.

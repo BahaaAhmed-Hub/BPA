@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { SECTION_BREAK } from '../ui'
 import { EmptyState } from '@/components/ui'
 import { Plus, X, MessageSquare } from 'lucide-react'
 import { usePersona } from '@/lib/assistantPersona'
@@ -236,7 +237,7 @@ export function IntegrationsSection() {
       </div>
 
       {/* ── SIRI SHORTCUTS ───────────────────────────────────────────────────── */}
-      <div style={{ marginTop: 24, paddingTop: 20, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+      <div style={{ ...SECTION_BREAK }}>
         <div style={{ marginBottom: 12 }}>
           <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>Siri Shortcuts</p>
           <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>

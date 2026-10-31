@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { biometricsAvailable, biometricName, deviceLabel, forgetPasskey, hashPassword, isLocked, loadLock, loadPasskey, markActive, registerPasskey, saveLock, RELOCK_CHOICES, type DevicePasskey, type LockConfig, type Relock } from '@/modules/finance/lock'
 import { LockGate } from '@/modules/finance/FinanceLockScreen'
-import { FieldRow, Toggle } from '../ui'
+import { FieldRow, Toggle, SECTION_BREAK } from '../ui'
 
 // ─── Settings → Finance → Security ───────────────────────────────────────────
 //
@@ -75,7 +75,7 @@ export function FinanceSecuritySection() {
   }
 
   return (
-    <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+    <div style={{ gridColumn: '1 / -1', ...SECTION_BREAK }}>
       <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 12 }}>SECURITY</span>
 
       {!open ? (

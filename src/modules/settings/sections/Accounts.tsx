@@ -1,3 +1,4 @@
+import { ProviderMark } from '@/components/ProviderMark'
 import { isBusinessAccount, setBusinessAccount } from '@/lib/businessAccounts'
 import { useState, useEffect, type ReactNode } from 'react'
 import { Pill } from '@/components/ui'
@@ -222,13 +223,7 @@ function AccountsSection({
         background: 'var(--sb-field)',
         border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.19)',
       }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-          background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.25)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)',
-        }}>
-          {primaryEmail ? primaryEmail[0].toUpperCase() : 'G'}
-        </div>
+        <ProviderMark email={primaryEmail} />
         <div style={{ flex: 1 }}>
           <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{primaryEmail || 'Primary Google Account'}</p>
           <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -289,9 +284,7 @@ function AccountsSection({
             opacity: hiddenAccts.has(acc.email) ? 0.5 : 1,
             transition: 'opacity 0.15s',
           }}>
-            <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 25.1%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-info)' }}>
-              {acc.email ? acc.email[0].toUpperCase() : 'G'}
-            </div>
+            <ProviderMark email={acc.email} />
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{acc.email || acc.name}</p>
@@ -474,15 +467,9 @@ export function AccountsAndCompaniesSection({
     <div>
       {/* How the two halves relate, stated once at the top */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-        padding: '9px 12px', marginBottom: 12,
-        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+        display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap',
+        marginBottom: 12,
       }}>
-        <p style={{ margin: 0, flex: 1, minWidth: 180, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
-          Connect a Google account, then point a company at it. Mail, calendars and
-          Drive flow in through the account; the company decides how that work is
-          tagged, coloured and assigned.
-        </p>
         <span style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           <span style={{ padding: '3px 9px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
             {accountCount} account{accountCount === 1 ? '' : 's'}

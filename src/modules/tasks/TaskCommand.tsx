@@ -23,6 +23,7 @@ import { TaskBanner } from './TaskBanner'
 import { TASK_TYPE_ICON, TASK_TYPE_ORDER } from './taskVisuals'
 import { ICON, STROKE } from '@/lib/type'
 import { LOZENGE } from '../../components/SideRail'
+import { loadDefaultView } from '@/lib/taskPrefs'
 
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 const TASKS_CONFIG_KEY = 'task-command-config'
@@ -49,7 +50,10 @@ export function TaskCommand() {
   const { tasks: allTasks, moveTask, moveTaskBefore, reorderInbox, reorderQuadrant, updateTask, addTask } = useTaskStore()
   const tasks = allTasks.filter(t => !isTaskHidden(t))
 
+  // Opens on the view the person chose in Settings → Tasks, or — if they chose none — the one they used last.
   const [stayView, setStayView] = useState<StayView>(() => {
+    const chosen = loadDefaultView()
+    if (chosen !== 'last') return chosen
     const saved = localStorage.getItem('task-view-mode') as StayView | null
     return saved && STAY_VIEWS.includes(saved) ? saved : 'board'
   })
@@ -59,7 +63,8 @@ export function TaskCommand() {
     if (mode === 'plan') { setPlanning(true); return }
     setPlanning(false)
     setStayView(mode)
-    localStorage.setItem('task-view-mode', mode)
+    // With a fixed default, switching is for this visit only: the page opens on the default next time.
+    if (loadDefaultView() === 'last') localStorage.setItem('task-view-mode', mode)
   }
 
   const [cfg, setCfg] = useState(loadTaskConfig)

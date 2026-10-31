@@ -7,7 +7,7 @@ import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
 import { HABIT_VIEWS, loadHabitView, saveHabitView, EmojiBtn, type HabitView } from '@/modules/habits/HabitsModule'
 import { ICON, STROKE } from '@/lib/type'
 import { DEFAULT_HABIT_EMOJI } from '@/lib/glyphs'
-import { Toggle } from '../ui'
+import { Toggle, SECTION_BREAK } from '../ui'
 import { PrayerBlock } from './PrayerBlock'
 
 const FREQ_OPTS    = ['daily','weekdays','weekly'] as const
@@ -333,7 +333,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
   } as const
 
   return (
-    <div style={{ marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+    <div style={{ ...SECTION_BREAK }}>
       <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 10 }}>
         APPLE HEALTH
       </span>
@@ -474,10 +474,6 @@ export function HabitsSection() {
 
   return (
     <div>
-      <p style={{ margin: '0 0 14px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
-        Changes here instantly sync with the Habits Tracker page.
-      </p>
-
       {/* First, not last: it used to sit under the whole habit list, and a switch nobody scrolled to is a feature nobody has. */}
       <PrayerBlock first />
 

@@ -10,7 +10,7 @@ import {
 import { ICON } from '@/lib/type'
 import { Button } from '@/components/ui'
 import { inputStyle } from '@/modules/library/fieldStyle'
-import { FieldRow, Toggle } from '../ui'
+import { FieldRow, SECTION_BREAK, Toggle } from '../ui'
 
 const today = () => new Date().toLocaleDateString('en-CA')
 
@@ -50,7 +50,7 @@ export function PrayerBlock({ first }: { first?: boolean } = {}) {
   const times = s.enabled && s.place ? prayerTimes(today(), s.place, s.method, s.school) : null
 
   return (
-    <div data-prayer-settings style={{ ...(first ? { paddingBottom: 18, marginBottom: 6, borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' } : { marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }), display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div data-prayer-settings style={{ ...(first ? { paddingBottom: 24, marginBottom: 24, borderBottom: 'var(--sb-border-emphasis) solid color-mix(in srgb, var(--sb-ink-3) 32%, transparent)' } : SECTION_BREAK), display: 'flex', flexDirection: 'column', gap: 14 }}>
       <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>
         PRAYER TIMES
       </span>
@@ -100,7 +100,7 @@ export function PrayerBlock({ first }: { first?: boolean } = {}) {
               {(Object.keys(METHODS) as PrayerMethod[]).map(m => <option key={m} value={m}>{METHODS[m].label}</option>)}
             </select>
           </FieldRow>
-          <FieldRow label="Asr" sub="Standard (shadow equals the object) or Hanafi (twice as long).">
+          <FieldRow label="Prayers" sub="Asr time: Standard (shadow equals the object) or Hanafi (twice as long).">
             <select aria-label="Asr school" value={s.school} onChange={e => patchPrayerState({ school: e.target.value as AsrSchool })} style={{ ...inputStyle, width: 160 }}>
               <option value="standard">Standard</option>
               <option value="hanafi">Hanafi</option>

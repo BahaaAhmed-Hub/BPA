@@ -783,3 +783,19 @@ the hub's.
 (the colour it already guarantees against its own accent): 12.0 / 4.5 / 6.9 / 6.5:1 across the four themes.
 `scripts/switch-knob-visible.mjs` opens Settings → Library, turns it on and measures the composited colours. Also: the
 Library section no longer prints a "126 books · 11 lists" line — statistics are not a setting.
+
+## Settings batch — logos, account marks, section breaks, Tasks defaults
+- **Company logo** (Companies): the mark is the control; when there is a logo a small ✕ sits on its top-right corner
+  (`data-logo-remove`, `.sb-hit`) — no "Logo" caption, no "Remove" word. `company-logo-sticks.mjs` asserts the ✕'s geometry.
+- **Account marks:** the circle on each connected account is `ProviderMark` (Google's multicolour G; Microsoft's four squares for
+  an outlook / hotmail / live / msn / office365 address). Every account connects through Google today, so Google is the default;
+  brand colours live in `lib/providerBrand.ts` (outside the hex rule). The intro paragraph on the page is gone.
+- **Section breaks:** `SECTION_BREAK` in `settings/ui.tsx` is the line between *sections* (2px, ink-3 at 32%, 30px above) — items in
+  a section keep the hairline. Billing, Appearance, Finance (×2), FinanceSecurity, CardPoints, Integrations, Habits and the Prayer
+  block use it. A page of settings should read as groups.
+- **Calendar blocking and Sync rules** are on **Schedule** (Workspace), each its own block; Integrations keeps Connected tools.
+- **Tasks → Defaults** (`TaskPreferencesSection`, `lib/taskPrefs.ts`, three more shared pref keys): default view (Last used / Board /
+  Matrix / List — a fixed default is where Tasks *opens*; switching in the page is for that visit only), hide completed (the same
+  `task-command-config.hideCompleted` the page's own menu uses), default calendar (the final fallback of `resolveTaskCalendar`,
+  after the task's and its company's — never over them), and the **productivity framework**, moved from Profile with the same
+  `framework` setting and no new behaviour. `scripts/task-defaults.mjs`. Hide-completed has no "off brings it back" control yet.

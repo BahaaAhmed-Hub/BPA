@@ -10,7 +10,7 @@ import { loadRules } from '@/modules/finance/modals/BudgetRuleModal'
 import { loadReminders, saveReminders, defaultReminder, dueDatesFor, reminderTitle, type MoneyReminder } from '@/modules/finance/reminders'
 import { askConfirm } from '@/lib/confirm'
 import { selectStyle } from '@/lib/fields'
-import { FieldRow, Toggle } from '../ui'
+import { FieldRow, Toggle, SECTION_BREAK } from '../ui'
 import { FinanceSecuritySection } from './FinanceSecurity'
 import { CardPointsSection } from './CardPoints'
 import { ShoppingSettingsBlock } from './ShoppingSettings'
@@ -371,7 +371,7 @@ export function FinanceSection() {
       <FinanceSecuritySection />
       <CardPointsSection />
 
-      <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+      <div style={{ gridColumn: '1 / -1', ...SECTION_BREAK }}>
         <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 12 }}>PAYMENT DATES</span>
         {!paidAtSupported() ? (
           <div style={{
@@ -444,7 +444,7 @@ export function FinanceSection() {
         )}
       </div>
 
-      <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
+      <div style={{ gridColumn: '1 / -1', ...SECTION_BREAK }}>
         <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 12 }}>MONEY REMINDERS</span>
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Segmented } from '@/components/ui'
 import { Download, Check } from 'lucide-react'
 import { ICON, STROKE } from '@/lib/type'
-import { DRow, GhostPill, PillValue } from '../ui'
+import { DRow, GhostPill, PillValue, SECTION_BREAK } from '../ui'
 import { PILL_BASE } from '../pillStyles'
 
 function VisaBadge() {
@@ -261,7 +261,7 @@ export function BillingSection() {
       {/* ── Cancel ── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-        marginTop: 18, paddingTop: 16, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
+        ...SECTION_BREAK,
       }}>
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
           Cancelling keeps your data readable until the term ends.

@@ -5,6 +5,13 @@ import { PILL_BASE } from './pillStyles'
 // ─── CHUNK 2: Shared UI atoms ─────────────────────────────────────────────────
 
 
+/** The line between two *sections* of a settings page. The items inside one section keep the faint
+ *  hairline; a section starts below a heavier rule and more air, so a page of settings reads as
+ *  groups, not as one long list. */
+export const SECTION_BREAK: React.CSSProperties = {
+  marginTop: 30, paddingTop: 24, borderTop: 'var(--sb-border-emphasis) solid color-mix(in srgb, var(--sb-ink-3) 32%, transparent)',
+}
+
 export function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   const accent = 'var(--sb-accent)'
   return (
